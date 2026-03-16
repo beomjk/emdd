@@ -1042,6 +1042,7 @@ DVC exp run -> metrics.json -> post-experiment hook -> Claude Code
 
 ```
 project-root/
++-- .emdd.yml                  # Project config (created by emdd init)
 +-- .claude/
 |   +-- CLAUDE.md              # Project rules
 |   +-- EMDD_AGENT.md          # EMDD agent behavior rules
@@ -1066,6 +1067,12 @@ project-root/
 +-- dvc.yaml
 +-- pyproject.toml
 ```
+
+**`.emdd.yml`** is created by `emdd init`. It contains two base fields:
+- `lang` — project language (`en` or `ko`)
+- `version` — configuration schema version (currently `"1.0"`). This is the `.emdd.yml` format version, **not** the emdd package version.
+
+Additional configuration blocks (`gaps`, `integrations`, `scale`) are documented in sections 6.8, 8.6, and 13.5 respectively.
 
 ### 8.6 External Tool Integration Patterns
 

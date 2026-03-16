@@ -672,6 +672,7 @@ DVC exp run → metrics.json → post-experiment hook → Claude Code
 
 ```
 project-root/
+├── .emdd.yml                  # 프로젝트 설정 (emdd init으로 생성)
 ├── .claude/
 │   ├── CLAUDE.md              # 프로젝트 규칙
 │   └── EMDD_AGENT.md          # EMDD 에이전트 행동 규칙
@@ -696,6 +697,12 @@ project-root/
 ├── dvc.yaml
 └── pyproject.toml
 ```
+
+**`.emdd.yml`**은 `emdd init`으로 생성된다. 두 가지 기본 필드를 포함한다:
+- `lang` — 프로젝트 언어 (`en` 또는 `ko`)
+- `version` — 설정 스키마 버전 (현재 `"1.0"`). `.emdd.yml` 형식의 버전이며, emdd 패키지 버전이 **아니다**.
+
+추가 설정 블록(`gaps`, `integrations`, `scale`)은 각각 섹션 6.8, 8.6, 13.5에 문서화되어 있다.
 
 ### 8.6 외부 도구 통합 패턴
 
