@@ -25,7 +25,7 @@ program
   .command('init [path]')
   .description('Initialize EMDD project')
   .option('--lang <locale>', 'Language', 'en')
-  .option('--multi-tool', 'Generate multi-tool config')
+  .option('--tool <tool>', 'AI tool rules to generate (claude|cursor|windsurf|cline|copilot|all)', 'claude')
   .action((path, options) => {
     initCommand(path, options);
   });
