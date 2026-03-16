@@ -7,10 +7,15 @@ import { registerCreateEdge } from './tools/create-edge.js';
 import { registerHealth } from './tools/health.js';
 import { registerCheck } from './tools/check.js';
 import { registerPromote } from './tools/promote.js';
+import { registerContextLoading } from './prompts/context-loading.js';
+import { registerEpisodeCreation } from './prompts/episode-creation.js';
+import { registerConsolidation } from './prompts/consolidation.js';
+import { registerHealthReview } from './prompts/health-review.js';
 
 export function createEmddMcpServer(): McpServer {
   const server = new McpServer({ name: 'emdd', version: '0.1.0' });
 
+  // Tools
   registerListNodes(server);
   registerReadNode(server);
   registerCreateNode(server);
@@ -18,6 +23,12 @@ export function createEmddMcpServer(): McpServer {
   registerHealth(server);
   registerCheck(server);
   registerPromote(server);
+
+  // Prompts
+  registerContextLoading(server);
+  registerEpisodeCreation(server);
+  registerConsolidation(server);
+  registerHealthReview(server);
 
   return server;
 }

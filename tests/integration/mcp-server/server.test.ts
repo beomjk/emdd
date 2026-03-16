@@ -44,5 +44,15 @@ describe('MCP Server — server metadata', () => {
     ]);
   });
 
-  it.todo('prompts (Wave 4 scope)');
+  it('lists 4 prompts', async () => {
+    const result = await client.listPrompts();
+    expect(result.prompts).toHaveLength(4);
+    const names = result.prompts.map(p => p.name).sort();
+    expect(names).toEqual([
+      'consolidation',
+      'context-loading',
+      'episode-creation',
+      'health-review',
+    ]);
+  });
 });
