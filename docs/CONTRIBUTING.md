@@ -1,0 +1,120 @@
+# Contributing to EMDD
+
+Thank you for your interest in EMDD. This project has two components that accept contributions differently:
+
+1. **The EMDD Specification** -- the methodology itself (node types, edge types, ceremonies, workflows)
+2. **The EMDD CLI Tool** -- the software that implements the specification
+
+Both types of contributions are welcome, from typo fixes to new node types. This guide explains how each works.
+
+---
+
+## Contributing to the Specification
+
+The EMDD specification lives in `docs/spec/`. The English version (`SPEC_EN.md`) is the canonical reference. Changes to the methodology go through a process proportional to their impact.
+
+### Types of Spec Changes
+
+| Change Type | Process | Examples |
+|-------------|---------|----------|
+| **Clarification** | Direct PR | Fixing ambiguous wording, adding examples, correcting typos |
+| **Minor addition** | PR + 1 maintainer approval | New anti-pattern, additional edge type alias, new health metric |
+| **Breaking change** | RFC process (30-day feedback) | New node type, removing an edge type, changing ceremony triggers, modifying confidence formula |
+
+### RFC Process for Breaking Changes
+
+1. **Open an Issue** with the `rfc` label describing the proposed change.
+2. **Include:**
+   - **Motivation:** What problem does this solve?
+   - **Proposal:** Exact spec text changes.
+   - **Impact:** What existing graphs would break? What tooling needs updating?
+   - **Alternatives:** What other approaches were considered?
+3. **30-day feedback period** -- community discussion on the issue.
+4. **Maintainer decision** -- accept, modify, or reject with rationale.
+5. **Implementation** -- PR with spec changes, CLI tool updates (if applicable), and a migration guide.
+
+### Spec Versioning
+
+The spec follows semantic versioning: `MAJOR.MINOR` (currently v0.4).
+
+- **MINOR** versions add features without breaking existing graphs (e.g., v0.3 to v0.4).
+- **MAJOR** versions may introduce breaking changes (e.g., v0.x to v1.0).
+- Each version change is documented in the Changelog appendix of the spec.
+
+### Translation
+
+- The English specification (`docs/spec/SPEC_EN.md`) is the canonical reference.
+- The Korean specification (`docs/spec/SPEC_KO.md`) is the original draft.
+- Translations to other languages are welcome. Place them at `docs/spec/SPEC_<LANG>.md` (e.g., `SPEC_JA.md`, `SPEC_DE.md`).
+- Translation PRs should note which English spec version they are based on.
+
+---
+
+## Contributing to the CLI Tool
+
+The CLI tool is in early development. This section will grow as the implementation takes shape.
+
+### Development Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/<org>/emdd.git
+cd emdd
+
+# Install dependencies (Node.js/TypeScript implementation planned)
+npm install
+
+# Run tests
+npm test
+```
+
+### Code Contributions
+
+1. **Fork** the repository.
+2. **Create a branch** from `main`: `git checkout -b feature/your-feature`
+3. **Write tests** for new functionality.
+4. **Ensure all tests pass**: `npm test`
+5. **Submit a PR** with a clear description of what changed and why.
+
+### Code Style
+
+- TypeScript with strict mode.
+- Follow existing patterns in the codebase.
+- Prefer clarity over cleverness.
+
+---
+
+## Reporting Issues
+
+Use [GitHub Issues](../../issues) for bugs, spec problems, and feature requests. Pick the right label:
+
+- **`spec`** -- Something in the specification is ambiguous, contradictory, or missing. Quote the relevant section.
+- **`bug`** -- The CLI tool does not behave as expected. Include steps to reproduce, expected behavior, and actual behavior.
+- **`enhancement`** -- A feature request. Describe the use case, not just the desired feature.
+
+---
+
+## Trying EMDD and Sharing Feedback
+
+One of the most valuable contributions right now is simply using EMDD on a real project and telling us what happened. If you try the methodology:
+
+- What worked well?
+- What was confusing or felt like unnecessary overhead?
+- What did you end up skipping, and why?
+- What would you add?
+
+Open a [Discussion](../../discussions) or an Issue with your experience. Field reports directly shape how the spec evolves.
+
+---
+
+## Code of Conduct
+
+We follow the [Contributor Covenant v2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/). Be respectful, constructive, and assume good intent.
+
+---
+
+## Questions?
+
+- **Methodology questions:** Open a [Discussion](../../discussions).
+- **Specific problems or proposals:** Open an [Issue](../../issues).
+- **Quick clarifications:** Check the [Glossary](GLOSSARY.md) and [Quick Start Guide](QUICK_START.md) first -- your answer may already be there.

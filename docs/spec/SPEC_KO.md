@@ -1,0 +1,826 @@
+# EMDD: Evolving Mindmap-Driven Development
+
+## Manifesto v0.4
+
+> **EMDD는 AI가 유지하는 진화하는 지식 그래프를 통해, R&D의 탐구에 구조를 부여하되 탐구를 죽이지 않는 방법론이다.**
+
+---
+
+## 1. 문제 인식
+
+소프트웨어 공학은 "무엇을 만들지 아는 상태"를 전제로 발전해왔다. Spec-Driven Development, Waterfall, 심지어 Agile조차 — 도착지가 존재한다는 가정 위에 서 있다. Sprint의 끝에는 deliverable이 있고, ticket에는 acceptance criteria가 있다. 이것은 개발에는 작동한다. 그러나 연구에는 작동하지 않는다. 연구란 본질적으로 "specification이 없는 탐구"이기 때문이다.
+
+그 반대편에는 vibe-coding이 있다. 직관을 따라 자유롭게 탐색하는 방식이다. 이것은 창의적이지만 치명적인 결함이 있다: 재현 불가능하고, 어제의 발견이 오늘의 맥락에서 사라지며, 같은 막다른 길을 반복해서 걷게 된다. James March가 말한 exploration과 exploitation의 긴장 — 탐구와 활용 사이의 균형 — 은 개인 연구자의 작업 방식에서도 정확히 재현된다.
+
+**너무 많은 구조는 탐구를 질식시키고, 너무 적은 구조는 탐구를 증발시킨다.**
+
+기존 방법론들은 이 문제의 한 단면만을 포착한다. HDD는 가설 검증 루프를 제공하지만 가설 간의 관계를 추적하지 않는다. DDP는 가정의 우선순위를 매기지만 예상 밖의 연결을 수용하지 못한다. nbdev는 코드와 문서를 통합하지만 지식의 진화를 표현하지 못한다. Zettelkasten은 상향식 emergence를 만들어내지만 "다음에 무엇을 탐구해야 하는가"를 말해주지 않는다.
+
+우리에게 필요한 것은 이 모든 것의 교집합이 아니라, 이들이 공유하는 하나의 부재를 채우는 것이다: **탐구 자체를 위한, 살아 움직이는 구조.**
+
+---
+
+## 2. EMDD 등식
+
+```
+EMDD = Zettelkasten의 상향식 emergence
+     + DDP의 위험 우선 검증
+     + InfraNodus의 구조적 공백 탐지
+     + Graphiti의 시간적 진화
+     ─────────────────────────────────
+       AI agent의 자율적 유지보수와 제안
+```
+
+인간의 인지 부하를 그래프와 AI에게 위임하되, 판단은 위임하지 않는다.
+
+---
+
+## 3. 핵심 원칙 (7개)
+
+### 원칙 1: Graph as First-Class Citizen
+코드가 아니라 그래프가 프로젝트의 source of truth이다. 노드는 코드 모듈이 아니라 **지식과 가설**을 담는다. 그래프는 "지금까지 무엇을 알게 되었는가"와 "다음에 무엇을 알아야 하는가"를 동시에 표현한다. 코드는 그래프 노드에서 파생되는 artifact이다.
+
+### 원칙 2: Minimum Viable Structure
+구조는 필요한 최소량만 존재해야 한다. 노드의 형식이 자유롭고, 연결의 의미가 느슨하며, 전체 그래프의 형태가 예측 불가능할 때 — 구조가 올바르게 작동하고 있는 것이다. 관료주의가 느껴지는 순간, 구조를 줄여야 한다.
+
+### 원칙 3: Gap-Driven Exploration
+그래프에서 가장 가치 있는 정보는 노드에 있지 않다 — 노드 사이의 빈 공간에 있다. 연결되어야 할 것 같은데 연결되지 않은 클러스터, 답이 없는 질문, 검증이 없는 가설. AI agent는 이 공백을 탐지하고 제안한다. 연구자는 추구할 가치가 있는 것을 선별한다.
+
+### 원칙 4: Temporal Evolution
+노드는 생성되고, 수정되고, 폐기된다. 가설은 검증되거나 반증된다. 이 모든 변화의 이력이 그래프 안에 보존되어야 한다. "어떻게 여기까지 왔는가"를 추적하는 것이 연구에서는 결과만큼 중요하다. **잘못된 경로를 삭제하지 말라 — 그것이 왜 잘못되었는지가 지식이다.**
+
+### 원칙 5: Riskiest-First Ordering
+가장 불확실하고, 실패 시 전체 방향을 바꿀 수 있는 가설을 먼저 검증한다. 확실한 것을 먼저 하는 것은 심리적으로 편하지만 전략적으로 잘못되었다. AI agent는 "이것이 무너지면 저것도 무너진다"는 위험 전파 경로를 식별하고, 검증 우선순위를 제안한다.
+
+### 원칙 6: Dual Trigger Evolution
+그래프의 변화는 단일 방향이 아니다. 인간 연구자가 실험 결과를 입력하면 그래프가 진화한다. AI agent가 패턴을 발견하거나 외부 지식과의 충돌을 감지하면 그래프가 진화한다. 이 양방향 촉발이 EMDD의 핵심 역학이다.
+
+### 원칙 7: Taste over Technique
+AI는 논문을 읽고, 패턴을 매칭하고, 코드를 생성하고, 실험을 실행하는 데 인간보다 빠르다. 그러나 "이 방향이 추구할 가치가 있는가", "이 결과가 흥미로운가"라는 판단은 인간의 영역이다. EMDD에서 AI의 제안은 언제나 제안이지 결정이 아니다.
+
+---
+
+## 4. 세 개의 역할
+
+### The Researcher (인간): 취향, 판단, 도약
+
+- **취향을 행사한다** — AI가 제안한 탐구 방향 중 추구할 가치가 있는 것을 고른다
+- **판단을 내린다** — 가설을 수정/폐기할지 결정한다
+- **도약한다** — 그래프의 논리적 구조에서는 도출되지 않는 직관적 연결, 유추, 재구성을 만든다
+- 핵심 행위: **노드의 생성과 가설의 판정**
+
+### The Graph (artifact): 살아있는 지식 구조
+
+세 가지 역할을 동시에 수행한다:
+- **지식 표현**: 현재까지 알려진 것과 알려지지 않은 것의 지도
+- **프로젝트 로드맵**: 빈 공간과 미검증 가설이 자연스럽게 "다음에 할 일"을 구성
+- **연구 기억**: 시도했던 경로, 실패한 가설, 변경된 방향의 이력
+
+### The Agent (AI): 정원사
+
+AI agent는 그래프의 **정원사(gardener)**이지 건축가(architect)가 아니다:
+- **유지보수**: 연결 정리, 중복 탐지, 고아 노드 식별, 일관성 유지
+- **패턴 탐지**: 연구자가 놓친 노드 간의 연결 가능성 식별
+- **공백 제안**: 구조적 공백 분석 → 탐구 방향 제안
+- **자동화**: 문헌 검색, 실험 코드 생성, 결과 요약 (technique 영역)
+
+---
+
+## 5. EMDD가 아닌 것
+
+- **프로젝트 관리 도구가 아니다**: 마감일도 없고, 진척률도 없다. "무엇을 알고 있고 무엇을 모르는가"를 추적한다.
+- **지식 베이스가 아니다**: 정리된 정보가 아니라 정보 간의 긴장, 모순, 공백이 가치다. 깔끔한 그래프는 죽은 그래프다.
+- **SDD에 그래프를 붙인 것이 아니다**: Specification이 먼저가 아니다. 탐구 과정에서 방향이 emergent하게 나타난다.
+- **개인 지식 관리 시스템이 아니다**: **프로젝트에 한정된다(project-scoped)**. 평생의 지식을 담는 second brain이 아니라, 하나의 탐구를 위한 working memory이다.
+- **AI에게 연구를 맡기는 것이 아니다**: AI는 가지를 치고, 물을 주고, "저쪽에 빈 땅이 있다"고 알려줄 뿐이다.
+
+---
+
+## 6. 그래프 스키마
+
+### 6.1 설계 원칙
+
+1. **Knowledge-first**: 노드는 코드가 아닌 지식 단위를 표현. 코드는 Experiment의 artifact로만 참조
+2. **Temporal-aware**: 모든 노드/엣지에 생성/수정/폐기 시점 기록
+3. **Confidence-propagating**: 신뢰도는 evidential edge를 따라 전파
+4. **Gap-detecting**: 그래프 구조에서 "연구해야 할 빈 공간" 탐지 가능
+5. **Dual-agency**: 인간과 AI 모두 생성/수정 가능, 누가 했는지 항상 추적
+
+<!-- v0.3: Finding/Insight 통합으로 노드 타입 8종→7종 -->
+### 6.2 노드 타입 (7종)
+
+| 타입 | 색상 | 의미 | 핵심 속성 |
+|------|------|------|----------|
+| **Knowledge** | 파랑 | 확인된 사실, 문헌, 도메인 규칙 | `knowledge_type`, `source`, `confidence` |
+| **Hypothesis** | 주황 | 검증 가능한 주장 | `confidence`, `risk_level`, `priority`, `status`, `kill_criterion` |
+| **Experiment** | 초록 | 가설 검증을 위한 실험 단위 | `config`, `status`, `results`, `artifacts` |
+| **Finding** | 청록 | 실험/분석에서 나온 사실 또는 노드 간 패턴 발견 | `finding_type`, `confidence`, `sources` |
+| **Question** | 노랑 | 열린 연구 질문 | `question_type`, `urgency`, `answer_summary` |
+| **Decision** | 검정 | 내린 결정과 근거 | `alternatives_considered`, `rationale`, `reversibility` |
+| **Episode** | 회색 | 하나의 탐구 루프 기록 | `trigger`, `duration`, `outcome`, `spawned`, `dead_ends` |
+
+<!-- v0.3: Insight가 Finding에 흡수됨. finding_type으로 구분 -->
+**Finding의 하위 유형 (`finding_type` 필드):**
+
+| `finding_type` | 의미 | 예시 |
+|----------------|------|------|
+| `observation` | 하나의 실험/분석에서 직접 관찰된 구체적 결과 | "데이터셋의 73%가 표준 224x224 리사이즈에서 소실되는 소형 결함(<10px)이다" (find-005) |
+| `insight` | 여러 Finding/Knowledge를 조합하여 발견한 상위 패턴 | "스크래치 결함과 피트 결함은 근본적으로 다른 검출 전략이 필요하다" |
+| `negative` | 확인된 부재 또는 실패 — "X는 아니다"라는 형태의 사실 | "표준 증강(flip, rotate)은 길쭉한 스크래치 결함의 재현율을 개선하지 않는다" |
+
+`observation`은 재현 가능한 단일 실험 결과, `insight`는 그래프 위에서 emerge한 교차 패턴, `negative`는 특정 경로가 작동하지 않음을 확정하는 결과이다. 세 유형 모두 `findings/` 디렉토리에 저장한다.
+
+**Finding vs Knowledge 구분:**
+
+```
+Finding  = "실험/분석에서 나온 사실, 또는 노드 간 패턴의 발견"
+           하위 유형: observation, insight, negative
+           특성: 중간 산출물. 개별 또는 소수의 근거에 기반.
+
+Knowledge = "확정되어 재사용 가능한 사실"
+            예: "결함 크기 분포는 5px와 45px에서 이봉 분포를 보인다" (know-003)
+            특성: Finding에서 승격된 것. 다른 작업의 전제로 사용 가능.
+                  Consolidation에서 승격 기준을 충족한 Finding.
+```
+
+**승격 경로**: `Finding → (Consolidation 승격) → Knowledge`. Finding은 중간 산출물이고, Knowledge는 확정된 재사용 가능 사실이다.
+
+<!-- v0.4: Consolidation Hint Tags -->
+**Consolidation Hint**: Finding의 links에 `extends: know-NNN` 힌트를 기재할 수 있다. 이 힌트는 해당 Finding이 특정 Knowledge를 확장하거나 보강한다는 의미이며, Consolidation 승격 단계에서 "hint가 있는 Finding부터 검토"하여 판단을 가속한다. 단, 힌트는 승격 기준을 면제하지 않는다 — 승격 기준(독립 지지 2개+, confidence ≥ 0.9, 사실상 사용 중)은 동일하게 적용한다.
+
+**승격 기준** (Consolidation에서 적용, 하나 이상 충족):
+- **독립 지지**: 2개 이상의 독립적인 Finding 또는 Experiment가 해당 사실을 지지
+- **높은 확신**: confidence ≥ 0.9
+- **사실상 사용 중**: 다른 작업의 전제로 이미 참조되고 있음 (de facto Knowledge)
+
+**승격 시 고려 (반증 캐스케이드 비용):**
+- 이 Knowledge에 의존하게 될 노드가 많을수록 승격을 신중히 판단한다 — RETRACTED 시 파급이 크기 때문
+- 활성 `CONTRADICTS` 엣지가 존재하면 승격하지 않는다 (DISPUTED 상태의 Knowledge가 탄생하므로)
+- 승격 기준을 충족하지 못한 Finding은 승격 기각 사유를 기록한다 (다음 Consolidation에서 재검토)
+
+### 6.3 Episode 노드 — 연구 에피소드
+
+Episode는 하나의 탐구 루프(= 하나의 세션, 또는 하나의 의미 있는 탐구 단위)를 기록하는 노드다. Finding이 "무엇을 알게 되었는가"를 기록한다면, Episode는 **"무엇이 일어났는가"** 전체를 기록한다 — 성공, 실패, 시도하지 않기로 한 것, 다음에 할 것 모두.
+
+**Episode가 필요한 이유:** Finding만 축적되면 그래프가 "하이라이트 릴"이 된다 (Anti-pattern 2). 왜 이 방향을 선택했고, 어떤 시도가 막혔고, 무엇을 보류했는지가 사라진다. Episode는 연구의 "내러티브 스레드"를 보존한다.
+
+**Episode 노드 포맷:**
+
+```markdown
+---
+id: ep-003
+type: episode
+trigger: "find-005 완료 → 소형 결함 분석이 다음 우선순위"
+created: 2026-03-15
+duration: ~2h
+outcome: success
+created_by: human:bjkim + ai:claude
+tags: [small-defects, resolution, augmentation]
+links:
+  - target: find-010
+    relation: produces
+  - target: find-005
+    relation: extends
+  - target: q-006
+    relation: spawns
+---
+
+# EP-003: 소형 결함 검출 전략
+
+## 목표
+모델이 10px 미만 결함에서 실패하는 이유를 조사하고 완화 전략 식별
+
+## 시도한 것
+- [✓] 데이터셋 분포 분석: 전체 카테고리에 걸친 결함 크기 히스토그램
+- [✓] 다중 해상도 추론: 224, 384, 512, 768px 입력 크기 테스트
+- [✓] 타일 기반 추론: 이미지를 겹치는 256×256 타일로 분할
+- [✓] 타일 기반 접근법이 누락된 소형 결함의 89%를 복구함을 확인
+
+## 막혔던 것 / 실패
+- 384px 입력이 소형 결함 재현율은 개선했지만 대형 결함 정밀도를 저하시킴
+- 초기 타일링 접근법이 타일 경계의 결함을 놓침 → 25% 오버랩 필요
+- find-005의 가정(균일한 결함 크기 분포)이 틀림 → 심하게 편향됨
+
+## 하지 않기로 한 것
+- 초해상도 전처리: 프로덕션 추론에 너무 느림, ROI 불분명
+- find-005 어노테이션 재라벨링: 현재 어노테이션이 ground truth, 재라벨링은 노이즈 도입 위험
+
+## 다음에 할 것
+- [ ] 적응형 타일링 구현: 관심 영역 식별을 위한 거친 패스 후 고해상도 타일
+  - 선행 읽기: know-003, find-010, find-005
+- [ ] ImageNet 사전학습 vs 도메인 특화 백본으로 타일 기반 결과 비교
+  - 선행 읽기: know-003, find-007, find-008, find-009
+- [ ] 스크래치 결함이 피트 결함보다 낮은 재현율을 보이는 이유 조사 (q-006)
+  - 선행 읽기: find-010, q-006
+
+## 떠오른 질문
+- 결함 종횡비(길쭉한 vs 원형)가 크기보다 검출에 더 영향을 미치는가?
+- 2단계 검출기(영역 제안 + 분류)가 소형 결함에서 단일 단계보다 우수할까?
+```
+
+**Episode 작성 시점:** 탐구 루프가 끝날 때 (= 자연스러운 중단점에서). 일일 리플렉션이나 다음 세션 시작 전에 작성.
+
+<!-- v0.4: Skeleton Episode — 필수/선택 섹션 분리 -->
+**Episode 섹션 (필수 + 선택):**
+
+| 섹션 | 필수/선택 | 기록 대상 | Anti-pattern 방지 |
+|------|----------|----------|------------------|
+| 시도한 것 | **필수** | 성공한 접근, 사용한 도구/방법 | Under-Feeding 방지 |
+| 다음에 할 것 | **필수** | 구체적 다음 단계 + **선행 읽기 노드 목록** | 방향 유실 + 컨텍스트 유실 방지 |
+| 막혔던 것 | 선택 (해당 시) | 실패, 오류, 잘못된 가정 | Graph Amnesia 방지 |
+| 하지 않기로 한 것 | 선택 (해당 시) | 의식적으로 보류/기각한 방향과 이유 | 반복 탐구 방지 |
+| 떠오른 질문 | 선택 (해당 시) | 새로 생긴 의문, 아이디어 | Question 고갈 방지 |
+
+빈 선택 섹션은 생략한다. 모든 세션이 막히거나 기각 결정을 내리는 것은 아니며, 빈 섹션은 노이즈만 추가한다.
+
+**"다음에 할 것"의 선행 읽기:** 각 다음 단계 항목 아래에 `선행 읽기: node-id, node-id, ...`를 기재한다. 이것은 다음 세션에서 해당 작업을 시작할 때 **반드시 먼저 읽어야 할 노드**의 목록이다. 이전 Episode가 다음 Episode의 컨텍스트를 큐레이션하는 것이다.
+
+<!-- v0.3: 상태 마커 테이블 추가 -->
+**"다음에 할 것"의 상태 마커:** 각 항목에 상태를 표시하여 추적한다:
+
+| 마커 | 의미 | 사용 시점 |
+|------|------|----------|
+| `[ ]` | 미착수 | Episode 작성 시 기본값 |
+| `[done]` | 완료 | 후속 Episode에서 체크 |
+| `[deferred]` | 보류 | 우선순위 밀림 or 선행조건 미충족 |
+| `[superseded]` | 무효화 | 새 정보로 더 이상 의미 없음 (이유 기재) |
+
+Consolidation에서 `[deferred]` 항목이 3개 이상 누적되면 별도 검토: Question으로 승격하거나, 의식적으로 기각(→ "하지 않기로 한 것"으로 이동).
+
+**"하지 않기로 한 것"의 검색성:** Episode 본문에 묻히면 6개월 뒤 찾을 수 없다. 두 가지로 보완한다:
+
+1. Episode frontmatter의 `tags`에 `not-pursued` 접미사를 붙인다:
+   ```yaml
+   tags: [small-defects, resolution, not-pursued:super-resolution, not-pursued:annotation-relabel]
+   ```
+   이렇게 하면 `not-pursued:` 접두어로 그래프 전체를 검색할 수 있다.
+
+2. `_index.md`의 클러스터에 **Negative Decisions** 서브섹션을 두어 주요 기각 사항을 한 줄로 요약한다:
+   ```markdown
+   **Negative Decisions**
+   - 초해상도 전처리 → 불필요 (ep-003: 타일 기반 추론이 10배 속도로 유사한 재현율 달성)
+   ```
+
+<!-- v0.3: frontmatter lowercase 매핑 노트 + CONFIRMS 추가로 14종 -->
+### 6.4 엣지 타입 (14종)
+
+**Frontmatter 표기 규칙:** YAML frontmatter의 `relation:` 필드는 소문자 현재형으로 기재한다 (예: `relation: produces`). 이것은 정형 타입 `PRODUCES`에 매핑된다. 아래 표의 대문자 이름이 정형 타입이고, frontmatter에서는 소문자 snake_case를 사용한다.
+
+**역방향 라벨 허용:** 노드 A에서 target B로의 링크를 기재할 때, 의미상 B→A 방향의 관계를 표현해야 하는 경우가 있다. 이때 `_by` 또는 `_from` 접미사를 붙인 역방향 라벨을 사용할 수 있다: `confirmed_by`, `supported_by`, `answered_by`, `spawned_from`, `produced_by`. 이들은 각각 `CONFIRMS`, `SUPPORTS`, `ANSWERS`, `SPAWNS`, `PRODUCES`의 역방향이다. 정규 방향의 링크를 반대쪽 파일에 중복 기재하지 않는다.
+
+**증거 관계:**
+- `SUPPORTS` — A가 B를 지지 (strength: 0.0~1.0)
+- `CONTRADICTS` — A가 B와 모순 (severity: FATAL / WEAKENING / TENSION)
+- `CONFIRMS` — A가 B를 강하게 확인 (`SUPPORTS(strength≥0.9)`의 편의 별칭)
+
+**생성 관계:**
+- `SPAWNS` — A에서 B가 파생됨 (Question→Hypothesis, Hypothesis→Experiment 등)
+- `PRODUCES` — A의 실행이 B를 생성함 (Episode→Finding, Experiment→Finding)
+- `ANSWERS` — A가 B에 대한 답을 제공 (completeness: 0.0~1.0)
+- `REVISES` — A가 B의 수정 버전
+- `PROMOTES` — A가 B로 승격됨 (Finding→Knowledge, Consolidation에서)
+
+**구조 관계:**
+- `DEPENDS_ON` — A가 B에 의존 (LOGICAL / PRACTICAL / TEMPORAL)
+- `EXTENDS` — A가 B의 결과를 기반으로 더 깊이 탐구함 (Finding→Finding, Episode→Episode)
+- `RELATES_TO` — A와 B가 관련 (약한 방향성, Zettelkasten 스타일)
+- `INFORMS` — A가 B의 판단에 영향 (DECISIVE / SIGNIFICANT / MINOR)
+
+**구성 관계:**
+- `PART_OF` — A가 B의 하위 요소
+- `CONTEXT_FOR` — A가 B의 맥락/배경 지식
+
+**엣지 선택 가이드 (자주 혼동되는 쌍):**
+
+| 상황 | 올바른 엣지 | 오용 주의 |
+|------|-----------|----------|
+| Episode에서 Finding이 나왔다 | `PRODUCES` | ~~SPAWNS~~ (SPAWNS는 논리적 파생, PRODUCES는 활동의 산출물) |
+| find-010이 find-005를 기반으로 더 깊이 파고들었다 | `EXTENDS` | ~~REVISES~~ (REVISES는 수정/대체, EXTENDS는 심화) |
+| Finding이 Knowledge로 승격됐다 | `PROMOTES` | ~~SPAWNS~~ (SPAWNS는 새 노드 파생, PROMOTES는 동일 사실의 승격) |
+| Question에서 Hypothesis가 나왔다 | `SPAWNS` | 정확한 사용 |
+| Finding이 가설을 거의 확실히 지지한다 | `CONFIRMS` | `SUPPORTS(strength≥0.9)`와 동일. 약한 지지에는 `SUPPORTS` 사용 |
+
+### 6.5 Hypothesis Status 전이
+
+```
+PROPOSED → TESTING       : 연결된 Experiment가 RUNNING
+TESTING  → SUPPORTED     : SUPPORTS edge (strength ≥ 0.7)
+TESTING  → REFUTED       : CONTRADICTS edge 존재
+TESTING  → REVISED       : 부분적 지지/반박 → 수정 가설 (REVISES edge)
+ANY      → DEFERRED      : 인간이 명시적으로 보류
+```
+
+<!-- v0.3: Knowledge status 전이 신설 -->
+### 6.6 Knowledge Status 전이
+
+Knowledge는 승격 후에도 상태가 변할 수 있다. 새로운 Finding이 기존 Knowledge와 모순될 때, 해당 Knowledge는 재검토 대상이 된다.
+
+```
+ACTIVE      → DISPUTED    : CONTRADICTS edge from new Finding
+DISPUTED    → ACTIVE      : contradiction resolved (Finding retracted or reconciled)
+DISPUTED    → SUPERSEDED  : new Knowledge replaces this one (REVISES edge)
+DISPUTED    → RETRACTED   : contradiction confirmed, no replacement
+ACTIVE      → SUPERSEDED  : direct replacement without dispute phase
+```
+
+**DISPUTED 전이 시 수행 사항:**
+1. 이 Knowledge에 `SUPPORTS` 또는 `DEPENDS_ON` 엣지로 연결된 모든 Hypothesis의 confidence에 severity 기반 penalty를 적용한다:
+   - `FATAL`: ×0.5 — 핵심 전제가 무너진 경우
+   - `WEAKENING`: ×0.7 — 부분적 모순, 수정으로 살릴 가능성
+   - `TENSION`: ×0.9 — 해석 차이 수준, 추가 조사 필요
+2. 이 Knowledge가 클러스터 진입점인 경우, `_index.md`에 "⚠ disputed" 경고를 표시한다
+3. 이 Knowledge를 `rationale`에서 인용하는 모든 Decision에 "⚠ review needed" 태그를 추가한다
+
+**RETRACTED 전이 시 수행 사항:**
+4. Knowledge 파일을 `knowledge/` 디렉토리에 그대로 유지하되 `status: retracted`로 변경한다. 파일을 이동하지 않는다 — 기존 `[[knowledge/know-XXX]]` 참조가 깨지지 않도록 하기 위함이며, 원칙 4(Temporal Evolution)에 따라 이력을 보존한다. 원본 Finding의 confidence를 하향 조정한다.
+5. 클러스터 진입점이었다면 대체 진입점을 지정한다
+6. "왜 이것이 Knowledge로 조기 승격되었는가?"를 분석하여 retraction Finding(`finding_type: negative`)으로 기록한다
+7. 동일 클러스터에서 2개 이상의 Knowledge가 RETRACTED된 경우 피벗 세러모니를 트리거한다
+
+### 6.7 Confidence 전파 (Bayesian-inspired)
+
+```python
+def update_hypothesis_confidence(hypothesis):
+    prior = hypothesis.initial_confidence
+    for edge in hypothesis.incoming_evidential_edges:
+        if edge.type == "SUPPORTS":
+            impact = edge.source.confidence * edge.strength
+            prior = prior + (1 - prior) * impact * 0.3
+        elif edge.type == "CONTRADICTS":
+            impact = edge.source.confidence * severity_weight(edge.severity)
+            prior = prior * (1 - impact * 0.5)
+    return clamp(prior, 0.0, 1.0)
+```
+
+### 6.8 구조적 공백 탐지 (5종)
+
+| Gap Type | 탐지 방법 | 출력 |
+|----------|----------|------|
+| **Disconnected Clusters** | 커뮤니티 탐지 후 클러스터 간 엣지 수 < threshold | Question 자동 제안 |
+| **Untested Hypotheses** | PROPOSED 상태 + N일 경과 | 실험 설계 제안 |
+| **Blocking Questions** | OPEN + urgency=BLOCKING | 즉시 해소 촉구 |
+| **Stale Knowledge** | N개월 된 source + 같은 클러스터에 새 Knowledge 추가 | 업데이트 필요 경고 |
+| **Orphan Findings** | Finding 노드에 outgoing SPAWNS 없음 | 새 질문/가설 연결 제안 |
+
+### 6.9 토픽 클러스터와 컨텍스트 로딩
+
+그래프가 성장하면 노드 수가 많아져 "지금 이 작업에 어떤 노드가 관련 있는가?"를 파악하기 어려워진다. 이를 해결하기 위해 두 가지 메커니즘을 사용한다.
+
+**토픽 클러스터 (`_index.md`에 유지):**
+
+`_index.md`의 노드 목록을 평면 나열이 아닌 **토픽별 클러스터**로 구조화한다. 각 클러스터에는 **진입점 노드**를 지정한다 — 해당 토픽에 대해 가장 먼저 읽어야 할, 핵심 사실이 요약된 Knowledge 또는 확정 Finding.
+
+```markdown
+## Cluster: Small Defect Detection
+- **진입점**: know-003 (결함 크기 분포 + 검출 임계값)
+- find-005 (크기 분석), find-010 (타일 기반 추론 결과)
+- hyp-001, q-007, ep-001
+
+## Cluster: Scratch Detection
+- **진입점**: know-004 (스크래치 형태 분류)
+- find-007, find-008, find-009
+- hyp-003
+```
+
+클러스터 진입점은 Consolidation 세러모니에서 관리한다. Knowledge 노드가 승격되면 진입점 후보가 된다.
+
+<!-- v0.3: 컨텍스트 로딩에 Consolidation 트리거 체크 추가 -->
+**컨텍스트 로딩 프로토콜 (탐구 시작 전):**
+
+새로운 탐구 루프(Episode)를 시작하기 전에 다음을 수행한다:
+
+```
+1. 직전 Episode의 "다음에 할 것" 확인
+   → 해당 작업의 선행 읽기 노드를 모두 읽는다
+
+2. 관련 토픽 클러스터의 진입점 노드를 읽는다
+   → 작업 키워드와 클러스터 이름/태그를 매칭
+
+3. 열린 Question 중 관련된 것을 확인한다
+   → 탐구 도중 답을 발견할 수 있는 질문이 있는가?
+
+4. Consolidation 트리거 체크 (숫자만)
+   → Finding 미승격 수, Episode 축적 수를 확인
+   → 트리거 충족 시 "[Consolidation 권장]" 메시지 출력
+```
+
+AI 에이전트의 경우, 이 프로토콜은 **세션 시작 시 자동으로 실행**한다. 인간 연구자의 경우, 모닝 브리핑에서 수행한다.
+
+**원칙: Episode가 다음 Episode의 컨텍스트를 큐레이션한다.** 이전 세션에서 "다음에 무엇을 읽어야 하는가"를 기록해두면, 다음 세션에서는 제로에서 시작하는 것이 아니라 큐레이션된 맥락 위에서 시작한다. 이것은 인간 연구자의 lab notebook 습관과 같다 — "내일은 여기서 이어서, 먼저 이것을 확인하고 시작할 것."
+
+---
+
+## 7. 워크플로우
+
+### 7.1 프로젝트 킥오프 (Day 0, ~3시간)
+
+```
+1. 중앙에 PROBLEM 노드 배치 (핵심 질문, 1개)
+2. CONSTRAINT 노드 배치 (하드웨어, 시간, 데이터, 성능 제약, 3~7개)
+3. 문헌 조사 → KNOWLEDGE 노드 (5~15개)
+4. 초기 HYPOTHESIS 노드 (2~5개, 각각 confidence 0.3~0.5)
+5. 열린 QUESTION 노드 (3~10개)
+6. DDP 스타일 가정 레지스터: 모든 가설에 risk_level × uncertainty 기반 priority
+7. 1주 단위 실험 로드맵 스케치 (확정 계획 아님, "현재 최선 추측")
+```
+
+### 7.2 일일 연구 루프
+
+```
+08:30~09:00  [30분] 모닝 브리핑:
+             ① 컨텍스트 로딩 (직전 Episode 선행 읽기 + 클러스터 진입점)
+             ② AI 오버나이트 리포트 리뷰
+             ③ 오늘의 방향 결정
+09:00~12:00  [3시간] 딥 워크 블록 1 — 실험 실행 (scratchpad에 메모, [!] = 놀라움)
+12:00~12:15  [15분] 미드데이 체크포인트 — [!] 항목 → 그래프 마이크로 업데이트
+13:00~17:00  [4시간] 딥 워크 블록 2
+17:00~17:30  [30분] 일일 리플렉션:
+             ① Episode 작성 (오늘 한 루프 기록)
+             ② 정리 트리거 체크 (해당 시 Consolidation 실행)
+             ③ AI와 내일 방향 탐색
+
+총 그래프 유지 오버헤드: ~45분/일 (전체의 ~10%)
+  정리 세러모니 포함 시: ~75분 (격일 정도 발생)
+```
+
+**모닝 브리핑 — AI 오버나이트 리포트 포맷:**
+
+```
+=== EMDD Daily Brief [2026-03-13] ===
+
+[OVERNIGHT RESULTS]
+- EXP-003 완료: mAP@0.5 = 0.68 (목표 0.80 미달)
+  → H-001 confidence: 0.4 → 0.25 (▼)
+
+[GRAPH STATE]
+- 활성 가설: 4개 | 미검증 3일+: H-003 (priority 2위)
+- Stale 질문: Q-004 (5일 방치)
+
+[RECOMMENDATIONS]
+1. [HIGH] H-001 후속: 데이터 증강 적용 재실험
+2. [MEDIUM] Q-004 해소: annotation 품질 점검
+3. [LOW] H-003 착수: segmentation 접근법 초기 실험
+```
+
+**Scratchpad 프로토콜** (딥 워크 중 플로우 보호):
+
+```markdown
+# scratchpad/2026-03-13.md
+- 09:15 augmentation에 Albumentations 사용
+- 09:45 학습 시작. 50 epoch 예상 ~40분
+- 10:50 [!] 예상 밖: 소형 결함(< 10px)이 augmentation 후 거의 사라짐
+         → 질문: 소형 결함에 대한 별도 전략 필요?
+- 11:20 학습 완료. mAP@0.5 = 0.73 (+0.05). 목표 미달.
+```
+
+### 7.3 AI 에이전트 개입 설계
+
+**인터럽트 버짓 (묵음 규칙):**
+
+| 시간대 | AI 능동적 개입 | 비고 |
+|--------|--------------|------|
+| 딥 워크 블록 | **0회** | 긴급 경고(kill criterion, 크래시)만 예외 |
+| 모닝 브리핑 | 최대 3개 제안 | 초과는 "더 보기"로 숨김 |
+| 미드데이 체크 | 최대 2개 제안 | |
+| 일일 리플렉션 | 제한 없음 | 연구자 주도 대화 |
+| 주간 기준 | 최대 20개/주 | 무시된 제안은 2주 후 자동 아카이브 |
+
+**AI가 침묵해야 하는 순간:**
+1. 연구자가 가설을 탐색하는 초기 단계 — 형성 중인 아이디어를 부정하지 않는다
+2. 실험 실행 중 — 결과 전에 추측하지 않는다
+3. 직전 제안이 거부된 직후 — 같은 맥락 재제안 금지 (24시간 대기)
+4. "탐색 모드" 선언 시 — 모닝/EOD에만 개입
+
+**AI 자동 권한 범위:**
+
+| 승인 불필요 | 승인 필요 | 절대 금지 |
+|-----------|----------|----------|
+| 실험 메트릭 → RESULT 노드 기록 | Hypothesis confidence 변경 | Hypothesis 노드 삭제 |
+| EXPERIMENT status 변경 | 새 Hypothesis/Question 생성 | DECISION 노드 생성 |
+| 시간 기반 속성 업데이트 | 엣지 추가/삭제 | Kill criterion 변경 |
+| | Knowledge status 변경 (DISPUTED/RETRACTED) | Knowledge 노드 삭제 |
+
+### 7.4 핵심 세러모니
+
+**주간 그래프 리뷰 (금요일 16:00~17:30, 90분):**
+- 그래프 건강도 점검: 크기, 가설 상태, staleness, 구조 분석 (20분)
+- 프루닝: CONTRADICTED → 아카이브, 2주+ 미검증 저우선순위 → 아카이브 후보 (20분)
+- 재구조화: 클러스터 식별, 테마 노드 생성, 가정 레지스터 재우선순위화 (30분)
+- 다음 주 스케치 + 오버나이트 자동 실험 계획 (20분)
+
+**프루닝 원칙**: "삭제하지 말고 아카이브하라." 모든 아카이브 노드는 `archived` 레이어로 이동, 필요 시 복원 가능.
+
+**정리 세러모니 (Consolidation)** (Finding 5개 축적 시 또는 Episode 3개 축적 시, 30~60분):
+
+연구가 진행되면 Finding은 빠르게 축적되지만, 그래프의 다른 레이어(Knowledge, Question, Hypothesis)는 정체된다. 이것은 자연스러운 현상이지만, 방치하면 그래프가 "발견의 무덤"이 된다 — 사실은 쌓여 있지만 구조화되지 않아 재사용 불가능한 상태. 정리 세러모니는 이 축적을 구조화한다.
+
+```
+정리 트리거 (하나라도 해당되면 실행):
+  - Finding 노드가 마지막 정리 이후 5개 이상 추가됨
+  - Episode 노드가 마지막 정리 이후 3개 이상 추가됨
+  - 열린 Question이 0개임 (연구가 "끝났다"는 환각)
+  - Experiment가 catch-all 되어 5개 이상 Finding을 담고 있음
+```
+
+**정리 5단계:**
+
+| 단계 | 행위 | 예시 |
+|------|------|------|
+| **승격** | 확정된 사실을 Knowledge로 승격 (hint가 있는 Finding부터 검토) | "결함 크기 분포는 5px와 45px에서 이봉 분포" → know-003 |
+| **분할** | 비대해진 Experiment를 의미 단위로 분할 | exp-003 "데이터 파이프라인 분석" → exp-003a (전처리), 003b (증강), 003c (후처리) |
+| **질문 생성** | Episode의 "떠오른 질문"을 Question 노드로 | "결함 종횡비가 크기보다 검출에 더 영향을 미치는가?" → q-006 |
+| **가설 갱신** | Finding 근거로 confidence 업데이트 + 새 가설 | hyp-001: 0.95→0.98, 새 hyp-004 |
+| **고아 정리** | outgoing 링크 없는 Finding에 연결 추가 | find-010 → spawns q-006, q-007 |
+
+<!-- v0.3: not-pursued 목록 표시 규칙 추가 -->
+**Health 대시보드와 Negative Decisions 동기화:** 건강도 점검에서 `not-pursued:` 태그를 수집할 때, 숫자뿐 아니라 항목 목록도 표시하여 과거 기각 사유를 빠르게 확인할 수 있게 한다. `_index.md`의 Negative Decisions 섹션과 동기화를 확인한다.
+
+**정리의 원칙:**
+- **정리는 선택이 아니라 의무다.** Episode나 Finding을 만들었으면 정리 트리거를 확인한다.
+- **정리 자체를 Episode로 기록하지 않는다.** 정리는 메타 활동이지 연구 활동이 아니다.
+- **정리 중 새 탐구를 시작하지 않는다.** 정리는 garden tending이다. 새 씨앗은 다음 세션에.
+
+**마일스톤 세러모니** (가설 판정 시, 30분):
+- SUPPORTED 확정: 근거 문서화, 파생 질문 생성, DECISION 노드, 의존 가설 활성화
+- REFUTED 확정: 실패 근거 문서화, "왜 틀렸는지" 기록, 대안 가설 탐색, 아카이브
+
+<!-- v0.3: Knowledge 반증 세러모니 신설 -->
+**Knowledge 반증 세러모니** (Knowledge가 RETRACTED될 때, 30~60분):
+- **트리거**: Knowledge 노드에 CONTRADICTS edge가 추가되고, 검토 결과 반증 확정
+- **스냅샷**: 반증 전 그래프 상태 기록
+- **실패 원인 분석**: "왜 이것이 Knowledge로 승격되었는가" — 승격 판단의 개선점 도출
+- **다운스트림 영향 분석**: 의존 Hypothesis, Decision, 다른 Knowledge를 순회하며 영향 평가
+- **클러스터 진입점 교체**: 해당 Knowledge가 진입점이었다면 대체 노드 지정
+- **피벗 세러모니 트리거 체크**: 동일 클러스터에서 2개 이상의 Knowledge가 반증된 경우 피벗 세러모니 실행
+
+**피벗 세러모니** (방향 전환 시, 2~3시간):
+- 트리거: 핵심 가설 2개+ 동시 REFUTED / 평균 confidence 2주 연속 하락 / 모든 경로 BLOCKED / 동일 클러스터 Knowledge 2개+ RETRACTED
+- 스냅샷 저장 → "무엇을 배웠는가" 요약 → 새 방향 브레인스토밍 → 그래프 재구성
+
+### 7.5 마찰 예산 (Friction Budget)
+
+```
+절대 상한: 60분/일 (연구 시간 7시간 기준 ~14%)
+목표:      45분/일 (~10%)
+주간 리뷰:  90분/주 (별도)
+
+관료주의 방지 규칙:
+- "3분 규칙": 그래프 업데이트 하나가 3분 이상 → 포맷 간소화
+- "스킵 허용": 미드데이 체크는 건너뛸 수 있음. 일일 리플렉션만 필수 (최소 10분)
+- "2주 실험": EMDD 프로세스 자체를 2주마다 평가, 불필요한 것은 제거
+- "도구 독립성": 핵심은 도구가 아니라 "가설-실험-학습-진화" 루프
+```
+
+---
+
+## 8. 구현 스택
+
+### 8.1 저장 포맷: Markdown + YAML Frontmatter (Git 저장)
+
+**선택 근거:**
+- AI(Claude Code)가 직접 Read/Edit 가능, API/드라이버 불필요
+- Git diff가 의미 있고, 브랜치/머지 자연스러움
+- 같은 파일을 Obsidian에서 열면 `[[]]` 링크로 그래프 뷰 자동 제공
+- Neo4j는 오버킬 (R&D PoC에서 노드 수 = 수백 단위)
+
+**단일 노드 파일 포맷:**
+
+```markdown
+---
+id: hyp-003
+type: hypothesis
+status: testing
+confidence: 0.65
+risk_level: high
+priority: 1
+created: 2026-03-12
+updated: 2026-03-12
+created_by: human:bjkim
+tags: [backbone, resnet, efficiency]
+links:
+  - target: exp-007
+    relation: tested_by
+  - target: hyp-001
+    relation: depends_on
+kill_criterion: "mAP@0.5 < 0.60이면 아키텍처 변경"
+sources:
+  wandb_run: run-abc123
+  dvc_exp: exp-branch-name
+---
+
+# ResNet-50이 현재 데이터셋에서 EfficientNet-B3보다 빠르게 수렴할 것이다
+
+## 배경
+- 데이터셋 크기가 작아(~5K) pretrained feature의 질이 중요
+- ResNet-50의 ImageNet feature가 우리 도메인과 더 유사할 가능성
+
+## 현재 근거
+- [[exp-007]] 초기 결과: ResNet-50 val_acc 0.82 vs EfficientNet-B3 0.79
+- 다만 EfficientNet은 아직 수렴 중 → [[exp-009]]에서 더 긴 학습 필요
+
+## 열린 질문
+- [ ] Learning rate scheduling 차이가 결과를 왜곡하고 있지 않은가?
+```
+
+<!-- v0.3: _graph.mmd 갱신 시점 명확화 -->
+### 8.2 시각화: Mermaid (Phase 1) → Cytoscape.js (Phase 2)
+
+**Mermaid 추천 이유:** GitHub/Obsidian/VSCode 네이티브 렌더링, Claude Code가 문법 정확히 생성, `classDef`로 confidence/status 색상 매핑. 노드 50개 이상에서 Cytoscape.js로 전환.
+
+**`_graph.mmd` 갱신 시점:** `_graph.mmd`는 Consolidation 세러모니 완료 시, 그리고 주간 그래프 리뷰 시 갱신한다. Episode 생성 시에는 갱신하지 않는다 (마찰 예산 고려).
+
+```mermaid
+graph TD
+    classDef validated fill:#2d6a4f,color:#fff
+    classDef testing fill:#e9c46a,color:#000
+    classDef refuted fill:#e76f51,color:#fff
+    classDef proposed fill:#a8dadc,color:#000
+
+    H1[hyp-001: ResNet backbone]:::validated
+    H3[hyp-003: ResNet > EfficientNet]:::testing
+    E7[exp-007: 초기 비교]
+    F12[finding-012: 수렴 속도 차이]
+
+    H1 -->|depends_on| H3
+    E7 -->|tests| H3
+    F12 -->|supports| H3
+```
+
+### 8.3 AI 에이전트: Claude Code 직접 활용
+
+**3단계 성숙도 모델:**
+
+| Mode | 시기 | 방식 |
+|------|------|------|
+| **수동 호출** | Day 1~ | 연구자가 Claude Code에 직접 "결과 나왔다, 그래프 업데이트해줘" |
+| **반자동** | Week 2~ | 실험 완료 시 post-experiment hook → Claude 자동 호출 |
+| **자율 분석** | Month 2~ | 주기적 그래프 전체 분석, 공백/패턴 자동 보고 |
+
+### 8.4 ML 도구 통합
+
+```
+DVC exp run → metrics.json → post-experiment hook → Claude Code
+    → graph/experiments/exp-XXX.md 생성
+    → graph/hypotheses/hyp-YYY.md confidence 업데이트
+    → graph/_graph.mmd 갱신
+```
+
+- W&B: run `tags`에 가설 ID 포함, run URL을 실험 노드 sources에 기록
+- Hydra: config에 `experiment_id`, `hypothesis_ids` 필드로 그래프 연결
+
+### 8.5 프로젝트 디렉토리 구조
+
+```
+project-root/
+├── .claude/
+│   ├── CLAUDE.md              # 프로젝트 규칙
+│   └── EMDD_AGENT.md          # EMDD 에이전트 행동 규칙
+│
+├── graph/                     # ★ EMDD 지식 그래프
+│   ├── _index.md              # 자동 생성 인덱스
+│   ├── _graph.mmd             # 자동 생성 Mermaid
+│   ├── _analysis/             # AI 분석 결과
+│   ├── hypotheses/
+│   ├── experiments/
+│   ├── findings/
+│   ├── knowledge/
+│   ├── questions/
+│   ├── decisions/
+│   └── episodes/
+│
+├── configs/                   # Hydra 설정
+├── src/                       # 소스 코드
+├── notebooks/                 # 탐색적 노트북
+├── scratchpad/                # 일일 메모
+├── data/                      # DVC 관리
+├── dvc.yaml
+└── pyproject.toml
+```
+
+---
+
+## 9. 안티패턴 (6가지)
+
+### Anti-pattern 1: Over-Structuring — 그래프가 관료주의가 될 때
+**증상**: 노드 추가 전에 유형/태그/메타데이터 결정에 시간 소비. "올바른 구조" 논의가 탐구보다 많아짐.
+**처방**: 노드를 먼저 던져 넣고 나중에 정리하라. AI agent가 정리를 도울 것이다.
+
+### Anti-pattern 2: Under-Feeding — 그래프가 굶어 죽을 때
+**증상**: 결과만 기록하고, 실패/의심/중간 생각이 들어가지 않음. 그래프가 highlight reel. Finding만 쌓이고 Episode/Question이 없으면 이 패턴이다.
+**처방**: 실패와 의심이야말로 가장 소중한 입력이다. 그래프는 lab notebook이다. Episode 노드가 이를 강제한다 — "막혔던 것"과 "하지 않기로 한 것"은 필수 섹션이다.
+
+### Anti-pattern 3: Blind Following — AI 제안을 무비판적으로 따를 때
+**증상**: AI 제안을 순서대로 실행. 연구자의 고유한 관점 소실.
+**처방**: AI의 제안은 메뉴이지 주문서가 아니다. 10개 중 9개를 무시하는 것이 정상이다.
+
+### Anti-pattern 4: Premature Convergence — 너무 일찍 수렴할 때
+**증상**: 첫 실험 성공 → 대안 탐색 없이 해당 방향으로 깊이 진입.
+**처방**: 확증 편향의 적. 현재 가설을 가장 강하게 위협하는 대안을 먼저 검증하라.
+
+### Anti-pattern 5: Finding Cemetery — 발견만 쌓이고 정리 안 할 때
+**증상**: Finding이 10개 이상인데 Knowledge 승격 0건, 열린 Question 0개, Experiment가 하나에 모든 Finding이 연결. 그래프가 평평하고 관계가 빈약함.
+**처방**: 정리 세러모니(Consolidation)를 실행하라. Finding은 중간 산출물이다 — Knowledge로 승격되거나, 새 Question을 spawn하거나, Hypothesis를 갱신할 때 비로소 가치가 실현된다.
+
+### Anti-pattern 6: Graph Amnesia — 시간성을 무시할 때
+**증상**: 잘못된 가설을 삭제. 방향 전환 이유 미기록.
+**처방**: 삭제 대신 폐기(deprecation). "왜 이 방향을 시도하지 않았는가?"에 그래프가 답할 수 있어야 한다.
+
+---
+
+## 10. 시작하기 — Minimum Viable Tool (MVT)
+
+### Week 1: 오늘 당장 시작
+
+```bash
+# 1. 디렉토리 구조 생성
+mkdir -p graph/{hypotheses,experiments,findings,knowledge,questions,decisions,episodes,_analysis}
+mkdir -p scratchpad
+
+# 2. Claude Code에 요청:
+# "현재 프로젝트의 연구 질문과 가정을 정리해서
+#  graph/ 디렉토리에 EMDD 노드로 만들어줘.
+#  이 문서의 포맷을 따라."
+```
+
+**필요한 것: 없음.** 마크다운 파일과 Claude Code만 있으면 된다.
+
+### Week 2: Mermaid 자동 생성 + post-experiment hook
+
+### Week 3: Graph MCP Server (~200줄 Python)
+
+```python
+# Tools:
+#   graph_list(type?, status?, min_confidence?) → 노드 목록
+#   graph_get(id) → 단일 노드 상세
+#   graph_neighbors(id, depth=1) → 연결 노드들
+#   graph_gaps() → 구조적 공백 분석
+#   graph_stats() → 전체 통계
+```
+
+### Week 4+: Cytoscape.js 시각화, 시간 슬라이더, 자율 분석
+
+**핵심: 도구를 만드느라 연구를 멈추지 말 것.** EMDD의 가치는 도구가 아니라 "연구 지식을 구조화하고 공백을 찾는 사고 방식"에 있다.
+
+---
+
+## 결어
+
+EMDD는 하나의 확신 위에 서 있다: **R&D에 필요한 구조는 이미 존재하지만, 그것을 유지하는 비용이 너무 높았을 뿐이다.** AI agent가 그 유지 비용을 극적으로 낮출 수 있는 지금, 우리는 처음으로 "탐구하면서 동시에 구조화하는" 방식으로 연구할 수 있다.
+
+Zettelkasten을 만든 Niklas Luhmann은 자신의 카드 상자를 "대화 파트너"라고 불렀다. EMDD의 그래프도 그런 대화 파트너이되, 이제는 AI라는 중재자를 통해 대화가 양방향으로 흐른다. 그래프가 연구자에게 말을 건다. "여기에 빈 공간이 있다. 여기에 모순이 있다. 여기를 먼저 확인해보는 것은 어떤가."
+
+연구자는 답한다. 때로는 그 제안을 따라, 때로는 완전히 다른 방향으로. 그리고 그 모든 움직임이 그래프에 기록되어 다음 대화의 재료가 된다.
+
+**탐구를 구조화하되, 구조에 갇히지 마라. 그것이 EMDD이다.**
+
+---
+
+<!-- v0.3: v0.3 후보 appendix 제거, changelog로 교체 -->
+## Appendix: v0.3 Changelog (v0.2 대비 변경 사항)
+
+1. **Finding/Insight 통합 (6.2)**: Insight 타입을 제거하고 Finding에 흡수. `finding_type` 필드로 `observation`, `insight`, `negative` 세 하위 유형을 구분. 노드 타입 8종 → 7종. `insights/` 디렉토리 불필요, `findings/`가 정규 위치.
+
+2. **엣지 타입 정비 (6.4)**: `CONFIRMS`를 `SUPPORTS(strength>=0.9)`의 편의 별칭으로 추가 (13종 → 14종). Frontmatter `relation:` 필드의 소문자 표기가 대문자 정형 타입에 매핑됨을 명시.
+
+3. **Knowledge Status 전이 신설 (6.6)**: Knowledge의 `ACTIVE → DISPUTED → SUPERSEDED/RETRACTED` 상태 전이와 각 전이 시 수행 사항(confidence penalty, 클러스터 진입점 교체, 피벗 트리거 등)을 정의.
+
+4. **컨텍스트 로딩에 Consolidation 트리거 체크 추가 (6.9)**: 탐구 시작 전 프로토콜에 4번째 단계로 "Finding 미승격 수, Episode 축적 수 확인 → 트리거 충족 시 Consolidation 권장 메시지" 추가.
+
+5. **Episode 상태 마커 테이블화 (6.3)**: "다음에 할 것"의 상태 마커(`[ ]`, `[done]`, `[deferred]`, `[superseded]`)를 테이블로 정리하여 가독성 향상.
+
+6. **`_graph.mmd` 갱신 시점 명확화 (8.2)**: Consolidation 세러모니 완료 시와 주간 그래프 리뷰 시에만 갱신. Episode 생성 시에는 갱신하지 않음 (마찰 예산 고려).
+
+7. **Health 대시보드 not-pursued 목록화 (7.4)**: `not-pursued:` 태그 수집 시 숫자뿐 아니라 항목 목록도 표시. `_index.md` Negative Decisions 섹션과의 동기화 확인 규칙 추가.
+
+8. **Knowledge 반증 세러모니 신설 (7.4)**: Knowledge RETRACTED 시 30~60분 세러모니 — 스냅샷, 승격 실패 원인 분석, 다운스트림 영향 순회, 클러스터 진입점 교체, 피벗 트리거 체크.
+
+9. **섹션 번호 재정렬**: Knowledge Status 전이(6.6) 신설로 이후 섹션 번호가 1씩 증가 (구 6.5→6.7, 구 6.6→6.8, 구 6.7→6.9).
+
+**v0.3 2차 리뷰 반영 (피드백 6건):**
+
+10. **DISPUTED penalty severity 연동 (6.6)**: 일률 ×0.7 → FATAL ×0.5 / WEAKENING ×0.7 / TENSION ×0.9. 6.7 Confidence 전파 공식의 severity_weight와 일관성 확보.
+
+11. **Knowledge 승격 기준 명시 (6.2)**: 독립 지지 2개+, confidence ≥ 0.9, 사실상 사용 중 (3개 기준 중 하나 이상). 반증 캐스케이드 비용을 승격 판단의 입력으로 고려.
+
+12. **RETRACTED Knowledge 처리 정밀화 (6.6)**: `knowledge/` 디렉토리에 유지 + `status: retracted` (파일 이동 없음 — 참조 보존, 원칙 4 준수). 원본 Finding confidence 하향.
+
+13. **Episode 예시 relation 현재형 통일 (6.3)**: `produced` → `produces`, `spawned` → `spawns`. 실전 그래프와 일치.
+
+14. **AI 권한 테이블에 Knowledge status 변경 추가 (7.3)**: "승인 필요"에 Knowledge DISPUTED/RETRACTED 변경 추가. "절대 금지"에 Knowledge 노드 삭제 추가.
+
+15. **시작하기 mkdir 보완 (10)**: `knowledge/`, `episodes/` 디렉토리 추가.
+
+16. **역방향 라벨 공식 허용 (6.4)**: `confirmed_by`, `supported_by`, `answered_by`, `spawned_from`, `produced_by`를 정규 엣지 타입의 역방향 편의 표기로 공식 허용. 양쪽 파일에 중복 기재 금지.
+
+## Appendix: v0.4 Changelog (v0.3 대비 변경 사항)
+
+1. **Skeleton Episode (6.3)**: Episode의 5가지 섹션을 필수/선택으로 분리. "시도한 것"과 "다음에 할 것"만 필수, 나머지("막혔던 것", "하지 않기로 한 것", "떠오른 질문")는 해당 시에만 작성. 빈 선택 섹션은 생략하여 마찰 감소.
+
+2. **Consolidation Hint Tags (6.2, 7.4)**: Finding의 links에 `extends: know-NNN` 힌트를 공식 허용. Consolidation 승격 단계에서 "hint가 있는 Finding부터 검토" 규칙 추가. 힌트는 승격 판단을 가속하지만 승격 기준(독립 지지 2개+, confidence ≥ 0.9, 사실상 사용 중)을 면제하지 않음.
+
+3. **CLI-Slash 통합**: 슬래시 커맨드(`emdd-episode`, `emdd-context`, `emdd-consolidation`, `emdd-health`)가 CLI 커맨드를 직접 호출하도록 템플릿 재작성. 새 CLI 커맨드 4개 추가:
+   - `emdd update <node-id> --set key=value`: frontmatter 필드 업데이트 (confidence 범위 검증 포함)
+   - `emdd link <source-id> <target-id> <relation>`: 노드 간 링크 추가 (relation 검증, 중복 skip)
+   - `emdd done <episode-id> "<item>"`: Episode "다음에 할 것" 항목의 상태 마커 변경
+   - `emdd backlog [--status pending|deferred|all]`: 전체 Episode의 미완료 항목 통합 조회 (중복 제거)
+   - `init` 커맨드에서 `{EMDD_PY}` 플레이스홀더를 실제 경로로 치환하여 설치
