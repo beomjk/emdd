@@ -14,6 +14,7 @@ import { graphCommand } from './commands/graph.js';
 import { backlogCommand } from './commands/backlog.js';
 import { resolveGraphDir } from './graph/loader.js';
 import { startMcpServer } from './mcp-server/index.js';
+import { VERSION } from './version.js';
 
 function withCliErrorHandling<T extends unknown[]>(
   fn: (...args: T) => Promise<void>,
@@ -34,7 +35,7 @@ const program = new Command();
 program
   .name('emdd')
   .description('CLI for Evolving Mindmap-Driven Development')
-  .version('0.1.0');
+  .version(VERSION);
 
 program
   .command('init [path]')

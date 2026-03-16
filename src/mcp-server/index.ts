@@ -11,9 +11,10 @@ import { registerContextLoading } from './prompts/context-loading.js';
 import { registerEpisodeCreation } from './prompts/episode-creation.js';
 import { registerConsolidation } from './prompts/consolidation.js';
 import { registerHealthReview } from './prompts/health-review.js';
+import { VERSION } from '../version.js';
 
 export function createEmddMcpServer(): McpServer {
-  const server = new McpServer({ name: 'emdd', version: '0.1.0' });
+  const server = new McpServer({ name: 'emdd', version: VERSION });
 
   // Tools
   registerListNodes(server);
