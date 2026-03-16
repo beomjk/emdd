@@ -5,7 +5,7 @@
 ## 1. Install (30 seconds)
 
 ```bash
-npx emdd --version
+npx @beomjk/emdd --version
 ```
 
 If you see a version number, you're ready. No global install needed.

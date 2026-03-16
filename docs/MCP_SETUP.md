@@ -15,7 +15,7 @@ The server communicates over stdio transport and is started with `emdd mcp`.
 
 ```bash
 # Install emdd globally (or use npx)
-npm install -g emdd
+npm install -g @beomjk/emdd
 
 # Initialize an EMDD project (if you haven't already)
 emdd init my-research
@@ -32,7 +32,7 @@ Then configure your AI tool using one of the sections below.
 ## Claude Code
 
 ```bash
-claude mcp add emdd -- npx emdd mcp
+claude mcp add emdd -- npx @beomjk/emdd mcp
 ```
 
 This registers the EMDD MCP server with Claude Code. Tools and prompts become available immediately in your next session.
@@ -41,7 +41,7 @@ This registers the EMDD MCP server with Claude Code. Tools and prompts become av
 
 ```bash
 # From your project root
-cp -r node_modules/emdd/.claude/commands .claude/commands
+cp -r node_modules/@beomjk/emdd/.claude/commands .claude/commands
 ```
 
 Or create them manually — see the [Slash Commands](#slash-commands-for-claude-code) section below.
@@ -57,7 +57,7 @@ Create `.cursor/mcp.json` in your project root:
   "mcpServers": {
     "emdd": {
       "command": "npx",
-      "args": ["emdd", "mcp"]
+      "args": ["@beomjk/emdd", "mcp"]
     }
   }
 }
@@ -83,7 +83,7 @@ Alternatively, if Windsurf supports a config file (e.g., `~/.codeium/windsurf/mc
   "mcpServers": {
     "emdd": {
       "command": "npx",
-      "args": ["emdd", "mcp"]
+      "args": ["@beomjk/emdd", "mcp"]
     }
   }
 }
@@ -117,7 +117,7 @@ Create `.vscode/mcp.json` in your project root:
   "servers": {
     "emdd": {
       "command": "npx",
-      "args": ["emdd", "mcp"]
+      "args": ["@beomjk/emdd", "mcp"]
     }
   }
 }
@@ -193,7 +193,7 @@ Ensure Node.js (v18+) and npm are installed and available in your PATH. If using
 # Verify
 node --version   # Should be v18+
 npx --version    # Should be available
-npx emdd --version
+npx @beomjk/emdd --version
 ```
 
 ### MCP server does not appear in tool list
@@ -214,11 +214,11 @@ The MCP server uses stdio transport — it reads from stdin and writes to stdout
 
 ### Permission errors on global install
 
-If `npm install -g emdd` fails with permission errors:
+If `npm install -g @beomjk/emdd` fails with permission errors:
 
 ```bash
 # Option 1: Use npx (no global install needed)
-npx emdd mcp
+npx @beomjk/emdd mcp
 
 # Option 2: Fix npm permissions
 # See https://docs.npmjs.com/resolving-eacces-permissions-errors-when-installing-packages-globally

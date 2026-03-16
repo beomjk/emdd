@@ -63,13 +63,13 @@ Hypotheses move through `PROPOSED -> TESTING -> SUPPORTED / REFUTED / REVISED`. 
 ## Installation
 
 ```bash
-npm install -g emdd
+npm install -g @beomjk/emdd
 ```
 
 Or use directly with npx:
 
 ```bash
-npx emdd <command>
+npx @beomjk/emdd <command>
 ```
 
 ## Quick Start
