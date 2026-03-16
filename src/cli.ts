@@ -34,8 +34,8 @@ program
   .command('new <type> <slug>')
   .description('Create a new node')
   .option('--path <path>', 'Project path')
-  .action((type, slug, options) => {
-    newCommand(type, slug, options);
+  .action(async (type, slug, options) => {
+    await newCommand(type, slug, options);
   });
 
 program
