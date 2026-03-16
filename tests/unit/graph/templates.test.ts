@@ -79,7 +79,7 @@ describe('nextId', () => {
 
   it('기존 노드가 있으면 다음 번호를 반환한다', () => {
     const id = nextId(path.join(FIXTURES, 'sample-graph'), 'hypothesis');
-    expect(id).toBe('hyp-002');
+    expect(id).toBe('hyp-003');
   });
 
   it('각 타입별로 올바른 prefix를 사용한다', () => {

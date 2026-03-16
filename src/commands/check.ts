@@ -1,14 +1,5 @@
 import { loadGraph } from '../graph/loader.js';
-
-export interface CheckTrigger {
-  type: string;
-  message: string;
-  count?: number;
-}
-
-export interface CheckResult {
-  triggers: CheckTrigger[];
-}
+import type { CheckTrigger, CheckResult } from '../graph/types.js';
 
 /**
  * Check consolidation triggers in the graph.

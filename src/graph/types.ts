@@ -149,3 +149,53 @@ export interface Graph {
   errors: string[];
   warnings: string[];
 }
+
+// ── Operations Return Types ────────────────────────────────────────
+
+export interface NodeFilter {
+  type?: NodeType;
+  status?: string;
+}
+
+export interface NodeDetail extends Node {
+  body: string;
+}
+
+export interface CreateNodeResult {
+  id: string;
+  type: NodeType;
+  path: string;
+}
+
+export interface CreateEdgeResult {
+  source: string;
+  target: string;
+  relation: string;
+}
+
+export interface HealthReport {
+  totalNodes: number;
+  totalEdges: number;
+  byType: Record<string, number>;
+  statusDistribution: Record<string, Record<string, number>>;
+  avgConfidence: number | null;
+  openQuestions: number;
+  linkDensity: number;
+  gaps: string[];
+}
+
+export interface CheckTrigger {
+  type: string;
+  message: string;
+  count?: number;
+}
+
+export interface CheckResult {
+  triggers: CheckTrigger[];
+}
+
+export interface PromoteCandidate {
+  id: string;
+  confidence: number;
+  supports: number;
+}

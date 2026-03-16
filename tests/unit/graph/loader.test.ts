@@ -48,10 +48,10 @@ describe('loadNode', () => {
 });
 
 describe('loadGraph', () => {
-  it('loads all 7 nodes from sample-graph fixture', async () => {
+  it('loads all nodes from sample-graph fixture', async () => {
     const graphDir = path.join(FIXTURES, 'sample-graph');
     const graph = await loadGraph(graphDir);
-    expect(graph.nodes.size).toBe(7);
+    expect(graph.nodes.size).toBe(14);
     expect(graph.nodes.has('hyp-001')).toBe(true);
     expect(graph.nodes.has('exp-001')).toBe(true);
     expect(graph.nodes.has('fnd-001')).toBe(true);

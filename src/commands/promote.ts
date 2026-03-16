@@ -1,10 +1,5 @@
 import { loadGraph } from '../graph/loader.js';
-
-export interface PromoteCandidate {
-  id: string;
-  confidence: number;
-  supports: number;
-}
+import type { PromoteCandidate } from '../graph/types.js';
 
 export interface PromoteResult {
   candidates: PromoteCandidate[];
