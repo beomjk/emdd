@@ -32,7 +32,6 @@ export type EdgeType =
   | 'context_for'
   // aliases
   | 'tests'
-  | 'answers_to'
   // reverse labels
   | 'confirmed_by'
   | 'supported_by'
@@ -51,7 +50,7 @@ export const EDGE_TYPES = new Set<string>([
   // composition
   'part_of', 'context_for',
   // aliases
-  'tests', 'answers_to',
+  'tests',
 ]);
 
 export const REVERSE_LABELS: Record<string, string> = {

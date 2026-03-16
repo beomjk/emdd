@@ -264,11 +264,11 @@ During Consolidation, if 3 or more `[deferred]` items have accumulated, conduct 
    ```
 
 <!-- v0.3: Frontmatter lowercase mapping note + CONFIRMS added for 14 total -->
-### 6.4 Edge Types (14)
+### 6.4 Edge Types (15)
 
 **Frontmatter notation convention:** The `relation:` field in YAML frontmatter uses lowercase present tense (e.g., `relation: produces`). This maps to the canonical type `PRODUCES`. The uppercase names in the table below are canonical types; frontmatter uses lowercase snake_case.
 
-**Reverse labels allowed:** When recording a link from node A to target B, there are cases where you need to express the relationship in the B-to-A direction. In these cases, use reverse labels with `_by` or `_from` suffixes: `confirmed_by`, `supported_by`, `answered_by`, `spawned_from`, `produced_by`. These are the reverses of `CONFIRMS`, `SUPPORTS`, `ANSWERS`, `SPAWNS`, and `PRODUCES` respectively. Do not duplicate the canonical-direction link in the other file.
+**Reverse labels allowed:** When recording a link from node A to target B, there are cases where you need to express the relationship in the B-to-A direction. In these cases, use reverse labels with `_by` or `_from` suffixes: `confirmed_by`, `supported_by`, `answered_by`, `spawned_from`, `produced_by`, `tested_by`. These are the reverses of `CONFIRMS`, `SUPPORTS`, `ANSWERS`, `SPAWNS`, `PRODUCES`, and `TESTS` respectively. Do not duplicate the canonical-direction link in the other file.
 
 **Evidential edges:**
 - `SUPPORTS` — A supports B (strength: 0.0--1.0)
@@ -291,6 +291,9 @@ During Consolidation, if 3 or more `[deferred]` items have accumulated, conduct 
 **Compositional edges:**
 - `PART_OF` — A is a sub-element of B
 - `CONTEXT_FOR` — A provides context/background for B
+
+**Alias edges:**
+- `TESTS` — A tests B (Experiment tests Hypothesis). Reverse label: `tested_by`
 
 **Edge selection guide (commonly confused pairs):**
 
@@ -343,6 +346,7 @@ Kill criteria are checked at these moments:
 | **Milestone Ceremony** | Researcher + AI | Review all active hypotheses' kill criteria |
 | **Weekly Review** | Researcher | Scan for hypotheses approaching their kill threshold |
 | **Confidence drops below 0.3** | AI agent (automatic) | Remind researcher of the kill criterion |
+| **Stale hypothesis (14+ days)** | AI agent (automatic) | Flag hypotheses in TESTING with no update for 14+ days |
 
 #### What Happens When a Kill Criterion is Met
 

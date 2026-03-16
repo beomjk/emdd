@@ -198,6 +198,60 @@ describe('linkCommand', () => {
   });
 });
 
+describe('updateCommand edge cases', () => {
+  let tmpDir: string;
+
+  beforeEach(() => { tmpDir = setupProject(); });
+  afterEach(() => { rmSync(tmpDir, { recursive: true, force: true }); });
+
+  it('rejects confidence > 1.0', async () => {
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'Test',
+      status: 'PROPOSED', confidence: 0.5,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+
+    await expect(
+      updateCommand(join(tmpDir, 'graph'), 'hyp-001', { confidence: '1.5' })
+    ).rejects.toThrow();
+  });
+
+  it('preserves body content after update', async () => {
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'Test',
+      status: 'PROPOSED', confidence: 0.5,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    }, '## Analysis\n\nImportant findings here.');
+
+    await updateCommand(join(tmpDir, 'graph'), 'hyp-001', { confidence: '0.8' });
+
+    const content = readFileSync(join(tmpDir, 'graph', 'hypotheses', 'hyp-001-test.md'), 'utf-8');
+    expect(content).toContain('Important findings here.');
+  });
+});
+
+describe('doneCommand edge cases', () => {
+  let tmpDir: string;
+
+  beforeEach(() => { tmpDir = setupProject(); });
+  afterEach(() => { rmSync(tmpDir, { recursive: true, force: true }); });
+
+  it('throws on multiple matches', async () => {
+    writeNode(tmpDir, 'episodes', 'epi-001-test.md', {
+      id: 'epi-001', type: 'episode', title: 'Test Episode',
+      status: 'ACTIVE',
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    }, '## Goals\n\n- [ ] run experiment\n- [ ] run experiment\n');
+
+    await expect(
+      doneCommand(join(tmpDir, 'graph'), 'epi-001', 'run experiment')
+    ).rejects.toThrow();
+  });
+});
+
 describe('doneCommand', () => {
   let tmpDir: string;
 

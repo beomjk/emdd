@@ -104,10 +104,10 @@ See the [Quick Start Guide](docs/QUICK_START.md) for a full walkthrough.
 | `emdd update <node-id> --set key=value` | Update node frontmatter |
 | `emdd done <episode-id> "<item>"` | Mark an episode item as done |
 | `emdd lint [path]` | Validate schema and link integrity |
-| `emdd health [path]` | Show graph health dashboard |
+| `emdd health [path]` | Show graph health dashboard (`--all`) |
 | `emdd check [path]` | Check consolidation triggers |
 | `emdd promote [path]` | Identify promotion candidates |
-| `emdd backlog [path]` | List incomplete items across all nodes |
+| `emdd backlog [path]` | List incomplete items across all nodes (`--status <pending\|all\|deferred>`) |
 | `emdd index [path]` | Generate `_index.md` |
 | `emdd graph [path]` | Generate `_graph.mmd` (Mermaid) |
 | `emdd confidence [path]` | Propagate confidence across the graph |
