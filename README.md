@@ -56,21 +56,57 @@ Question ──> Hypothesis ──> Experiment ──> Finding
 
 Hypotheses move through `PROPOSED -> TESTING -> SUPPORTED / REFUTED / REVISED`. Findings accumulate evidence. When a Finding has sufficient independent support, it is promoted to Knowledge. Refuted hypotheses are preserved -- the knowledge of *why* something failed is itself knowledge.
 
+## Installation
+
+```bash
+npm install -g emdd
+```
+
+Or use directly with npx:
+
+```bash
+npx emdd <command>
+```
+
 ## Quick Start
 
 ```bash
-# Initialize an EMDD graph
-mkdir -p graph/{hypotheses,experiments,findings,knowledge,questions,decisions,episodes,_analysis}
-mkdir -p scratchpad
+# Initialize an EMDD project
+emdd init my-research
 
-# Then ask your AI assistant:
-# "Organize this project's research questions and assumptions
-#  into EMDD nodes in the graph/ directory."
+# Create your first nodes
+cd my-research
+emdd new question "what-causes-defects" --lang en
+emdd new hypothesis "surface-cracks-from-stress"
+
+# Link them
+emdd link qst-001 hyp-001 MOTIVATES
+
+# Check graph health
+emdd lint
+emdd health
 ```
 
-What you need: **Markdown files and an AI assistant.** That is all.
+See the [Quick Start Guide](docs/QUICK_START.md) for a full walkthrough.
 
-See the [Quick Start Guide](docs/QUICK_START.md) for a walkthrough of creating your first nodes and running your first exploration session.
+## CLI Commands
+
+| Command | Description |
+|---------|-------------|
+| `emdd init [path]` | Initialize a new EMDD project |
+| `emdd new <type> <slug>` | Create a node (hypothesis, experiment, finding, ...) |
+| `emdd link <source> <target> <relation>` | Add a link between nodes |
+| `emdd update <node-id> --set key=value` | Update node frontmatter |
+| `emdd done <episode-id> "<item>"` | Mark an episode item as done |
+| `emdd lint [path]` | Validate schema and link integrity |
+| `emdd health [path]` | Show graph health dashboard |
+| `emdd check [path]` | Check consolidation triggers |
+| `emdd promote [path]` | Identify promotion candidates |
+| `emdd backlog [path]` | List incomplete items across all nodes |
+| `emdd index [path]` | Generate `_index.md` |
+| `emdd graph [path]` | Generate `_graph.mmd` (Mermaid) |
+
+All commands support `--lang en|ko` for bilingual output.
 
 ## Phased Adoption
 
@@ -86,9 +122,13 @@ See [section 11 of the specification](docs/spec/SPEC_EN.md#11-phased-adoption-gu
 
 ## Documentation
 
-- [Full Specification](docs/spec/SPEC_EN.md) -- the complete methodology (sections 1-11)
+- [Quick Start Guide](docs/QUICK_START.md) -- get started in 15 minutes
+- [Full Specification](docs/spec/SPEC_EN.md) -- the complete methodology
+- [Philosophy](docs/PHILOSOPHY.md) -- why EMDD exists
+- [Operations](docs/OPERATIONS.md) -- research loops, ceremonies, adoption
 - [Tool Comparison](docs/COMPARISON.md) -- EMDD vs. Obsidian, Zettelkasten, DDP, HDD, nbdev, and more
 - [Glossary](docs/GLOSSARY.md) -- definitions of all EMDD terms
+- [한국어 스펙](docs/spec/SPEC_KO.md) -- Korean specification
 
 ## What EMDD is NOT
 
@@ -100,8 +140,8 @@ See [section 11 of the specification](docs/spec/SPEC_EN.md#11-phased-adoption-gu
 
 ## Contributing
 
-EMDD is a young methodology and contributions are welcome -- whether that is trying it on your own project and reporting what worked, proposing changes to the spec, or building tooling. A `CONTRIBUTING.md` guide is forthcoming.
+Contributions are welcome -- whether that is trying EMDD on your own project and reporting what worked, proposing changes to the spec, or building tooling. See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for guidelines and the RFC process.
 
 ## License
 
-License to be determined (MIT or Apache-2.0). See `LICENSE` for details once finalized.
+[MIT](LICENSE)
