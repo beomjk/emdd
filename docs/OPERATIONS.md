@@ -434,7 +434,7 @@ emdd update exp-003 --set status=COMPLETED
 # - name: Update EMDD
 #   run: |
 #     emdd update exp-004 --set status=COMPLETED
-#     emdd update exp-004 --set "meta.ci_run=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+#     # Note: emdd update sets flat key-value pairs; for nested metadata, edit the file directly
 ```
 
 #### Recipe: Paper → Knowledge Node
@@ -532,8 +532,8 @@ Use separate `graph/` directories per project with `meta.xref` for cross-referen
 time emdd lint
 time emdd health
 
-# JSON output for scripting
-emdd health --json | jq '.totalNodes, .linkDensity'
+# Measure command performance
+time emdd health
 ```
 
 **Targets by tier:**

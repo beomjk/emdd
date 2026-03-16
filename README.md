@@ -80,7 +80,7 @@ emdd init my-research
 
 # Create your first nodes
 cd my-research
-emdd new question "what-causes-defects" --lang en
+emdd new question "what-causes-defects"
 emdd new hypothesis "surface-cracks-from-stress"
 
 # Link them
@@ -130,7 +130,7 @@ See [section 11 of the specification](docs/spec/SPEC_EN.md#11-phased-adoption-gu
 
 - [EMDD in 5 Minutes](docs/TUTORIAL.md) -- copy-paste tutorial
 - [Quick Start Guide](docs/QUICK_START.md) -- get started in 15 minutes
-- [Example Graph](examples/ml-backbone-selection/) -- a complete 13-node research narrative
+- [Example Graph](examples/ml-backbone-selection/) -- a complete 14-node research narrative
 - [Full Specification](docs/spec/SPEC_EN.md) -- the complete methodology
 - [Philosophy](docs/PHILOSOPHY.md) -- why EMDD exists
 - [Operations](docs/OPERATIONS.md) -- research loops, ceremonies, adoption

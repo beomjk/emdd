@@ -14,7 +14,7 @@
 | 결정 (Decision) | Decision | Recorded decision with rationale | §6.2 |
 | 에피소드 (Episode) | Episode | Record of one exploration loop | §6.3 |
 
-## Finding Subtypes
+## Finding Subtypes (spec only, not yet implemented in CLI/MCP)
 
 | Korean | English | Description | Spec Section |
 |--------|---------|-------------|--------------|
@@ -51,7 +51,23 @@
 | 반증됨 (REFUTED) | REFUTED | CONTRADICTS edge exists | §6.5 |
 | 수정됨 (REVISED) | REVISED | Partial support/refutation leads to revised hypothesis | §6.5 |
 | 보류 (DEFERRED) | DEFERRED | Explicitly deferred by the researcher | §6.5 |
-| 활성 (ACTIVE) | ACTIVE | Knowledge is current and valid | §6.6 |
+| 이의 제기 (CONTESTED) | CONTESTED | Team members disagree on verdict (team protocol) | §7.2b |
+| 계획됨 (PLANNED) | PLANNED | Experiment initial state | §6.5 |
+| 실행 중 (RUNNING) | RUNNING | Experiment is being executed | §6.5 |
+| 완료 (COMPLETED) | COMPLETED | Experiment finished successfully | §6.5 |
+| 실패 (FAILED) | FAILED | Experiment failed | §6.5 |
+| 포기 (ABANDONED) | ABANDONED | Experiment or question abandoned | §6.5 |
+| 초안 (DRAFT) | DRAFT | Finding initial state | §6.5 |
+| 검증됨 (VALIDATED) | VALIDATED | Finding validated by evidence | §6.5 |
+| 승격됨 (PROMOTED) | PROMOTED | Finding promoted to knowledge | §6.5 |
+| 열림 (OPEN) | OPEN | Question is open | §6.5 |
+| 해결됨 (RESOLVED) | RESOLVED | Question resolved | §6.5 |
+| 답변됨 (ANSWERED) | ANSWERED | Question answered | §6.5 |
+| 수렴 (CONVERGED) | CONVERGED | Question converged from multiple sources | §6.5 |
+| 병합됨 (MERGED) | MERGED | Question merged with another | §6.5 |
+| 수락됨 (ACCEPTED) | ACCEPTED | Decision accepted | §6.5 |
+| 되돌림 (REVERTED) | REVERTED | Decision reverted | §6.5 |
+| 활성 (ACTIVE) | ACTIVE | Knowledge or episode is current and valid | §6.6 |
 | 논쟁 중 (DISPUTED) | DISPUTED | Knowledge contradicted by new Finding | §6.6 |
 | 대체됨 (SUPERSEDED) | SUPERSEDED | Knowledge replaced by newer Knowledge | §6.6 |
 | 철회됨 (RETRACTED) | RETRACTED | Knowledge contradiction confirmed, no replacement | §6.6 |

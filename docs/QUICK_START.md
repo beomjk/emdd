@@ -21,11 +21,11 @@ You do not need `decisions/` or `_analysis/` yet. Those come later when you adop
 
 Create your first Knowledge node to anchor the graph. This is the established fact that everything else builds on.
 
-Create `graph/knowledge/know-001.md`:
+Create `graph/knowledge/knw-001.md`:
 
 ```markdown
 ---
-id: know-001
+id: knw-001
 type: knowledge
 status: active
 confidence: 1.0
@@ -63,7 +63,7 @@ created: 2026-03-15
 created_by: human:yourname
 tags: [your-topic]
 links:
-  - target: know-001
+  - target: knw-001
     relation: depends_on
 kill_criterion: "[What specific result would prove this wrong?]"
 ---
@@ -135,7 +135,7 @@ outcome: success
 created_by: human:yourname
 tags: [setup, kickoff]
 links:
-  - target: know-001
+  - target: knw-001
     relation: produces
   - target: hyp-001
     relation: produces
@@ -144,7 +144,7 @@ links:
 # EP-001: Project Kickoff
 
 ## What I Tried
-- Defined the core problem in know-001
+- Defined the core problem in knw-001
 - Formed initial hypothesis in hyp-001
 - Designed first experiment in exp-001
 
@@ -153,7 +153,7 @@ links:
 
 ## What's Next
 - [ ] Run exp-001
-  - Prerequisite reading: know-001, hyp-001
+  - Prerequisite reading: knw-001, hyp-001
 - [ ] [Another next step you are considering]
   - Prerequisite reading: [relevant node IDs]
 ```
@@ -166,7 +166,7 @@ The **Prerequisite reading** line under each next step is important: it tells fu
 
 ```
 graph/
-  knowledge/know-001.md    -- Your problem definition
+  knowledge/knw-001.md     -- Your problem definition
   hypotheses/hyp-001.md    -- Your first testable guess
   experiments/exp-001.md   -- How you will test it
   episodes/ep-001.md       -- Record of your first session
@@ -214,7 +214,7 @@ That is it. The graph grows naturally from this loop.
 ## Tips
 
 - **Start messy.** Throw nodes in first, organize later. The moment the graph feels like bureaucracy, you are over-structuring.
-- **Record failures.** Dead ends are knowledge too. A confirmed "this does not work" (`finding_type: negative`) is as valuable as a success -- it prevents you and others from walking the same dead end again.
+- **Record failures.** Dead ends are knowledge too. A confirmed "this does not work" is as valuable as a success -- it prevents you and others from walking the same dead end again.
 - **Let the AI help.** Ask your AI assistant to maintain the graph, detect gaps, and suggest next steps. The AI is a gardener, not an architect -- it tends the graph, but you decide where it grows.
 - **Keep Episodes short.** "What I tried" and "What's next" are the only mandatory sections. A five-line Episode is better than no Episode.
 - **Do not delete -- deprecate.** When a hypothesis is wrong, change its status to `refuted`. When knowledge is overturned, mark it `retracted`. The graph should be able to answer "why didn't we try that?" six months from now.

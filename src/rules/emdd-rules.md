@@ -33,7 +33,7 @@ updated: 2026-03-15
 created_by: human:yourname
 tags: [topic]
 links:
-  - target: know-001
+  - target: knw-001
     relation: depends_on
 ---
 # Title here
