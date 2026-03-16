@@ -199,3 +199,12 @@ export interface PromoteCandidate {
   confidence: number;
   supports: number;
 }
+
+// ── File Operations (plan+execute pattern) ────────────────────────
+
+export interface WriteFileOp { kind: 'write'; path: string; content: string; }
+export interface MkdirOp { kind: 'mkdir'; path: string; }
+export type FileOp = WriteFileOp | MkdirOp;
+
+export interface CreateNodePlan { id: string; type: NodeType; path: string; ops: FileOp[]; }
+export interface CreateEdgePlan { source: string; target: string; relation: string; ops: FileOp[]; }

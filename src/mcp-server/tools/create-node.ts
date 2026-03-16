@@ -10,7 +10,9 @@ export function registerCreateNode(server: McpServer): void {
     {
       graphDir: z.string().describe('Path to the EMDD graph directory'),
       type: z.string().describe('Node type (hypothesis, experiment, finding, knowledge, question, decision, episode)'),
-      slug: z.string().describe('URL-friendly slug for the node'),
+      slug: z.string().min(1).max(80)
+        .regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/, 'Slug must be alphanumeric with hyphens/underscores')
+        .describe('URL-friendly slug for the node'),
       lang: z.string().optional().describe('Language locale (default: en)'),
     },
     async ({ graphDir, type, slug, lang }) =>

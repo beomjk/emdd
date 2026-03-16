@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, rmSync, mkdirSync } from 'node:fs';
+import { mkdtempSync, rmSync, mkdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -18,6 +18,9 @@ import {
   readNode,
   createNode,
   createEdge,
+  planCreateNode,
+  planCreateEdge,
+  executeOps,
   getHealth,
   checkConsolidation,
   getPromotionCandidates,
@@ -257,5 +260,86 @@ describe('getPromotionCandidates', () => {
       expect(typeof c.supports).toBe('number');
       expect(c.supports).toBeGreaterThanOrEqual(2);
     }
+  });
+});
+
+describe('planCreateNode', () => {
+  let tmpDir: string;
+  beforeEach(() => { tmpDir = setupProject(); });
+  afterEach(() => { rmSync(tmpDir, { recursive: true, force: true }); });
+
+  it('returns plan without creating files', () => {
+    const plan = planCreateNode(join(tmpDir, 'graph'), 'hypothesis', 'test-idea');
+    expect(plan.id).toMatch(/^hyp-\d{3}$/);
+    expect(plan.type).toBe('hypothesis');
+    expect(plan.ops.length).toBeGreaterThan(0);
+    // File should NOT exist yet
+    expect(existsSync(plan.path)).toBe(false);
+  });
+
+  it('sanitizes slug in the plan', () => {
+    const plan = planCreateNode(join(tmpDir, 'graph'), 'hypothesis', '../../bad-path');
+    expect(plan.path).not.toContain('..');
+    expect(plan.path).toContain('bad-path');
+  });
+
+  it('creates files after executeOps', async () => {
+    const plan = planCreateNode(join(tmpDir, 'graph'), 'finding', 'my-finding');
+    await executeOps(plan.ops);
+    expect(existsSync(plan.path)).toBe(true);
+    const content = readFileSync(plan.path, 'utf-8');
+    expect(content).toContain('finding');
+  });
+});
+
+describe('planCreateEdge', () => {
+  let tmpDir: string;
+  beforeEach(() => { tmpDir = setupProject(); });
+  afterEach(() => { rmSync(tmpDir, { recursive: true, force: true }); });
+
+  it('returns plan with write operation', async () => {
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'Test',
+      status: 'PROPOSED', confidence: 0.5,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+    writeNode(tmpDir, 'experiments', 'exp-001-test.md', {
+      id: 'exp-001', type: 'experiment', title: 'Test Exp',
+      status: 'COMPLETED',
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+
+    const plan = await planCreateEdge(join(tmpDir, 'graph'), 'exp-001', 'hyp-001', 'supports');
+    expect(plan.source).toBe('exp-001');
+    expect(plan.target).toBe('hyp-001');
+    expect(plan.relation).toBe('supports');
+    expect(plan.ops.length).toBe(1);
+    expect(plan.ops[0].kind).toBe('write');
+  });
+
+  it('creates link after executeOps', async () => {
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'Test',
+      status: 'PROPOSED', confidence: 0.5,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+    writeNode(tmpDir, 'experiments', 'exp-001-test.md', {
+      id: 'exp-001', type: 'experiment', title: 'Test Exp',
+      status: 'COMPLETED',
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+
+    const plan = await planCreateEdge(join(tmpDir, 'graph'), 'exp-001', 'hyp-001', 'supports');
+    await executeOps(plan.ops);
+
+    const content = readFileSync(join(tmpDir, 'graph', 'experiments', 'exp-001-test.md'), 'utf-8');
+    const parsed = matter(content);
+    expect(parsed.data.links).toContainEqual(
+      expect.objectContaining({ target: 'hyp-001', relation: 'supports' })
+    );
   });
 });

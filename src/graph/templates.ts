@@ -4,6 +4,18 @@ import type { NodeType } from './types.js';
 import { NODE_TYPE_DIRS, ID_PREFIXES, VALID_STATUSES } from './types.js';
 import type { Locale } from '../i18n/index.js';
 
+// ── sanitizeSlug ──────────────────────────────────────────────────
+
+export function sanitizeSlug(slug: string): string {
+  let s = slug.replace(/[\/\\\.]+/g, '-');
+  s = s.replace(/[^a-zA-Z0-9_-]/g, '');
+  s = s.replace(/-{2,}/g, '-');
+  s = s.replace(/^-+|-+$/g, '');
+  s = s.slice(0, 80);
+  if (s.length === 0) throw new Error('Slug is empty after sanitization');
+  return s;
+}
+
 // ── Body templates per type and locale ─────────────────────────────
 
 const BODY_TEMPLATES: Record<string, Record<NodeType, string>> = {
@@ -72,7 +84,7 @@ export function renderTemplate(
   const lines: string[] = ['---'];
   if (data.id) lines.push(`id: ${data.id}`);
   lines.push(`type: ${data.type}`);
-  lines.push(`title: "${data.title}"`);
+  lines.push(`title: "${String(data.title).replace(/"/g, '\\"')}"`);
   lines.push(`status: ${data.status}`);
   if (confidence !== undefined) {
     lines.push(`confidence: ${data.confidence}`);
@@ -124,5 +136,5 @@ export function nodePath(
   slug: string,
 ): string {
   const typeDir = NODE_TYPE_DIRS[type];
-  return path.join(graphDir, typeDir, `${id}-${slug}.md`);
+  return path.join(graphDir, typeDir, `${id}-${sanitizeSlug(slug)}.md`);
 }

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import matter from 'gray-matter';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { renderTemplate, nextId, nodePath } from '../../../src/graph/templates.js';
+import { renderTemplate, nextId, nodePath, sanitizeSlug } from '../../../src/graph/templates.js';
 import { NODE_TYPES } from '../../../src/graph/types.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -89,6 +89,33 @@ describe('nextId', () => {
     expect(nextId(path.join(FIXTURES, 'empty-graph'), 'question')).toBe('qst-001');
     expect(nextId(path.join(FIXTURES, 'empty-graph'), 'decision')).toBe('dec-001');
     expect(nextId(path.join(FIXTURES, 'empty-graph'), 'episode')).toBe('epi-001');
+  });
+});
+
+describe('sanitizeSlug', () => {
+  it('경로 순회 문자를 제거한다', () => {
+    expect(sanitizeSlug('../../etc/passwd')).toBe('etc-passwd');
+  });
+
+  it('특수문자를 제거한다', () => {
+    expect(sanitizeSlug('hello@world!#$%')).toBe('helloworld');
+  });
+
+  it('반복 하이픈을 단일 하이픈으로 변환한다', () => {
+    expect(sanitizeSlug('foo---bar')).toBe('foo-bar');
+  });
+
+  it('빈 결과에 대해 에러를 던진다', () => {
+    expect(() => sanitizeSlug('...')).toThrow('Slug is empty after sanitization');
+  });
+
+  it('80자를 초과하면 잘린다', () => {
+    const long = 'a'.repeat(100);
+    expect(sanitizeSlug(long).length).toBe(80);
+  });
+
+  it('정상적인 slug는 그대로 반환한다', () => {
+    expect(sanitizeSlug('my-valid-slug_01')).toBe('my-valid-slug_01');
   });
 });
 

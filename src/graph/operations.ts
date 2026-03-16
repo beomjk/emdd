@@ -1,7 +1,8 @@
 import fs from 'node:fs';
+import path from 'node:path';
 import matter from 'gray-matter';
 import { loadGraph } from './loader.js';
-import { nextId, renderTemplate, nodePath } from './templates.js';
+import { nextId, renderTemplate, nodePath, sanitizeSlug } from './templates.js';
 import { NODE_TYPES, NODE_TYPE_DIRS, ALL_VALID_RELATIONS, REVERSE_LABELS } from './types.js';
 import type {
   Node,
@@ -10,6 +11,9 @@ import type {
   NodeDetail,
   CreateNodeResult,
   CreateEdgeResult,
+  CreateNodePlan,
+  CreateEdgePlan,
+  FileOp,
   HealthReport,
   CheckResult,
   CheckTrigger,
@@ -57,7 +61,58 @@ export async function readNode(graphDir: string, nodeId: string): Promise<NodeDe
   };
 }
 
+// ── executeOps ──────────────────────────────────────────────────────
+
+/**
+ * Execute a list of file operations (mkdir / write).
+ */
+export async function executeOps(ops: FileOp[]): Promise<void> {
+  for (const op of ops) {
+    switch (op.kind) {
+      case 'mkdir':
+        if (!fs.existsSync(op.path)) {
+          fs.mkdirSync(op.path, { recursive: true });
+        }
+        break;
+      case 'write':
+        fs.writeFileSync(op.path, op.content, 'utf-8');
+        break;
+    }
+  }
+}
+
 // ── createNode ──────────────────────────────────────────────────────
+
+/**
+ * Plan the creation of a new node (pure computation, no I/O).
+ */
+export function planCreateNode(
+  graphDir: string,
+  type: string,
+  slug: string,
+  lang?: string,
+): CreateNodePlan {
+  if (!NODE_TYPES.includes(type as NodeType)) {
+    throw new Error(`Invalid node type: ${type}. Valid types: ${NODE_TYPES.join(', ')}`);
+  }
+
+  const nodeType = type as NodeType;
+  const id = nextId(graphDir, nodeType);
+  const sanitized = sanitizeSlug(slug);
+  const content = renderTemplate(nodeType, sanitized, {
+    id,
+    locale: (lang as Locale) ?? 'en',
+  });
+  const filePath = nodePath(graphDir, nodeType, id, sanitized);
+  const dir = path.dirname(filePath);
+
+  const ops: FileOp[] = [
+    { kind: 'mkdir', path: dir },
+    { kind: 'write', path: filePath, content },
+  ];
+
+  return { id, type: nodeType, path: filePath, ops };
+}
 
 /**
  * Create a new node of the given type with the given slug.
@@ -69,41 +124,22 @@ export async function createNode(
   slug: string,
   lang?: string,
 ): Promise<CreateNodeResult> {
-  if (!NODE_TYPES.includes(type as NodeType)) {
-    throw new Error(`Invalid node type: ${type}. Valid types: ${NODE_TYPES.join(', ')}`);
-  }
-
-  const nodeType = type as NodeType;
-  const id = nextId(graphDir, nodeType);
-  const content = renderTemplate(nodeType, slug, {
-    id,
-    locale: (lang as Locale) ?? 'en',
-  });
-  const filePath = nodePath(graphDir, nodeType, id, slug);
-
-  // Ensure directory exists
-  const dir = filePath.substring(0, filePath.lastIndexOf('/'));
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-
-  fs.writeFileSync(filePath, content, 'utf-8');
-
-  return { id, type: nodeType, path: filePath };
+  const plan = planCreateNode(graphDir, type, slug, lang);
+  await executeOps(plan.ops);
+  return { id: plan.id, type: plan.type, path: plan.path };
 }
 
 // ── createEdge ──────────────────────────────────────────────────────
 
 /**
- * Add an edge (link) from source to target with the given relation.
- * Validates relation, source existence, and target existence.
+ * Plan the creation of an edge (pure computation after graph load).
  */
-export async function createEdge(
+export async function planCreateEdge(
   graphDir: string,
   source: string,
   target: string,
   relation: string,
-): Promise<CreateEdgeResult> {
+): Promise<CreateEdgePlan> {
   // Validate relation
   if (!ALL_VALID_RELATIONS.has(relation)) {
     const valid = [...ALL_VALID_RELATIONS].sort().join(', ');
@@ -119,7 +155,6 @@ export async function createEdge(
     throw new Error(`Source node not found: ${source}`);
   }
 
-  // Validate target exists (new behavior not in original link.ts)
   const targetNode = graph.nodes.get(target);
   if (!targetNode) {
     throw new Error(`Target node not found: ${target}`);
@@ -140,11 +175,26 @@ export async function createEdge(
   // Auto-update the `updated` field
   parsed.data.updated = new Date().toISOString().slice(0, 10);
 
-  // Write back
+  // Compute new file content
   const output = matter.stringify(parsed.content, parsed.data);
-  fs.writeFileSync(filePath, output);
+  const ops: FileOp[] = [{ kind: 'write', path: filePath, content: output }];
 
-  return { source, target, relation: canonical };
+  return { source, target, relation: canonical, ops };
+}
+
+/**
+ * Add an edge (link) from source to target with the given relation.
+ * Validates relation, source existence, and target existence.
+ */
+export async function createEdge(
+  graphDir: string,
+  source: string,
+  target: string,
+  relation: string,
+): Promise<CreateEdgeResult> {
+  const plan = await planCreateEdge(graphDir, source, target, relation);
+  await executeOps(plan.ops);
+  return { source: plan.source, target: plan.target, relation: plan.relation };
 }
 
 // ── getHealth ───────────────────────────────────────────────────────

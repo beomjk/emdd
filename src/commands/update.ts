@@ -27,7 +27,11 @@ export async function updateCommand(
   // Apply updates
   for (const [key, value] of Object.entries(updates)) {
     if (key === 'confidence') {
-      parsed.data[key] = parseFloat(value);
+      const num = parseFloat(value);
+      if (isNaN(num) || num < 0 || num > 1) {
+        throw new Error(`Invalid confidence value: "${value}" (must be 0-1)`);
+      }
+      parsed.data[key] = num;
     } else {
       parsed.data[key] = value;
     }

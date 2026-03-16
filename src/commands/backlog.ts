@@ -22,14 +22,16 @@ export async function backlogCommand(graphDir: string, _statusFilter?: string): 
     let content: string;
     try {
       content = readFileSync(file, 'utf-8');
-    } catch {
+    } catch (err) {
+      console.warn(`Warning: Could not read ${file}: ${err instanceof Error ? err.message : String(err)}`);
       continue;
     }
 
     let parsed: matter.GrayMatterFile<string>;
     try {
       parsed = matter(content);
-    } catch {
+    } catch (err) {
+      console.warn(`Warning: Could not parse ${file}: ${err instanceof Error ? err.message : String(err)}`);
       continue;
     }
 
