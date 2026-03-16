@@ -1,0 +1,29 @@
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { registerListNodes } from './tools/list-nodes.js';
+import { registerReadNode } from './tools/read-node.js';
+import { registerCreateNode } from './tools/create-node.js';
+import { registerCreateEdge } from './tools/create-edge.js';
+import { registerHealth } from './tools/health.js';
+import { registerCheck } from './tools/check.js';
+import { registerPromote } from './tools/promote.js';
+
+export function createEmddMcpServer(): McpServer {
+  const server = new McpServer({ name: 'emdd', version: '0.1.0' });
+
+  registerListNodes(server);
+  registerReadNode(server);
+  registerCreateNode(server);
+  registerCreateEdge(server);
+  registerHealth(server);
+  registerCheck(server);
+  registerPromote(server);
+
+  return server;
+}
+
+export async function startMcpServer(): Promise<void> {
+  const server = createEmddMcpServer();
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+}

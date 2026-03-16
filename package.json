@@ -4,7 +4,8 @@
   "description": "CLI for Evolving Mindmap-Driven Development",
   "type": "module",
   "bin": {
-    "emdd": "./dist/cli.js"
+    "emdd": "./dist/cli.js",
+    "emdd-mcp": "./dist/mcp-server/cli.js"
   },
   "main": "./dist/index.js",
   "scripts": {
@@ -23,12 +24,14 @@
   ],
   "license": "MIT",
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
     "chalk": "^5.6.2",
     "cli-table3": "^0.6.5",
     "commander": "^14.0.3",
     "glob": "^13.0.6",
     "gray-matter": "^4.0.3",
-    "js-yaml": "^4.1.1"
+    "js-yaml": "^4.1.1",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/node": "^25.5.0",

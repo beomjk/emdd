@@ -13,6 +13,7 @@ import { indexCommand } from './commands/index.js';
 import { graphCommand } from './commands/graph.js';
 import { backlogCommand } from './commands/backlog.js';
 import { resolveGraphDir } from './graph/loader.js';
+import { startMcpServer } from './mcp-server/index.js';
 
 const program = new Command();
 
@@ -158,6 +159,13 @@ program
         console.log(`[ ] ${item.episodeId}  ${item.text}`);
       }
     }
+  });
+
+program
+  .command('mcp')
+  .description('Start MCP server over stdio')
+  .action(async () => {
+    await startMcpServer();
   });
 
 program.parse();
