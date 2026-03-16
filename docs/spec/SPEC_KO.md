@@ -697,6 +697,138 @@ project-root/
 └── pyproject.toml
 ```
 
+### 8.6 외부 도구 통합 패턴
+
+EMDD 그래프는 고립되어 존재하지 않는다. 연구 프로젝트에는 이슈 트래커, 노트북, CI 파이프라인, 문헌 관리 도구가 함께 사용된다. 이 섹션은 외부 도구와 EMDD 그래프를 연결하는 패턴을 정의한다.
+
+**통합 설계 원칙:**
+- EMDD 그래프는 **목적지**이지 소스가 아니다. 외부 도구가 그래프로 흘러들어온다.
+- 완전 자동 통합보다 수동/반자동 통합을 선호한다. 무엇이 그래프에 들어갈지에 대한 인간의 판단이 필수적이다 (원칙 5: 연구자 주권).
+- `meta.source`를 사용하여 외부 시스템으로의 출처를 보존한다.
+
+#### 패턴 1: 이슈 트래커 → Question
+
+| 항목 | 상세 |
+|------|------|
+| **외부 도구** | GitHub Issues, Linear, Jira |
+| **EMDD 매핑** | Issue → `question` 노드 |
+| **트리거** | 연구자가 연구 관련 이슈를 식별 |
+| **자동화 수준** | 수동 (권장) 또는 라벨 필터를 통한 반자동 |
+
+**필드 매핑:**
+
+| 외부 필드 | EMDD 필드 |
+|----------|-----------|
+| `issue.title` | `question.title` |
+| `issue.body` | Question body (마크다운) |
+| `issue.labels` | `question.tags` |
+| `issue.url` | `question.meta.source` (예: `"github:owner/repo#123"`) |
+| `issue.created_at` | `question.created` |
+
+**워크플로우:**
+1. 연구 관련 이슈에 `emdd:question` 또는 `research-question` 라벨 추가
+2. 이슈 내용을 기반으로 `emdd new question <slug>` 실행
+3. 추적성 보존을 위해 `meta.source: "github:owner/repo#123"` 추가
+4. 그래프에서 질문이 해결되면, 원본 이슈에 댓글 또는 종료 (선택)
+
+**사용하지 말 것:** 버그 리포트, 기능 요청, 운영 이슈는 연구 질문이 아니다. 문제 도메인에 대한 진정한 불확실성을 나타내는 이슈만 그래프에 포함한다.
+
+#### 패턴 2: Notebook → Experiment + Finding
+
+| 항목 | 상세 |
+|------|------|
+| **외부 도구** | Jupyter, Google Colab, Kaggle Notebooks |
+| **EMDD 매핑** | Notebook → `experiment` 노드; 핵심 결과 → `finding` 노드 |
+| **트리거** | 실험 완료 |
+| **자동화 수준** | 반자동 (post-run hook) 또는 수동 |
+
+**워크플로우:**
+1. 노트북 첫 번째 셀에 EMDD 메타데이터 추가:
+   ```python
+   # EMDD: tests hyp-002, extends exp-001
+   ```
+2. 실험 완료 후 실험 노드 생성:
+   ```bash
+   emdd new experiment <slug>
+   emdd link exp-004 hyp-002 tests
+   ```
+3. 실험의 `meta.notebook` 필드에 노트북 경로 기록
+4. 핵심 결과를 finding 노드로 추출:
+   ```bash
+   emdd new finding <result-slug>
+   emdd link fnd-005 exp-004 produced_by
+   ```
+
+#### 패턴 3: CI/CD → Experiment Status
+
+| 항목 | 상세 |
+|------|------|
+| **외부 도구** | GitHub Actions, Jenkins, GitLab CI |
+| **EMDD 매핑** | CI 실행 → `experiment.status` 업데이트 |
+| **트리거** | CI 파이프라인 완료 |
+| **자동화 수준** | 자동 (webhook/action) |
+
+CI 완료 시: `emdd update exp-004 --set status=COMPLETED`
+CI 실패 시: `emdd update exp-004 --set status=FAILED`
+CI 실행 URL을 `meta.ci_run`에 기록한다.
+
+#### 패턴 4: 문헌 관리 → Knowledge
+
+| 항목 | 상세 |
+|------|------|
+| **외부 도구** | Zotero, Paperpile, BibTeX 파일 |
+| **EMDD 매핑** | 논문/문헌 → `knowledge` 노드 (status: `ACTIVE`) |
+| **트리거** | 연구 관련 논문 읽기 |
+| **자동화 수준** | 수동 |
+
+논문의 핵심 기여를 요약하는 knowledge 노드를 생성하고, `meta.doi` 또는 `meta.source`에 참조를 기록한다. `tags: [literature, <주제>]`로 실증 지식과 구분한다. 읽은 모든 논문에 노드가 필요한 것은 아니다 — 그래프의 가설이나 질문에 직접 영향을 미치는 논문만 대상이다.
+
+#### 패턴 5: 토론 포럼 → Question 또는 Hypothesis
+
+| 항목 | 상세 |
+|------|------|
+| **외부 도구** | GitHub Discussions, Slack, Discord |
+| **EMDD 매핑** | 스레드 → `question` 또는 `hypothesis` 노드 |
+| **트리거** | 토론에서 연구 관련 질문이나 추측이 도출 |
+| **자동화 수준** | 수동 |
+
+패턴 1과 동일한 워크플로우. `meta.source`에 토론 URL 기록. 검증 가능한 주장이면 `hypothesis`, 열린 불확실성이면 `question`을 사용한다.
+
+#### 패턴 6: Knowledge Base ↔ Graph (양방향)
+
+| 항목 | 상세 |
+|------|------|
+| **외부 도구** | Obsidian, Notion, Logseq |
+| **EMDD 매핑** | 공유 ID를 통한 양방향 동기화 |
+| **트리거** | 정기 동기화 (예: 주간 리뷰) |
+| **자동화 수준** | 수동 또는 플러그인 지원 |
+
+**동기화 규칙:**
+- EMDD 노드 ID (예: `hyp-001`)를 공유 키로 사용
+- Obsidian에서 `[[hyp-001]]` 형식으로 링크; EMDD frontmatter가 메타데이터의 진실 원본
+- 동기화 방향: 그래프 메타데이터는 EMDD → Obsidian, 확장 노트는 Obsidian → EMDD
+- 중복 노드 생성 금지 — 양쪽에 ID가 존재하면 EMDD frontmatter가 우선
+
+**주의:** 양방향 동기화는 가장 복잡한 패턴이다. 양방향 시도 전에 단방향(EMDD → Obsidian 내보내기)부터 시작하라.
+
+#### 통합 설정
+
+`.emdd.yml`에 통합 설정을 지정할 수 있다:
+
+```yaml
+integrations:
+  github:
+    label_filter: "emdd:question"    # 이 라벨이 있는 이슈만 동기화
+    auto_close: false                # 질문 해결 시 이슈 자동 종료 안 함
+  notebooks:
+    path: "notebooks/"               # 노트북 탐색 경로
+    post_hook: ".hooks/post-notebook.sh"
+  ci:
+    auto_update: true                # CI에서 실험 상태 자동 업데이트
+  literature:
+    doi_field: "meta.doi"            # DOI 참조 저장 위치
+```
+
 ---
 
 ## 9. 안티패턴 (6가지)
@@ -760,6 +892,158 @@ mkdir -p scratchpad
 ### Week 4+: Cytoscape.js 시각화, 시간 슬라이더, 자율 분석
 
 **핵심: 도구를 만드느라 연구를 멈추지 말 것.** EMDD의 가치는 도구가 아니라 "연구 지식을 구조화하고 공백을 찾는 사고 방식"에 있다.
+
+---
+
+## 13. 규모 & 성능
+
+EMDD는 "R&D PoC 규모" — 일반적으로 수십에서 수백 개의 노드 — 를 위해 설계되었다. 그러나 프로젝트는 성장하고, 팀은 수개월에 걸쳐 지식을 축적한다. 이 섹션은 다양한 규모에서 그래프를 관리하는 가이드를 제공한다.
+
+### 13.1 규모 기준점
+
+| 기준 | 노드 수 | 대표 시나리오 | 핵심 과제 |
+|------|---------|-------------|----------|
+| **Lite** | ~50 | 단일 PoC, 1인 연구 | 없음 (기본 동작) |
+| **Standard** | ~200 | 중형 프로젝트, 2-3개 가설 계통 | 탐색 효율, 시각화 전환 |
+| **Large** | ~500 | 장기 프로젝트, 팀 연구 | 구조적 분할, 성능 관리 |
+| **Enterprise** | ~1000+ | 다중 프로젝트, 조직 지식 | 그래프 연방화, 아카이빙 |
+
+### 13.2 Lite 기준 (~50 노드)
+
+이 규모에서는 모든 것이 기본 동작으로 충분하다:
+
+- **시각화:** Mermaid가 깔끔하게 렌더링됨
+- **탐색:** 파일 시스템 브라우징 + `emdd list`로 충분
+- **Consolidation 빈도:** 3 Episode마다 (기본 임계값)
+- **성능:** 모든 CLI 커맨드 1초 이내 완료
+
+특별한 조치 불필요. 도구가 아니라 방법론에 집중하라.
+
+### 13.3 Standard 기준 (~200 노드)
+
+~200 노드에서는 단일 Mermaid 다이어그램으로 시각화하기 어렵고, 수동 브라우징이 느려진다.
+
+**권장 사항:**
+- **시각화:** Mermaid → Cytoscape.js 전환 권장. 클러스터 수준 개요를 위해 `_graph.mmd`는 계속 생성
+- **필터링:** 타입·상태 필터 적극 활용: `emdd list --type hypothesis --status TESTING`
+- **태깅:** 클러스터링을 위한 일관된 태그 규칙 채택 (예: `tags: [backbone, cnn]`)
+- **인덱스:** `emdd index` 출력(`_index.md`)을 주요 탐색 도구로 활용
+- **Consolidation 빈도:** 2-3 Episode마다 (Finding 축적 방지를 위해 약간 더 자주)
+
+**성능 목표:**
+
+| 커맨드 | 목표 |
+|--------|------|
+| `emdd health` | < 1초 |
+| `emdd lint` | < 3초 |
+| `emdd list` | < 1초 |
+| `emdd graph` | < 2초 |
+
+### 13.4 Large 기준 (~500 노드)
+
+이 규모에서는 단일 평면 그래프가 다루기 어려워진다. 분할이 필수적이다.
+
+**그래프 분할 전략:**
+
+**A. 시간 기반 아카이빙:**
+완료된 가설 계통을 `archive/` 디렉토리로 이동:
+
+```
+graph/
+├── hypotheses/          # 활성 가설
+├── archive/
+│   └── 2026-q1/         # 아카이브: 해결된 가설 계통
+│       ├── hyp-001-*.md
+│       ├── exp-001-*.md
+│       └── fnd-001-*.md
+```
+
+아카이브 기준: 가설이 SUPPORTED, REFUTED, 또는 DEFERRED 상태로 30일 이상 경과, 모든 하위 실험이 COMPLETED 또는 ABANDONED.
+
+**B. 주제 기반 분할:**
+독립적인 연구 질문을 별도의 `graph/` 디렉토리로 분리:
+
+```
+project-root/
+├── graph/               # 주 연구 스레드
+├── graph-distillation/  # 독립 하위 프로젝트
+└── graph-deployment/    # 별도 관심사
+```
+
+그래프 간 교차 참조: `meta.xref: "graph-distillation:hyp-003"`
+
+**C. 핵심 + 상세 분리:**
+Knowledge + 활성 Hypothesis로 구성된 "핵심 그래프"와 Experiment/Finding의 "상세 그래프"로 이중 구조를 유지한다.
+
+**아카이빙 정책:**
+- REFUTED 가설 + 하위 실험/발견: 30일 후 아카이브
+- RETRACTED finding: 14일 후 아카이브
+- 90일 이상 된 COMPLETED episode: 아카이브
+- SUPERSEDED decision: 대체 결정이 ACCEPTED된 후 아카이브
+
+**성능 목표:**
+
+| 커맨드 | 목표 |
+|--------|------|
+| `emdd health` | < 3초 |
+| `emdd lint` | < 10초 |
+| `emdd list` (필터) | < 2초 |
+
+### 13.5 Enterprise 기준 (~1000+ 노드)
+
+조직 규모에서는 단일 그래프가 더 이상 가능하지 않다. 연방화가 해답이다.
+
+**그래프 연방화 모델:**
+
+```
+organization/
+├── shared-knowledge/     # 프로젝트 간 공유되는 승격된 지식
+│   └── graph/
+├── project-alpha/
+│   └── graph/            # 프로젝트별 그래프
+├── project-beta/
+│   └── graph/
+```
+
+**연방화 규칙:**
+- 각 프로젝트는 자체 ID 네임스페이스로 독립 그래프 유지
+- "조직 지식"으로 승격된 Knowledge 노드는 `shared-knowledge/graph/knowledge/`로 복사 (이동 아님)
+- 프로젝트 간 참조: `meta.xref: "project-alpha:knw-005"`
+- Git submodule 또는 monorepo 구조 권장
+- 각 프로젝트가 자체 MCP 서버 인스턴스 운영
+
+**자동 아카이빙 설정:**
+
+```yaml
+# .emdd.yml
+scale:
+  tier: enterprise
+  archive:
+    after_days: 90
+    statuses: [REFUTED, RETRACTED, SUPERSEDED]
+    exempt: [knowledge, decision]
+  visualization: cytoscape
+  cluster_by: tags
+```
+
+**성능 목표:**
+
+| 커맨드 | 목표 (프로젝트별) |
+|--------|------------------|
+| `emdd health` | < 5초 |
+| `emdd lint` | < 30초 |
+| `emdd list` (필터) | < 3초 |
+
+### 13.6 스케일 업 시기
+
+**현재 기준을 넘어섰다는 신호:**
+- `emdd health`가 이전 실행보다 눈에 띄게 느려짐
+- 브라우징으로 노드를 찾기 어려움 — 항상 `emdd list` 필터 필요
+- Mermaid 그래프가 읽기 어려움 (엣지 겹침, 노드 과다)
+- Consolidation 세러모니가 90분 이상 소요
+- 팀원들이 "그래프 피로"를 보고 — 그래프가 도구가 아니라 부담으로 느껴짐
+
+**규모 확장은 의무가 아니다.** 많은 성공적인 EMDD 프로젝트가 Lite 기준에 머문다. 현재 기준의 방식이 불충분할 때만 확장하라. 성급한 확장 자체가 Over-Structuring (안티패턴 #1)의 한 형태이다.
 
 ---
 

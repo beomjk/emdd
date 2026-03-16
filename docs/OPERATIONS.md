@@ -380,6 +380,169 @@ project-root/
 +-- pyproject.toml
 ```
 
+### 8.6 Integration Recipes
+
+Step-by-step recipes for connecting external tools to your EMDD graph. For the full pattern catalog, see [§8.6 in the specification](spec/SPEC_EN.md#86-external-tool-integration-patterns).
+
+#### Recipe: GitHub Issue → Question Node
+
+```bash
+# 1. Identify a research-relevant issue (e.g., #42)
+# 2. Create the question node
+emdd new question "can-distillation-close-accuracy-gap"
+
+# 3. Edit the created file to add source metadata
+# In graph/questions/qst-002-can-distillation-close-accuracy-gap.md:
+#   meta:
+#     source: "github:myorg/myrepo#42"
+
+# 4. Link to relevant hypothesis
+emdd link qst-002 hyp-001 relates_to
+```
+
+#### Recipe: Jupyter Notebook → Experiment + Finding
+
+```bash
+# 1. Run your notebook (notebooks/resnet-augmentation.ipynb)
+
+# 2. Create experiment node
+emdd new experiment "resnet-augmentation-v2"
+
+# 3. Link to hypothesis being tested
+emdd link exp-003 hyp-001 tests
+
+# 4. Record notebook path (edit the experiment file)
+# In graph/experiments/exp-003-resnet-augmentation-v2.md:
+#   meta:
+#     notebook: "notebooks/resnet-augmentation.ipynb"
+
+# 5. Record key result as finding
+emdd new finding "augmentation-improves-map-5pct"
+emdd link fnd-004 exp-003 produced_by
+emdd link fnd-004 hyp-001 supports
+
+# 6. Update experiment status
+emdd update exp-003 --set status=COMPLETED
+```
+
+#### Recipe: CI Pipeline → Experiment Status Update
+
+```bash
+# In your GitHub Actions workflow (or equivalent):
+# .github/workflows/experiment.yml
+#
+# - name: Update EMDD
+#   run: |
+#     emdd update exp-004 --set status=COMPLETED
+#     emdd update exp-004 --set "meta.ci_run=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+```
+
+#### Recipe: Paper → Knowledge Node
+
+```bash
+# 1. Create knowledge node for the paper's key contribution
+emdd new knowledge "attention-is-all-you-need"
+
+# 2. Edit to add DOI/source
+# In graph/knowledge/knw-003-attention-is-all-you-need.md:
+#   meta:
+#     doi: "10.48550/arXiv.1706.03762"
+#     source: "Vaswani et al., 2017"
+#   tags: [literature, transformer, attention]
+
+# 3. Link to hypotheses it informs
+emdd link knw-003 hyp-002 informs
+```
+
+### 8.7 Scaling Your Graph
+
+Practical guidance for managing graphs as they grow. For the full scale tier definitions, see [§13 in the specification](spec/SPEC_EN.md#13-scale--performance).
+
+#### At ~50 nodes (Lite): No action needed
+
+Default behavior is fine. Mermaid renders cleanly. All commands are instant.
+
+#### At ~200 nodes (Standard): Add structure
+
+```bash
+# Use filters to navigate
+emdd list --type hypothesis --status TESTING
+emdd list --type finding --status DRAFT
+
+# Keep _index.md current
+emdd index
+
+# Consolidate more frequently (every 2-3 Episodes)
+emdd check   # Shows consolidation triggers
+```
+
+Adopt consistent tagging: `tags: [backbone, cnn]` groups related nodes for filtering.
+
+#### At ~500 nodes (Large): Partition the graph
+
+**Temporal archiving — move resolved lineages:**
+
+```bash
+# Create archive directory
+mkdir -p graph/archive/2026-q1
+
+# Move resolved hypothesis + its experiments + findings
+mv graph/hypotheses/hyp-001-*.md graph/archive/2026-q1/
+mv graph/experiments/exp-001-*.md graph/archive/2026-q1/
+mv graph/findings/fnd-001-*.md graph/archive/2026-q1/
+```
+
+**Archive criteria checklist:**
+- [ ] Hypothesis is SUPPORTED, REFUTED, or DEFERRED for > 30 days
+- [ ] All downstream experiments are COMPLETED or ABANDONED
+- [ ] No active nodes link to the archived nodes (or links are updated to `meta.xref`)
+
+**Topic-based splitting:**
+
+```bash
+# Separate independent sub-projects
+mkdir -p graph-distillation/{hypotheses,experiments,findings,knowledge,questions,episodes}
+
+# Move relevant nodes
+mv graph/hypotheses/hyp-003-*.md graph-distillation/hypotheses/
+# Add cross-reference: meta.xref: "graph-distillation:hyp-003"
+```
+
+#### At ~1000+ nodes (Enterprise): Federate
+
+Configure archiving in `.emdd.yml`:
+
+```yaml
+scale:
+  tier: enterprise
+  archive:
+    after_days: 90
+    statuses: [REFUTED, RETRACTED, SUPERSEDED]
+    exempt: [knowledge, decision]
+  visualization: cytoscape
+  cluster_by: tags
+```
+
+Use separate `graph/` directories per project with `meta.xref` for cross-references. Promote shared knowledge to a central `shared-knowledge/graph/` repository.
+
+#### Measuring performance
+
+```bash
+# Time any command
+time emdd lint
+time emdd health
+
+# JSON output for scripting
+emdd health --json | jq '.totalNodes, .linkDensity'
+```
+
+**Targets by tier:**
+
+| Command | ~50 | ~200 | ~500 | ~1000+ |
+|---------|-----|------|------|--------|
+| `emdd health` | < 0.5s | < 1s | < 3s | < 5s |
+| `emdd lint` | < 0.5s | < 3s | < 10s | < 30s |
+
 ---
 
 ## 9. Anti-Patterns (6)

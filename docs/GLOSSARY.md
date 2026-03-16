@@ -146,3 +146,20 @@
 | 조기 수렴 | Premature Convergence | Diving deep on first success without exploring alternatives | §9 |
 | 발견의 무덤 | Finding Cemetery | Findings pile up without promotion, question generation, or hypothesis updates | §9 |
 | 그래프 기억상실 | Graph Amnesia | Deleting wrong hypotheses instead of deprecating; losing temporal history | §9 |
+
+## Integration Patterns
+
+| Korean | English | Description | Spec Section |
+|--------|---------|-------------|--------------|
+| 통합 패턴 | Integration Pattern | Defined workflow for connecting external tools to the EMDD graph | §8.6 |
+| 출처 추적 | Provenance | `meta.source` field preserving origin of nodes from external systems | §8.6 |
+| 교차 참조 | Cross-reference (xref) | `meta.xref` field linking nodes across separate graphs | §8.6, §13 |
+
+## Scale & Performance
+
+| Korean | English | Description | Spec Section |
+|--------|---------|-------------|--------------|
+| 규모 기준점 | Scale Tier | Graph size classification: Lite (~50), Standard (~200), Large (~500), Enterprise (~1000+) | §13.1 |
+| 그래프 분할 | Graph Partitioning | Splitting a large graph by time, topic, or core/detail layers | §13.4 |
+| 그래프 연방화 | Graph Federation | Multi-project graph architecture with shared knowledge layer | §13.5 |
+| 아카이빙 | Archiving | Moving resolved/inactive nodes to `archive/` directory | §13.4 |

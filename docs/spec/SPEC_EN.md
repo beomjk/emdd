@@ -1067,6 +1067,166 @@ project-root/
 +-- pyproject.toml
 ```
 
+### 8.6 External Tool Integration Patterns
+
+EMDD graphs do not live in isolation. Research projects typically involve issue trackers, notebooks, CI pipelines, and literature managers. This section defines patterns for bridging external tools with the EMDD graph.
+
+**Design principles for integration:**
+- The EMDD graph is the **destination**, not the source. External tools feed into it.
+- Prefer manual or semi-automatic integration over fully automatic. Human judgment on what enters the graph is essential (Principle 5: Researcher Primacy).
+- Use `meta.source` to preserve provenance back to the external system.
+
+#### Pattern 1: Issue Tracker → Question
+
+| Aspect | Detail |
+|--------|--------|
+| **External tools** | GitHub Issues, Linear, Jira |
+| **EMDD mapping** | Issue → `question` node |
+| **Trigger** | Researcher identifies a research-relevant issue |
+| **Automation level** | Manual (recommended) or semi-auto via label filter |
+
+**Field mapping:**
+
+| External field | EMDD field |
+|---------------|------------|
+| `issue.title` | `question.title` |
+| `issue.body` | Question body (markdown) |
+| `issue.labels` | `question.tags` |
+| `issue.url` | `question.meta.source` (e.g., `"github:owner/repo#123"`) |
+| `issue.created_at` | `question.created` |
+
+**Workflow:**
+1. Label research-relevant issues with `emdd:question` or `research-question`
+2. Run `emdd new question <slug>` with content derived from the issue
+3. Add `meta.source: "github:owner/repo#123"` to preserve traceability
+4. When the question is resolved in the graph, optionally close or comment on the original issue
+
+**When NOT to use:** Bug reports, feature requests, and operational issues are not research questions. Only issues that represent genuine uncertainty about the problem domain belong in the graph.
+
+#### Pattern 2: Notebook → Experiment + Finding
+
+| Aspect | Detail |
+|--------|--------|
+| **External tools** | Jupyter, Google Colab, Kaggle Notebooks |
+| **EMDD mapping** | Notebook → `experiment` node; key results → `finding` nodes |
+| **Trigger** | Experiment completion |
+| **Automation level** | Semi-auto (post-run hook) or manual |
+
+**Workflow:**
+1. Add EMDD metadata to the notebook's first cell:
+   ```python
+   # EMDD: tests hyp-002, extends exp-001
+   ```
+2. After experiment completion, create the experiment node:
+   ```bash
+   emdd new experiment <slug>
+   emdd link exp-004 hyp-002 tests
+   ```
+3. Record the notebook path in the experiment's `meta.notebook` field
+4. Extract key results into finding nodes:
+   ```bash
+   emdd new finding <result-slug>
+   emdd link fnd-005 exp-004 produced_by
+   ```
+
+**Post-run hook (optional):**
+```bash
+#!/bin/bash
+# .hooks/post-notebook.sh — triggered after notebook execution
+NOTEBOOK=$1
+EXP_ID=$(head -5 "$NOTEBOOK" | grep "# EMDD:" | sed 's/.*EMDD: //')
+emdd new experiment "$(basename "$NOTEBOOK" .ipynb)"
+echo "Created experiment node. Link manually: emdd link <exp-id> <hyp-id> tests"
+```
+
+#### Pattern 3: CI/CD → Experiment Status
+
+| Aspect | Detail |
+|--------|--------|
+| **External tools** | GitHub Actions, Jenkins, GitLab CI |
+| **EMDD mapping** | CI run → `experiment.status` update |
+| **Trigger** | CI pipeline completion |
+| **Automation level** | Auto (webhook/action) |
+
+**Workflow:**
+1. Tag experiment nodes with the CI job name in `meta.ci_job`
+2. On CI completion, update the experiment status:
+   ```bash
+   # In CI pipeline
+   emdd update exp-004 --set status=COMPLETED
+   emdd update exp-004 --set "meta.ci_run=https://github.com/.../runs/123"
+   ```
+3. On CI failure:
+   ```bash
+   emdd update exp-004 --set status=FAILED
+   ```
+
+#### Pattern 4: Literature Manager → Knowledge
+
+| Aspect | Detail |
+|--------|--------|
+| **External tools** | Zotero, Paperpile, BibTeX files |
+| **EMDD mapping** | Paper/article → `knowledge` node (status: `ACTIVE`) |
+| **Trigger** | Researcher reads a paper relevant to the research |
+| **Automation level** | Manual |
+
+**Workflow:**
+1. Create a knowledge node summarizing the paper's key contribution:
+   ```bash
+   emdd new knowledge <paper-slug>
+   ```
+2. Set `meta.doi` or `meta.source` to the paper reference
+3. Link to relevant hypotheses: `emdd link knw-003 hyp-001 informs`
+4. Use `tags: [literature, <topic>]` to distinguish from empirical knowledge
+
+**Note:** Not every paper read needs a node. Only create nodes for papers that directly inform your graph's hypotheses or questions.
+
+#### Pattern 5: Discussion Forum → Question or Hypothesis
+
+| Aspect | Detail |
+|--------|--------|
+| **External tools** | GitHub Discussions, Slack, Discord |
+| **EMDD mapping** | Thread → `question` or `hypothesis` node |
+| **Trigger** | A discussion surfaces a research-relevant question or conjecture |
+| **Automation level** | Manual |
+
+**Workflow:** Same as Pattern 1, with `meta.source` pointing to the discussion URL. Use `hypothesis` when the discussion proposes a testable claim; use `question` when it raises an open uncertainty.
+
+#### Pattern 6: Knowledge Base ↔ Graph (Bidirectional)
+
+| Aspect | Detail |
+|--------|--------|
+| **External tools** | Obsidian, Notion, Logseq |
+| **EMDD mapping** | Bidirectional sync via shared IDs |
+| **Trigger** | Periodic sync (e.g., weekly review) |
+| **Automation level** | Manual or plugin-assisted |
+
+**Sync rules:**
+- EMDD node IDs (e.g., `hyp-001`) serve as the shared key
+- Obsidian links use `[[hyp-001]]` format; EMDD frontmatter is the source of truth for metadata
+- Sync direction: EMDD → Obsidian for graph metadata; Obsidian → EMDD for extended notes
+- Never create duplicate nodes — if an ID exists in both systems, the EMDD frontmatter wins
+
+**Caution:** Bidirectional sync is the most complex pattern. Start with one-way (EMDD → Obsidian export) before attempting two-way sync.
+
+#### Integration Configuration
+
+Integration preferences can be specified in `.emdd.yml`:
+
+```yaml
+integrations:
+  github:
+    label_filter: "emdd:question"    # Only sync issues with this label
+    auto_close: false                # Don't auto-close issues on question resolution
+  notebooks:
+    path: "notebooks/"               # Where to look for notebooks
+    post_hook: ".hooks/post-notebook.sh"
+  ci:
+    auto_update: true                # Auto-update experiment status from CI
+  literature:
+    doi_field: "meta.doi"            # Where to store DOI references
+```
+
 ---
 
 ## 9. Anti-Patterns (6)
@@ -1273,6 +1433,163 @@ EMDD is succeeding when:
 3. **Dead ends are documented** — you never accidentally re-explore a failed path
 4. **The graph surprises you** — AI gap detection surfaces connections or questions you hadn't considered
 5. **New team members can onboard** — reading the graph's entry points + recent Episodes gives them context in 30 minutes
+
+---
+
+## 13. Scale & Performance
+
+EMDD is designed for "R&D PoC scale" — typically tens to hundreds of nodes. But projects grow, and teams accumulate knowledge across months. This section provides guidance for managing graphs at different scales.
+
+### 13.1 Scale Tiers
+
+| Tier | Nodes | Typical scenario | Key challenge |
+|------|-------|-----------------|---------------|
+| **Lite** | ~50 | Single PoC, solo researcher | None (default behavior) |
+| **Standard** | ~200 | Mid-size project, 2-3 hypothesis lineages | Navigation efficiency, visualization |
+| **Large** | ~500 | Long-running project, team research | Structural partitioning, performance |
+| **Enterprise** | ~1000+ | Multi-project, organizational knowledge | Graph federation, archiving |
+
+### 13.2 Lite Tier (~50 nodes)
+
+At this scale, everything works out of the box:
+
+- **Visualization:** Mermaid renders cleanly. `_graph.mmd` is readable.
+- **Navigation:** File system browsing + `emdd list` is sufficient.
+- **Consolidation cadence:** Every 3 Episodes (default threshold).
+- **Performance:** All CLI commands complete in < 1 second.
+
+No special measures needed. Focus on methodology, not tooling.
+
+### 13.3 Standard Tier (~200 nodes)
+
+At ~200 nodes, the graph becomes too large to visualize as a single Mermaid diagram, and manual browsing slows down.
+
+**Recommended practices:**
+- **Visualization:** Transition from Mermaid to Cytoscape.js (or similar) for interactive exploration. Continue generating `_graph.mmd` for cluster-level overviews.
+- **Filtering:** Use type and status filters actively: `emdd list --type hypothesis --status TESTING`
+- **Tagging:** Adopt consistent tag conventions for clustering. Example: `tags: [backbone, cnn]` to group related nodes.
+- **Index reliance:** Use `emdd index` output (`_index.md`) as the primary navigation tool.
+- **Consolidation cadence:** Every 2-3 Episodes (slightly more frequent to prevent Finding accumulation).
+
+**Performance targets:**
+
+| Command | Target |
+|---------|--------|
+| `emdd health` | < 1 second |
+| `emdd lint` | < 3 seconds |
+| `emdd list` | < 1 second |
+| `emdd graph` | < 2 seconds |
+
+### 13.4 Large Tier (~500 nodes)
+
+At this scale, a single flat graph becomes unwieldy. Partitioning is essential.
+
+**Graph partitioning strategies:**
+
+**A. Temporal archiving:**
+Move completed hypothesis lineages to an `archive/` directory:
+
+```
+graph/
+├── hypotheses/          # Active hypotheses
+├── archive/
+│   └── 2026-q1/         # Archived: resolved hypothesis lineage
+│       ├── hyp-001-*.md
+│       ├── exp-001-*.md
+│       └── fnd-001-*.md
+```
+
+Archive criteria: hypothesis is SUPPORTED, REFUTED, or DEFERRED for > 30 days, and all downstream experiments are COMPLETED or ABANDONED.
+
+**B. Topic-based splitting:**
+Separate independent research questions into distinct `graph/` directories:
+
+```
+project-root/
+├── graph/               # Main research thread
+├── graph-distillation/  # Independent sub-project
+└── graph-deployment/    # Separate concern
+```
+
+Use `meta.xref: "graph-distillation:hyp-003"` for cross-references between graphs.
+
+**C. Core + detail separation:**
+Maintain a "core graph" of Knowledge + active Hypotheses, with Experiments and Findings as the detail layer:
+
+- Core graph: Knowledge, Decision, active Hypothesis, open Question nodes
+- Detail graph: Experiments, Findings, Episodes
+
+The `emdd health` dashboard should report on the core graph by default, with `--all` for full detail.
+
+**Archiving policy:**
+- REFUTED hypotheses + their experiments/findings: archive after 30 days
+- RETRACTED findings: archive after 14 days
+- COMPLETED episodes older than 90 days: archive
+- SUPERSEDED decisions: archive after the replacement decision is ACCEPTED
+
+**Performance targets:**
+
+| Command | Target |
+|---------|--------|
+| `emdd health` | < 3 seconds |
+| `emdd lint` | < 10 seconds |
+| `emdd list` (filtered) | < 2 seconds |
+
+### 13.5 Enterprise Tier (~1000+ nodes)
+
+At organizational scale, a single graph is no longer viable. Federation is the answer.
+
+**Graph federation model:**
+
+```
+organization/
+├── shared-knowledge/     # Promoted knowledge shared across projects
+│   └── graph/
+├── project-alpha/
+│   └── graph/            # Project-specific graph
+├── project-beta/
+│   └── graph/
+```
+
+**Federation rules:**
+- Each project maintains its own graph with its own ID namespace
+- Knowledge nodes promoted to "organizational knowledge" are copied (not moved) to `shared-knowledge/graph/knowledge/`
+- Cross-project references use fully qualified IDs: `meta.xref: "project-alpha:knw-005"`
+- Git submodules or monorepo structure recommended for multi-project management
+- Each project runs its own MCP server instance
+
+**Automated archiving policy:**
+
+```yaml
+# .emdd.yml
+scale:
+  tier: enterprise
+  archive:
+    after_days: 90                              # Archive nodes untouched for 90 days
+    statuses: [REFUTED, RETRACTED, SUPERSEDED]  # Auto-archive these statuses
+    exempt: [knowledge, decision]               # Never auto-archive these types
+  visualization: cytoscape
+  cluster_by: tags
+```
+
+**Performance targets:**
+
+| Command | Target (per project) |
+|---------|---------------------|
+| `emdd health` | < 5 seconds |
+| `emdd lint` | < 30 seconds |
+| `emdd list` (filtered) | < 3 seconds |
+
+### 13.6 When to Scale Up
+
+**Signals that you've outgrown your current tier:**
+- `emdd health` takes noticeably longer than previous runs
+- You regularly can't find nodes by browsing — you always need `emdd list` filters
+- The Mermaid graph is unreadable (overlapping edges, too many nodes)
+- Consolidation ceremonies take > 90 minutes because there's too much to review
+- Team members report "graph fatigue" — the graph feels like a burden, not a tool
+
+**Scaling is not mandatory.** Many successful EMDD projects remain at the Lite tier. Scale up only when the current tier's practices are insufficient. Premature scaling is itself a form of Over-Structuring (Anti-pattern #1).
 
 ---
 
