@@ -37,15 +37,6 @@ claude mcp add emdd -- npx @beomjk/emdd mcp
 
 This registers the EMDD MCP server with Claude Code. Tools and prompts become available immediately in your next session.
 
-**Optional: Slash commands.** For guided workflows, copy the `.claude/commands/` files from this repository into your project:
-
-```bash
-# From your project root
-cp -r node_modules/@beomjk/emdd/.claude/commands .claude/commands
-```
-
-Or create them manually — see the [Slash Commands](#slash-commands-for-claude-code) section below.
-
 ---
 
 ## Cursor
@@ -162,20 +153,7 @@ All tools accept a `graphDir` parameter — the path to your EMDD `graph/` direc
 | `consolidation` | Step-by-step guide for running a Consolidation ceremony |
 | `health-review` | Analyze graph health and generate recommendations |
 
-Prompts are available in tools that support MCP prompts (e.g., Claude Code). They can also be used as slash commands — see below.
-
----
-
-## Slash Commands for Claude Code
-
-The following slash command files can be placed in `.claude/commands/` in your project. They provide the same workflows as the MCP prompts but in Claude Code's native slash command format.
-
-| File | Slash Command | Purpose |
-|------|---------------|---------|
-| `emdd-context.md` | `/emdd-context` | Context loading at session start |
-| `emdd-episode.md` | `/emdd-episode` | Episode creation at session end |
-| `emdd-consolidation.md` | `/emdd-consolidation` | Consolidation ceremony execution |
-| `emdd-health.md` | `/emdd-health` | Health review and recommendations |
+Prompts are available in tools that support MCP prompts (e.g., Claude Code).
 
 ---
 

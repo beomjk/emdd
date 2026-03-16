@@ -356,8 +356,7 @@ DVC exp run -> metrics.json -> post-experiment hook -> Claude Code
 ```
 project-root/
 +-- .claude/
-|   +-- CLAUDE.md              # Project rules
-|   +-- EMDD_AGENT.md          # EMDD agent behavior rules
+|   +-- CLAUDE.md              # EMDD rules + agent behavior (created by emdd init)
 |
 +-- graph/                     # EMDD knowledge graph
 |   +-- _index.md              # Auto-generated index
