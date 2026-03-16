@@ -9,7 +9,7 @@ const CLI = './node_modules/.bin/tsx src/cli.ts';
 function run(args: string, cwd?: string): string {
   return execSync(`${CLI} ${args}`, {
     encoding: 'utf-8',
-    cwd: cwd ?? '/Users/bjk/Projects/emdd',
+    cwd: cwd ?? process.cwd(),
     env: { ...process.env, FORCE_COLOR: '0' },
   });
 }
