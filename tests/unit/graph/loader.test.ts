@@ -1,6 +1,10 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import matter from 'gray-matter';
 import { loadNode, loadGraph, resolveGraphDir } from '../../../src/graph/loader.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -74,6 +78,100 @@ describe('loadGraph', () => {
     const graphDir = path.join(FIXTURES, 'empty-graph');
     const graph = await loadGraph(graphDir);
     expect(graph.nodes.size).toBe(0);
+  });
+});
+
+describe('parseLinks with edge attributes', () => {
+  let tmpDir: string;
+  let graphDir: string;
+
+  beforeEach(() => {
+    tmpDir = mkdtempSync(join(tmpdir(), 'emdd-loader-'));
+    graphDir = join(tmpDir, 'graph');
+    mkdirSync(join(graphDir, 'findings'), { recursive: true });
+  });
+
+  afterEach(() => {
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  function writeFixture(filename: string, frontmatter: Record<string, unknown>) {
+    const content = matter.stringify('', frontmatter);
+    writeFileSync(join(graphDir, 'findings', filename), content);
+  }
+
+  it('parses strength from supports link', async () => {
+    writeFixture('fnd-001-test.md', {
+      id: 'fnd-001', type: 'finding', title: 'Test', status: 'DRAFT',
+      confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [],
+      links: [{ target: 'hyp-001', relation: 'supports', strength: 0.8 }],
+    });
+    const node = await loadNode(join(graphDir, 'findings/fnd-001-test.md'));
+    expect(node!.links[0].strength).toBe(0.8);
+  });
+
+  it('parses severity from contradicts link', async () => {
+    writeFixture('fnd-001-test.md', {
+      id: 'fnd-001', type: 'finding', title: 'Test', status: 'DRAFT',
+      confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [],
+      links: [{ target: 'hyp-001', relation: 'contradicts', severity: 'FATAL' }],
+    });
+    const node = await loadNode(join(graphDir, 'findings/fnd-001-test.md'));
+    expect(node!.links[0].severity).toBe('FATAL');
+  });
+
+  it('parses completeness from answers link', async () => {
+    writeFixture('fnd-001-test.md', {
+      id: 'fnd-001', type: 'finding', title: 'Test', status: 'DRAFT',
+      confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [],
+      links: [{ target: 'qst-001', relation: 'answers', completeness: 0.7 }],
+    });
+    const node = await loadNode(join(graphDir, 'findings/fnd-001-test.md'));
+    expect(node!.links[0].completeness).toBe(0.7);
+  });
+
+  it('parses dependencyType from depends_on link', async () => {
+    writeFixture('fnd-001-test.md', {
+      id: 'fnd-001', type: 'finding', title: 'Test', status: 'DRAFT',
+      confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [],
+      links: [{ target: 'fnd-002', relation: 'depends_on', dependencyType: 'LOGICAL' }],
+    });
+    const node = await loadNode(join(graphDir, 'findings/fnd-001-test.md'));
+    expect(node!.links[0].dependencyType).toBe('LOGICAL');
+  });
+
+  it('parses impact from informs link', async () => {
+    writeFixture('fnd-001-test.md', {
+      id: 'fnd-001', type: 'finding', title: 'Test', status: 'DRAFT',
+      confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [],
+      links: [{ target: 'hyp-001', relation: 'informs', impact: 'DECISIVE' }],
+    });
+    const node = await loadNode(join(graphDir, 'findings/fnd-001-test.md'));
+    expect(node!.links[0].impact).toBe('DECISIVE');
+  });
+
+  it('defaults missing attributes to undefined', async () => {
+    writeFixture('fnd-001-test.md', {
+      id: 'fnd-001', type: 'finding', title: 'Test', status: 'DRAFT',
+      confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [],
+      links: [{ target: 'hyp-001', relation: 'supports' }],
+    });
+    const node = await loadNode(join(graphDir, 'findings/fnd-001-test.md'));
+    expect(node!.links[0].strength).toBeUndefined();
+    expect(node!.links[0].severity).toBeUndefined();
+    expect(node!.links[0].completeness).toBeUndefined();
+    expect(node!.links[0].dependencyType).toBeUndefined();
+    expect(node!.links[0].impact).toBeUndefined();
+  });
+
+  it('ignores unknown link attributes', async () => {
+    writeFixture('fnd-001-test.md', {
+      id: 'fnd-001', type: 'finding', title: 'Test', status: 'DRAFT',
+      confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [],
+      links: [{ target: 'hyp-001', relation: 'supports', unknownField: 42 }],
+    });
+    const node = await loadNode(join(graphDir, 'findings/fnd-001-test.md'));
+    expect(node!.links[0]).not.toHaveProperty('unknownField');
   });
 });
 

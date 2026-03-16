@@ -13,6 +13,10 @@ import { indexCommand } from './commands/index.js';
 import { graphCommand } from './commands/graph.js';
 import { backlogCommand } from './commands/backlog.js';
 import { listCommand } from './commands/list.js';
+import { confidenceCommand } from './commands/confidence.js';
+import { transitionsCommand } from './commands/transitions.js';
+import { killCheckCommand } from './commands/kill-check.js';
+import { branchesCommand } from './commands/branches.js';
 import { resolveGraphDir } from './graph/loader.js';
 import { startMcpServer } from './mcp-server/index.js';
 import { VERSION } from './version.js';
@@ -182,6 +186,70 @@ program
     } else {
       for (const item of result.items) {
         console.log(`[ ] ${item.episodeId}  ${item.text}`);
+      }
+    }
+  }));
+
+program
+  .command('confidence [path]')
+  .description('Propagate confidence across the graph')
+  .action(withCliErrorHandling(async (path) => {
+    const graphDir = resolveGraphDir(path);
+    const results = await confidenceCommand(graphDir);
+    if (results.length === 0) {
+      console.log('No confidence changes detected.');
+    } else {
+      for (const r of results) {
+        console.log(`${r.nodeId}  ${r.oldConfidence.toFixed(2)} → ${r.newConfidence.toFixed(2)}`);
+      }
+    }
+  }));
+
+program
+  .command('transitions [path]')
+  .description('Detect recommended status transitions')
+  .action(withCliErrorHandling(async (path) => {
+    const graphDir = resolveGraphDir(path);
+    const results = await transitionsCommand(graphDir);
+    if (results.length === 0) {
+      console.log('No status transitions recommended.');
+    } else {
+      for (const r of results) {
+        console.log(`${r.nodeId}  ${r.currentStatus} → ${r.recommendedStatus}  (${r.reason})`);
+      }
+    }
+  }));
+
+program
+  .command('kill-check [path]')
+  .description('Check kill criteria status for hypotheses')
+  .action(withCliErrorHandling(async (path) => {
+    const graphDir = resolveGraphDir(path);
+    const alerts = await killCheckCommand(graphDir);
+    if (alerts.length === 0) {
+      console.log('No kill criterion alerts.');
+    } else {
+      for (const a of alerts) {
+        console.log(`ALERT  ${a.hypothesisId}  [${a.trigger}]  ${a.message}`);
+      }
+    }
+  }));
+
+program
+  .command('branches [path]')
+  .description('List and analyze branch groups')
+  .action(withCliErrorHandling(async (path) => {
+    const graphDir = resolveGraphDir(path);
+    const groups = await branchesCommand(graphDir);
+    if (groups.length === 0) {
+      console.log('No branch groups found.');
+    } else {
+      for (const g of groups) {
+        const status = g.convergenceReady ? `CONVERGENCE READY: ${g.convergenceReason}` : 'OPEN';
+        console.log(`${g.groupId}  [${status}]  ${g.candidates.length} candidates`);
+        for (const w of g.warnings) {
+          console.log(`  WARNING: ${w}`);
+        }
       }
     }
   }));

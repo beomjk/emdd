@@ -1,5 +1,9 @@
 import type { Node, Graph, NodeType } from './types.js';
-import { VALID_STATUSES, REQUIRED_FIELDS, ALL_VALID_RELATIONS } from './types.js';
+import {
+  VALID_STATUSES, REQUIRED_FIELDS, ALL_VALID_RELATIONS,
+  VALID_SEVERITIES, VALID_DEPENDENCY_TYPES, VALID_IMPACTS,
+  VALID_FINDING_TYPES, VALID_URGENCIES, VALID_RISK_LEVELS, VALID_REVERSIBILITIES,
+} from './types.js';
 import { t } from '../i18n/index.js';
 
 export interface LintError {
@@ -100,7 +104,7 @@ export function lintNode(node: Node): LintError[] {
     });
   }
 
-  // Check link relations
+  // Check link relations and edge attributes
   for (const link of node.links) {
     if (!ALL_VALID_RELATIONS.has(link.relation)) {
       errors.push({
@@ -108,6 +112,87 @@ export function lintNode(node: Node): LintError[] {
         field: 'links',
         message: t('lint.invalid_relation', { relation: link.relation }),
         severity: 'error',
+      });
+    }
+
+    if (link.strength !== undefined && (link.strength < 0.0 || link.strength > 1.0)) {
+      errors.push({
+        nodeId: id, field: 'links',
+        message: `Edge attribute strength must be between 0.0 and 1.0, got ${link.strength}`,
+        severity: 'warning',
+      });
+    }
+
+    if (link.severity !== undefined && !(VALID_SEVERITIES as readonly string[]).includes(link.severity)) {
+      errors.push({
+        nodeId: id, field: 'links',
+        message: `Invalid severity "${link.severity}". Valid: ${VALID_SEVERITIES.join(', ')}`,
+        severity: 'warning',
+      });
+    }
+
+    if (link.completeness !== undefined && (link.completeness < 0.0 || link.completeness > 1.0)) {
+      errors.push({
+        nodeId: id, field: 'links',
+        message: `Edge attribute completeness must be between 0.0 and 1.0, got ${link.completeness}`,
+        severity: 'warning',
+      });
+    }
+
+    if (link.dependencyType !== undefined && !(VALID_DEPENDENCY_TYPES as readonly string[]).includes(link.dependencyType)) {
+      errors.push({
+        nodeId: id, field: 'links',
+        message: `Invalid dependencyType "${link.dependencyType}". Valid: ${VALID_DEPENDENCY_TYPES.join(', ')}`,
+        severity: 'warning',
+      });
+    }
+
+    if (link.impact !== undefined && !(VALID_IMPACTS as readonly string[]).includes(link.impact)) {
+      errors.push({
+        nodeId: id, field: 'links',
+        message: `Invalid impact "${link.impact}". Valid: ${VALID_IMPACTS.join(', ')}`,
+        severity: 'warning',
+      });
+    }
+  }
+
+  // Type-specific meta validation
+  if (nodeType === 'finding' && node.meta.finding_type !== undefined) {
+    if (!(VALID_FINDING_TYPES as readonly string[]).includes(String(node.meta.finding_type))) {
+      errors.push({
+        nodeId: id, field: 'finding_type',
+        message: `Invalid finding_type "${node.meta.finding_type}". Valid: ${VALID_FINDING_TYPES.join(', ')}`,
+        severity: 'warning',
+      });
+    }
+  }
+
+  if (nodeType === 'question' && node.meta.urgency !== undefined) {
+    if (!(VALID_URGENCIES as readonly string[]).includes(String(node.meta.urgency))) {
+      errors.push({
+        nodeId: id, field: 'urgency',
+        message: `Invalid urgency "${node.meta.urgency}". Valid: ${VALID_URGENCIES.join(', ')}`,
+        severity: 'warning',
+      });
+    }
+  }
+
+  if (nodeType === 'hypothesis' && node.meta.risk_level !== undefined) {
+    if (!(VALID_RISK_LEVELS as readonly string[]).includes(String(node.meta.risk_level))) {
+      errors.push({
+        nodeId: id, field: 'risk_level',
+        message: `Invalid risk_level "${node.meta.risk_level}". Valid: ${VALID_RISK_LEVELS.join(', ')}`,
+        severity: 'warning',
+      });
+    }
+  }
+
+  if (nodeType === 'decision' && node.meta.reversibility !== undefined) {
+    if (!(VALID_REVERSIBILITIES as readonly string[]).includes(String(node.meta.reversibility))) {
+      errors.push({
+        nodeId: id, field: 'reversibility',
+        message: `Invalid reversibility "${node.meta.reversibility}". Valid: ${VALID_REVERSIBILITIES.join(', ')}`,
+        severity: 'warning',
       });
     }
   }

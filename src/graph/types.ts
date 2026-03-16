@@ -130,7 +130,20 @@ export const REQUIRED_FIELDS: Record<NodeType, readonly string[]> = {
 export interface Link {
   target: string;
   relation: string;
+  strength?: number;
+  severity?: 'FATAL' | 'WEAKENING' | 'TENSION';
+  completeness?: number;
+  dependencyType?: 'LOGICAL' | 'PRACTICAL' | 'TEMPORAL';
+  impact?: 'DECISIVE' | 'SIGNIFICANT' | 'MINOR';
 }
+
+export const VALID_SEVERITIES = ['FATAL', 'WEAKENING', 'TENSION'] as const;
+export const VALID_DEPENDENCY_TYPES = ['LOGICAL', 'PRACTICAL', 'TEMPORAL'] as const;
+export const VALID_IMPACTS = ['DECISIVE', 'SIGNIFICANT', 'MINOR'] as const;
+export const VALID_FINDING_TYPES = ['observation', 'insight', 'negative'] as const;
+export const VALID_URGENCIES = ['BLOCKING', 'HIGH', 'MEDIUM', 'LOW'] as const;
+export const VALID_RISK_LEVELS = ['high', 'medium', 'low'] as const;
+export const VALID_REVERSIBILITIES = ['high', 'medium', 'low'] as const;
 
 export interface Node {
   id: string;
@@ -173,6 +186,12 @@ export interface CreateEdgeResult {
   relation: string;
 }
 
+export interface GapDetail {
+  type: 'untested_hypothesis' | 'blocking_question' | 'stale_knowledge' | 'orphan_finding' | 'disconnected_cluster';
+  nodeIds: string[];
+  message: string;
+}
+
 export interface HealthReport {
   totalNodes: number;
   totalEdges: number;
@@ -182,6 +201,7 @@ export interface HealthReport {
   openQuestions: number;
   linkDensity: number;
   gaps: string[];
+  gapDetails: GapDetail[];
 }
 
 export interface CheckTrigger {
@@ -192,12 +212,16 @@ export interface CheckTrigger {
 
 export interface CheckResult {
   triggers: CheckTrigger[];
+  promotionCandidates: PromoteCandidate[];
+  orphanFindings: string[];
+  deferredItems: string[];
 }
 
 export interface PromoteCandidate {
   id: string;
   confidence: number;
   supports: number;
+  reason: 'confidence' | 'de_facto' | 'both';
 }
 
 // ── File Operations (plan+execute pattern) ────────────────────────

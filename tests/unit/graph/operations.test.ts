@@ -218,6 +218,107 @@ describe('getHealth', () => {
   });
 });
 
+describe('getHealth — structural gaps §6.8', () => {
+  let tmpDir: string;
+  beforeEach(() => { tmpDir = setupProject(); });
+  afterEach(() => { rmSync(tmpDir, { recursive: true, force: true }); });
+
+  it('detects untested hypotheses (PROPOSED + created N+ days ago)', async () => {
+    const oldDate = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'Test', status: 'PROPOSED',
+      confidence: 0.5, created: oldDate, updated: oldDate, tags: [], links: [],
+    });
+
+    const report = await getHealth(join(tmpDir, 'graph'));
+    expect(report.gapDetails.some(g => g.type === 'untested_hypothesis')).toBe(true);
+  });
+
+  it('detects blocking questions (OPEN + urgency=BLOCKING + N+ days)', async () => {
+    const oldDate = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    writeNode(tmpDir, 'questions', 'qst-001-test.md', {
+      id: 'qst-001', type: 'question', title: 'Test', status: 'OPEN',
+      urgency: 'BLOCKING', created: oldDate, updated: oldDate, tags: [], links: [],
+    });
+
+    const report = await getHealth(join(tmpDir, 'graph'));
+    expect(report.gapDetails.some(g => g.type === 'blocking_question')).toBe(true);
+  });
+
+  it('detects orphan findings (0 outgoing spawns/answers/extends)', async () => {
+    writeNode(tmpDir, 'findings', 'fnd-001-test.md', {
+      id: 'fnd-001', type: 'finding', title: 'Test', status: 'DRAFT',
+      confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+    });
+
+    const report = await getHealth(join(tmpDir, 'graph'));
+    expect(report.gapDetails.some(g => g.type === 'orphan_finding')).toBe(true);
+  });
+
+  it('detects stale knowledge (source date > N days + newer knowledge exists)', async () => {
+    const oldDate = new Date(Date.now() - 100 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const recentDate = new Date().toISOString().slice(0, 10);
+    writeNode(tmpDir, 'knowledge', 'knw-001-old.md', {
+      id: 'knw-001', type: 'knowledge', title: 'Old', status: 'ACTIVE',
+      confidence: 0.9, created: oldDate, updated: oldDate, tags: [], links: [],
+    });
+    writeNode(tmpDir, 'knowledge', 'knw-002-new.md', {
+      id: 'knw-002', type: 'knowledge', title: 'New', status: 'ACTIVE',
+      confidence: 0.9, created: recentDate, updated: recentDate, tags: [], links: [],
+    });
+
+    const report = await getHealth(join(tmpDir, 'graph'));
+    expect(report.gapDetails.some(g => g.type === 'stale_knowledge')).toBe(true);
+  });
+
+  it('detects disconnected clusters', async () => {
+    // Two nodes with no links between them
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'PROPOSED',
+      confidence: 0.5, created: '2026-03-17', updated: '2026-03-17', tags: [], links: [],
+    });
+    writeNode(tmpDir, 'findings', 'fnd-001-test.md', {
+      id: 'fnd-001', type: 'finding', title: 'F1', status: 'DRAFT',
+      confidence: 0.5, created: '2026-03-17', updated: '2026-03-17', tags: [], links: [],
+    });
+
+    const report = await getHealth(join(tmpDir, 'graph'));
+    expect(report.gapDetails.some(g => g.type === 'disconnected_cluster')).toBe(true);
+  });
+
+  it('uses default thresholds when no .emdd.yml', async () => {
+    const oldDate = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'Test', status: 'PROPOSED',
+      confidence: 0.5, created: oldDate, updated: oldDate, tags: [], links: [],
+    });
+
+    // No .emdd.yml exists, should use defaults (untested_days: 5)
+    const report = await getHealth(join(tmpDir, 'graph'));
+    expect(report.gapDetails.some(g => g.type === 'untested_hypothesis')).toBe(true);
+  });
+
+  it('uses custom thresholds from config', async () => {
+    const oldDate = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'Test', status: 'PROPOSED',
+      confidence: 0.5, created: oldDate, updated: oldDate, tags: [], links: [],
+    });
+
+    // Create config with low threshold (2 days)
+    writeFileSync(join(tmpDir, '.emdd.yml'), 'gaps:\n  untested_days: 2\n');
+
+    const report = await getHealth(join(tmpDir, 'graph'));
+    expect(report.gapDetails.some(g => g.type === 'untested_hypothesis')).toBe(true);
+  });
+
+  it('existing 4 basic gaps still work', async () => {
+    const report = await getHealth(SAMPLE_GRAPH);
+    expect(Array.isArray(report.gaps)).toBe(true);
+    expect(Array.isArray(report.gapDetails)).toBe(true);
+  });
+});
+
 describe('checkConsolidation', () => {
   it('triggers when finding count exceeds threshold', async () => {
     // sample-graph has 5 findings, threshold is 5 unpromoted
@@ -237,28 +338,149 @@ describe('checkConsolidation', () => {
     expect(episodeTrigger).toBeDefined();
     expect(episodeTrigger!.count).toBe(3);
   });
+
+  it('includes promotion evaluation for each unpromoted finding', async () => {
+    const result = await checkConsolidation(SAMPLE_GRAPH);
+    expect(result.promotionCandidates).toBeDefined();
+    expect(Array.isArray(result.promotionCandidates)).toBe(true);
+  });
+
+  it('includes orphan cleanup suggestions', async () => {
+    const result = await checkConsolidation(SAMPLE_GRAPH);
+    expect(result.orphanFindings).toBeDefined();
+    expect(Array.isArray(result.orphanFindings)).toBe(true);
+  });
+
+  it('includes deferred items review', async () => {
+    const result = await checkConsolidation(SAMPLE_GRAPH);
+    expect(result.deferredItems).toBeDefined();
+    expect(Array.isArray(result.deferredItems)).toBe(true);
+  });
 });
 
 describe('getPromotionCandidates', () => {
-  it('identifies hypotheses with sufficient evidence', async () => {
-    // fnd-002 has confidence 0.82 and 2 supports links
-    const candidates = await getPromotionCandidates(SAMPLE_GRAPH);
-    expect(candidates.length).toBeGreaterThan(0);
-    expect(candidates.some(c => c.id === 'fnd-002')).toBe(true);
-  });
-
   it('returns empty when no candidates exist', async () => {
     const candidates = await getPromotionCandidates(EMPTY_GRAPH);
     expect(candidates).toEqual([]);
   });
 
-  it('includes confidence scores', async () => {
-    const candidates = await getPromotionCandidates(SAMPLE_GRAPH);
-    for (const c of candidates) {
-      expect(typeof c.confidence).toBe('number');
-      expect(c.confidence).toBeGreaterThanOrEqual(0.8);
-      expect(typeof c.supports).toBe('number');
-      expect(c.supports).toBeGreaterThanOrEqual(2);
+  it('threshold is 0.9 (not 0.8) — spec §6.2', async () => {
+    let tmpDir2 = setupProject();
+    try {
+      writeNode(tmpDir2, 'findings', 'fnd-001-test.md', {
+        id: 'fnd-001', type: 'finding', title: 'F1', status: 'VALIDATED',
+        confidence: 0.85, created: '2026-01-01', updated: '2026-01-01', tags: [],
+        links: [
+          { target: 'hyp-001', relation: 'supports' },
+          { target: 'hyp-002', relation: 'supports' },
+        ],
+      });
+      writeNode(tmpDir2, 'hypotheses', 'hyp-001-test.md', {
+        id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'TESTING',
+        confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+      });
+      writeNode(tmpDir2, 'hypotheses', 'hyp-002-test.md', {
+        id: 'hyp-002', type: 'hypothesis', title: 'H2', status: 'TESTING',
+        confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+      });
+
+      const candidates = await getPromotionCandidates(join(tmpDir2, 'graph'));
+      // 0.85 < 0.9, so should NOT be a candidate by confidence alone
+      expect(candidates.some(c => c.id === 'fnd-001' && c.reason === 'confidence')).toBe(false);
+    } finally {
+      rmSync(tmpDir2, { recursive: true, force: true });
+    }
+  });
+
+  it('candidate with active CONTRADICTS edge is excluded', async () => {
+    let tmpDir2 = setupProject();
+    try {
+      writeNode(tmpDir2, 'findings', 'fnd-001-test.md', {
+        id: 'fnd-001', type: 'finding', title: 'F1', status: 'VALIDATED',
+        confidence: 0.95, created: '2026-01-01', updated: '2026-01-01', tags: [],
+        links: [
+          { target: 'hyp-001', relation: 'supports' },
+          { target: 'hyp-002', relation: 'supports' },
+        ],
+      });
+      writeNode(tmpDir2, 'hypotheses', 'hyp-001-test.md', {
+        id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'TESTING',
+        confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+      });
+      writeNode(tmpDir2, 'hypotheses', 'hyp-002-test.md', {
+        id: 'hyp-002', type: 'hypothesis', title: 'H2', status: 'TESTING',
+        confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+      });
+      // Something contradicts fnd-001
+      writeNode(tmpDir2, 'findings', 'fnd-002-test.md', {
+        id: 'fnd-002', type: 'finding', title: 'F2', status: 'VALIDATED',
+        confidence: 0.8, created: '2026-01-01', updated: '2026-01-01', tags: [],
+        links: [
+          { target: 'fnd-001', relation: 'contradicts', severity: 'WEAKENING' },
+        ],
+      });
+
+      const candidates = await getPromotionCandidates(join(tmpDir2, 'graph'));
+      expect(candidates.some(c => c.id === 'fnd-001')).toBe(false);
+    } finally {
+      rmSync(tmpDir2, { recursive: true, force: true });
+    }
+  });
+
+  it('de facto candidate (referenced as premise) qualifies even below 0.9', async () => {
+    let tmpDir2 = setupProject();
+    try {
+      writeNode(tmpDir2, 'findings', 'fnd-001-test.md', {
+        id: 'fnd-001', type: 'finding', title: 'F1', status: 'VALIDATED',
+        confidence: 0.85, created: '2026-01-01', updated: '2026-01-01', tags: [],
+        links: [
+          { target: 'hyp-001', relation: 'supports' },
+          { target: 'hyp-002', relation: 'supports' },
+        ],
+      });
+      writeNode(tmpDir2, 'hypotheses', 'hyp-001-test.md', {
+        id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'TESTING',
+        confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [],
+        links: [{ target: 'fnd-001', relation: 'depends_on' }],
+      });
+      writeNode(tmpDir2, 'hypotheses', 'hyp-002-test.md', {
+        id: 'hyp-002', type: 'hypothesis', title: 'H2', status: 'TESTING',
+        confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+      });
+
+      const candidates = await getPromotionCandidates(join(tmpDir2, 'graph'));
+      // fnd-001 is de facto in use (hyp-001 depends_on it), so should qualify
+      expect(candidates.some(c => c.id === 'fnd-001')).toBe(true);
+    } finally {
+      rmSync(tmpDir2, { recursive: true, force: true });
+    }
+  });
+
+  it('at least one criterion met → included (OR logic)', async () => {
+    let tmpDir2 = setupProject();
+    try {
+      // High confidence, qualifies by confidence criterion
+      writeNode(tmpDir2, 'findings', 'fnd-001-test.md', {
+        id: 'fnd-001', type: 'finding', title: 'F1', status: 'VALIDATED',
+        confidence: 0.95, created: '2026-01-01', updated: '2026-01-01', tags: [],
+        links: [
+          { target: 'hyp-001', relation: 'supports' },
+          { target: 'hyp-002', relation: 'supports' },
+        ],
+      });
+      writeNode(tmpDir2, 'hypotheses', 'hyp-001-test.md', {
+        id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'TESTING',
+        confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+      });
+      writeNode(tmpDir2, 'hypotheses', 'hyp-002-test.md', {
+        id: 'hyp-002', type: 'hypothesis', title: 'H2', status: 'TESTING',
+        confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+      });
+
+      const candidates = await getPromotionCandidates(join(tmpDir2, 'graph'));
+      expect(candidates.some(c => c.id === 'fnd-001')).toBe(true);
+    } finally {
+      rmSync(tmpDir2, { recursive: true, force: true });
     }
   });
 });

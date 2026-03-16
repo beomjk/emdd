@@ -7,6 +7,10 @@ import { registerCreateEdge } from './tools/create-edge.js';
 import { registerHealth } from './tools/health.js';
 import { registerCheck } from './tools/check.js';
 import { registerPromote } from './tools/promote.js';
+import { registerConfidence } from './tools/confidence.js';
+import { registerTransitions } from './tools/transitions.js';
+import { registerKillCheck } from './tools/kill-check.js';
+import { registerBranchGroups } from './tools/branch-groups.js';
 import { registerContextLoading } from './prompts/context-loading.js';
 import { registerEpisodeCreation } from './prompts/episode-creation.js';
 import { registerConsolidation } from './prompts/consolidation.js';
@@ -24,6 +28,10 @@ export function createEmddMcpServer(): McpServer {
   registerHealth(server);
   registerCheck(server);
   registerPromote(server);
+  registerConfidence(server);
+  registerTransitions(server);
+  registerKillCheck(server);
+  registerBranchGroups(server);
 
   // Prompts
   registerContextLoading(server);

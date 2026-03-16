@@ -15,10 +15,12 @@ import type {
   CreateEdgePlan,
   FileOp,
   HealthReport,
+  GapDetail,
   CheckResult,
   CheckTrigger,
   PromoteCandidate,
 } from './types.js';
+import { loadConfig } from './config.js';
 import type { Locale } from '../i18n/index.js';
 
 // ── listNodes ───────────────────────────────────────────────────────
@@ -249,7 +251,7 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
   }
   const linkDensity = totalNodes > 0 ? totalEdges / totalNodes : 0;
 
-  // Structural gaps
+  // Structural gaps (basic)
   const gaps: string[] = [];
   if (byType['hypothesis'] > 0 && byType['experiment'] === 0) {
     gaps.push('No experiments — hypotheses lack testing');
@@ -264,6 +266,164 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
     gaps.push('No edges — graph is disconnected');
   }
 
+  // Advanced gap detection (§6.8)
+  const config = loadConfig(graphDir);
+  const gapDetails: GapDetail[] = [];
+  const now = new Date();
+
+  // 1. Untested hypotheses: PROPOSED + N days elapsed
+  const untestedIds: string[] = [];
+  for (const node of graph.nodes.values()) {
+    if (node.type === 'hypothesis' && node.status === 'PROPOSED') {
+      const created = node.meta.created ? new Date(String(node.meta.created)) : null;
+      if (created) {
+        const daysElapsed = Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
+        if (daysElapsed >= config.gaps.untested_days) {
+          untestedIds.push(node.id);
+        }
+      }
+    }
+  }
+  if (untestedIds.length > 0) {
+    gapDetails.push({
+      type: 'untested_hypothesis',
+      nodeIds: untestedIds,
+      message: `${untestedIds.length} hypothesis(es) in PROPOSED for ${config.gaps.untested_days}+ days`,
+    });
+  }
+
+  // 2. Blocking questions: OPEN + urgency=BLOCKING + N days
+  const blockingIds: string[] = [];
+  for (const node of graph.nodes.values()) {
+    if (node.type === 'question' && node.status === 'OPEN' && node.meta.urgency === 'BLOCKING') {
+      const created = node.meta.created ? new Date(String(node.meta.created)) : null;
+      if (created) {
+        const daysElapsed = Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
+        if (daysElapsed >= config.gaps.blocking_days) {
+          blockingIds.push(node.id);
+        }
+      }
+    }
+  }
+  if (blockingIds.length > 0) {
+    gapDetails.push({
+      type: 'blocking_question',
+      nodeIds: blockingIds,
+      message: `${blockingIds.length} blocking question(s) open for ${config.gaps.blocking_days}+ days`,
+    });
+  }
+
+  // 3. Orphan findings: no outgoing SPAWNS, ANSWERS, or EXTENDS edges
+  const orphanIds: string[] = [];
+  const forwardRelations = new Set(['spawns', 'answers', 'extends']);
+  for (const node of graph.nodes.values()) {
+    if (node.type === 'finding') {
+      const forwardEdges = node.links.filter(l => forwardRelations.has(l.relation));
+      if (forwardEdges.length <= config.gaps.orphan_min_outgoing) {
+        orphanIds.push(node.id);
+      }
+    }
+  }
+  if (orphanIds.length > 0) {
+    gapDetails.push({
+      type: 'orphan_finding',
+      nodeIds: orphanIds,
+      message: `${orphanIds.length} finding(s) with no outgoing spawns/answers/extends edges`,
+    });
+  }
+
+  // 4. Stale knowledge: source date > N days + newer knowledge exists
+  const knowledgeNodes = [...graph.nodes.values()].filter(n => n.type === 'knowledge');
+  const staleIds: string[] = [];
+  for (const node of knowledgeNodes) {
+    if (node.status !== 'ACTIVE') continue;
+    const updated = node.meta.updated ? new Date(String(node.meta.updated)) : null;
+    if (updated) {
+      const daysElapsed = Math.floor((now.getTime() - updated.getTime()) / (1000 * 60 * 60 * 24));
+      if (daysElapsed >= config.gaps.stale_days) {
+        // Check if newer knowledge exists
+        const hasNewer = knowledgeNodes.some(other => {
+          if (other.id === node.id) return false;
+          const otherUpdated = other.meta.updated ? new Date(String(other.meta.updated)) : null;
+          return otherUpdated && otherUpdated > updated;
+        });
+        if (hasNewer) {
+          staleIds.push(node.id);
+        }
+      }
+    }
+  }
+  if (staleIds.length > 0) {
+    gapDetails.push({
+      type: 'stale_knowledge',
+      nodeIds: staleIds,
+      message: `${staleIds.length} knowledge node(s) stale for ${config.gaps.stale_days}+ days`,
+    });
+  }
+
+  // 5. Disconnected clusters: BFS connected components
+  if (totalNodes > 1) {
+    // Build undirected adjacency
+    const adj = new Map<string, Set<string>>();
+    for (const node of graph.nodes.values()) {
+      if (!adj.has(node.id)) adj.set(node.id, new Set());
+      for (const link of node.links) {
+        if (graph.nodes.has(link.target)) {
+          adj.get(node.id)!.add(link.target);
+          if (!adj.has(link.target)) adj.set(link.target, new Set());
+          adj.get(link.target)!.add(node.id);
+        }
+      }
+    }
+
+    const visited = new Set<string>();
+    const components: string[][] = [];
+    for (const nodeId of graph.nodes.keys()) {
+      if (visited.has(nodeId)) continue;
+      const component: string[] = [];
+      const queue = [nodeId];
+      while (queue.length > 0) {
+        const current = queue.pop()!;
+        if (visited.has(current)) continue;
+        visited.add(current);
+        component.push(current);
+        const neighbors = adj.get(current) ?? new Set();
+        for (const neighbor of neighbors) {
+          if (!visited.has(neighbor)) queue.push(neighbor);
+        }
+      }
+      components.push(component);
+    }
+
+    if (components.length > 1) {
+      // Count inter-cluster edges
+      const nodeToCluster = new Map<string, number>();
+      components.forEach((comp, idx) => comp.forEach(id => nodeToCluster.set(id, idx)));
+
+      let interClusterEdges = 0;
+      for (const node of graph.nodes.values()) {
+        const myCluster = nodeToCluster.get(node.id)!;
+        for (const link of node.links) {
+          const targetCluster = nodeToCluster.get(link.target);
+          if (targetCluster !== undefined && targetCluster !== myCluster) {
+            interClusterEdges++;
+          }
+        }
+      }
+
+      if (interClusterEdges < config.gaps.min_cluster_edges) {
+        const clusterNodeIds = components
+          .filter(c => c.length > 0)
+          .map(c => c[0]); // representative node from each cluster
+        gapDetails.push({
+          type: 'disconnected_cluster',
+          nodeIds: clusterNodeIds,
+          message: `${components.length} disconnected clusters with only ${interClusterEdges} inter-cluster edge(s)`,
+        });
+      }
+    }
+  }
+
   return {
     totalNodes,
     totalEdges,
@@ -273,6 +433,7 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
     openQuestions,
     linkDensity,
     gaps,
+    gapDetails,
   };
 }
 
@@ -344,14 +505,35 @@ export async function checkConsolidation(graphDir: string): Promise<CheckResult>
     });
   }
 
-  return { triggers };
+  // Promotion evaluation
+  const promotionCandidates = await getPromotionCandidates(graphDir);
+
+  // Orphan findings: findings with no forward edges
+  const forwardRelations = new Set(['spawns', 'answers', 'extends']);
+  const orphanFindings: string[] = [];
+  for (const [id, node] of graph.nodes) {
+    if (node.type !== 'finding') continue;
+    const hasForward = node.links.some(l => forwardRelations.has(l.relation));
+    if (!hasForward) orphanFindings.push(id);
+  }
+
+  // Deferred items
+  const deferredItems: string[] = [];
+  for (const [id, node] of graph.nodes) {
+    if (node.status === 'DEFERRED') deferredItems.push(id);
+  }
+
+  return { triggers, promotionCandidates, orphanFindings, deferredItems };
 }
 
 // ── getPromotionCandidates ──────────────────────────────────────────
 
 /**
  * Identify findings eligible for promotion to knowledge.
- * Criteria: confidence >= 0.8 AND 2+ outgoing "supports" links.
+ * Spec §6.2 criteria (OR logic — at least one must be met):
+ * 1. confidence >= 0.9 + independent support 2+
+ * 2. de facto in use (referenced as premise via DEPENDS_ON/EXTENDS)
+ * Exclusion: CONTRADICTS edge exists → not eligible
  */
 export async function getPromotionCandidates(graphDir: string): Promise<PromoteCandidate[]> {
   const graph = await loadGraph(graphDir);
@@ -369,20 +551,43 @@ export async function getPromotionCandidates(graphDir: string): Promise<PromoteC
     }
   }
 
+  // Build set of findings that are contradicted
+  const contradictedIds = new Set<string>();
+  for (const [, node] of graph.nodes) {
+    for (const link of node.links) {
+      if (link.relation === 'contradicts') {
+        contradictedIds.add(link.target);
+      }
+    }
+  }
+
+  // Build set of findings referenced as premise (de facto in use)
+  const deFactoIds = new Set<string>();
+  for (const [, node] of graph.nodes) {
+    for (const link of node.links) {
+      if (link.relation === 'depends_on' || link.relation === 'extends') {
+        deFactoIds.add(link.target);
+      }
+    }
+  }
+
   for (const [id, node] of graph.nodes) {
     if (node.type !== 'finding') continue;
     if (promotedIds.has(id)) continue;
+    if (contradictedIds.has(id)) continue;
 
     const confidence = node.confidence ?? 0;
-    if (confidence < 0.8) continue;
+    const supportsCount = node.links.filter(l => l.relation === 'supports').length;
+    const isDeFacto = deFactoIds.has(id);
+    const meetsConfidence = confidence >= 0.9 && supportsCount >= 2;
 
-    const supportsCount = node.links.filter(
-      l => l.relation === 'supports'
-    ).length;
+    if (!meetsConfidence && !isDeFacto) continue;
 
-    if (supportsCount < 2) continue;
+    const reason = meetsConfidence && isDeFacto ? 'both'
+      : meetsConfidence ? 'confidence'
+      : 'de_facto';
 
-    candidates.push({ id, confidence, supports: supportsCount });
+    candidates.push({ id, confidence, supports: supportsCount, reason });
   }
 
   return candidates;

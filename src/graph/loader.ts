@@ -44,10 +44,18 @@ function parseLinks(raw: unknown): Link[] {
   if (!Array.isArray(raw)) return [];
   return raw
     .filter((item): item is Record<string, unknown> => typeof item === 'object' && item !== null)
-    .map((item) => ({
-      target: String(item.target ?? ''),
-      relation: normalizeRelation(String(item.relation ?? 'relates_to')),
-    }));
+    .map((item) => {
+      const link: Link = {
+        target: String(item.target ?? ''),
+        relation: normalizeRelation(String(item.relation ?? 'relates_to')),
+      };
+      if (typeof item.strength === 'number') link.strength = item.strength;
+      if (typeof item.severity === 'string') link.severity = item.severity as Link['severity'];
+      if (typeof item.completeness === 'number') link.completeness = item.completeness;
+      if (typeof item.dependencyType === 'string') link.dependencyType = item.dependencyType as Link['dependencyType'];
+      if (typeof item.impact === 'string') link.impact = item.impact as Link['impact'];
+      return link;
+    });
 }
 
 /**

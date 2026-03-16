@@ -71,6 +71,49 @@ describe('renderTemplate', () => {
   });
 });
 
+describe('type-specific template fields', () => {
+  it('hypothesis template includes kill_criterion, risk_level, priority', () => {
+    const output = renderTemplate('hypothesis', 'test', { locale: 'en' });
+    const parsed = matter(output);
+    expect(parsed.data.kill_criterion).toBeDefined();
+    expect(parsed.data.risk_level).toBeDefined();
+    expect(parsed.data.priority).toBeDefined();
+  });
+
+  it('finding template includes finding_type: observation', () => {
+    const output = renderTemplate('finding', 'test', { locale: 'en' });
+    const parsed = matter(output);
+    expect(parsed.data.finding_type).toBe('observation');
+  });
+
+  it('question template includes urgency: MEDIUM', () => {
+    const output = renderTemplate('question', 'test', { locale: 'en' });
+    const parsed = matter(output);
+    expect(parsed.data.urgency).toBe('MEDIUM');
+  });
+
+  it('episode template includes trigger, outcome', () => {
+    const output = renderTemplate('episode', 'test', { locale: 'en' });
+    const parsed = matter(output);
+    expect(parsed.data).toHaveProperty('trigger');
+    expect(parsed.data).toHaveProperty('outcome');
+  });
+
+  it('decision template includes alternatives_considered, reversibility', () => {
+    const output = renderTemplate('decision', 'test', { locale: 'en' });
+    const parsed = matter(output);
+    expect(parsed.data.alternatives_considered).toEqual([]);
+    expect(parsed.data.reversibility).toBe('medium');
+  });
+
+  it('experiment template includes config (empty object or omitted)', () => {
+    const output = renderTemplate('experiment', 'test', { locale: 'en' });
+    const parsed = matter(output);
+    // config can be empty object or absent, but template should have it
+    expect(parsed.data).toHaveProperty('config');
+  });
+});
+
 describe('nextId', () => {
   it('빈 디렉토리에서 001을 반환한다', () => {
     const id = nextId(path.join(FIXTURES, 'empty-graph'), 'hypothesis');

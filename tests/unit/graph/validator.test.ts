@@ -160,6 +160,126 @@ describe('lintNode', () => {
   });
 });
 
+describe('edge attribute validation', () => {
+  it('warns on strength outside 0.0-1.0', () => {
+    const node = {
+      id: 'test-001', type: 'finding' as const, title: 'Test', path: '/fake.md',
+      status: 'DRAFT', confidence: 0.5, tags: [], meta: {},
+      links: [{ target: 'hyp-001', relation: 'supports', strength: 1.5 }],
+    };
+    const errors = lintNode(node);
+    expect(errors.some(e => e.field === 'links' && e.severity === 'warning' && e.message.includes('strength'))).toBe(true);
+  });
+
+  it('warns on invalid severity value', () => {
+    const node = {
+      id: 'test-001', type: 'finding' as const, title: 'Test', path: '/fake.md',
+      status: 'DRAFT', confidence: 0.5, tags: [], meta: {},
+      links: [{ target: 'hyp-001', relation: 'contradicts', severity: 'INVALID' as any }],
+    };
+    const errors = lintNode(node);
+    expect(errors.some(e => e.field === 'links' && e.severity === 'warning' && e.message.includes('severity'))).toBe(true);
+  });
+
+  it('warns on completeness outside 0.0-1.0', () => {
+    const node = {
+      id: 'test-001', type: 'finding' as const, title: 'Test', path: '/fake.md',
+      status: 'DRAFT', confidence: 0.5, tags: [], meta: {},
+      links: [{ target: 'qst-001', relation: 'answers', completeness: -0.1 }],
+    };
+    const errors = lintNode(node);
+    expect(errors.some(e => e.field === 'links' && e.severity === 'warning' && e.message.includes('completeness'))).toBe(true);
+  });
+
+  it('warns on invalid dependencyType', () => {
+    const node = {
+      id: 'test-001', type: 'finding' as const, title: 'Test', path: '/fake.md',
+      status: 'DRAFT', confidence: 0.5, tags: [], meta: {},
+      links: [{ target: 'fnd-002', relation: 'depends_on', dependencyType: 'INVALID' as any }],
+    };
+    const errors = lintNode(node);
+    expect(errors.some(e => e.field === 'links' && e.severity === 'warning' && e.message.includes('dependencyType'))).toBe(true);
+  });
+
+  it('warns on invalid impact value', () => {
+    const node = {
+      id: 'test-001', type: 'finding' as const, title: 'Test', path: '/fake.md',
+      status: 'DRAFT', confidence: 0.5, tags: [], meta: {},
+      links: [{ target: 'hyp-001', relation: 'informs', impact: 'INVALID' as any }],
+    };
+    const errors = lintNode(node);
+    expect(errors.some(e => e.field === 'links' && e.severity === 'warning' && e.message.includes('impact'))).toBe(true);
+  });
+
+  it('no warning for valid attributes', () => {
+    const node = {
+      id: 'test-001', type: 'finding' as const, title: 'Test', path: '/fake.md',
+      status: 'DRAFT', confidence: 0.5, tags: [], meta: {},
+      links: [
+        { target: 'hyp-001', relation: 'supports', strength: 0.8 },
+        { target: 'hyp-002', relation: 'contradicts', severity: 'FATAL' as const },
+        { target: 'qst-001', relation: 'answers', completeness: 0.7 },
+        { target: 'fnd-002', relation: 'depends_on', dependencyType: 'LOGICAL' as const },
+        { target: 'hyp-003', relation: 'informs', impact: 'DECISIVE' as const },
+      ],
+    };
+    const errors = lintNode(node);
+    expect(errors.filter(e => e.severity === 'warning')).toEqual([]);
+  });
+
+  it('no warning for absent attributes (optional)', () => {
+    const node = {
+      id: 'test-001', type: 'finding' as const, title: 'Test', path: '/fake.md',
+      status: 'DRAFT', confidence: 0.5, tags: [], meta: {},
+      links: [{ target: 'hyp-001', relation: 'supports' }],
+    };
+    const errors = lintNode(node);
+    expect(errors.filter(e => e.severity === 'warning')).toEqual([]);
+  });
+});
+
+describe('type-specific meta validation', () => {
+  it('warns on invalid finding_type value', () => {
+    const node = {
+      id: 'fnd-001', type: 'finding' as const, title: 'Test', path: '/fake.md',
+      status: 'DRAFT', confidence: 0.5, tags: [], links: [],
+      meta: { finding_type: 'invalid' },
+    };
+    const errors = lintNode(node);
+    expect(errors.some(e => e.severity === 'warning' && e.message.includes('finding_type'))).toBe(true);
+  });
+
+  it('warns on invalid urgency value', () => {
+    const node = {
+      id: 'qst-001', type: 'question' as const, title: 'Test', path: '/fake.md',
+      status: 'OPEN', tags: [], links: [],
+      meta: { urgency: 'CRITICAL' },
+    };
+    const errors = lintNode(node);
+    expect(errors.some(e => e.severity === 'warning' && e.message.includes('urgency'))).toBe(true);
+  });
+
+  it('warns on invalid risk_level value', () => {
+    const node = {
+      id: 'hyp-001', type: 'hypothesis' as const, title: 'Test', path: '/fake.md',
+      status: 'PROPOSED', confidence: 0.5, tags: [], links: [],
+      meta: { risk_level: 'critical' },
+    };
+    const errors = lintNode(node);
+    expect(errors.some(e => e.severity === 'warning' && e.message.includes('risk_level'))).toBe(true);
+  });
+
+  it('warns on invalid reversibility value', () => {
+    const node = {
+      id: 'dec-001', type: 'decision' as const, title: 'Test', path: '/fake.md',
+      status: 'PROPOSED', tags: [], links: [],
+      meta: { reversibility: 'none' },
+    };
+    const errors = lintNode(node);
+    expect(errors.some(e => e.severity === 'warning' && e.message.includes('reversibility'))).toBe(true);
+  });
+});
+
 describe('lintGraph', () => {
   it('detects broken link target (nonexistent node)', async () => {
     const graph = await loadGraph(path.join(FIXTURES, 'graph-with-broken-link'));

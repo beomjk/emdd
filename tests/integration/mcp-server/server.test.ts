@@ -30,18 +30,22 @@ describe('MCP Server — server metadata', () => {
     expect(info?.version).toBe(VERSION);
   });
 
-  it('lists 7 tools', async () => {
+  it('lists 11 tools', async () => {
     const result = await client.listTools();
-    expect(result.tools).toHaveLength(7);
+    expect(result.tools).toHaveLength(11);
     const names = result.tools.map(t => t.name).sort();
     expect(names).toEqual([
+      'branch-groups',
       'check',
+      'confidence-propagate',
       'create-edge',
       'create-node',
       'health',
+      'kill-check',
       'list-nodes',
       'promote',
       'read-node',
+      'status-transitions',
     ]);
   });
 

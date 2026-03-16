@@ -68,7 +68,7 @@ describe('promoteCommand', () => {
   beforeEach(() => { tmpDir = setupProject(); });
   afterEach(() => { rmSync(tmpDir, { recursive: true, force: true }); });
 
-  it('identifies finding with confidence >= 0.8 and 2+ supports as candidate', async () => {
+  it('identifies finding with confidence >= 0.9 and 2+ supports as candidate', async () => {
     // Create hypothesis
     writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
       id: 'hyp-001', type: 'hypothesis', title: 'Test Hyp',
@@ -83,10 +83,10 @@ describe('promoteCommand', () => {
       created: '2026-01-01', updated: '2026-01-01',
       tags: [], links: [],
     });
-    // Create finding with high confidence and 2 support links
+    // Create finding with high confidence (>= 0.9 per spec) and 2 support links
     writeNode(tmpDir, 'findings', 'fnd-001-test.md', {
       id: 'fnd-001', type: 'finding', title: 'Promotable Finding',
-      status: 'VALIDATED', confidence: 0.85,
+      status: 'VALIDATED', confidence: 0.95,
       created: '2026-01-01', updated: '2026-01-01',
       tags: [],
       links: [

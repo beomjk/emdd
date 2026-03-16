@@ -80,6 +80,33 @@ export function renderTemplate(
   // Build body
   const body = BODY_TEMPLATES[locale]?.[type] ?? BODY_TEMPLATES['en'][type];
 
+  // Type-specific fields
+  const typeFields: Record<string, unknown> = {};
+  switch (type) {
+    case 'hypothesis':
+      typeFields.kill_criterion = '';
+      typeFields.risk_level = 'high';
+      typeFields.priority = 1;
+      break;
+    case 'finding':
+      typeFields.finding_type = 'observation';
+      break;
+    case 'question':
+      typeFields.urgency = 'MEDIUM';
+      break;
+    case 'episode':
+      typeFields.trigger = '';
+      typeFields.outcome = 'success';
+      break;
+    case 'decision':
+      typeFields.alternatives_considered = [];
+      typeFields.reversibility = 'medium';
+      break;
+    case 'experiment':
+      typeFields.config = {};
+      break;
+  }
+
   // Manually build YAML frontmatter to keep control over formatting
   const lines: string[] = ['---'];
   if (data.id) lines.push(`id: ${data.id}`);
@@ -88,6 +115,18 @@ export function renderTemplate(
   lines.push(`status: ${data.status}`);
   if (confidence !== undefined) {
     lines.push(`confidence: ${data.confidence}`);
+  }
+  // Type-specific fields
+  for (const [key, value] of Object.entries(typeFields)) {
+    if (Array.isArray(value)) {
+      lines.push(`${key}: []`);
+    } else if (typeof value === 'object' && value !== null) {
+      lines.push(`${key}: {}`);
+    } else if (typeof value === 'string') {
+      lines.push(`${key}: "${String(value).replace(/"/g, '\\"')}"`);
+    } else {
+      lines.push(`${key}: ${value}`);
+    }
   }
   lines.push(`created: ${data.created}`);
   lines.push(`updated: ${data.updated}`);
