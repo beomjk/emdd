@@ -13,7 +13,8 @@
     "dev": "tsx src/cli.ts",
     "test": "vitest",
     "test:run": "vitest run --passWithNoTests",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "demo:record": "terminal-demo play docs/assets/demo.md --record docs/assets/demo.cast && svg-term --in docs/assets/demo.cast --out docs/assets/demo.svg --window --width 80 --height 24"
   },
   "keywords": [
     "emdd",
@@ -35,6 +36,9 @@
   },
   "devDependencies": {
     "@types/node": "^25.5.0",
+    "react": "^16.14.0",
+    "svg-term-cli": "^2.1.1",
+    "terminal-demo": "^0.1.11",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vitest": "^4.1.0"

@@ -221,4 +221,4 @@ That is it. The graph grows naturally from this loop.
 
 ---
 
-*For the complete methodology, read the [full specification](spec/SPEC_EN.md). For the philosophical foundation, see [Philosophy](PHILOSOPHY.md). For term definitions, see the [Glossary](GLOSSARY.md).*
+*Prefer a faster, copy-paste-only walkthrough? Try [EMDD in 5 Minutes](TUTORIAL.md). For a complete example graph, see [`examples/ml-backbone-selection/`](../examples/ml-backbone-selection/). For the complete methodology, read the [full specification](spec/SPEC_EN.md). For the philosophical foundation, see [Philosophy](PHILOSOPHY.md). For term definitions, see the [Glossary](GLOSSARY.md).*

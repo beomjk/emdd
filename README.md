@@ -2,6 +2,10 @@
 
 > **A methodology that gives structure to R&D exploration through an AI-maintained evolving knowledge graph -- without killing the exploration itself.**
 
+## Demo
+
+<img src="docs/assets/demo.svg" alt="EMDD Demo" width="720">
+
 ## What is EMDD?
 
 Too much structure suffocates research. Too little structure evaporates it. Existing approaches each solve one piece -- Zettelkasten gives bottom-up emergence, HDD gives hypothesis testing, DDP gives risk prioritization -- but none of them track the *relationships* between what you know, what you don't know, and what to explore next. EMDD fills that gap: it is a lightweight, AI-maintained knowledge graph that structures your exploration as it happens, surfaces blind spots, and remembers every dead end so you never walk it twice.
@@ -80,7 +84,7 @@ emdd new question "what-causes-defects" --lang en
 emdd new hypothesis "surface-cracks-from-stress"
 
 # Link them
-emdd link qst-001 hyp-001 MOTIVATES
+emdd link hyp-001 qst-001 spawned_from
 
 # Check graph health
 emdd lint
@@ -122,7 +126,9 @@ See [section 11 of the specification](docs/spec/SPEC_EN.md#11-phased-adoption-gu
 
 ## Documentation
 
+- [EMDD in 5 Minutes](docs/TUTORIAL.md) -- copy-paste tutorial
 - [Quick Start Guide](docs/QUICK_START.md) -- get started in 15 minutes
+- [Example Graph](examples/ml-backbone-selection/) -- a complete 13-node research narrative
 - [Full Specification](docs/spec/SPEC_EN.md) -- the complete methodology
 - [Philosophy](docs/PHILOSOPHY.md) -- why EMDD exists
 - [Operations](docs/OPERATIONS.md) -- research loops, ceremonies, adoption
