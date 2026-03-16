@@ -355,6 +355,7 @@ DVC exp run -> metrics.json -> post-experiment hook -> Claude Code
 
 ```
 project-root/
++-- .emdd.yml                  # Project config (created by emdd init)
 +-- .claude/
 |   +-- CLAUDE.md              # EMDD rules + agent behavior (created by emdd init)
 |

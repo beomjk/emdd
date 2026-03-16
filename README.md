@@ -97,7 +97,8 @@ See the [Quick Start Guide](docs/QUICK_START.md) for a full walkthrough.
 
 | Command | Description |
 |---------|-------------|
-| `emdd init [path]` | Initialize a new EMDD project |
+| `emdd init [path]` | Initialize a new EMDD project (`--tool claude\|cursor\|windsurf\|cline\|copilot\|all`, `--lang en\|ko`) |
+| `emdd list [path]` | List nodes (`--type`, `--status` filters) |
 | `emdd new <type> <slug>` | Create a node (hypothesis, experiment, finding, ...) |
 | `emdd link <source> <target> <relation>` | Add a link between nodes |
 | `emdd update <node-id> --set key=value` | Update node frontmatter |
@@ -109,8 +110,9 @@ See the [Quick Start Guide](docs/QUICK_START.md) for a full walkthrough.
 | `emdd backlog [path]` | List incomplete items across all nodes |
 | `emdd index [path]` | Generate `_index.md` |
 | `emdd graph [path]` | Generate `_graph.mmd` (Mermaid) |
+| `emdd mcp` | Start MCP server (stdio transport) |
 
-All commands support `--lang en|ko` for bilingual output.
+The `init` command supports `--lang en|ko` for bilingual project setup.
 
 ## Phased Adoption
 

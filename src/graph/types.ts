@@ -104,11 +104,11 @@ export const PREFIX_TO_TYPE: Record<string, NodeType> = Object.fromEntries(
 // ── Valid Statuses per Node Type ────────────────────────────────────
 
 export const VALID_STATUSES: Record<NodeType, readonly string[]> = {
-  hypothesis: ['PROPOSED', 'TESTING', 'SUPPORTED', 'REFUTED', 'REVISED', 'DEFERRED'],
+  hypothesis: ['PROPOSED', 'TESTING', 'SUPPORTED', 'REFUTED', 'REVISED', 'DEFERRED', 'CONTESTED'],
   experiment: ['PLANNED', 'RUNNING', 'COMPLETED', 'FAILED', 'ABANDONED'],
   finding: ['DRAFT', 'VALIDATED', 'PROMOTED', 'RETRACTED'],
   knowledge: ['ACTIVE', 'DISPUTED', 'SUPERSEDED', 'RETRACTED'],
-  question: ['OPEN', 'RESOLVED', 'ANSWERED', 'DEFERRED'],
+  question: ['OPEN', 'RESOLVED', 'ANSWERED', 'DEFERRED', 'CONVERGED', 'MERGED', 'ABANDONED'],
   decision: ['PROPOSED', 'ACCEPTED', 'SUPERSEDED', 'REVERTED'],
   episode: ['ACTIVE', 'COMPLETED'],
 };

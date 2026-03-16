@@ -97,6 +97,67 @@ describe('lintNode', () => {
     expect(errors.length).toBeGreaterThan(0);
     expect(errors.some(e => e.field === 'confidence' && e.severity === 'warning')).toBe(true);
   });
+
+  it('accepts CONTESTED as valid hypothesis status', () => {
+    const node = {
+      id: 'hyp-test',
+      type: 'hypothesis' as const,
+      title: 'Contested Hypothesis',
+      path: '/fake/path.md',
+      status: 'CONTESTED',
+      confidence: 0.5,
+      tags: [],
+      links: [],
+      meta: { created: '2026-01-01', updated: '2026-01-01' },
+    };
+    const errors = lintNode(node);
+    expect(errors.some(e => e.field === 'status')).toBe(false);
+  });
+
+  it('accepts CONVERGED as valid question status', () => {
+    const node = {
+      id: 'qst-test',
+      type: 'question' as const,
+      title: 'Converged Question',
+      path: '/fake/path.md',
+      status: 'CONVERGED',
+      tags: [],
+      links: [],
+      meta: { created: '2026-01-01', updated: '2026-01-01' },
+    };
+    const errors = lintNode(node);
+    expect(errors.some(e => e.field === 'status')).toBe(false);
+  });
+
+  it('accepts MERGED as valid question status', () => {
+    const node = {
+      id: 'qst-test',
+      type: 'question' as const,
+      title: 'Merged Question',
+      path: '/fake/path.md',
+      status: 'MERGED',
+      tags: [],
+      links: [],
+      meta: { created: '2026-01-01', updated: '2026-01-01' },
+    };
+    const errors = lintNode(node);
+    expect(errors.some(e => e.field === 'status')).toBe(false);
+  });
+
+  it('accepts ABANDONED as valid question status', () => {
+    const node = {
+      id: 'qst-test',
+      type: 'question' as const,
+      title: 'Abandoned Question',
+      path: '/fake/path.md',
+      status: 'ABANDONED',
+      tags: [],
+      links: [],
+      meta: { created: '2026-01-01', updated: '2026-01-01' },
+    };
+    const errors = lintNode(node);
+    expect(errors.some(e => e.field === 'status')).toBe(false);
+  });
 });
 
 describe('lintGraph', () => {

@@ -901,6 +901,149 @@ mkdir -p scratchpad
 
 ---
 
+## 11. 단계적 도입 가이드
+
+EMDD의 전체 명세는 7가지 node type, 14가지 edge type, 5가지 ceremony를 포함한다. 모든 것을 한꺼번에 도입하면 부담이 크고, 원칙 2(최소한의 필요 구조)에 위배된다. 대신 세 단계에 걸쳐 EMDD를 도입한다:
+
+### 11.1 Lite — Hypothesis 루프 (1-2주차)
+
+**목표:** 시도한 것, 배운 것, 다음에 할 것을 기록하는 습관을 만든다.
+
+**사용 항목:**
+- **Node type (4가지):** Hypothesis, Experiment, Finding, Episode (기본 골격)
+- **Edge type (4가지):** SUPPORTS, CONTRADICTS, PRODUCES, SPAWNS
+- **Ceremony:** 없음 — 각 세션이 끝날 때 Episode만 작성
+
+**일일 소요 시간:** ~15분 (Episode 작성만)
+
+**잘 하고 있다는 신호:** 지난주의 Episode를 열었을 때 다음에 무엇을 해야 할지 즉시 알 수 있다.
+
+### 11.2 Standard — 구조 추가 (3-4주차)
+
+**목표:** 발견 사항을 재사용 가능한 지식으로 통합하고 열린 질문을 추적하기 시작한다.
+
+**추가 항목:**
+- **Node type (+2가지):** Knowledge, Question
+- **Edge type (+3가지):** PROMOTES, ANSWERS, EXTENDS
+- **Ceremony (+1가지):** Consolidation (Finding 5개 또는 Episode 3개마다)
+
+**일일 소요 시간:** ~25분
+
+**잘 하고 있다는 신호:** Finding이 정기적으로 Knowledge로 승격되고, Episode에서 새로운 Question이 도출된다.
+
+### 11.3 Full EMDD (5주차 이후)
+
+**목표:** 위험 우선순위 기반 탐색과 갭 탐지를 포함한 완전한 방법론을 사용한다.
+
+**추가 항목:**
+- **Node type (+1가지):** Decision
+- **Edge type (나머지 전부):** DEPENDS_ON, RELATES_TO, INFORMS, PART_OF, CONTEXT_FOR, REVISES, CONFIRMS
+- **Ceremony (전부):** Weekly Review, Milestone, Knowledge Refutation, Pivot
+
+**일일 소요 시간:** ~45분
+
+**잘 하고 있다는 신호:** 그래프가 이미 한 일뿐만 아니라 다음에 탐색할 것을 알려준다.
+
+### 11.4 단계를 건너뛸 때
+
+다음 경우에는 곧바로 Full EMDD로 시작한다:
+- 구조화된 연구 방법론(DDP, HDD) 경험이 있는 경우
+- 프로젝트의 중요도가 높아 첫날부터 엄격한 지식 추적이 필요한 경우
+- 팀으로 작업하며 처음부터 공유된 이해가 필요한 경우
+
+---
+
+## 12. 성공 지표
+
+EMDD에는 전통적 의미의 "산출물"이나 "속도"가 없다. 그러나 건강한 EMDD 그래프는 측정 가능한 패턴을 보인다. 이 지표들은 연구자가 그래프가 제대로 기능하고 있는지, 아니면 안티 패턴으로 흘러가고 있는지를 평가하는 데 도움을 준다.
+
+### 12.1 그래프 건강 지표
+
+| 지표 | 건강 범위 | 경고 신호 | 관련 안티 패턴 |
+|-----------|--------------|--------------|---------------------|
+| **Hypothesis 종결률** | Hypothesis의 30-50%가 2주 내에 SUPPORTED 또는 REFUTED에 도달 | < 20% (Hypothesis가 방치됨) 또는 > 80% (안전한 가설만 검증) | Premature Convergence (#4) |
+| **Knowledge/Finding 비율** | 1:4 ~ 1:8 | < 1:10 (Finding이 승격 없이 축적됨) | Finding Cemetery (#5) |
+| **Episode당 Finding 수** | 2-4개 | 0개 (발견 없는 Episode) 또는 > 8개 (Episode 범위가 너무 큼) | Under-Feeding (#2) |
+| **열린 Question 수** | 항상 3개 이상 | 0개 (완료되었다는 잘못된 인식) | Finding Cemetery (#5) |
+| **Episode 빈도** | 주 1회 이상 (파트타임) 또는 주 3회 이상 (풀타임) | 2주 이상 공백 | Graph Amnesia (#6) |
+| **부정적 Finding 비율** | 전체 Finding의 15-30% | < 5% (성공만 기록) | Under-Feeding (#2) |
+| **고아 Finding 수** | 3개 미만 | 5개 이상 (Finding이 다음 단계로 연결되지 않음) | Finding Cemetery (#5) |
+| **Consolidation 주기** | Finding 5-8개 또는 Episode 3-4개마다 | Consolidation 없이 Finding 10개 이상 축적 | Finding Cemetery (#5) |
+| **"미추진" Decision 수** | 월 1개 이상 | 2개월 이상 0개 (의식적 선택을 하지 않음) | Blind Following (#3) |
+| **그래프 밀도** (edge/node) | 1.5-3.0 | < 1.0 (연결되지 않은 node) 또는 > 5.0 (과도한 연결) | Over-Structuring (#1) |
+
+### 12.2 궤적 신호
+
+특정 시점의 지표 외에도 추세를 관찰한다:
+
+**긍정적 궤적 (EMDD가 잘 작동하고 있음):**
+- Hypothesis가 단순히 축적되지 않고 해결(SUPPORTED 또는 REFUTED)되고 있음
+- Episode와 Consolidation에서 새로운 Question이 도출됨
+- Knowledge node가 성장하고 있음 — Finding이 승격되고 있음
+- Episode의 "What's Next" 섹션이 실행 가능하고 후속 조치가 이루어짐
+- 그래프가 다음에 탐색할 것을 결정하는 데 도움을 주고 있음
+
+**부정적 궤적 (개입이 필요함):**
+- 동일한 Hypothesis가 3주 이상 TESTING 상태에 머물러 있음
+- 2주 이상 새로운 Question이 생성되지 않았음
+- Episode가 형식적임 (복사-붙여넣기, 최소한의 내용)
+- "What's Next" 항목이 대부분 [deferred] 또는 [superseded] 상태
+- 연구보다 그래프 유지 관리에 더 많은 시간을 쓰고 있음 (마찰 예산 초과)
+- AI 제안을 모두 수용하거나 모두 거부하고 있음
+
+### 12.3 Health Dashboard 통합
+
+`emdd health` 명령(또는 동등한 기능)은 이 지표들을 보고해야 한다. 권장 대시보드 형식:
+
+```
+=== EMDD Health Report [2026-03-15] ===
+
+[GRAPH SIZE]
+Nodes: 47 | Edges: 68 | Density: 1.45
+
+[HYPOTHESIS STATUS]
+Active: 5 | Closure rate (30d): 40% ✓
+Untested > 5d: hyp-008 (7d) ⚠
+
+[FINDINGS]
+Total: 23 | Orphans: 2 ✓ | Negative: 18% ✓
+Last Consolidation: 4 Findings ago ✓
+
+[KNOWLEDGE]
+Total: 5 | K/F ratio: 1:4.6 ✓ | Disputed: 0
+
+[QUESTIONS]
+Open: 4 ✓ | Blocking: 0 ✓ | Stale > 7d: q-009 ⚠
+
+[EPISODES]
+Total: 12 | Last: 1d ago ✓
+Deferred items: 2 | Superseded: 1
+
+[RECOMMENDATIONS]
+1. Review hyp-008 — untested for 7 days
+2. Review q-009 — open for 9 days without progress
+```
+
+### 12.4 주의가 필요한 시점
+
+**다음 경우 즉시 점검을 실시한다:**
+- 열린 Question이 0개일 때 (연구가 "완료"된 것 같지만 아마 아닐 것임)
+- 평균 Hypothesis 신뢰도가 2주 이상 하락 추세일 때 (체계적 실패)
+- 백로그에 [deferred] 항목이 3개 이상일 때 (의사결정 회피)
+- 2주 이상 Episode를 작성하지 않았을 때 (그래프가 죽어가고 있음)
+- 동일 클러스터에서 Knowledge가 2회 RETRACTED되었을 때 (기반 가정이 잘못됨 → Pivot Ceremony 고려)
+
+### 12.5 성공의 모습
+
+EMDD가 성공적일 때:
+1. **연구 궤적을 설명할 수 있음** — Episode 체인이 현재에 이르기까지의 과정을 이야기해 줌
+2. **모르는 것이 무엇인지 알고 있음** — 열린 Question과 미검증 Hypothesis가 가시적이고 우선순위가 매겨져 있음
+3. **막다른 길이 문서화되어 있음** — 실패한 경로를 실수로 다시 탐색하는 일이 없음
+4. **그래프가 놀라움을 줌** — AI 갭 탐지가 미처 생각하지 못한 연결이나 질문을 제시함
+5. **새 팀원이 온보딩할 수 있음** — 그래프의 진입점과 최근 Episode를 읽으면 30분 내에 맥락을 파악할 수 있음
+
+---
+
 ## 13. 규모 & 성능
 
 EMDD는 "R&D PoC 규모" — 일반적으로 수십에서 수백 개의 노드 — 를 위해 설계되었다. 그러나 프로젝트는 성장하고, 팀은 수개월에 걸쳐 지식을 축적한다. 이 섹션은 다양한 규모에서 그래프를 관리하는 가이드를 제공한다.

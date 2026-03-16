@@ -12,6 +12,7 @@ import { doneCommand } from './commands/done.js';
 import { indexCommand } from './commands/index.js';
 import { graphCommand } from './commands/graph.js';
 import { backlogCommand } from './commands/backlog.js';
+import { listCommand } from './commands/list.js';
 import { resolveGraphDir } from './graph/loader.js';
 import { startMcpServer } from './mcp-server/index.js';
 import { VERSION } from './version.js';
@@ -52,6 +53,15 @@ program
   .option('--path <path>', 'Project path')
   .action(withCliErrorHandling(async (type, slug, options) => {
     await newCommand(type, slug, options);
+  }));
+
+program
+  .command('list [path]')
+  .description('List nodes, optionally filtered by type and/or status')
+  .option('--type <type>', 'Filter by node type')
+  .option('--status <status>', 'Filter by status')
+  .action(withCliErrorHandling(async (path, options) => {
+    await listCommand(path, options);
   }));
 
 program
