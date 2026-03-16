@@ -12,7 +12,7 @@ describe('detectTransitions', () => {
   beforeEach(() => {
     tmpDir = mkdtempSync(join(tmpdir(), 'emdd-trans-'));
     graphDir = join(tmpDir, 'graph');
-    for (const sub of ['hypotheses', 'experiments', 'findings', 'knowledge']) {
+    for (const sub of ['hypotheses', 'experiments', 'findings', 'knowledge', 'decisions']) {
       mkdirSync(join(graphDir, sub), { recursive: true });
     }
   });
@@ -171,6 +171,88 @@ describe('detectTransitions', () => {
 
       const results = await detectTransitions(graphDir);
       expect(results.filter(r => r.nodeId === 'knw-001')).toEqual([]);
+    });
+  });
+
+  describe('CONTESTED hypothesis transitions', () => {
+    it('TESTING→CONTESTED: Decision with status CONTESTED references hypothesis', async () => {
+      writeNode('hypotheses', 'hyp-001-test.md', {
+        id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'TESTING',
+        confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+      });
+      writeNode('decisions', 'dec-001-test.md', {
+        id: 'dec-001', type: 'decision', title: 'D1', status: 'CONTESTED',
+        created: '2026-01-01', updated: '2026-01-01', tags: [],
+        links: [{ target: 'hyp-001', relation: 'context_for' }],
+      });
+
+      const results = await detectTransitions(graphDir);
+      expect(results.some(r => r.nodeId === 'hyp-001' && r.recommendedStatus === 'CONTESTED')).toBe(true);
+    });
+
+    it('CONTESTED→SUPPORTED: Decision ACCEPTED + strong supports evidence', async () => {
+      writeNode('hypotheses', 'hyp-001-test.md', {
+        id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'CONTESTED',
+        confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+      });
+      writeNode('decisions', 'dec-001-test.md', {
+        id: 'dec-001', type: 'decision', title: 'D1', status: 'ACCEPTED',
+        created: '2026-01-01', updated: '2026-01-01', tags: [],
+        links: [{ target: 'hyp-001', relation: 'confirms' }],
+      });
+      writeNode('findings', 'fnd-001-test.md', {
+        id: 'fnd-001', type: 'finding', title: 'F1', status: 'VALIDATED',
+        confidence: 0.9, created: '2026-01-01', updated: '2026-01-01', tags: [],
+        links: [{ target: 'hyp-001', relation: 'supports', strength: 0.8 }],
+      });
+
+      const results = await detectTransitions(graphDir);
+      expect(results.some(r => r.nodeId === 'hyp-001' && r.recommendedStatus === 'SUPPORTED')).toBe(true);
+    });
+
+    it('CONTESTED→REFUTED: Decision ACCEPTED + contradicts evidence', async () => {
+      writeNode('hypotheses', 'hyp-001-test.md', {
+        id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'CONTESTED',
+        confidence: 0.3, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+      });
+      writeNode('decisions', 'dec-001-test.md', {
+        id: 'dec-001', type: 'decision', title: 'D1', status: 'ACCEPTED',
+        created: '2026-01-01', updated: '2026-01-01', tags: [],
+        links: [{ target: 'hyp-001', relation: 'confirms' }],
+      });
+      writeNode('findings', 'fnd-001-test.md', {
+        id: 'fnd-001', type: 'finding', title: 'F1', status: 'VALIDATED',
+        confidence: 0.8, created: '2026-01-01', updated: '2026-01-01', tags: [],
+        links: [{ target: 'hyp-001', relation: 'contradicts' }],
+      });
+
+      const results = await detectTransitions(graphDir);
+      expect(results.some(r => r.nodeId === 'hyp-001' && r.recommendedStatus === 'REFUTED')).toBe(true);
+    });
+
+    it('CONTESTED→REVISED: revises edge from newer hypothesis', async () => {
+      writeNode('hypotheses', 'hyp-001-test.md', {
+        id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'CONTESTED',
+        confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+      });
+      writeNode('hypotheses', 'hyp-002-test.md', {
+        id: 'hyp-002', type: 'hypothesis', title: 'H2', status: 'PROPOSED',
+        confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [],
+        links: [{ target: 'hyp-001', relation: 'revises' }],
+      });
+
+      const results = await detectTransitions(graphDir);
+      expect(results.some(r => r.nodeId === 'hyp-001' && r.recommendedStatus === 'REVISED')).toBe(true);
+    });
+
+    it('CONTESTED with no resolution: no transition', async () => {
+      writeNode('hypotheses', 'hyp-001-test.md', {
+        id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'CONTESTED',
+        confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+      });
+
+      const results = await detectTransitions(graphDir);
+      expect(results.filter(r => r.nodeId === 'hyp-001')).toEqual([]);
     });
   });
 

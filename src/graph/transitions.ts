@@ -54,6 +54,22 @@ export async function detectTransitions(graphDir: string): Promise<TransitionRec
       }
 
       if (node.status === 'TESTING') {
+        // TESTING→CONTESTED: Decision with status CONTESTED references this hypothesis
+        const contestedDecision = incoming.find(e => {
+          const source = graph.nodes.get(e.sourceId);
+          return source?.type === 'decision' && source.status === 'CONTESTED';
+        });
+        if (contestedDecision) {
+          recommendations.push({
+            nodeId,
+            currentStatus: 'TESTING',
+            recommendedStatus: 'CONTESTED',
+            reason: `Contested by decision ${contestedDecision.sourceId}`,
+            evidenceIds: [contestedDecision.sourceId],
+          });
+          continue;
+        }
+
         // Check for REVISES edge first (REVISED takes priority over REFUTED)
         const revisesEdges = incoming.filter(e => e.relation === 'revises');
         if (revisesEdges.length > 0) {
@@ -93,6 +109,57 @@ export async function detectTransitions(graphDir: string): Promise<TransitionRec
             evidenceIds: contradictions.map(e => e.sourceId),
           });
           continue;
+        }
+      }
+
+      if (node.status === 'CONTESTED') {
+        // CONTESTED→REVISED: revises edge (same pattern as TESTING→REVISED)
+        const revisesEdges = incoming.filter(e => e.relation === 'revises');
+        if (revisesEdges.length > 0) {
+          recommendations.push({
+            nodeId,
+            currentStatus: 'CONTESTED',
+            recommendedStatus: 'REVISED',
+            reason: `Revised by ${revisesEdges.map(e => e.sourceId).join(', ')}`,
+            evidenceIds: revisesEdges.map(e => e.sourceId),
+          });
+          continue;
+        }
+
+        // Check for ACCEPTED decision referencing this hypothesis
+        const hasAcceptedDecision = incoming.some(e => {
+          const source = graph.nodes.get(e.sourceId);
+          return source?.type === 'decision' && source.status === 'ACCEPTED';
+        });
+
+        if (hasAcceptedDecision) {
+          // CONTESTED→SUPPORTED: SUPPORTS with strength≥0.7 AND ACCEPTED decision
+          const strongSupports = incoming.filter(
+            e => e.relation === 'supports' && (e.strength ?? 0) >= 0.7
+          );
+          if (strongSupports.length > 0) {
+            recommendations.push({
+              nodeId,
+              currentStatus: 'CONTESTED',
+              recommendedStatus: 'SUPPORTED',
+              reason: `Resolved: strong support from ${strongSupports.map(e => e.sourceId).join(', ')} with accepted decision`,
+              evidenceIds: strongSupports.map(e => e.sourceId),
+            });
+            continue;
+          }
+
+          // CONTESTED→REFUTED: CONTRADICTS edge AND ACCEPTED decision
+          const contradictions = incoming.filter(e => e.relation === 'contradicts');
+          if (contradictions.length > 0) {
+            recommendations.push({
+              nodeId,
+              currentStatus: 'CONTESTED',
+              recommendedStatus: 'REFUTED',
+              reason: `Resolved: contradicted by ${contradictions.map(e => e.sourceId).join(', ')} with accepted decision`,
+              evidenceIds: contradictions.map(e => e.sourceId),
+            });
+            continue;
+          }
         }
       }
     }

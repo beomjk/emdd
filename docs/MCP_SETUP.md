@@ -6,7 +6,7 @@
 
 The EMDD MCP server exposes the knowledge graph to any MCP-compatible AI coding assistant. It provides:
 
-- **7 tools** for reading, creating, and analyzing graph nodes and edges
+- **13 tools** for reading, creating, and analyzing graph nodes and edges
 - **4 prompts** for guided workflows (context loading, episode creation, consolidation, health review)
 
 The server communicates over stdio transport and is started with `emdd mcp`.
@@ -131,6 +131,12 @@ All tools accept a `graphDir` parameter — the path to your EMDD `graph/` direc
 | `health` | Compute a health report for the graph | `graphDir` |
 | `check` | Check consolidation triggers | `graphDir` |
 | `promote` | Identify findings eligible for promotion to knowledge | `graphDir` |
+| `confidence-propagate` | Propagate confidence scores across the graph | `graphDir` |
+| `status-transitions` | Detect recommended status transitions | `graphDir` |
+| `kill-check` | Check kill criteria status for hypotheses | `graphDir` |
+| `branch-groups` | List and analyze branch groups | `graphDir` |
+| `graph_neighbors` | Get connected nodes for a given node | `graphDir`, `nodeId`, `depth?` |
+| `graph_gaps` | Analyze structural gaps in the graph | `graphDir` |
 
 ### Parameter Details
 

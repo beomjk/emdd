@@ -135,6 +135,32 @@ describe('type-specific template fields', () => {
     expect(parsed.data).toHaveProperty('sources');
     expect(parsed.data.sources).toEqual([]);
   });
+
+  it('decision template includes rationale', () => {
+    const output = renderTemplate('decision', 'test', { locale: 'en' });
+    const parsed = matter(output);
+    expect(parsed.data).toHaveProperty('rationale');
+  });
+
+  it('episode template includes duration', () => {
+    const output = renderTemplate('episode', 'test', { locale: 'en' });
+    const parsed = matter(output);
+    expect(parsed.data).toHaveProperty('duration');
+  });
+
+  it('question template includes question_type and answer_summary', () => {
+    const output = renderTemplate('question', 'test', { locale: 'en' });
+    const parsed = matter(output);
+    expect(parsed.data).toHaveProperty('question_type');
+    expect(parsed.data).toHaveProperty('answer_summary');
+  });
+
+  it('experiment template includes results and artifacts', () => {
+    const output = renderTemplate('experiment', 'test', { locale: 'en' });
+    const parsed = matter(output);
+    expect(parsed.data).toHaveProperty('results');
+    expect(parsed.data).toHaveProperty('artifacts');
+  });
 });
 
 describe('nextId', () => {

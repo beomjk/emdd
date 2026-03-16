@@ -1285,12 +1285,20 @@ mkdir -p scratchpad
 ### Week 3: Graph MCP Server (~200 lines of Python)
 
 ```python
-# Tools:
-#   graph_list(type?, status?, min_confidence?) -> node listing
-#   graph_get(id) -> single node details
+# Tools (implemented in TypeScript MCP server):
+#   list-nodes(type?, status?) -> node listing
+#   read-node(id) -> single node details
+#   create-node(type, slug) -> create a new node
+#   create-edge(source, target, relation) -> add an edge
+#   health(graphDir) -> graph health dashboard (replaces graph_stats)
+#   check(graphDir) -> consolidation triggers
+#   promote(graphDir) -> promotion candidates
+#   confidence-propagate(graphDir) -> confidence propagation
+#   status-transitions(graphDir) -> recommended status transitions
+#   kill-check(graphDir) -> kill criteria status
+#   branch-groups(graphDir) -> branch group analysis
 #   graph_neighbors(id, depth=1) -> connected nodes
 #   graph_gaps() -> structural gap analysis
-#   graph_stats() -> overall statistics
 ```
 
 ### Week 4+: Cytoscape.js visualization, time slider, autonomous analysis

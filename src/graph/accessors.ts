@@ -35,6 +35,7 @@ export interface ExperimentMeta {
 
 export interface DecisionMeta {
   alternatives_considered?: string[];
+  rationale?: string;
   reversibility?: string;
 }
 
@@ -77,7 +78,7 @@ export function getExperimentMeta(node: Node): ExperimentMeta | null {
 }
 
 export function getDecisionMeta(node: Node): DecisionMeta | null {
-  return extract<DecisionMeta>(node, 'decision', ['alternatives_considered', 'reversibility']);
+  return extract<DecisionMeta>(node, 'decision', ['alternatives_considered', 'rationale', 'reversibility']);
 }
 
 export function getKnowledgeMeta(node: Node): KnowledgeMeta | null {

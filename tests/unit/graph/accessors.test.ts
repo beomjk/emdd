@@ -133,12 +133,13 @@ describe('getExperimentMeta', () => {
 });
 
 describe('getDecisionMeta', () => {
-  it('returns alternatives_considered, reversibility', () => {
+  it('returns alternatives_considered, rationale, reversibility', () => {
     const node = makeNode({
       type: 'decision',
-      meta: { alternatives_considered: ['A', 'B'], reversibility: 'medium' },
+      meta: { rationale: 'because X', alternatives_considered: ['A', 'B'], reversibility: 'medium' },
     });
     const m = getDecisionMeta(node);
+    expect(m!.rationale).toBe('because X');
     expect(m!.alternatives_considered).toEqual(['A', 'B']);
     expect(m!.reversibility).toBe('medium');
   });

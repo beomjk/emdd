@@ -1043,12 +1043,20 @@ mkdir -p scratchpad
 ### Week 3: Graph MCP Server (~200줄 Python)
 
 ```python
-# Tools:
-#   graph_list(type?, status?, min_confidence?) → 노드 목록
-#   graph_get(id) → 단일 노드 상세
+# Tools (TypeScript MCP 서버로 구현됨):
+#   list-nodes(type?, status?) → 노드 목록
+#   read-node(id) → 단일 노드 상세
+#   create-node(type, slug) → 새 노드 생성
+#   create-edge(source, target, relation) → 에지 추가
+#   health(graphDir) → 그래프 건강 대시보드 (graph_stats 대체)
+#   check(graphDir) → 통합 트리거
+#   promote(graphDir) → 승격 후보
+#   confidence-propagate(graphDir) → 신뢰도 전파
+#   status-transitions(graphDir) → 권장 상태 전이
+#   kill-check(graphDir) → 킬 기준 상태
+#   branch-groups(graphDir) → 브랜치 그룹 분석
 #   graph_neighbors(id, depth=1) → 연결 노드들
 #   graph_gaps() → 구조적 공백 분석
-#   graph_stats() → 전체 통계
 ```
 
 ### Week 4+: Cytoscape.js 시각화, 시간 슬라이더, 자율 분석

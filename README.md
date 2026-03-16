@@ -110,6 +110,10 @@ See the [Quick Start Guide](docs/QUICK_START.md) for a full walkthrough.
 | `emdd backlog [path]` | List incomplete items across all nodes |
 | `emdd index [path]` | Generate `_index.md` |
 | `emdd graph [path]` | Generate `_graph.mmd` (Mermaid) |
+| `emdd confidence [path]` | Propagate confidence across the graph |
+| `emdd transitions [path]` | Detect recommended status transitions |
+| `emdd kill-check [path]` | Check kill criteria status for hypotheses |
+| `emdd branches [path]` | List and analyze branch groups |
 | `emdd mcp` | Start MCP server (stdio transport) |
 
 The `init` command supports `--lang en|ko` for bilingual project setup.

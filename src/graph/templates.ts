@@ -93,20 +93,26 @@ export function renderTemplate(
       typeFields.sources = [];
       break;
     case 'question':
+      typeFields.question_type = '';
       typeFields.urgency = 'MEDIUM';
+      typeFields.answer_summary = '';
       break;
     case 'episode':
       typeFields.trigger = '';
+      typeFields.duration = '';
       typeFields.outcome = 'success';
       typeFields.spawned = [];
       typeFields.dead_ends = [];
       break;
     case 'decision':
+      typeFields.rationale = '';
       typeFields.alternatives_considered = [];
       typeFields.reversibility = 'medium';
       break;
     case 'experiment':
       typeFields.config = {};
+      typeFields.results = {};
+      typeFields.artifacts = [];
       break;
     case 'knowledge':
       typeFields.knowledge_type = '';
