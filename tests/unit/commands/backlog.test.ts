@@ -1,0 +1,73 @@
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import matter from 'gray-matter';
+import { backlogCommand } from '../../../src/commands/backlog.js';
+
+describe('backlogCommand', () => {
+  let tmpDir: string;
+  let graphDir: string;
+
+  beforeEach(() => {
+    tmpDir = mkdtempSync(join(tmpdir(), 'emdd-backlog-'));
+    graphDir = join(tmpDir, 'graph');
+    mkdirSync(join(graphDir, 'episodes'), { recursive: true });
+  });
+
+  afterEach(() => {
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  function writeEpisode(filename: string, fm: Record<string, unknown>, body: string) {
+    writeFileSync(join(graphDir, 'episodes', filename), matter.stringify(body, fm));
+  }
+
+  it('returns all unchecked items without filter', async () => {
+    writeEpisode('epi-001-test.md', {
+      id: 'epi-001', type: 'episode', title: 'E1', status: 'ACTIVE',
+      created: '2026-03-01', updated: '2026-03-01', tags: [], links: [],
+    }, '## Goals\n\n- [ ] Task A\n- [x] Task B\n- [ ] Task C\n');
+
+    const result = await backlogCommand(graphDir);
+    expect(result.items.length).toBe(2);
+    expect(result.items.every(i => !i.checked)).toBe(true);
+  });
+
+  it('--status pending: returns only unchecked items', async () => {
+    writeEpisode('epi-001-test.md', {
+      id: 'epi-001', type: 'episode', title: 'E1', status: 'ACTIVE',
+      created: '2026-03-01', updated: '2026-03-01', tags: [], links: [],
+    }, '## Goals\n\n- [ ] Task A\n- [x] Task B\n');
+
+    const result = await backlogCommand(graphDir, 'pending');
+    expect(result.items.length).toBe(1);
+    expect(result.items[0].text).toBe('Task A');
+  });
+
+  it('--status all: returns both checked and unchecked items', async () => {
+    writeEpisode('epi-001-test.md', {
+      id: 'epi-001', type: 'episode', title: 'E1', status: 'ACTIVE',
+      created: '2026-03-01', updated: '2026-03-01', tags: [], links: [],
+    }, '## Goals\n\n- [ ] Task A\n- [x] Task B\n');
+
+    const result = await backlogCommand(graphDir, 'all');
+    expect(result.items.length).toBe(2);
+  });
+
+  it('--status deferred: returns items from DEFERRED episodes only', async () => {
+    writeEpisode('epi-001-test.md', {
+      id: 'epi-001', type: 'episode', title: 'E1', status: 'ACTIVE',
+      created: '2026-03-01', updated: '2026-03-01', tags: [], links: [],
+    }, '## Goals\n\n- [ ] Active Task\n');
+    writeEpisode('epi-002-test.md', {
+      id: 'epi-002', type: 'episode', title: 'E2', status: 'DEFERRED',
+      created: '2026-03-01', updated: '2026-03-01', tags: [], links: [],
+    }, '## Goals\n\n- [ ] Deferred Task\n');
+
+    const result = await backlogCommand(graphDir, 'deferred');
+    expect(result.items.length).toBe(1);
+    expect(result.items[0].text).toBe('Deferred Task');
+    expect(result.items[0].episodeId).toBe('epi-002');
+  });
+});

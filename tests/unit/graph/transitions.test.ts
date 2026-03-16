@@ -113,7 +113,52 @@ describe('detectTransitions', () => {
       expect(results.some(r => r.nodeId === 'knw-001' && r.recommendedStatus === 'DISPUTED')).toBe(true);
     });
 
-    it('no transition for already-DISPUTED', async () => {
+    it('DISPUTED→ACTIVE: contradiction resolved (contradicting node RETRACTED)', async () => {
+      writeNode('knowledge', 'knw-001-test.md', {
+        id: 'knw-001', type: 'knowledge', title: 'K1', status: 'DISPUTED',
+        confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+      });
+      writeNode('findings', 'fnd-001-test.md', {
+        id: 'fnd-001', type: 'finding', title: 'F1', status: 'RETRACTED',
+        confidence: 0.8, created: '2026-01-01', updated: '2026-01-01', tags: [],
+        links: [{ target: 'knw-001', relation: 'contradicts' }],
+      });
+
+      const results = await detectTransitions(graphDir);
+      expect(results.some(r => r.nodeId === 'knw-001' && r.recommendedStatus === 'ACTIVE')).toBe(true);
+    });
+
+    it('DISPUTED→SUPERSEDED: REVISES edge from newer knowledge', async () => {
+      writeNode('knowledge', 'knw-001-test.md', {
+        id: 'knw-001', type: 'knowledge', title: 'K1', status: 'DISPUTED',
+        confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+      });
+      writeNode('knowledge', 'knw-002-test.md', {
+        id: 'knw-002', type: 'knowledge', title: 'K2', status: 'ACTIVE',
+        confidence: 0.9, created: '2026-01-15', updated: '2026-01-15', tags: [],
+        links: [{ target: 'knw-001', relation: 'revises' }],
+      });
+
+      const results = await detectTransitions(graphDir);
+      expect(results.some(r => r.nodeId === 'knw-001' && r.recommendedStatus === 'SUPERSEDED')).toBe(true);
+    });
+
+    it('ACTIVE→SUPERSEDED: direct replacement via REVISES edge from newer knowledge', async () => {
+      writeNode('knowledge', 'knw-001-test.md', {
+        id: 'knw-001', type: 'knowledge', title: 'K1', status: 'ACTIVE',
+        confidence: 0.9, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+      });
+      writeNode('knowledge', 'knw-002-test.md', {
+        id: 'knw-002', type: 'knowledge', title: 'K2', status: 'ACTIVE',
+        confidence: 0.9, created: '2026-01-15', updated: '2026-01-15', tags: [],
+        links: [{ target: 'knw-001', relation: 'revises' }],
+      });
+
+      const results = await detectTransitions(graphDir);
+      expect(results.some(r => r.nodeId === 'knw-001' && r.recommendedStatus === 'SUPERSEDED')).toBe(true);
+    });
+
+    it('no transition for DISPUTED without resolution', async () => {
       writeNode('knowledge', 'knw-001-test.md', {
         id: 'knw-001', type: 'knowledge', title: 'K1', status: 'DISPUTED',
         confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],

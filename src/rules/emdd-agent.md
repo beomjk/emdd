@@ -25,10 +25,10 @@
 - Creating new Hypothesis or Question nodes
 - Adding or deleting edges
 - Changing Knowledge status (DISPUTED/RETRACTED)
+- Creating Decision nodes
 
 **Forbidden:**
 - Deleting any node (archive/deprecate instead)
-- Creating Decision nodes
 - Modifying kill criteria
 
 ## Graph Maintenance Tasks

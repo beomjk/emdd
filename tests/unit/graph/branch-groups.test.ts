@@ -110,6 +110,41 @@ describe('listBranchGroups', () => {
     expect(groups[0].warnings.some(w => w.includes('4 candidates'))).toBe(true);
   });
 
+  it('convergenceReady when group open >= 2 weeks', async () => {
+    const oldDate = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    writeNode('hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'TESTING',
+      confidence: 0.5, branch_group: 'bg-001', branch_role: 'candidate',
+      created: oldDate, updated: oldDate, tags: [], links: [],
+    });
+    writeNode('hypotheses', 'hyp-002-test.md', {
+      id: 'hyp-002', type: 'hypothesis', title: 'H2', status: 'TESTING',
+      confidence: 0.5, branch_group: 'bg-001', branch_role: 'candidate',
+      created: oldDate, updated: oldDate, tags: [], links: [],
+    });
+
+    const groups = await listBranchGroups(graphDir);
+    expect(groups[0].convergenceReady).toBe(true);
+    expect(groups[0].convergenceReason).toContain('Time limit');
+  });
+
+  it('not convergenceReady when group open < 2 weeks', async () => {
+    const recentDate = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    writeNode('hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'TESTING',
+      confidence: 0.5, branch_group: 'bg-001', branch_role: 'candidate',
+      created: recentDate, updated: recentDate, tags: [], links: [],
+    });
+    writeNode('hypotheses', 'hyp-002-test.md', {
+      id: 'hyp-002', type: 'hypothesis', title: 'H2', status: 'TESTING',
+      confidence: 0.5, branch_group: 'bg-001', branch_role: 'candidate',
+      created: recentDate, updated: recentDate, tags: [], links: [],
+    });
+
+    const groups = await listBranchGroups(graphDir);
+    expect(groups[0].convergenceReady).toBe(false);
+  });
+
   it('warns on group OPEN > 4 weeks', async () => {
     const oldDate = new Date(Date.now() - 35 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
     writeNode('hypotheses', 'hyp-001-test.md', {

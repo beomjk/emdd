@@ -24,6 +24,7 @@ import {
   getHealth,
   checkConsolidation,
   getPromotionCandidates,
+  getNeighbors,
 } from '../../../src/graph/operations.js';
 
 // Helper to create a minimal EMDD project with nodes
@@ -563,5 +564,81 @@ describe('planCreateEdge', () => {
     expect(parsed.data.links).toContainEqual(
       expect.objectContaining({ target: 'hyp-001', relation: 'supports' })
     );
+  });
+});
+
+describe('getNeighbors', () => {
+  let tmpDir: string;
+
+  beforeEach(() => {
+    tmpDir = setupProject();
+  });
+
+  afterEach(() => {
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it('returns directly connected neighbors at depth=1', async () => {
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'TESTING',
+      confidence: 0.5, created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [{ target: 'exp-001', relation: 'tests' }],
+    });
+    writeNode(tmpDir, 'experiments', 'exp-001-test.md', {
+      id: 'exp-001', type: 'experiment', title: 'E1', status: 'RUNNING',
+      created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+    });
+
+    const neighbors = await getNeighbors(join(tmpDir, 'graph'), 'hyp-001');
+    expect(neighbors.length).toBe(1);
+    expect(neighbors[0].id).toBe('exp-001');
+    expect(neighbors[0].direction).toBe('outgoing');
+  });
+
+  it('returns 2-hop neighbors at depth=2', async () => {
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'TESTING',
+      confidence: 0.5, created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [{ target: 'exp-001', relation: 'tests' }],
+    });
+    writeNode(tmpDir, 'experiments', 'exp-001-test.md', {
+      id: 'exp-001', type: 'experiment', title: 'E1', status: 'COMPLETED',
+      created: '2026-01-01', updated: '2026-01-01', tags: [],
+      links: [{ target: 'fnd-001', relation: 'produces' }],
+    });
+    writeNode(tmpDir, 'findings', 'fnd-001-test.md', {
+      id: 'fnd-001', type: 'finding', title: 'F1', status: 'VALIDATED',
+      confidence: 0.8, created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+
+    const neighbors = await getNeighbors(join(tmpDir, 'graph'), 'hyp-001', 2);
+    expect(neighbors.length).toBe(2);
+    expect(neighbors.some(n => n.id === 'exp-001' && n.depth === 1)).toBe(true);
+    expect(neighbors.some(n => n.id === 'fnd-001' && n.depth === 2)).toBe(true);
+  });
+
+  it('throws error for non-existent node', async () => {
+    await expect(
+      getNeighbors(join(tmpDir, 'graph'), 'hyp-999')
+    ).rejects.toThrow('Node not found: hyp-999');
+  });
+
+  it('returns incoming neighbors', async () => {
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'TESTING',
+      confidence: 0.5, created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+    writeNode(tmpDir, 'findings', 'fnd-001-test.md', {
+      id: 'fnd-001', type: 'finding', title: 'F1', status: 'VALIDATED',
+      confidence: 0.8, created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [{ target: 'hyp-001', relation: 'supports', strength: 0.8 }],
+    });
+
+    const neighbors = await getNeighbors(join(tmpDir, 'graph'), 'hyp-001');
+    expect(neighbors.length).toBe(1);
+    expect(neighbors[0].id).toBe('fnd-001');
+    expect(neighbors[0].direction).toBe('incoming');
   });
 });

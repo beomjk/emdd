@@ -10,6 +10,7 @@ export interface HypothesisMeta {
 
 export interface FindingMeta {
   finding_type?: string;
+  sources?: string[];
 }
 
 export interface QuestionMeta {
@@ -22,6 +23,8 @@ export interface EpisodeMeta {
   trigger?: string;
   duration?: string;
   outcome?: string;
+  spawned?: string[];
+  dead_ends?: string[];
 }
 
 export interface ExperimentMeta {
@@ -58,7 +61,7 @@ export function getHypothesisMeta(node: Node): HypothesisMeta | null {
 }
 
 export function getFindingMeta(node: Node): FindingMeta | null {
-  return extract<FindingMeta>(node, 'finding', ['finding_type']);
+  return extract<FindingMeta>(node, 'finding', ['finding_type', 'sources']);
 }
 
 export function getQuestionMeta(node: Node): QuestionMeta | null {
@@ -66,7 +69,7 @@ export function getQuestionMeta(node: Node): QuestionMeta | null {
 }
 
 export function getEpisodeMeta(node: Node): EpisodeMeta | null {
-  return extract<EpisodeMeta>(node, 'episode', ['trigger', 'duration', 'outcome']);
+  return extract<EpisodeMeta>(node, 'episode', ['trigger', 'duration', 'outcome', 'spawned', 'dead_ends']);
 }
 
 export function getExperimentMeta(node: Node): ExperimentMeta | null {

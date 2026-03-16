@@ -437,6 +437,97 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
   };
 }
 
+// ── getNeighbors ───────────────────────────────────────────────────
+
+export interface NeighborNode {
+  id: string;
+  type: string;
+  title: string;
+  status?: string;
+  relation: string;
+  direction: 'outgoing' | 'incoming';
+  depth: number;
+}
+
+/**
+ * Get neighbors of a node up to a given depth using BFS.
+ */
+export async function getNeighbors(
+  graphDir: string,
+  nodeId: string,
+  depth: number = 1,
+): Promise<NeighborNode[]> {
+  const graph = await loadGraph(graphDir);
+  const startNode = graph.nodes.get(nodeId);
+  if (!startNode) {
+    throw new Error(`Node not found: ${nodeId}`);
+  }
+
+  // Build reverse index for incoming edges
+  const reverseAdj = new Map<string, Array<{ sourceId: string; relation: string }>>();
+  for (const [id, node] of graph.nodes) {
+    for (const link of node.links) {
+      if (!reverseAdj.has(link.target)) reverseAdj.set(link.target, []);
+      reverseAdj.get(link.target)!.push({ sourceId: id, relation: link.relation });
+    }
+  }
+
+  const visited = new Set<string>([nodeId]);
+  const result: NeighborNode[] = [];
+  let frontier: Array<{ id: string; depth: number }> = [{ id: nodeId, depth: 0 }];
+
+  while (frontier.length > 0) {
+    const nextFrontier: Array<{ id: string; depth: number }> = [];
+
+    for (const { id, depth: currentDepth } of frontier) {
+      if (currentDepth >= depth) continue;
+      const node = graph.nodes.get(id);
+      if (!node) continue;
+
+      // Outgoing edges
+      for (const link of node.links) {
+        if (!visited.has(link.target) && graph.nodes.has(link.target)) {
+          visited.add(link.target);
+          const target = graph.nodes.get(link.target)!;
+          result.push({
+            id: target.id,
+            type: target.type,
+            title: target.title,
+            status: target.status,
+            relation: link.relation,
+            direction: 'outgoing',
+            depth: currentDepth + 1,
+          });
+          nextFrontier.push({ id: target.id, depth: currentDepth + 1 });
+        }
+      }
+
+      // Incoming edges
+      const incoming = reverseAdj.get(id) ?? [];
+      for (const edge of incoming) {
+        if (!visited.has(edge.sourceId)) {
+          visited.add(edge.sourceId);
+          const source = graph.nodes.get(edge.sourceId)!;
+          result.push({
+            id: source.id,
+            type: source.type,
+            title: source.title,
+            status: source.status,
+            relation: edge.relation,
+            direction: 'incoming',
+            depth: currentDepth + 1,
+          });
+          nextFrontier.push({ id: source.id, depth: currentDepth + 1 });
+        }
+      }
+    }
+
+    frontier = nextFrontier;
+  }
+
+  return result;
+}
+
 // ── checkConsolidation ──────────────────────────────────────────────
 
 /**

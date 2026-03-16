@@ -11,6 +11,8 @@ import { registerConfidence } from './tools/confidence.js';
 import { registerTransitions } from './tools/transitions.js';
 import { registerKillCheck } from './tools/kill-check.js';
 import { registerBranchGroups } from './tools/branch-groups.js';
+import { registerNeighbors } from './tools/neighbors.js';
+import { registerGaps } from './tools/gaps.js';
 import { registerContextLoading } from './prompts/context-loading.js';
 import { registerEpisodeCreation } from './prompts/episode-creation.js';
 import { registerConsolidation } from './prompts/consolidation.js';
@@ -32,6 +34,8 @@ export function createEmddMcpServer(): McpServer {
   registerTransitions(server);
   registerKillCheck(server);
   registerBranchGroups(server);
+  registerNeighbors(server);
+  registerGaps(server);
 
   // Prompts
   registerContextLoading(server);

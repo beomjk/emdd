@@ -3,7 +3,11 @@ import { getHealth } from '../graph/operations.js';
 import { NODE_TYPES } from '../graph/types.js';
 import { t } from '../i18n/index.js';
 
-export async function healthCommand(targetPath: string | undefined): Promise<void> {
+export interface HealthOptions {
+  all?: boolean;
+}
+
+export async function healthCommand(targetPath: string | undefined, options?: HealthOptions): Promise<void> {
   const graphDir = resolveGraphDir(targetPath);
   const report = await getHealth(graphDir);
 
@@ -38,4 +42,15 @@ export async function healthCommand(targetPath: string | undefined): Promise<voi
   console.log(`${t('health.open_questions')}: ${report.openQuestions}`);
   console.log(`${t('health.link_density')}: ${linkDensity}`);
   console.log('');
+
+  // --all: show gap details
+  if (options?.all && report.gapDetails.length > 0) {
+    console.log('=== Gap Details ===');
+    console.log('');
+    for (const gap of report.gapDetails) {
+      console.log(`  [${gap.type}] ${gap.message}`);
+      console.log(`    Nodes: ${gap.nodeIds.join(', ')}`);
+    }
+    console.log('');
+  }
 }

@@ -98,6 +98,16 @@ export async function listBranchGroups(graphDir: string): Promise<BranchGroup[]>
       }
     }
 
+    // 3. Time limit: group open >= 2 weeks
+    if (!convergenceReady && oldestCreated) {
+      const created = new Date(oldestCreated);
+      const weeksElapsed = (Date.now() - created.getTime()) / (1000 * 60 * 60 * 24 * 7);
+      if (weeksElapsed >= 2) {
+        convergenceReady = true;
+        convergenceReason = `Time limit reached: ${Math.floor(weeksElapsed)} weeks (default: 2 weeks)`;
+      }
+    }
+
     groups.push({
       groupId,
       candidates,

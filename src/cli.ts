@@ -78,8 +78,9 @@ program
 program
   .command('health [path]')
   .description('Show health dashboard')
-  .action(withCliErrorHandling(async (path) => {
-    await healthCommand(path);
+  .option('--all', 'Show full detail including gap analysis')
+  .action(withCliErrorHandling(async (path, options) => {
+    await healthCommand(path, { all: options.all });
   }));
 
 program
@@ -174,18 +175,18 @@ program
   }));
 
 program
-  .command('backlog')
+  .command('backlog [path]')
   .description('Show unchecked backlog items')
-  .option('--path <path>', 'Project path')
-  .option('--status <status>', 'Filter by status')
-  .action(withCliErrorHandling(async (options) => {
-    const graphDir = resolveGraphDir(options.path);
+  .option('--status <status>', 'Filter by status (pending|all|deferred)')
+  .action(withCliErrorHandling(async (path, options) => {
+    const graphDir = resolveGraphDir(path);
     const result = await backlogCommand(graphDir, options.status);
     if (result.items.length === 0) {
       console.log('No backlog items.');
     } else {
       for (const item of result.items) {
-        console.log(`[ ] ${item.episodeId}  ${item.text}`);
+        const marker = item.checked ? '[x]' : '[ ]';
+        console.log(`${marker} ${item.episodeId}  ${item.text}`);
       }
     }
   }));

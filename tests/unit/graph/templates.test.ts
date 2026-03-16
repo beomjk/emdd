@@ -112,6 +112,29 @@ describe('type-specific template fields', () => {
     // config can be empty object or absent, but template should have it
     expect(parsed.data).toHaveProperty('config');
   });
+
+  it('knowledge template includes knowledge_type and source', () => {
+    const output = renderTemplate('knowledge', 'test', { locale: 'en' });
+    const parsed = matter(output);
+    expect(parsed.data).toHaveProperty('knowledge_type');
+    expect(parsed.data).toHaveProperty('source');
+  });
+
+  it('episode template includes spawned and dead_ends', () => {
+    const output = renderTemplate('episode', 'test', { locale: 'en' });
+    const parsed = matter(output);
+    expect(parsed.data).toHaveProperty('spawned');
+    expect(parsed.data).toHaveProperty('dead_ends');
+    expect(parsed.data.spawned).toEqual([]);
+    expect(parsed.data.dead_ends).toEqual([]);
+  });
+
+  it('finding template includes sources', () => {
+    const output = renderTemplate('finding', 'test', { locale: 'en' });
+    const parsed = matter(output);
+    expect(parsed.data).toHaveProperty('sources');
+    expect(parsed.data.sources).toEqual([]);
+  });
 });
 
 describe('nextId', () => {

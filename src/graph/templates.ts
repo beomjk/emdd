@@ -90,6 +90,7 @@ export function renderTemplate(
       break;
     case 'finding':
       typeFields.finding_type = 'observation';
+      typeFields.sources = [];
       break;
     case 'question':
       typeFields.urgency = 'MEDIUM';
@@ -97,6 +98,8 @@ export function renderTemplate(
     case 'episode':
       typeFields.trigger = '';
       typeFields.outcome = 'success';
+      typeFields.spawned = [];
+      typeFields.dead_ends = [];
       break;
     case 'decision':
       typeFields.alternatives_considered = [];
@@ -104,6 +107,10 @@ export function renderTemplate(
       break;
     case 'experiment':
       typeFields.config = {};
+      break;
+    case 'knowledge':
+      typeFields.knowledge_type = '';
+      typeFields.source = '';
       break;
   }
 

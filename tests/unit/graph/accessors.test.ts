@@ -72,6 +72,15 @@ describe('getFindingMeta', () => {
     expect(m).not.toBeNull();
     expect(m!.finding_type).toBeUndefined();
   });
+
+  it('returns sources field', () => {
+    const node = makeNode({
+      type: 'finding',
+      meta: { sources: ['paper-A', 'dataset-B'] },
+    });
+    const m = getFindingMeta(node);
+    expect(m!.sources).toEqual(['paper-A', 'dataset-B']);
+  });
 });
 
 describe('getQuestionMeta', () => {
@@ -97,6 +106,16 @@ describe('getEpisodeMeta', () => {
     expect(m!.trigger).toBe('scheduled review');
     expect(m!.duration).toBe('2h');
     expect(m!.outcome).toBe('success');
+  });
+
+  it('returns spawned and dead_ends fields', () => {
+    const node = makeNode({
+      type: 'episode',
+      meta: { spawned: ['hyp-002'], dead_ends: ['exp-003'] },
+    });
+    const m = getEpisodeMeta(node);
+    expect(m!.spawned).toEqual(['hyp-002']);
+    expect(m!.dead_ends).toEqual(['exp-003']);
   });
 });
 

@@ -116,7 +116,7 @@ describe('EMDD E2E workflow', () => {
   });
 
   it('Step 13: backlog', () => {
-    const result = run(`backlog --path ${dir}`);
+    const result = run(`backlog ${dir}`);
     expect(result).toBeDefined();
   });
 });

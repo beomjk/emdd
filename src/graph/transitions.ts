@@ -98,17 +98,71 @@ export async function detectTransitions(graphDir: string): Promise<TransitionRec
     }
 
     // Knowledge transitions
-    if (node.type === 'knowledge' && node.status === 'ACTIVE') {
+    if (node.type === 'knowledge') {
       const incoming = reverseIndex.get(nodeId) ?? [];
-      const contradictions = incoming.filter(e => e.relation === 'contradicts');
-      if (contradictions.length > 0) {
-        recommendations.push({
-          nodeId,
-          currentStatus: 'ACTIVE',
-          recommendedStatus: 'DISPUTED',
-          reason: `Contradicted by ${contradictions.map(e => e.sourceId).join(', ')}`,
-          evidenceIds: contradictions.map(e => e.sourceId),
-        });
+
+      if (node.status === 'ACTIVE') {
+        // ACTIVE→DISPUTED: CONTRADICTS edge from new Finding
+        const contradictions = incoming.filter(e => e.relation === 'contradicts');
+        if (contradictions.length > 0) {
+          recommendations.push({
+            nodeId,
+            currentStatus: 'ACTIVE',
+            recommendedStatus: 'DISPUTED',
+            reason: `Contradicted by ${contradictions.map(e => e.sourceId).join(', ')}`,
+            evidenceIds: contradictions.map(e => e.sourceId),
+          });
+          continue;
+        }
+
+        // ACTIVE→SUPERSEDED: direct replacement (REVISES edge from newer knowledge)
+        const revises = incoming.filter(
+          e => e.relation === 'revises' && graph.nodes.get(e.sourceId)?.type === 'knowledge'
+        );
+        if (revises.length > 0) {
+          recommendations.push({
+            nodeId,
+            currentStatus: 'ACTIVE',
+            recommendedStatus: 'SUPERSEDED',
+            reason: `Superseded by ${revises.map(e => e.sourceId).join(', ')}`,
+            evidenceIds: revises.map(e => e.sourceId),
+          });
+        }
+      }
+
+      if (node.status === 'DISPUTED') {
+        // DISPUTED→SUPERSEDED: REVISES edge from newer knowledge
+        const revises = incoming.filter(
+          e => e.relation === 'revises' && graph.nodes.get(e.sourceId)?.type === 'knowledge'
+        );
+        if (revises.length > 0) {
+          recommendations.push({
+            nodeId,
+            currentStatus: 'DISPUTED',
+            recommendedStatus: 'SUPERSEDED',
+            reason: `Superseded by ${revises.map(e => e.sourceId).join(', ')}`,
+            evidenceIds: revises.map(e => e.sourceId),
+          });
+          continue;
+        }
+
+        // DISPUTED→ACTIVE: contradiction resolved (all contradicting sources RETRACTED)
+        const contradictions = incoming.filter(e => e.relation === 'contradicts');
+        if (contradictions.length > 0) {
+          const allRetracted = contradictions.every(e => {
+            const src = graph.nodes.get(e.sourceId);
+            return src?.status === 'RETRACTED';
+          });
+          if (allRetracted) {
+            recommendations.push({
+              nodeId,
+              currentStatus: 'DISPUTED',
+              recommendedStatus: 'ACTIVE',
+              reason: `Contradiction resolved: ${contradictions.map(e => e.sourceId).join(', ')} retracted`,
+              evidenceIds: contradictions.map(e => e.sourceId),
+            });
+          }
+        }
       }
     }
   }
