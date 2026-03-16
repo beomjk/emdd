@@ -14,7 +14,7 @@
   ],
   "main": "./dist/index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && cp src/rules/*.md dist/rules/",
     "dev": "tsx src/cli.ts",
     "test": "vitest",
     "test:run": "vitest run --passWithNoTests",
