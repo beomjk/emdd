@@ -318,6 +318,37 @@ describe('getHealth — structural gaps §6.8', () => {
     expect(Array.isArray(report.gaps)).toBe(true);
     expect(Array.isArray(report.gapDetails)).toBe(true);
   });
+
+  it('includes deferred items in health report', async () => {
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-deferred.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'Deferred H',
+      status: 'DEFERRED', confidence: 0.3,
+      created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+    });
+    writeNode(tmpDir, 'questions', 'qst-001-deferred.md', {
+      id: 'qst-001', type: 'question', title: 'Deferred Q',
+      status: 'DEFERRED',
+      created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+    });
+
+    const report = await getHealth(join(tmpDir, 'graph'));
+    expect(report.deferredItems).toBeDefined();
+    expect(report.deferredItems).toContain('hyp-001');
+    expect(report.deferredItems).toContain('qst-001');
+    expect(report.deferredItems.length).toBe(2);
+  });
+
+  it('returns empty deferredItems when none exist', async () => {
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-active.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'Active H',
+      status: 'PROPOSED', confidence: 0.5,
+      created: '2026-03-17', updated: '2026-03-17', tags: [], links: [],
+    });
+
+    const report = await getHealth(join(tmpDir, 'graph'));
+    expect(report.deferredItems).toBeDefined();
+    expect(report.deferredItems).toEqual([]);
+  });
 });
 
 describe('checkConsolidation', () => {

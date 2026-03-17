@@ -424,6 +424,12 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
     }
   }
 
+  // Deferred items (OPERATIONS.md §7.4: display not-pursued items in health report)
+  const deferredItems: string[] = [];
+  for (const [id, node] of graph.nodes) {
+    if (node.status === 'DEFERRED') deferredItems.push(id);
+  }
+
   return {
     totalNodes,
     totalEdges,
@@ -434,6 +440,7 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
     linkDensity,
     gaps,
     gapDetails,
+    deferredItems,
   };
 }
 

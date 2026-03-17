@@ -108,7 +108,7 @@ export const VALID_STATUSES: Record<NodeType, readonly string[]> = {
   finding: ['DRAFT', 'VALIDATED', 'PROMOTED', 'RETRACTED'],
   knowledge: ['ACTIVE', 'DISPUTED', 'SUPERSEDED', 'RETRACTED'],
   question: ['OPEN', 'RESOLVED', 'ANSWERED', 'DEFERRED', 'CONVERGED', 'MERGED', 'ABANDONED'],
-  decision: ['PROPOSED', 'ACCEPTED', 'SUPERSEDED', 'REVERTED'],
+  decision: ['PROPOSED', 'ACCEPTED', 'SUPERSEDED', 'REVERTED', 'CONTESTED'],
   episode: ['ACTIVE', 'COMPLETED'],
 };
 
@@ -201,6 +201,7 @@ export interface HealthReport {
   linkDensity: number;
   gaps: string[];
   gapDetails: GapDetail[];
+  deferredItems: string[];
 }
 
 export interface CheckTrigger {

@@ -114,6 +114,21 @@ describe('lintNode', () => {
     expect(errors.some(e => e.field === 'status')).toBe(false);
   });
 
+  it('accepts CONTESTED as valid decision status', () => {
+    const node = {
+      id: 'dec-test',
+      type: 'decision' as const,
+      title: 'Contested Decision',
+      path: '/fake/path.md',
+      status: 'CONTESTED',
+      tags: [],
+      links: [],
+      meta: { created: '2026-01-01', updated: '2026-01-01' },
+    };
+    const errors = lintNode(node);
+    expect(errors.some(e => e.field === 'status')).toBe(false);
+  });
+
   it('accepts CONVERGED as valid question status', () => {
     const node = {
       id: 'qst-test',

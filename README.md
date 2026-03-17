@@ -107,7 +107,7 @@ See the [Quick Start Guide](docs/QUICK_START.md) for a full walkthrough.
 | `emdd health [path]` | Show graph health dashboard (`--all`) |
 | `emdd check [path]` | Check consolidation triggers |
 | `emdd promote [path]` | Identify promotion candidates |
-| `emdd backlog [path]` | List incomplete items across all nodes (`--status <pending\|all\|deferred>`) |
+| `emdd backlog [path]` | List incomplete items across all episodes (`--status <pending\|all\|deferred>`) |
 | `emdd index [path]` | Generate `_index.md` |
 | `emdd graph [path]` | Generate `_graph.mmd` (Mermaid) |
 | `emdd confidence [path]` | Propagate confidence across the graph |
