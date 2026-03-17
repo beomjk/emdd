@@ -264,7 +264,7 @@ During Consolidation, if 3 or more `[deferred]` items have accumulated, conduct 
    ```
 
 <!-- v0.3: Frontmatter lowercase mapping note + CONFIRMS added for 14 total -->
-### 6.4 Edge Types (15)
+### 6.4 Edge Types (16)
 
 **Frontmatter notation convention:** The `relation:` field in YAML frontmatter uses lowercase present tense (e.g., `relation: produces`). This maps to the canonical type `PRODUCES`. The uppercase names in the table below are canonical types; frontmatter uses lowercase snake_case.
 
@@ -291,6 +291,7 @@ During Consolidation, if 3 or more `[deferred]` items have accumulated, conduct 
 **Compositional edges:**
 - `PART_OF` — A is a sub-element of B
 - `CONTEXT_FOR` — A provides context/background for B
+- `RESOLVES` — A resolves the outcome of branch group B. Reverse label: `resolved_by`
 
 **Alias edges:**
 - `TESTS` — A tests B (Experiment tests Hypothesis). Reverse label: `tested_by`

@@ -31,7 +31,7 @@ describe('backlogCommand', () => {
 
     const result = await backlogCommand(graphDir);
     expect(result.items.length).toBe(2);
-    expect(result.items.every(i => !i.checked)).toBe(true);
+    expect(result.items.every(i => i.marker === 'pending')).toBe(true);
   });
 
   it('--status pending: returns only unchecked items', async () => {
@@ -53,6 +53,53 @@ describe('backlogCommand', () => {
 
     const result = await backlogCommand(graphDir, 'all');
     expect(result.items.length).toBe(2);
+  });
+
+  it('parses [done], [deferred], [superseded] markers', async () => {
+    writeEpisode('epi-001-test.md', {
+      id: 'epi-001', type: 'episode', title: 'E1', status: 'ACTIVE',
+      created: '2026-03-01', updated: '2026-03-01', tags: [], links: [],
+    }, '## Goals\n\n- [ ] Pending\n- [done] Done\n- [deferred] Deferred\n- [superseded] Superseded\n');
+
+    const result = await backlogCommand(graphDir, 'all');
+    expect(result.items.length).toBe(4);
+    expect(result.items[0]).toEqual({ text: 'Pending', episodeId: 'epi-001', marker: 'pending' });
+    expect(result.items[1]).toEqual({ text: 'Done', episodeId: 'epi-001', marker: 'done' });
+    expect(result.items[2]).toEqual({ text: 'Deferred', episodeId: 'epi-001', marker: 'deferred' });
+    expect(result.items[3]).toEqual({ text: 'Superseded', episodeId: 'epi-001', marker: 'superseded' });
+  });
+
+  it('treats [x] as [done] for backward compatibility', async () => {
+    writeEpisode('epi-001-test.md', {
+      id: 'epi-001', type: 'episode', title: 'E1', status: 'ACTIVE',
+      created: '2026-03-01', updated: '2026-03-01', tags: [], links: [],
+    }, '## Goals\n\n- [x] Legacy done\n- [X] Legacy Done Upper\n');
+
+    const result = await backlogCommand(graphDir, 'all');
+    expect(result.items.length).toBe(2);
+    expect(result.items.every(i => i.marker === 'done')).toBe(true);
+  });
+
+  it('--status done: returns only done items', async () => {
+    writeEpisode('epi-001-test.md', {
+      id: 'epi-001', type: 'episode', title: 'E1', status: 'ACTIVE',
+      created: '2026-03-01', updated: '2026-03-01', tags: [], links: [],
+    }, '## Goals\n\n- [ ] Pending\n- [done] Done\n- [deferred] Deferred\n');
+
+    const result = await backlogCommand(graphDir, 'done');
+    expect(result.items.length).toBe(1);
+    expect(result.items[0].text).toBe('Done');
+  });
+
+  it('--status superseded: returns only superseded items', async () => {
+    writeEpisode('epi-001-test.md', {
+      id: 'epi-001', type: 'episode', title: 'E1', status: 'ACTIVE',
+      created: '2026-03-01', updated: '2026-03-01', tags: [], links: [],
+    }, '## Goals\n\n- [ ] Pending\n- [superseded] Old task\n');
+
+    const result = await backlogCommand(graphDir, 'superseded');
+    expect(result.items.length).toBe(1);
+    expect(result.items[0].text).toBe('Old task');
   });
 
   it('--status deferred: returns items from DEFERRED episodes only', async () => {

@@ -258,7 +258,7 @@ describe('doneCommand', () => {
   beforeEach(() => { tmpDir = setupProject(); });
   afterEach(() => { rmSync(tmpDir, { recursive: true, force: true }); });
 
-  it('marks a checklist item as done', async () => {
+  it('marks a checklist item as done with [done] marker', async () => {
     writeNode(tmpDir, 'episodes', 'epi-001-test.md', {
       id: 'epi-001', type: 'episode', title: 'Test Episode',
       status: 'ACTIVE',
@@ -269,8 +269,62 @@ describe('doneCommand', () => {
     await doneCommand(join(tmpDir, 'graph'), 'epi-001', 'run baseline experiment');
 
     const content = readFileSync(join(tmpDir, 'graph', 'episodes', 'epi-001-test.md'), 'utf-8');
-    expect(content).toContain('- [x] run baseline experiment');
+    expect(content).toContain('- [done] run baseline experiment');
     expect(content).toContain('- [ ] analyze results'); // unchanged
+  });
+
+  it('marks item with --marker deferred', async () => {
+    writeNode(tmpDir, 'episodes', 'epi-001-test.md', {
+      id: 'epi-001', type: 'episode', title: 'Test Episode',
+      status: 'ACTIVE',
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    }, '## Goals\n\n- [ ] run experiment\n');
+
+    await doneCommand(join(tmpDir, 'graph'), 'epi-001', 'run experiment', 'deferred');
+
+    const content = readFileSync(join(tmpDir, 'graph', 'episodes', 'epi-001-test.md'), 'utf-8');
+    expect(content).toContain('- [deferred] run experiment');
+  });
+
+  it('marks item with --marker superseded', async () => {
+    writeNode(tmpDir, 'episodes', 'epi-001-test.md', {
+      id: 'epi-001', type: 'episode', title: 'Test Episode',
+      status: 'ACTIVE',
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    }, '## Goals\n\n- [ ] run experiment\n');
+
+    await doneCommand(join(tmpDir, 'graph'), 'epi-001', 'run experiment', 'superseded');
+
+    const content = readFileSync(join(tmpDir, 'graph', 'episodes', 'epi-001-test.md'), 'utf-8');
+    expect(content).toContain('- [superseded] run experiment');
+  });
+
+  it('throws on already marked item', async () => {
+    writeNode(tmpDir, 'episodes', 'epi-001-test.md', {
+      id: 'epi-001', type: 'episode', title: 'Test Episode',
+      status: 'ACTIVE',
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    }, '## Goals\n\n- [done] run experiment\n');
+
+    await expect(
+      doneCommand(join(tmpDir, 'graph'), 'epi-001', 'run experiment')
+    ).rejects.toThrow();
+  });
+
+  it('throws on invalid marker value', async () => {
+    writeNode(tmpDir, 'episodes', 'epi-001-test.md', {
+      id: 'epi-001', type: 'episode', title: 'Test Episode',
+      status: 'ACTIVE',
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    }, '## Goals\n\n- [ ] run experiment\n');
+
+    await expect(
+      doneCommand(join(tmpDir, 'graph'), 'epi-001', 'run experiment', 'invalid' as any)
+    ).rejects.toThrow();
   });
 
   it('throws when item not found', async () => {

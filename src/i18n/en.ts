@@ -66,8 +66,10 @@ export const messages: Record<string, string> = {
   'link.invalid_relation': 'Invalid relation: {relation}. Valid: {valid}',
 
   // Done
-  'done.success': 'Marked as done: {item}',
+  'done.success': 'Marked as [{marker}]: {item}',
   'done.item_not_found': 'Item not found in {id}: {item}',
+  'done.invalid_marker': 'Invalid marker: {marker}. Valid markers: done, deferred, superseded',
+  'done.already_marked': 'Item already marked in {id}: {item}',
 
   // Index
   'index.generated': 'Generated _index.md ({nodes} nodes)',

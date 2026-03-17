@@ -129,7 +129,23 @@ describe('lintNode', () => {
     expect(errors.some(e => e.field === 'status')).toBe(false);
   });
 
-  it('accepts CONVERGED as valid question status', () => {
+  it('accepts resolves as valid edge relation', () => {
+    const node = {
+      id: 'hyp-test',
+      type: 'hypothesis' as const,
+      title: 'Test',
+      path: '/fake/path.md',
+      status: 'PROPOSED',
+      confidence: 0.5,
+      tags: [],
+      links: [{ target: 'qst-001', relation: 'resolves' }],
+      meta: { created: '2026-01-01', updated: '2026-01-01' },
+    };
+    const errors = lintNode(node);
+    expect(errors.some(e => e.field === 'links')).toBe(false);
+  });
+
+  it('rejects CONVERGED as question status (branch group only)', () => {
     const node = {
       id: 'qst-test',
       type: 'question' as const,
@@ -141,10 +157,10 @@ describe('lintNode', () => {
       meta: { created: '2026-01-01', updated: '2026-01-01' },
     };
     const errors = lintNode(node);
-    expect(errors.some(e => e.field === 'status')).toBe(false);
+    expect(errors.some(e => e.field === 'status')).toBe(true);
   });
 
-  it('accepts MERGED as valid question status', () => {
+  it('rejects MERGED as question status (branch group only)', () => {
     const node = {
       id: 'qst-test',
       type: 'question' as const,
@@ -156,10 +172,10 @@ describe('lintNode', () => {
       meta: { created: '2026-01-01', updated: '2026-01-01' },
     };
     const errors = lintNode(node);
-    expect(errors.some(e => e.field === 'status')).toBe(false);
+    expect(errors.some(e => e.field === 'status')).toBe(true);
   });
 
-  it('accepts ABANDONED as valid question status', () => {
+  it('rejects ABANDONED as question status (branch group only)', () => {
     const node = {
       id: 'qst-test',
       type: 'question' as const,
@@ -171,7 +187,7 @@ describe('lintNode', () => {
       meta: { created: '2026-01-01', updated: '2026-01-01' },
     };
     const errors = lintNode(node);
-    expect(errors.some(e => e.field === 'status')).toBe(false);
+    expect(errors.some(e => e.field === 'status')).toBe(true);
   });
 });
 

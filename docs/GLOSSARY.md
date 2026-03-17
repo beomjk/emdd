@@ -56,15 +56,15 @@
 | 실행 중 (RUNNING) | RUNNING | Experiment is being executed | §6.5 |
 | 완료 (COMPLETED) | COMPLETED | Experiment finished successfully | §6.5 |
 | 실패 (FAILED) | FAILED | Experiment failed | §6.5 |
-| 포기 (ABANDONED) | ABANDONED | Experiment or question abandoned | §6.5 |
+| 포기 (ABANDONED) | ABANDONED | Experiment abandoned, or branch group abandoned (not valid for Question) | §6.5 |
 | 초안 (DRAFT) | DRAFT | Finding initial state | §6.5 |
 | 검증됨 (VALIDATED) | VALIDATED | Finding validated by evidence | §6.5 |
 | 승격됨 (PROMOTED) | PROMOTED | Finding promoted to knowledge | §6.5 |
 | 열림 (OPEN) | OPEN | Question is open | §6.5 |
 | 해결됨 (RESOLVED) | RESOLVED | Question resolved | §6.5 |
 | 답변됨 (ANSWERED) | ANSWERED | Question answered | §6.5 |
-| 수렴 (CONVERGED) | CONVERGED | Question converged from multiple sources | §6.5 |
-| 병합됨 (MERGED) | MERGED | Question merged with another | §6.5 |
+| 수렴 (CONVERGED) | CONVERGED | Branch group converged (branch group only, not valid for Question) | §6.5 |
+| 병합됨 (MERGED) | MERGED | Branch group merged (branch group only, not valid for Question) | §6.5 |
 | 수락됨 (ACCEPTED) | ACCEPTED | Decision accepted | §6.5 |
 | 되돌림 (REVERTED) | REVERTED | Decision reverted | §6.5 |
 | 활성 (ACTIVE) | ACTIVE | Knowledge or episode is current and valid | §6.6 |

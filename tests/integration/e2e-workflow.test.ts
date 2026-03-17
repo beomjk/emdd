@@ -85,7 +85,7 @@ describe('EMDD E2E workflow', () => {
 
     run(`done epi-001 "Review initial results" --path ${dir}`);
     const updated = readFileSync(episodePath, 'utf-8');
-    expect(updated).toContain('- [x] Review initial results');
+    expect(updated).toContain('- [done] Review initial results');
   });
 
   it('Step 9: generate index', () => {

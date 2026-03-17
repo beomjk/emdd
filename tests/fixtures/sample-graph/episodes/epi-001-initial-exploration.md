@@ -11,10 +11,10 @@ links: []
 
 ## Goals
 
-- [x] Survey existing defect detection literature
+- [done] Survey existing defect detection literature
 - [x] Set up baseline experiment
 - [ ] run baseline experiment
-- [ ] Analyze failure cases
+- [deferred] Analyze failure cases
 
 ## Notes
 

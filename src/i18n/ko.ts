@@ -66,8 +66,10 @@ export const messages: Record<string, string> = {
   'link.invalid_relation': '잘못된 관계: {relation}. 유효한 값: {valid}',
 
   // 완료
-  'done.success': '완료 표시됨: {item}',
+  'done.success': '[{marker}]로 표시됨: {item}',
   'done.item_not_found': '{id}에서 항목을 찾을 수 없습니다: {item}',
+  'done.invalid_marker': '잘못된 마커: {marker}. 유효한 마커: done, deferred, superseded',
+  'done.already_marked': '{id}에서 이미 표시된 항목입니다: {item}',
 
   // 인덱스
   'index.generated': '_index.md 생성됨 ({nodes}개 노드)',

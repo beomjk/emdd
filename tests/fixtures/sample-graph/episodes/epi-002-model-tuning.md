@@ -11,9 +11,9 @@ links: []
 
 ## Goals
 
-- [x] Tune learning rate
+- [done] Tune learning rate
 - [x] Test different batch sizes
-- [ ] Document results
+- [superseded] Document results
 
 ## Notes
 

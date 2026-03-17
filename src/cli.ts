@@ -148,12 +148,13 @@ program
 
 program
   .command('done <episode-id> <item>')
-  .description('Mark a checklist item as done')
+  .description('Mark a checklist item with a status marker')
   .option('--path <path>', 'Project path')
+  .option('--marker <marker>', 'Marker type (done|deferred|superseded)', 'done')
   .action(withCliErrorHandling(async (episodeId, item, options) => {
     const graphDir = resolveGraphDir(options.path);
-    await doneCommand(graphDir, episodeId, item);
-    console.log(`Done: ${item}`);
+    await doneCommand(graphDir, episodeId, item, options.marker);
+    console.log(`Marked as [${options.marker}]: ${item}`);
   }));
 
 program
@@ -177,7 +178,7 @@ program
 program
   .command('backlog [path]')
   .description('Show unchecked backlog items')
-  .option('--status <status>', 'Filter by status (pending|all|deferred)')
+  .option('--status <status>', 'Filter by status (pending|done|deferred|superseded|all)')
   .action(withCliErrorHandling(async (path, options) => {
     const graphDir = resolveGraphDir(path);
     const result = await backlogCommand(graphDir, options.status);
@@ -185,8 +186,8 @@ program
       console.log('No backlog items.');
     } else {
       for (const item of result.items) {
-        const marker = item.checked ? '[x]' : '[ ]';
-        console.log(`${marker} ${item.episodeId}  ${item.text}`);
+        const markerStr = item.marker === 'pending' ? '[ ]' : `[${item.marker}]`;
+        console.log(`${markerStr} ${item.episodeId}  ${item.text}`);
       }
     }
   }));

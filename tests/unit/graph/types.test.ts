@@ -51,8 +51,16 @@ describe('ID_PREFIXES / PREFIX_TO_TYPE', () => {
 });
 
 describe('EDGE_TYPES', () => {
-  it('contains 15 types (14 canonical + tests alias)', () => {
-    expect(EDGE_TYPES.size).toBe(15);
+  it('contains 16 types (14 canonical + tests alias + resolves)', () => {
+    expect(EDGE_TYPES.size).toBe(16);
+  });
+
+  it('includes resolves edge type', () => {
+    expect(EDGE_TYPES.has('resolves')).toBe(true);
+  });
+
+  it('includes resolved_by as reverse label', () => {
+    expect(REVERSE_LABELS['resolved_by']).toBe('resolves');
   });
 
   it('every REVERSE_LABELS value is in EDGE_TYPES', () => {

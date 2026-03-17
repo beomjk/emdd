@@ -3,14 +3,26 @@ import { join } from 'node:path';
 import { glob } from 'glob';
 import matter from 'gray-matter';
 
+export type ItemMarker = 'pending' | 'done' | 'deferred' | 'superseded';
+
 export interface BacklogItem {
   text: string;
   episodeId: string;
-  checked: boolean;
+  marker: ItemMarker;
 }
 
 export interface BacklogResult {
   items: BacklogItem[];
+}
+
+const CHECKLIST_RE = /^- \[([ xX]|done|deferred|superseded)\]\s+(.+)/;
+
+function parseMarker(raw: string): ItemMarker {
+  if (raw === ' ') return 'pending';
+  if (raw === 'x' || raw === 'X' || raw === 'done') return 'done';
+  if (raw === 'deferred') return 'deferred';
+  if (raw === 'superseded') return 'superseded';
+  return 'pending';
 }
 
 export async function backlogCommand(graphDir: string, statusFilter?: string): Promise<BacklogResult> {
@@ -40,32 +52,33 @@ export async function backlogCommand(graphDir: string, statusFilter?: string): P
     const episodeStatus = parsed.data?.status ?? '';
     const body = parsed.content;
 
-    // Skip non-DEFERRED episodes when filtering by deferred
+    // Skip non-DEFERRED episodes when filtering by deferred (episode-level status)
     if (statusFilter === 'deferred' && episodeStatus !== 'DEFERRED') {
       continue;
     }
 
     for (const line of body.split('\n')) {
-      const unchecked = line.match(/^- \[ \]\s+(.+)/);
-      const checked = line.match(/^- \[x\]\s+(.+)/i);
-
-      if (unchecked) {
-        items.push({ text: unchecked[1].trim(), episodeId, checked: false });
-      } else if (checked) {
-        items.push({ text: checked[1].trim(), episodeId, checked: true });
+      const match = line.match(CHECKLIST_RE);
+      if (match) {
+        const marker = parseMarker(match[1]);
+        items.push({ text: match[2].trim(), episodeId, marker });
       }
     }
   }
 
   // Apply status filter
   if (!statusFilter || statusFilter === 'pending') {
-    return { items: items.filter(i => !i.checked) };
+    return { items: items.filter(i => i.marker === 'pending') };
   } else if (statusFilter === 'all') {
     return { items };
+  } else if (statusFilter === 'done') {
+    return { items: items.filter(i => i.marker === 'done') };
   } else if (statusFilter === 'deferred') {
-    return { items: items.filter(i => !i.checked) };
+    return { items: items.filter(i => i.marker === 'pending') };
+  } else if (statusFilter === 'superseded') {
+    return { items: items.filter(i => i.marker === 'superseded') };
   }
 
   // Default: unchecked only
-  return { items: items.filter(i => !i.checked) };
+  return { items: items.filter(i => i.marker === 'pending') };
 }

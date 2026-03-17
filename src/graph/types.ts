@@ -30,6 +30,7 @@ export type EdgeType =
   // composition
   | 'part_of'
   | 'context_for'
+  | 'resolves'
   // aliases
   | 'tests'
   // reverse labels
@@ -38,7 +39,8 @@ export type EdgeType =
   | 'answered_by'
   | 'spawned_from'
   | 'produced_by'
-  | 'tested_by';
+  | 'tested_by'
+  | 'resolved_by';
 
 export const EDGE_TYPES = new Set<string>([
   // evidence
@@ -48,7 +50,7 @@ export const EDGE_TYPES = new Set<string>([
   // structure
   'depends_on', 'extends', 'relates_to', 'informs',
   // composition
-  'part_of', 'context_for',
+  'part_of', 'context_for', 'resolves',
   // aliases
   'tests',
 ]);
@@ -60,6 +62,7 @@ export const REVERSE_LABELS: Record<string, string> = {
   spawned_from: 'spawns',
   produced_by: 'produces',
   tested_by: 'tests',
+  resolved_by: 'resolves',
 };
 
 export const ALL_VALID_RELATIONS = new Set<string>([
@@ -107,7 +110,7 @@ export const VALID_STATUSES: Record<NodeType, readonly string[]> = {
   experiment: ['PLANNED', 'RUNNING', 'COMPLETED', 'FAILED', 'ABANDONED'],
   finding: ['DRAFT', 'VALIDATED', 'PROMOTED', 'RETRACTED'],
   knowledge: ['ACTIVE', 'DISPUTED', 'SUPERSEDED', 'RETRACTED'],
-  question: ['OPEN', 'RESOLVED', 'ANSWERED', 'DEFERRED', 'CONVERGED', 'MERGED', 'ABANDONED'],
+  question: ['OPEN', 'RESOLVED', 'ANSWERED', 'DEFERRED'],
   decision: ['PROPOSED', 'ACCEPTED', 'SUPERSEDED', 'REVERTED', 'CONTESTED'],
   episode: ['ACTIVE', 'COMPLETED'],
 };
