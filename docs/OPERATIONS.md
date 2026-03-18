@@ -9,8 +9,8 @@
 ### 7.1 Project Kickoff (Day 0, ~3 hours)
 
 ```
-1. Place a PROBLEM node at the center (the core question, 1 node)
-2. Place CONSTRAINT nodes (hardware, time, data, performance constraints; 3-7 nodes)
+1. Place a KNOWLEDGE node at the center (the core problem definition, 1 node)
+2. Place KNOWLEDGE nodes for constraints (hardware, time, data, performance; 3-7 nodes)
 3. Literature survey -> KNOWLEDGE nodes (5-15 nodes)
 4. Initial HYPOTHESIS nodes (2-5, each with confidence 0.3-0.5)
 5. Open QUESTION nodes (3-10)
