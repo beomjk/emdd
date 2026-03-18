@@ -7,13 +7,22 @@
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <div id="toolbar"></div>
+  <div id="toolbar">
+    <span class="toolbar-title">EMDD Dashboard</span>
+    <div id="layout-selector"></div>
+    <button id="refresh-btn" title="Refresh graph data">↻ Refresh</button>
+    <div id="search-bar"></div>
+  </div>
   <div id="app">
     <aside id="sidebar"></aside>
-    <main id="graph-canvas"></main>
+    <main id="graph-canvas">
+      <div id="cy"></div>
+      <div id="empty-state" class="hidden">
+        <p>No nodes found. Create your first node with <code>emdd create</code></p>
+      </div>
+    </main>
     <section id="detail-panel"></section>
   </div>
-  <div id="search-bar"></div>
   <div id="timeline"></div>
   <script src="/bundle.js"></script>
 </body>
