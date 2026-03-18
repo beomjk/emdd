@@ -3,6 +3,7 @@ import { renderGraph, highlightNeighbors, clearHighlights, getCy } from './graph
 import { showDetailPanel, hideDetailPanel, setDepthChangeHandler, getCurrentDepth } from './detail-panel.js';
 import { renderFilters, setFilterChangeHandler } from './filters.js';
 import { renderSearchBar } from './search.js';
+import { renderHealthSidebar } from './sidebar.js';
 
 export interface DashboardState {
   graph: SerializedGraph | null;
@@ -119,6 +120,11 @@ function renderDashboard(graph: SerializedGraph): void {
   const sidebar = document.getElementById('sidebar')!;
   const { types, statuses, edgeTypes } = extractUniqueValues(graph);
   renderFilters(sidebar, types, statuses, edgeTypes);
+
+  // Render health sidebar above filters
+  renderHealthSidebar(sidebar, {
+    onNodeClick: (id) => selectNode(id),
+  }).catch(console.error);
 
   // Sync filter state
   state.visibleTypes = new Set(types);

@@ -170,3 +170,42 @@ body {
   text-transform: uppercase;
   margin-bottom: 4px;
 }
+
+/* Sidebar health sections */
+.sidebar-section { margin-bottom: 14px; }
+.sidebar-heading {
+  font-size: 11px; font-weight: 600; color: #888;
+  text-transform: uppercase; margin-bottom: 6px;
+  letter-spacing: 0.5px;
+}
+
+.metric-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+}
+.metric {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 6px 4px; background: #f8f8f8; border-radius: 4px;
+}
+.metric-value { font-size: 16px; font-weight: 700; color: #333; }
+.metric-label { font-size: 10px; color: #999; }
+
+.type-bar-row { display: flex; align-items: center; gap: 4px; margin: 3px 0; }
+.type-bar-label { font-size: 10px; color: #666; width: 65px; text-align: right; }
+.type-bar-track { flex: 1; height: 8px; background: #eee; border-radius: 4px; overflow: hidden; }
+.type-bar-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
+.type-bar-count { font-size: 10px; color: #888; width: 16px; }
+
+.status-badge {
+  display: inline-block; padding: 1px 6px; border-radius: 2px;
+  background: #f0f0f0; font-size: 10px; color: #555;
+}
+.status-badge b { font-weight: 600; }
+
+.gap-item { margin: 6px 0; padding: 6px; background: #fff8f0; border-left: 3px solid #FF8C42; border-radius: 2px; }
+.gap-type { display: block; font-size: 10px; font-weight: 600; color: #e67e22; text-transform: capitalize; }
+.gap-message { display: block; font-size: 11px; color: #555; margin: 2px 0; }
+.gap-nodes { font-size: 11px; }
+.gap-node-link { color: #3498DB; text-decoration: none; cursor: pointer; }
+.gap-node-link:hover { text-decoration: underline; }
+
+.promo-item { margin: 4px 0; }
