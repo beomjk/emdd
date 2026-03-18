@@ -1,6 +1,5 @@
 // ── Schema Validation ───────────────────────────────────────────────
-// Zod structural validation for graph-schema.yaml.
-// Referential integrity checks are added in Phase 2 (T004).
+// Zod structural validation + referential integrity checks for graph-schema.yaml.
 
 import { z } from 'zod';
 
@@ -56,3 +55,183 @@ export type TransitionRule = z.infer<typeof TransitionRuleZod>;
 export type TransitionCondition = z.infer<typeof TransitionConditionZod>;
 export type ManualTransitionRule = z.infer<typeof ManualTransitionRuleZod>;
 export type EdgeTypeDefinitions = z.infer<typeof EdgeTypeDefinitionsZod>;
+
+// ── Referential Integrity ───────────────────────────────────────────
+
+export interface ValidationError {
+  path: string;
+  message: string;
+  severity: 'ERROR' | 'WARNING';
+}
+
+export const VALID_PRESET_FNS = [
+  'has_linked',
+  'field_present',
+  'min_linked_count',
+  'all_linked_with',
+] as const;
+
+const presetFnSet = new Set<string>(VALID_PRESET_FNS);
+
+export function validateReferentialIntegrity(schema: GraphSchema): ValidationError[] {
+  const errors: ValidationError[] = [];
+
+  // Build lookup maps
+  const typeNames = new Set(schema.nodeTypes.map(n => n.name));
+  const statusesByType = new Map(schema.nodeTypes.map(n => [n.name, new Set(n.statuses)]));
+  const allRelations = new Set([
+    ...schema.edgeTypes.forward,
+    ...Object.keys(schema.edgeTypes.reverse),
+  ]);
+
+  // ── Duplicate prefix check ──
+  const seenPrefixes = new Map<string, string>();
+  for (let i = 0; i < schema.nodeTypes.length; i++) {
+    const nt = schema.nodeTypes[i];
+    const existing = seenPrefixes.get(nt.prefix);
+    if (existing) {
+      errors.push({
+        path: `nodeTypes[${i}].prefix`,
+        message: `duplicate prefix "${nt.prefix}" (already used by "${existing}")`,
+        severity: 'ERROR',
+      });
+    } else {
+      seenPrefixes.set(nt.prefix, nt.name);
+    }
+  }
+
+  // ── Transition rules check ──
+  for (const [typeName, rules] of Object.entries(schema.transitions)) {
+    if (!typeNames.has(typeName)) {
+      errors.push({
+        path: `transitions.${typeName}`,
+        message: `references non-existent nodeType "${typeName}"`,
+        severity: 'ERROR',
+      });
+      continue;
+    }
+
+    const validStatuses = statusesByType.get(typeName)!;
+    const seenFromTo = new Set<string>();
+
+    for (let i = 0; i < rules.length; i++) {
+      const rule = rules[i];
+      const rulePath = `transitions.${typeName}[${i}]`;
+
+      // Check from/to statuses
+      if (!validStatuses.has(rule.from)) {
+        errors.push({
+          path: rulePath,
+          message: `"from" status "${rule.from}" not in ${typeName} statuses`,
+          severity: 'ERROR',
+        });
+      }
+      if (!validStatuses.has(rule.to)) {
+        errors.push({
+          path: rulePath,
+          message: `"to" status "${rule.to}" not in ${typeName} statuses`,
+          severity: 'ERROR',
+        });
+      }
+
+      // Check duplicate from→to
+      const fromToKey = `${rule.from}→${rule.to}`;
+      if (seenFromTo.has(fromToKey)) {
+        errors.push({
+          path: rulePath,
+          message: `duplicate transition ${fromToKey} in ${typeName}`,
+          severity: 'ERROR',
+        });
+      }
+      seenFromTo.add(fromToKey);
+
+      // Check conditions
+      for (let j = 0; j < rule.conditions.length; j++) {
+        const cond = rule.conditions[j];
+        const condPath = `${rulePath}.conditions[${j}]`;
+
+        // Check preset fn
+        if (!presetFnSet.has(cond.fn)) {
+          errors.push({
+            path: condPath,
+            message: `unknown preset function "${cond.fn}"`,
+            severity: 'ERROR',
+          });
+        }
+
+        // Check type arg references valid nodeType
+        const condType = cond.args.type as string | undefined;
+        if (condType && !typeNames.has(condType)) {
+          errors.push({
+            path: condPath,
+            message: `condition references non-existent nodeType "${condType}"`,
+            severity: 'ERROR',
+          });
+        }
+
+        // Check relation arg references valid edge type
+        const condRelation = cond.args.relation as string | undefined;
+        if (condRelation && !allRelations.has(condRelation)) {
+          errors.push({
+            path: condPath,
+            message: `condition references non-existent relation "${condRelation}"`,
+            severity: 'ERROR',
+          });
+        }
+
+        // Check status arg is valid for the referenced type
+        const condStatus = cond.args.status as string | undefined;
+        if (condStatus && condType) {
+          const refStatuses = statusesByType.get(condType);
+          if (refStatuses && !refStatuses.has(condStatus)) {
+            errors.push({
+              path: condPath,
+              message: `condition references status "${condStatus}" not in ${condType} statuses`,
+              severity: 'ERROR',
+            });
+          }
+        }
+      }
+    }
+  }
+
+  // ── Manual transitions check ──
+  if (schema.manualTransitions) {
+    for (const [typeName, rules] of Object.entries(schema.manualTransitions)) {
+      if (!typeNames.has(typeName)) {
+        errors.push({
+          path: `manualTransitions.${typeName}`,
+          message: `references non-existent nodeType "${typeName}"`,
+          severity: 'ERROR',
+        });
+        continue;
+      }
+
+      const validStatuses = statusesByType.get(typeName)!;
+
+      for (let i = 0; i < rules.length; i++) {
+        const rule = rules[i];
+        const rulePath = `manualTransitions.${typeName}[${i}]`;
+
+        // "ANY" is a special value meaning "from any status"
+        if (rule.from !== 'ANY' && !validStatuses.has(rule.from)) {
+          errors.push({
+            path: rulePath,
+            message: `"from" status "${rule.from}" not in ${typeName} statuses`,
+            severity: 'ERROR',
+          });
+        }
+
+        if (!validStatuses.has(rule.to)) {
+          errors.push({
+            path: rulePath,
+            message: `"to" status "${rule.to}" not in ${typeName} statuses`,
+            severity: 'ERROR',
+          });
+        }
+      }
+    }
+  }
+
+  return errors;
+}

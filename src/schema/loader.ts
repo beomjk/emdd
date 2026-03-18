@@ -5,7 +5,7 @@ import { accessSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import yaml from 'js-yaml';
-import { GraphSchemaZod, type GraphSchema } from './validator.js';
+import { GraphSchemaZod, validateReferentialIntegrity, type GraphSchema } from './validator.js';
 
 const DEFAULT_SCHEMA_FILENAME = 'graph-schema.yaml';
 
@@ -29,6 +29,15 @@ export async function loadSchema(schemaPath?: string): Promise<GraphSchema> {
     );
     throw new Error(
       `graph-schema.yaml validation failed:\n${messages.join('\n')}`,
+    );
+  }
+
+  // Referential integrity checks (Phase 2)
+  const riErrors = validateReferentialIntegrity(result.data);
+  if (riErrors.length > 0) {
+    const messages = riErrors.map((e) => `  - ${e.path}: ${e.message}`);
+    throw new Error(
+      `graph-schema.yaml referential integrity errors:\n${messages.join('\n')}`,
     );
   }
 
