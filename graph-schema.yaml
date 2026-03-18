@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=graph-schema.schema.json
 # graph-schema.yaml — Single source of truth for EMDD graph structure
 # All code constants, transition rules, and spec tables are derived from this file.
 # Do NOT edit generated files directly; modify this file and run `npm run build`.

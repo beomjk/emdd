@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "EMDD Graph Schema",
+  "description": "Schema for graph-schema.yaml — single source of truth for EMDD graph structure",
+  "type": "object",
+  "required": ["version", "nodeTypes", "edgeTypes", "thresholds", "transitions", "validValues"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Schema version (informational metadata)"
+    },
+    "nodeTypes": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Node type definitions",
+      "items": {
+        "type": "object",
+        "required": ["name", "prefix", "directory", "statuses", "requiredFields"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "description": "Node type name (e.g., hypothesis)" },
+          "prefix": { "type": "string", "description": "ID prefix (e.g., hyp)", "pattern": "^[a-z]{2,4}$" },
+          "directory": { "type": "string", "description": "Directory name under graph/" },
+          "statuses": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "pattern": "^[A-Z_]+$" },
+            "description": "Valid statuses for this node type"
+          },
+          "requiredFields": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string" },
+            "description": "Required frontmatter fields"
+          },
+          "optionalFields": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Optional frontmatter fields (schema metadata only, not generated into code)"
+          }
+        }
+      }
+    },
+    "edgeTypes": {
+      "type": "object",
+      "required": ["forward", "reverse"],
+      "additionalProperties": false,
+      "properties": {
+        "forward": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" },
+          "description": "Forward edge type names"
+        },
+        "reverse": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Reverse label → forward edge mapping"
+        }
+      }
+    },
+    "thresholds": {
+      "type": "object",
+      "additionalProperties": { "type": "number" },
+      "description": "Build-time numeric thresholds (promotion, transition criteria)"
+    },
+    "transitions": {
+      "type": "object",
+      "description": "Declarative transition rules per node type",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["from", "to", "conditions"],
+          "additionalProperties": false,
+          "properties": {
+            "from": { "type": "string", "description": "Source status" },
+            "to": { "type": "string", "description": "Target status" },
+            "conditions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["fn", "args"],
+                "additionalProperties": false,
+                "properties": {
+                  "fn": {
+                    "type": "string",
+                    "enum": ["has_linked", "field_present", "min_linked_count", "all_linked_with"],
+                    "description": "Preset function name"
+                  },
+                  "args": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "description": "Arguments for the preset function"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "validValues": {
+      "type": "object",
+      "description": "Enum-like value lists for validation",
+      "additionalProperties": {
+        "type": "array",
+        "items": { "type": "string" }
+      }
+    },
+    "manualTransitions": {
+      "type": "object",
+      "description": "Manual transition allowlist (not auto-detected)",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["from", "to"],
+          "additionalProperties": false,
+          "properties": {
+            "from": { "type": "string", "description": "Source status or ANY" },
+            "to": { "type": "string", "description": "Target status" }
+          }
+        }
+      }
+    }
+  }
+}
