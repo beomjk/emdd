@@ -34,7 +34,7 @@ describe('emdd init', () => {
     rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it('graph/ 디렉토리와 7개 서브디렉토리를 생성한다', () => {
+  it('creates graph/ directory with 7 subdirectories', () => {
     run(`init ${tmpDir}`);
     expect(existsSync(join(tmpDir, 'graph'))).toBe(true);
     expect(existsSync(join(tmpDir, 'graph', 'hypotheses'))).toBe(true);
@@ -46,18 +46,18 @@ describe('emdd init', () => {
     expect(existsSync(join(tmpDir, 'graph', 'episodes'))).toBe(true);
   });
 
-  it('.emdd.yml 설정 파일을 생성한다', () => {
+  it('creates .emdd.yml config file', () => {
     run(`init ${tmpDir}`);
     expect(existsSync(join(tmpDir, '.emdd.yml'))).toBe(true);
   });
 
-  it('--lang ko 옵션이 설정에 반영된다', () => {
+  it('applies --lang ko option to config', () => {
     run(`init ${tmpDir} --lang ko`);
     const config = readFileSync(join(tmpDir, '.emdd.yml'), 'utf-8');
     expect(config).toContain('lang: ko');
   });
 
-  it('이미 초기화된 프로젝트에서 경고를 출력한다', () => {
+  it('warns when project is already initialized', () => {
     run(`init ${tmpDir}`);
     const result = run(`init ${tmpDir}`);
     expect(result.toLowerCase()).toMatch(/already|exist/);
@@ -76,25 +76,25 @@ describe('emdd new', () => {
     rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it('hypothesis 노드 파일을 생성한다', () => {
+  it('creates a hypothesis node file', () => {
     run(`new hypothesis test-hyp --path ${tmpDir}`);
     const files = readdirSync(join(tmpDir, 'graph', 'hypotheses'));
     expect(files.some(f => f.includes('hyp-001'))).toBe(true);
   });
 
-  it('잘못된 타입이면 에러를 반환한다', () => {
+  it('returns error for invalid type', () => {
     const { exitCode } = runMayFail(`new invalid-type test --path ${tmpDir}`);
     expect(exitCode).not.toBe(0);
   });
 
-  it('연속 생성 시 ID가 증가한다', () => {
+  it('increments ID on consecutive creation', () => {
     run(`new hypothesis first --path ${tmpDir}`);
     run(`new hypothesis second --path ${tmpDir}`);
     const files = readdirSync(join(tmpDir, 'graph', 'hypotheses'));
     expect(files.some(f => f.includes('hyp-002'))).toBe(true);
   });
 
-  it('생성 메시지를 출력한다', () => {
+  it('prints creation message', () => {
     const result = run(`new hypothesis test-hyp --path ${tmpDir}`);
     expect(result).toMatch(/hyp-001/);
   });
@@ -112,13 +112,13 @@ describe('emdd lint', () => {
     rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it('정상 그래프에서 exit code 0을 반환한다', () => {
+  it('returns exit code 0 for valid graph', () => {
     run(`new hypothesis test --path ${tmpDir}`);
     const { exitCode } = runMayFail(`lint ${tmpDir}`);
     expect(exitCode).toBe(0);
   });
 
-  it('정상 그래프에서 에러 없음 메시지를 출력한다', () => {
+  it('prints no-error message for valid graph', () => {
     run(`new hypothesis test --path ${tmpDir}`);
     const result = run(`lint ${tmpDir}`);
     expect(result.toLowerCase()).toMatch(/valid|clean|no error/);
@@ -137,13 +137,13 @@ describe('emdd health', () => {
     rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it('대시보드를 출력한다', () => {
+  it('prints health dashboard', () => {
     run(`new hypothesis test --path ${tmpDir}`);
     const result = run(`health ${tmpDir}`);
     expect(result.toLowerCase()).toContain('health');
   });
 
-  it('노드 수를 표시한다', () => {
+  it('displays node count', () => {
     run(`new hypothesis test1 --path ${tmpDir}`);
     run(`new experiment test2 --path ${tmpDir}`);
     const result = run(`health ${tmpDir}`);

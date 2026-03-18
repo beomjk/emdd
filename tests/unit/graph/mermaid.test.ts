@@ -21,14 +21,14 @@ function makeGraph(nodes: Node[]): Graph {
 }
 
 describe('generateMermaid', () => {
-  it('graph TD 헤더로 시작한다', () => {
+  it('starts with graph TD header', () => {
     const graph = makeGraph([
       makeNode({ id: 'hyp-001', type: 'hypothesis', title: 'Test' }),
     ]);
     expect(generateMermaid(graph)).toMatch(/^graph TD/);
   });
 
-  it('모든 노드가 포함된다', () => {
+  it('includes all nodes', () => {
     const graph = makeGraph([
       makeNode({ id: 'hyp-001', type: 'hypothesis', title: 'Hypothesis A' }),
       makeNode({ id: 'exp-001', type: 'experiment', title: 'Experiment A' }),
@@ -40,7 +40,7 @@ describe('generateMermaid', () => {
     expect(output).toContain('fnd-001');
   });
 
-  it('노드 라벨에 id와 title이 포함된다', () => {
+  it('node label includes id and title', () => {
     const graph = makeGraph([
       makeNode({ id: 'hyp-001', type: 'hypothesis', title: 'Surface Defect Detection' }),
     ]);
@@ -49,7 +49,7 @@ describe('generateMermaid', () => {
     expect(output).toContain('Surface Defect Detection');
   });
 
-  it('엣지가 관계명으로 표시된다', () => {
+  it('edges display relation name', () => {
     const graph = makeGraph([
       makeNode({
         id: 'exp-001', type: 'experiment', title: 'Exp',
@@ -63,7 +63,7 @@ describe('generateMermaid', () => {
     expect(output).toContain('supports');
   });
 
-  it('긴 제목을 잘라낸다 (40자 기준)', () => {
+  it('truncates long titles (40 char limit)', () => {
     const longTitle = 'A'.repeat(60);
     const graph = makeGraph([
       makeNode({ id: 'hyp-001', type: 'hypothesis', title: longTitle }),
@@ -73,13 +73,13 @@ describe('generateMermaid', () => {
     expect(output).toContain('A'.repeat(40));
   });
 
-  it('빈 그래프에서도 유효한 Mermaid를 반환한다', () => {
+  it('returns valid Mermaid for empty graph', () => {
     const graph: Graph = { nodes: new Map(), errors: [], warnings: [] };
     const output = generateMermaid(graph);
     expect(output.trim()).toBe('graph TD');
   });
 
-  it('CONFIRMED 상태 노드에 스타일이 적용된다', () => {
+  it('applies style to CONFIRMED status nodes', () => {
     const graph = makeGraph([
       makeNode({ id: 'hyp-001', type: 'hypothesis', title: 'Confirmed', status: 'CONFIRMED' }),
     ]);
@@ -87,7 +87,7 @@ describe('generateMermaid', () => {
     expect(output).toMatch(/style.*hyp-001/);
   });
 
-  it('REFUTED 상태 노드에 스타일이 적용된다', () => {
+  it('applies style to REFUTED status nodes', () => {
     const graph = makeGraph([
       makeNode({ id: 'hyp-001', type: 'hypothesis', title: 'Refuted', status: 'REFUTED' }),
     ]);

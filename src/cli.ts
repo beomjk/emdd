@@ -17,6 +17,8 @@ import { confidenceCommand } from './commands/confidence.js';
 import { transitionsCommand } from './commands/transitions.js';
 import { killCheckCommand } from './commands/kill-check.js';
 import { branchesCommand } from './commands/branches.js';
+import { serveCommand } from './commands/serve.js';
+import { exportHtmlCommand } from './commands/export-html.js';
 import { resolveGraphDir } from './graph/loader.js';
 import { startMcpServer } from './mcp-server/index.js';
 import { VERSION } from './version.js';
@@ -254,6 +256,28 @@ program
         }
       }
     }
+  }));
+
+program
+  .command('serve [path]')
+  .description('Start web dashboard server')
+  .option('-p, --port <port>', 'Server port', '3000')
+  .option('--no-open', 'Do not open browser automatically')
+  .action(withCliErrorHandling(async (path, options) => {
+    await serveCommand(path, {
+      port: parseInt(options.port, 10),
+      open: options.open,
+    });
+  }));
+
+program
+  .command('export-html [output]')
+  .description('Export graph as standalone HTML file')
+  .option('--layout <layout>', 'Layout type (force, hierarchical)', 'force')
+  .option('--types <types>', 'Comma-separated node types to include')
+  .option('--statuses <statuses>', 'Comma-separated statuses to include')
+  .action(withCliErrorHandling(async (output, options) => {
+    await exportHtmlCommand(output, options);
   }));
 
 program

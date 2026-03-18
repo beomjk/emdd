@@ -21,6 +21,7 @@ import type {
   PromoteCandidate,
 } from './types.js';
 import { loadConfig } from './config.js';
+export { detectClusters, identifyClusters } from './clusters.js';
 import type { Locale } from '../i18n/index.js';
 
 // ── listNodes ───────────────────────────────────────────────────────

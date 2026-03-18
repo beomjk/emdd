@@ -27,7 +27,7 @@ describe('indexCommand', () => {
   beforeEach(() => { tmpDir = setupProject(); });
   afterEach(() => { rmSync(tmpDir, { recursive: true, force: true }); });
 
-  it('_index.md 파일을 생성한다', async () => {
+  it('creates _index.md file', async () => {
     writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
       id: 'hyp-001', type: 'hypothesis', title: 'Test Hyp',
       status: 'PROPOSED', confidence: 0.5,
@@ -40,7 +40,7 @@ describe('indexCommand', () => {
     expect(existsSync(join(tmpDir, 'graph', '_index.md'))).toBe(true);
   });
 
-  it('생성된 _index.md에 노드 정보가 포함된다', async () => {
+  it('generated _index.md contains node information', async () => {
     writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
       id: 'hyp-001', type: 'hypothesis', title: 'Surface Detection',
       status: 'TESTING', confidence: 0.6,
@@ -55,7 +55,7 @@ describe('indexCommand', () => {
     expect(content).toContain('Surface Detection');
   });
 
-  it('결과 요약을 반환한다', async () => {
+  it('returns result summary', async () => {
     writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
       id: 'hyp-001', type: 'hypothesis', title: 'Test',
       status: 'PROPOSED', confidence: 0.5,
@@ -73,7 +73,7 @@ describe('graphCommand', () => {
   beforeEach(() => { tmpDir = setupProject(); });
   afterEach(() => { rmSync(tmpDir, { recursive: true, force: true }); });
 
-  it('_graph.mmd 파일을 생성한다', async () => {
+  it('creates _graph.mmd file', async () => {
     writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
       id: 'hyp-001', type: 'hypothesis', title: 'Test Hyp',
       status: 'PROPOSED', confidence: 0.5,
@@ -86,7 +86,7 @@ describe('graphCommand', () => {
     expect(existsSync(join(tmpDir, 'graph', '_graph.mmd'))).toBe(true);
   });
 
-  it('생성된 파일이 graph TD로 시작한다', async () => {
+  it('generated file starts with graph TD', async () => {
     writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
       id: 'hyp-001', type: 'hypothesis', title: 'Test',
       status: 'PROPOSED', confidence: 0.5,
@@ -100,7 +100,7 @@ describe('graphCommand', () => {
     expect(content).toMatch(/^graph TD/);
   });
 
-  it('엣지가 포함된다', async () => {
+  it('includes edges', async () => {
     writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
       id: 'hyp-001', type: 'hypothesis', title: 'Hyp',
       status: 'TESTING', confidence: 0.6,
@@ -121,7 +121,7 @@ describe('graphCommand', () => {
     expect(content).toContain('supports');
   });
 
-  it('결과 요약을 반환한다', async () => {
+  it('returns result summary', async () => {
     writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
       id: 'hyp-001', type: 'hypothesis', title: 'Test',
       status: 'PROPOSED', confidence: 0.5,
@@ -140,7 +140,7 @@ describe('backlogCommand', () => {
   beforeEach(() => { tmpDir = setupProject(); });
   afterEach(() => { rmSync(tmpDir, { recursive: true, force: true }); });
 
-  it('에피소드에서 미완료 항목을 수집한다', async () => {
+  it('collects incomplete items from episodes', async () => {
     writeNode(tmpDir, 'episodes', 'epi-001-test.md', {
       id: 'epi-001', type: 'episode', title: 'Test Episode',
       status: 'IN_PROGRESS',
@@ -154,7 +154,7 @@ describe('backlogCommand', () => {
     expect(result.items.some(i => i.text === 'task three')).toBe(true);
   });
 
-  it('완료된 항목은 제외한다', async () => {
+  it('excludes completed items', async () => {
     writeNode(tmpDir, 'episodes', 'epi-001-test.md', {
       id: 'epi-001', type: 'episode', title: 'Test',
       status: 'COMPLETED',
@@ -166,12 +166,12 @@ describe('backlogCommand', () => {
     expect(result.items.length).toBe(0);
   });
 
-  it('에피소드가 없으면 빈 배열을 반환한다', async () => {
+  it('returns empty array when no episodes exist', async () => {
     const result = await backlogCommand(join(tmpDir, 'graph'));
     expect(result.items).toEqual([]);
   });
 
-  it('각 항목에 소속 에피소드 ID가 포함된다', async () => {
+  it('each item includes its parent episode ID', async () => {
     writeNode(tmpDir, 'episodes', 'epi-001-test.md', {
       id: 'epi-001', type: 'episode', title: 'Test',
       status: 'IN_PROGRESS',

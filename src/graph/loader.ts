@@ -3,7 +3,15 @@ import path from 'node:path';
 import matter from 'gray-matter';
 import { glob } from 'glob';
 import type { Node, Graph, Link, NodeType } from './types.js';
-import { REVERSE_LABELS } from './types.js';
+import { REVERSE_LABELS, NODE_TYPE_DIRS, PREFIX_TO_TYPE } from './types.js';
+
+export interface LoadGraphOptions {
+  permissive?: boolean;
+}
+
+const DIR_TO_TYPE: Record<string, NodeType> = Object.fromEntries(
+  Object.entries(NODE_TYPE_DIRS).map(([type, dir]) => [dir, type as NodeType]),
+);
 
 /**
  * Walk up from startPath looking for a `graph/` directory.
@@ -99,15 +107,66 @@ export async function loadNode(filePath: string): Promise<Node | null> {
 }
 
 /**
+ * Build a minimal Node for an invalid/unparseable file (FR-026).
+ * Returns null if id or type cannot be derived from the file path.
+ */
+function buildInvalidNode(filePath: string, graphDir: string): Node | null {
+  const basename = path.basename(filePath, '.md');
+  const idMatch = basename.match(/^(\w+-\d+)/);
+  if (!idMatch) return null;
+
+  const id = idMatch[1];
+  const prefix = id.split('-')[0];
+  const type = PREFIX_TO_TYPE[prefix];
+  if (!type) return null;
+
+  // Verify parent directory matches expected type dir
+  const relative = path.relative(graphDir, filePath);
+  const parentDir = relative.split(path.sep)[0];
+  const dirType = DIR_TO_TYPE[parentDir];
+  // Use dir-based type if available, otherwise fall back to prefix-based
+  const resolvedType = dirType ?? type;
+
+  let parseError = 'Failed to parse node frontmatter';
+  try {
+    const content = fs.readFileSync(filePath, 'utf-8');
+    const parsed = matter(content);
+    if (!parsed.data || Object.keys(parsed.data).length === 0) {
+      parseError = 'No frontmatter found';
+    } else if (!parsed.data.type) {
+      parseError = 'Missing required field: type';
+    }
+  } catch (e) {
+    parseError = `Parse error: ${e instanceof Error ? e.message : String(e)}`;
+  }
+
+  return {
+    id,
+    type: resolvedType,
+    title: basename,
+    path: filePath,
+    status: undefined,
+    tags: [],
+    links: [],
+    meta: { _invalid: true, _parseError: parseError },
+  };
+}
+
+/**
  * Load all .md nodes from a graph directory (including subdirectories).
  * Excludes files/dirs starting with _.
+ *
+ * When `options.permissive` is true, invalid/unparseable files are included
+ * as minimal nodes with `meta._invalid = true` instead of being silently skipped.
  */
-export async function loadGraph(graphDir: string): Promise<Graph> {
+export async function loadGraph(graphDir: string, options?: LoadGraphOptions): Promise<Graph> {
   const graph: Graph = {
     nodes: new Map(),
     errors: [],
     warnings: [],
   };
+
+  const permissive = options?.permissive ?? false;
 
   // Find all .md files in the graph directory and subdirectories
   const pattern = path.join(graphDir, '**/*.md');
@@ -122,6 +181,14 @@ export async function loadGraph(graphDir: string): Promise<Graph> {
     const node = await loadNode(file);
     if (node) {
       graph.nodes.set(node.id, node);
+    } else if (permissive) {
+      const invalidNode = buildInvalidNode(file, graphDir);
+      if (invalidNode) {
+        graph.nodes.set(invalidNode.id, invalidNode);
+        graph.errors.push(`Invalid node file: ${relative}`);
+      } else {
+        graph.errors.push(`Unidentifiable file (skipped): ${relative}`);
+      }
     }
   }
 

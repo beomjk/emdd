@@ -21,7 +21,7 @@ function makeGraph(nodes: Node[]): Graph {
 }
 
 describe('generateIndex', () => {
-  it('마크다운 문자열을 반환한다', () => {
+  it('returns a markdown string', () => {
     const graph = makeGraph([
       makeNode({ id: 'hyp-001', type: 'hypothesis', title: 'Test Hypothesis' }),
     ]);
@@ -29,7 +29,7 @@ describe('generateIndex', () => {
     expect(output).toContain('# ');
   });
 
-  it('타입별 섹션이 포함된다', () => {
+  it('includes sections for each type', () => {
     const graph = makeGraph([
       makeNode({ id: 'hyp-001', type: 'hypothesis', title: 'H1' }),
       makeNode({ id: 'exp-001', type: 'experiment', title: 'E1' }),
@@ -41,7 +41,7 @@ describe('generateIndex', () => {
     expect(output).toMatch(/finding/i);
   });
 
-  it('각 노드의 ID와 제목이 포함된다', () => {
+  it('includes each node ID and title', () => {
     const graph = makeGraph([
       makeNode({ id: 'hyp-001', type: 'hypothesis', title: 'Surface Defect Detection' }),
       makeNode({ id: 'exp-001', type: 'experiment', title: 'CNN Baseline' }),
@@ -53,7 +53,7 @@ describe('generateIndex', () => {
     expect(output).toContain('CNN Baseline');
   });
 
-  it('노드의 상태가 포함된다', () => {
+  it('includes node status', () => {
     const graph = makeGraph([
       makeNode({ id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'TESTING' }),
     ]);
@@ -61,7 +61,7 @@ describe('generateIndex', () => {
     expect(output).toContain('TESTING');
   });
 
-  it('통계 정보가 포함된다 (총 노드 수)', () => {
+  it('includes statistics (total node count)', () => {
     const graph = makeGraph([
       makeNode({ id: 'hyp-001', type: 'hypothesis', title: 'H1' }),
       makeNode({ id: 'exp-001', type: 'experiment', title: 'E1' }),
@@ -71,7 +71,7 @@ describe('generateIndex', () => {
     expect(output).toContain('3');
   });
 
-  it('빈 그래프에서도 유효한 마크다운을 반환한다', () => {
+  it('returns valid markdown for empty graph', () => {
     const graph: Graph = { nodes: new Map(), errors: [], warnings: [] };
     const output = generateIndex(graph);
     expect(output).toContain('# ');
