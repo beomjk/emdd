@@ -201,7 +201,10 @@ describe('generateTypesFile', () => {
       ) {
         // Object/array entries inside { } or [ ] should end with comma
         if (/^\w+:/.test(trimmed) || /^'[^']+':/.test(trimmed) || /^'[^']+',$/.test(trimmed)) {
-          expect(trimmed.endsWith(',')).toBe(true);
+          // Lines opening nested structures (ending with [ or {) are not leaf entries
+          if (!trimmed.endsWith('[') && !trimmed.endsWith('{')) {
+            expect(trimmed.endsWith(',')).toBe(true);
+          }
         }
       }
     }

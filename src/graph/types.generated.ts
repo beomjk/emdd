@@ -150,6 +150,33 @@ export const THRESHOLDS = {
   support_strength_min: 0.7,
 } as const;
 
+// ── Transition Table ─────────────────────────────────────────────────
+
+export const TRANSITION_TABLE: Record<string, { from: string; to: string; conditions: { fn: string; args: Record<string, unknown> }[] }[]> = {
+  hypothesis: [
+    { from: 'PROPOSED', to: 'TESTING', conditions: [{ fn: 'has_linked', args: { direction: "any", status: "RUNNING", type: "experiment" } }] },
+    { from: 'TESTING', to: 'CONTESTED', conditions: [{ fn: 'has_linked', args: { direction: "incoming", status: "CONTESTED", type: "decision" } }] },
+    { from: 'TESTING', to: 'REVISED', conditions: [{ fn: 'has_linked', args: { direction: "incoming", relation: "revises" } }] },
+    { from: 'TESTING', to: 'SUPPORTED', conditions: [{ fn: 'has_linked', args: { direction: "incoming", min_strength: 0.7, relation: "supports" } }] },
+    { from: 'TESTING', to: 'REFUTED', conditions: [{ fn: 'has_linked', args: { direction: "incoming", relation: "contradicts" } }] },
+    { from: 'CONTESTED', to: 'REVISED', conditions: [{ fn: 'has_linked', args: { direction: "incoming", relation: "revises" } }] },
+    { from: 'CONTESTED', to: 'SUPPORTED', conditions: [{ fn: 'has_linked', args: { direction: "incoming", min_strength: 0.7, relation: "supports" } }, { fn: 'has_linked', args: { direction: "incoming", status: "ACCEPTED", type: "decision" } }] },
+    { from: 'CONTESTED', to: 'REFUTED', conditions: [{ fn: 'has_linked', args: { direction: "incoming", relation: "contradicts" } }, { fn: 'has_linked', args: { direction: "incoming", status: "ACCEPTED", type: "decision" } }] },
+  ],
+  knowledge: [
+    { from: 'ACTIVE', to: 'DISPUTED', conditions: [{ fn: 'has_linked', args: { direction: "incoming", relation: "contradicts" } }] },
+    { from: 'ACTIVE', to: 'SUPERSEDED', conditions: [{ fn: 'has_linked', args: { direction: "incoming", relation: "revises", type: "knowledge" } }] },
+    { from: 'DISPUTED', to: 'SUPERSEDED', conditions: [{ fn: 'has_linked', args: { direction: "incoming", relation: "revises", type: "knowledge" } }] },
+    { from: 'DISPUTED', to: 'ACTIVE', conditions: [{ fn: 'all_linked_with', args: { relation: "contradicts", status: "RETRACTED" } }] },
+  ],
+};
+
+export const MANUAL_TRANSITIONS: Record<string, { from: string; to: string }[]> = {
+  hypothesis: [
+    { from: 'ANY', to: 'DEFERRED' },
+  ],
+};
+
 // ── Valid Values ─────────────────────────────────────────────────────
 
 export const VALID_DEPENDENCY_TYPES = ['LOGICAL', 'PRACTICAL', 'TEMPORAL'] as const;

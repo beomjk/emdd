@@ -16,6 +16,7 @@ export function generateTypesFile(schema: GraphSchema): string {
     generateNodeTypesSection(schema),
     generateEdgeTypesSection(schema),
     generateThresholdsSection(schema),
+    generateTransitionsSection(schema),
     generateValidValuesSection(schema),
     '', // trailing newline
   ];
@@ -156,6 +157,55 @@ function generateThresholdsSection(schema: GraphSchema): string {
     lines.push(`  ${key}: ${value},`);
   }
   lines.push('} as const;');
+
+  return lines.join('\n');
+}
+
+function generateTransitionsSection(schema: GraphSchema): string {
+  const lines: string[] = [];
+
+  // ── TRANSITION_TABLE
+  lines.push('');
+  lines.push(sectionComment('Transition Table'));
+  lines.push('');
+  lines.push('export const TRANSITION_TABLE: Record<string, { from: string; to: string; conditions: { fn: string; args: Record<string, unknown> }[] }[]> = {');
+
+  const typeNames = Object.keys(schema.transitions).sort();
+  for (const typeName of typeNames) {
+    const rules = schema.transitions[typeName];
+    lines.push(`  ${typeName}: [`);
+    for (const rule of rules) {
+      const conditionsStr = rule.conditions.map(c => {
+        const argsStr = Object.entries(c.args)
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([k, v]) => `${k}: ${JSON.stringify(v)}`)
+          .join(', ');
+        return `{ fn: '${c.fn}', args: { ${argsStr} } }`;
+      }).join(', ');
+      lines.push(`    { from: '${rule.from}', to: '${rule.to}', conditions: [${conditionsStr}] },`);
+    }
+    lines.push('  ],');
+  }
+  lines.push('};');
+
+  // ── MANUAL_TRANSITIONS
+  if (schema.manualTransitions && Object.keys(schema.manualTransitions).length > 0) {
+    lines.push('');
+    lines.push('export const MANUAL_TRANSITIONS: Record<string, { from: string; to: string }[]> = {');
+    const mtTypeNames = Object.keys(schema.manualTransitions).sort();
+    for (const typeName of mtTypeNames) {
+      const rules = schema.manualTransitions[typeName];
+      lines.push(`  ${typeName}: [`);
+      for (const rule of rules) {
+        lines.push(`    { from: '${rule.from}', to: '${rule.to}' },`);
+      }
+      lines.push('  ],');
+    }
+    lines.push('};');
+  } else {
+    lines.push('');
+    lines.push('export const MANUAL_TRANSITIONS: Record<string, { from: string; to: string }[]> = {};');
+  }
 
   return lines.join('\n');
 }

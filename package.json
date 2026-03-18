@@ -20,6 +20,7 @@
     "test": "vitest",
     "test:run": "vitest run --passWithNoTests",
     "lint": "tsc --noEmit",
+    "spec:coverage": "tsx src/schema/spec-coverage.ts",
     "demo:record": "npx terminal-demo play docs/assets/demo.md --record docs/assets/demo.cast && npx svg-term --in docs/assets/demo.cast --out docs/assets/demo.svg --window --width 80 --height 24"
   },
   "keywords": [

@@ -7,10 +7,12 @@ import {
 import type { NodeType } from '../../../src/graph/types.js';
 
 describe('NODE_TYPES', () => {
+  // @spec §6.2.1
   it('contains exactly 7 types', () => {
     expect(NODE_TYPES).toHaveLength(7);
   });
 
+  // @spec §6.2.2
   it('every type has VALID_STATUSES entry', () => {
     for (const t of NODE_TYPES) {
       expect(VALID_STATUSES).toHaveProperty(t);
@@ -51,6 +53,7 @@ describe('ID_PREFIXES / PREFIX_TO_TYPE', () => {
 });
 
 describe('EDGE_TYPES', () => {
+  // @spec §6.5.1
   it('contains 16 types (14 canonical + tests alias + resolves)', () => {
     expect(EDGE_TYPES.size).toBe(16);
   });
@@ -63,6 +66,7 @@ describe('EDGE_TYPES', () => {
     expect(REVERSE_LABELS['resolved_by']).toBe('resolves');
   });
 
+  // @spec §6.5.2
   it('every REVERSE_LABELS value is in EDGE_TYPES', () => {
     for (const value of Object.values(REVERSE_LABELS)) {
       expect(EDGE_TYPES.has(value)).toBe(true);
@@ -80,6 +84,7 @@ describe('EDGE_TYPES', () => {
 });
 
 describe('validation constants', () => {
+  // @spec §6.7.2
   it('VALID_SEVERITIES has 3 values: FATAL, WEAKENING, TENSION', () => {
     expect([...VALID_SEVERITIES]).toEqual(['FATAL', 'WEAKENING', 'TENSION']);
   });

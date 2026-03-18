@@ -109,8 +109,16 @@ The AI agent is a **gardener** of the graph, not an architect:
 5. **Dual-agency**: both humans and AI can create/modify; authorship is always tracked
 
 <!-- v0.3: Finding/Insight merger reduced node types from 8 to 7 -->
+<!-- ASSERT §6.2.1: there are exactly 7 node types -->
 ### 6.2 Node Types (7)
 
+<!-- ASSERT §6.2.2: hypothesis has 7 statuses (PROPOSED, TESTING, SUPPORTED, REFUTED, REVISED, DEFERRED, CONTESTED) -->
+<!-- ASSERT §6.2.3: experiment has 5 statuses (PLANNED, RUNNING, COMPLETED, FAILED, ABANDONED) -->
+<!-- ASSERT §6.2.4: finding has 4 statuses (DRAFT, VALIDATED, PROMOTED, RETRACTED) -->
+<!-- ASSERT §6.2.5: knowledge has 4 statuses (ACTIVE, DISPUTED, SUPERSEDED, RETRACTED) -->
+<!-- ASSERT §6.2.6: question has 4 statuses (OPEN, RESOLVED, ANSWERED, DEFERRED) -->
+<!-- ASSERT §6.2.7: decision has 5 statuses (PROPOSED, ACCEPTED, SUPERSEDED, REVERTED, CONTESTED) -->
+<!-- ASSERT §6.2.8: episode has 2 statuses (ACTIVE, COMPLETED) -->
 | Type | Color | Meaning | Key Attributes |
 |------|-------|---------|----------------|
 | **Knowledge** | Blue | Confirmed facts, literature, domain rules | `knowledge_type`, `source`, `confidence` |
@@ -264,10 +272,12 @@ During Consolidation, if 3 or more `[deferred]` items have accumulated, conduct 
    ```
 
 <!-- v0.3: Frontmatter lowercase mapping note + CONFIRMS added for 14 total -->
+<!-- ASSERT §6.5.1: there are exactly 16 edge types -->
 ### 6.4 Edge Types (16)
 
 **Frontmatter notation convention:** The `relation:` field in YAML frontmatter uses lowercase present tense (e.g., `relation: produces`). This maps to the canonical type `PRODUCES`. The uppercase names in the table below are canonical types; frontmatter uses lowercase snake_case.
 
+<!-- ASSERT §6.5.2: reverse labels map confirmed_by→confirms, supported_by→supports, answered_by→answers, spawned_from→spawns, produced_by→produces, tested_by→tests, resolved_by→resolves -->
 **Reverse labels allowed:** When recording a link from node A to target B, there are cases where you need to express the relationship in the B-to-A direction. In these cases, use reverse labels with `_by` or `_from` suffixes: `confirmed_by`, `supported_by`, `answered_by`, `spawned_from`, `produced_by`, `tested_by`. These are the reverses of `CONFIRMS`, `SUPPORTS`, `ANSWERS`, `SPAWNS`, `PRODUCES`, and `TESTS` respectively. Do not duplicate the canonical-direction link in the other file.
 
 **Evidential edges:**
@@ -306,6 +316,9 @@ During Consolidation, if 3 or more `[deferred]` items have accumulated, conduct 
 | A Hypothesis emerged from a Question | `SPAWNS` | Correct usage |
 | A Finding almost certainly supports a hypothesis | `CONFIRMS` | Same as `SUPPORTS(strength>=0.9)`. Use `SUPPORTS` for weaker support |
 
+<!-- ASSERT §6.5.3: hypothesis transitions: PROPOSED→TESTING when connected Experiment is RUNNING -->
+<!-- ASSERT §6.5.4: hypothesis transitions: TESTING→SUPPORTED when SUPPORTS edge strength >= 0.7 -->
+<!-- ASSERT §6.5.5: hypothesis transitions: TESTING→REFUTED when CONTRADICTS edge exists -->
 ### 6.5 Hypothesis Status Transitions
 
 ```
@@ -382,6 +395,7 @@ The AI agent should:
 - **Never**: autonomously change a hypothesis status based on a kill criterion. This is always a human decision (Principle 7: Taste over Technique).
 
 <!-- v0.3: Knowledge status transitions added -->
+<!-- ASSERT §6.6.1: knowledge transitions: ACTIVE→DISPUTED when CONTRADICTS edge from new Finding -->
 ### 6.6 Knowledge Status Transitions
 
 Knowledge can change status even after promotion. When a new Finding contradicts existing Knowledge, that Knowledge becomes subject to review.
@@ -408,6 +422,9 @@ ACTIVE      -> SUPERSEDED  : direct replacement without dispute phase
 6. Analyze "why was this prematurely promoted to Knowledge?" and record it as a retraction Finding (`finding_type: negative`)
 7. If 2 or more Knowledge nodes in the same cluster have been RETRACTED, trigger a Pivot Ceremony
 
+<!-- ASSERT §6.7.1: confidence propagation formula uses 0.3 coefficient for SUPPORTS -->
+<!-- ASSERT §6.7.2: severity weights are FATAL=0.9, WEAKENING=0.6, TENSION=0.3 -->
+<!-- ASSERT §6.7.3: CONFIRMS edge treated as SUPPORTS with strength=1.0 -->
 ### 6.7 Confidence Propagation (Bayesian-inspired)
 
 ```python
@@ -463,6 +480,7 @@ Step 2: CONTRADICTS edge arrives
 Final confidence: 0.42 (rounded)
 ```
 
+<!-- ASSERT §6.8.1: there are exactly 5 structural gap types -->
 ### 6.8 Structural Gap Detection (5 Types)
 
 | Gap Type | Detection Method | Output |
@@ -495,6 +513,7 @@ gaps:
   min_cluster_edges: 3
 ```
 
+<!-- ASSERT §6.9.1: consolidation trigger check is part of context loading protocol -->
 ### 6.9 Topic Clusters and Context Loading
 
 As the graph grows, the increasing number of nodes makes it difficult to determine "which nodes are relevant to the current task?" Two mechanisms address this.
