@@ -1,6 +1,8 @@
 import type { SerializedGraph } from '../types.js';
 import { renderGraph, highlightNeighbors, clearHighlights, getCy } from './graph.js';
 import { showDetailPanel, hideDetailPanel, setDepthChangeHandler, getCurrentDepth } from './detail-panel.js';
+import { renderFilters, setFilterChangeHandler } from './filters.js';
+import { renderSearchBar } from './search.js';
 
 export interface DashboardState {
   graph: SerializedGraph | null;
@@ -70,6 +72,30 @@ async function refresh(): Promise<void> {
   showToast(`Refreshed at ${new Date().toLocaleTimeString()}`);
 }
 
+function extractUniqueValues(graph: SerializedGraph): {
+  types: string[];
+  statuses: string[];
+  edgeTypes: string[];
+} {
+  const types = new Set<string>();
+  const statuses = new Set<string>();
+  const edgeTypes = new Set<string>();
+
+  for (const node of graph.nodes) {
+    types.add(node.type);
+    if (node.status) statuses.add(node.status);
+  }
+  for (const edge of graph.edges) {
+    edgeTypes.add(edge.relation);
+  }
+
+  return {
+    types: [...types].sort(),
+    statuses: [...statuses].sort(),
+    edgeTypes: [...edgeTypes].sort(),
+  };
+}
+
 function renderDashboard(graph: SerializedGraph): void {
   const emptyState = document.getElementById('empty-state')!;
   const cyContainer = document.getElementById('cy')!;
@@ -88,7 +114,24 @@ function renderDashboard(graph: SerializedGraph): void {
     onNodeSelect: (id) => selectNode(id),
     onBackgroundClick: () => deselectNode(),
   });
+
+  // Render filters in sidebar
+  const sidebar = document.getElementById('sidebar')!;
+  const { types, statuses, edgeTypes } = extractUniqueValues(graph);
+  renderFilters(sidebar, types, statuses, edgeTypes);
+
+  // Sync filter state
+  state.visibleTypes = new Set(types);
+  state.visibleStatuses = new Set(statuses);
+  state.visibleEdgeTypes = new Set(edgeTypes);
 }
+
+// Filter change handler — sync state
+setFilterChangeHandler((filterState) => {
+  state.visibleTypes = filterState.visibleTypes;
+  state.visibleStatuses = filterState.visibleStatuses;
+  state.visibleEdgeTypes = filterState.visibleEdgeTypes;
+});
 
 // Depth change handler — re-fetch neighbors for selected node
 setDepthChangeHandler(async (depth) => {
@@ -101,6 +144,10 @@ async function init(): Promise<void> {
   const graph = await fetchGraph();
   state.graph = graph;
   renderDashboard(graph);
+
+  // Render search bar
+  const searchContainer = document.getElementById('search-bar')!;
+  renderSearchBar(searchContainer);
 
   const refreshBtn = document.getElementById('refresh-btn');
   refreshBtn?.addEventListener('click', refresh);
