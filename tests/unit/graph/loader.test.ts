@@ -175,6 +175,54 @@ describe('parseLinks with edge attributes', () => {
   });
 });
 
+describe('loadGraph permissive mode', () => {
+  const invalidFixture = path.join(FIXTURES, 'graph-with-invalid');
+
+  it('non-permissive skips invalid nodes (default behavior)', async () => {
+    const graph = await loadGraph(invalidFixture);
+    expect(graph.nodes.size).toBe(1);
+    expect(graph.nodes.has('hyp-001')).toBe(true);
+    expect(graph.nodes.has('hyp-002')).toBe(false);
+    expect(graph.nodes.has('fnd-001')).toBe(false);
+    expect(graph.errors).toHaveLength(0);
+  });
+
+  it('permissive=true includes invalid nodes with _invalid meta', async () => {
+    const graph = await loadGraph(invalidFixture, { permissive: true });
+    expect(graph.nodes.size).toBe(3);
+    expect(graph.nodes.has('hyp-001')).toBe(true);
+    expect(graph.nodes.has('hyp-002')).toBe(true);
+    expect(graph.nodes.has('fnd-001')).toBe(true);
+  });
+
+  it('invalid nodes have _invalid and _parseError in meta', async () => {
+    const graph = await loadGraph(invalidFixture, { permissive: true });
+    const hyp002 = graph.nodes.get('hyp-002')!;
+    expect(hyp002.meta._invalid).toBe(true);
+    expect(hyp002.meta._parseError).toBeDefined();
+    expect(hyp002.type).toBe('hypothesis');
+    expect(hyp002.tags).toEqual([]);
+    expect(hyp002.links).toEqual([]);
+
+    const fnd001 = graph.nodes.get('fnd-001')!;
+    expect(fnd001.meta._invalid).toBe(true);
+    expect(fnd001.type).toBe('finding');
+  });
+
+  it('populates graph.errors for invalid files', async () => {
+    const graph = await loadGraph(invalidFixture, { permissive: true });
+    expect(graph.errors.length).toBeGreaterThanOrEqual(2);
+    expect(graph.errors.some(e => e.includes('hyp-002'))).toBe(true);
+    expect(graph.errors.some(e => e.includes('fnd-001'))).toBe(true);
+  });
+
+  it('existing loadGraph call sites are unaffected (no options)', async () => {
+    const graphDir = path.join(FIXTURES, 'sample-graph');
+    const graph = await loadGraph(graphDir);
+    expect(graph.nodes.size).toBe(14);
+  });
+});
+
 describe('resolveGraphDir', () => {
   it('finds graph/ in sample-project fixture', () => {
     const projectDir = path.join(FIXTURES, 'sample-project');
