@@ -6,6 +6,7 @@ import matter from 'gray-matter';
 import { computeConfidence, propagateConfidence } from '../../../src/graph/confidence.js';
 
 describe('computeConfidence — pure formula', () => {
+  // @spec §6.7.1
   it('worked example from spec: initial=0.40, SUPPORTS(0.90,0.80) + CONTRADICTS(0.70,WEAKENING) → ~0.42', () => {
     const result = computeConfidence(0.40, [
       { type: 'supports', sourceConfidence: 0.90, strength: 0.80 },
@@ -28,6 +29,7 @@ describe('computeConfidence — pure formula', () => {
     expect(result).toBeLessThan(0.5);
   });
 
+  // @spec §6.7.3
   it('CONFIRMS treated as SUPPORTS with strength=1.0', () => {
     const withConfirms = computeConfidence(0.5, [
       { type: 'confirms', sourceConfidence: 0.8 },
@@ -53,6 +55,7 @@ describe('computeConfidence — pure formula', () => {
     expect(result).toBeGreaterThanOrEqual(0.0);
   });
 
+  // @spec §6.7.2
   it('severity weights: FATAL=0.9, WEAKENING=0.6, TENSION=0.3', () => {
     const fatal = computeConfidence(0.5, [
       { type: 'contradicts', sourceConfidence: 1.0, severity: 'FATAL' },

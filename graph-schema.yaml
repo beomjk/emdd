@@ -1,0 +1,191 @@
+# yaml-language-server: $schema=graph-schema.schema.json
+# graph-schema.yaml — Single source of truth for EMDD graph structure
+# All code constants, transition rules, and spec tables are derived from this file.
+# Do NOT edit generated files directly; modify this file and run `npm run build`.
+
+version: "1.0"
+
+nodeTypes:
+  - name: decision
+    prefix: dec
+    directory: decisions
+    statuses: [PROPOSED, ACCEPTED, SUPERSEDED, REVERTED, CONTESTED]
+    requiredFields: [id, type, title, status, created, updated]
+    optionalFields: [tags, links, reversibility]
+
+  - name: episode
+    prefix: epi
+    directory: episodes
+    statuses: [ACTIVE, COMPLETED]
+    requiredFields: [id, type, title, status, created, updated]
+    optionalFields: [tags, links]
+
+  - name: experiment
+    prefix: exp
+    directory: experiments
+    statuses: [PLANNED, RUNNING, COMPLETED, FAILED, ABANDONED]
+    requiredFields: [id, type, title, status, created, updated]
+    optionalFields: [tags, links]
+
+  - name: finding
+    prefix: fnd
+    directory: findings
+    statuses: [DRAFT, VALIDATED, PROMOTED, RETRACTED]
+    requiredFields: [id, type, title, status, confidence, created, updated]
+    optionalFields: [tags, links, finding_type]
+
+  - name: hypothesis
+    prefix: hyp
+    directory: hypotheses
+    statuses: [PROPOSED, TESTING, SUPPORTED, REFUTED, REVISED, DEFERRED, CONTESTED]
+    requiredFields: [id, type, title, status, confidence, created, updated]
+    optionalFields: [tags, links, kill_criteria, risk_level]
+
+  - name: knowledge
+    prefix: knw
+    directory: knowledge
+    statuses: [ACTIVE, DISPUTED, SUPERSEDED, RETRACTED]
+    requiredFields: [id, type, title, status, confidence, created, updated]
+    optionalFields: [tags, links]
+
+  - name: question
+    prefix: qst
+    directory: questions
+    statuses: [OPEN, RESOLVED, ANSWERED, DEFERRED]
+    requiredFields: [id, type, title, status, created, updated]
+    optionalFields: [tags, links, urgency]
+
+edgeTypes:
+  forward:
+    # evidence
+    - supports
+    - contradicts
+    - confirms
+    # generation
+    - spawns
+    - produces
+    - answers
+    - revises
+    - promotes
+    # structure
+    - depends_on
+    - extends
+    - relates_to
+    - informs
+    # composition
+    - part_of
+    - context_for
+    - resolves
+    # aliases
+    - tests
+  reverse:
+    # 16 forward 중 7개만 reverse label이 정의됨.
+    # reverse label이 없는 9개는 단방향 관계이다.
+    answered_by: answers
+    confirmed_by: confirms
+    produced_by: produces
+    resolved_by: resolves
+    spawned_from: spawns
+    supported_by: supports
+    tested_by: tests
+
+thresholds:
+  min_independent_supports: 2
+  promotion_confidence: 0.9
+  support_strength_min: 0.7
+
+transitions:
+  # ─── hypothesis 전이 규칙 (8개) ───
+  # 평가 우선순위: YAML 선언 순서 = 우선순위
+  hypothesis:
+    - from: PROPOSED
+      to: TESTING
+      conditions:
+        - fn: has_linked
+          args: { type: experiment, status: RUNNING, direction: any }
+
+    - from: TESTING
+      to: CONTESTED
+      conditions:
+        - fn: has_linked
+          args: { type: decision, status: CONTESTED, direction: incoming }
+
+    - from: TESTING
+      to: REVISED
+      conditions:
+        - fn: has_linked
+          args: { relation: revises, direction: incoming }
+
+    - from: TESTING
+      to: SUPPORTED
+      conditions:
+        - fn: has_linked
+          args: { relation: supports, min_strength: 0.7, direction: incoming }
+
+    - from: TESTING
+      to: REFUTED
+      conditions:
+        - fn: has_linked
+          args: { relation: contradicts, direction: incoming }
+
+    - from: CONTESTED
+      to: REVISED
+      conditions:
+        - fn: has_linked
+          args: { relation: revises, direction: incoming }
+
+    - from: CONTESTED
+      to: SUPPORTED
+      conditions:
+        - fn: has_linked
+          args: { relation: supports, min_strength: 0.7, direction: incoming }
+        - fn: has_linked
+          args: { type: decision, status: ACCEPTED, direction: incoming }
+
+    - from: CONTESTED
+      to: REFUTED
+      conditions:
+        - fn: has_linked
+          args: { relation: contradicts, direction: incoming }
+        - fn: has_linked
+          args: { type: decision, status: ACCEPTED, direction: incoming }
+
+  # ─── knowledge 전이 규칙 (4개) ───
+  knowledge:
+    - from: ACTIVE
+      to: DISPUTED
+      conditions:
+        - fn: has_linked
+          args: { relation: contradicts, direction: incoming }
+
+    - from: ACTIVE
+      to: SUPERSEDED
+      conditions:
+        - fn: has_linked
+          args: { relation: revises, type: knowledge, direction: incoming }
+
+    - from: DISPUTED
+      to: SUPERSEDED
+      conditions:
+        - fn: has_linked
+          args: { relation: revises, type: knowledge, direction: incoming }
+
+    - from: DISPUTED
+      to: ACTIVE
+      conditions:
+        - fn: all_linked_with
+          args: { relation: contradicts, status: RETRACTED }
+
+manualTransitions:
+  hypothesis:
+    - from: ANY
+      to: DEFERRED
+
+validValues:
+  dependencyTypes: [LOGICAL, PRACTICAL, TEMPORAL]
+  findingTypes: [observation, insight, negative]
+  impacts: [DECISIVE, SIGNIFICANT, MINOR]
+  reversibilities: [high, medium, low]
+  riskLevels: [high, medium, low]
+  severities: [FATAL, WEAKENING, TENSION]
+  urgencies: [BLOCKING, HIGH, MEDIUM, LOW]

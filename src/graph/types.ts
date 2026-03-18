@@ -1,133 +1,12 @@
-// ── Node Types ──────────────────────────────────────────────────────
+// ── Re-export generated constants and types ─────────────────────────
+// All constants, type unions, and valid-value arrays are auto-generated
+// from graph-schema.yaml. See types.generated.ts.
 
-export type NodeType =
-  | 'hypothesis'
-  | 'experiment'
-  | 'finding'
-  | 'knowledge'
-  | 'question'
-  | 'decision'
-  | 'episode';
-
-// ── Edge Types ──────────────────────────────────────────────────────
-
-export type EdgeType =
-  // evidence
-  | 'supports'
-  | 'contradicts'
-  | 'confirms'
-  // generation
-  | 'spawns'
-  | 'produces'
-  | 'answers'
-  | 'revises'
-  | 'promotes'
-  // structure
-  | 'depends_on'
-  | 'extends'
-  | 'relates_to'
-  | 'informs'
-  // composition
-  | 'part_of'
-  | 'context_for'
-  | 'resolves'
-  // aliases
-  | 'tests'
-  // reverse labels
-  | 'confirmed_by'
-  | 'supported_by'
-  | 'answered_by'
-  | 'spawned_from'
-  | 'produced_by'
-  | 'tested_by'
-  | 'resolved_by';
-
-export const EDGE_TYPES = new Set<string>([
-  // evidence
-  'supports', 'contradicts', 'confirms',
-  // generation
-  'spawns', 'produces', 'answers', 'revises', 'promotes',
-  // structure
-  'depends_on', 'extends', 'relates_to', 'informs',
-  // composition
-  'part_of', 'context_for', 'resolves',
-  // aliases
-  'tests',
-]);
-
-export const REVERSE_LABELS: Record<string, string> = {
-  confirmed_by: 'confirms',
-  supported_by: 'supports',
-  answered_by: 'answers',
-  spawned_from: 'spawns',
-  produced_by: 'produces',
-  tested_by: 'tests',
-  resolved_by: 'resolves',
-};
-
-export const ALL_VALID_RELATIONS = new Set<string>([
-  ...EDGE_TYPES,
-  ...Object.keys(REVERSE_LABELS),
-]);
-
-export const NODE_TYPES: NodeType[] = [
-  'hypothesis', 'experiment', 'finding', 'knowledge',
-  'question', 'decision', 'episode',
-];
-
-// ── Node Type → Directory Mapping ───────────────────────────────────
-
-export const NODE_TYPE_DIRS: Record<NodeType, string> = {
-  hypothesis: 'hypotheses',
-  experiment: 'experiments',
-  finding: 'findings',
-  knowledge: 'knowledge',
-  question: 'questions',
-  decision: 'decisions',
-  episode: 'episodes',
-};
-
-// ── ID Prefixes ─────────────────────────────────────────────────────
-
-export const ID_PREFIXES: Record<NodeType, string> = {
-  hypothesis: 'hyp',
-  experiment: 'exp',
-  finding: 'fnd',
-  knowledge: 'knw',
-  question: 'qst',
-  decision: 'dec',
-  episode: 'epi',
-};
-
-export const PREFIX_TO_TYPE: Record<string, NodeType> = Object.fromEntries(
-  Object.entries(ID_PREFIXES).map(([type, prefix]) => [prefix, type as NodeType])
-) as Record<string, NodeType>;
-
-// ── Valid Statuses per Node Type ────────────────────────────────────
-
-export const VALID_STATUSES: Record<NodeType, readonly string[]> = {
-  hypothesis: ['PROPOSED', 'TESTING', 'SUPPORTED', 'REFUTED', 'REVISED', 'DEFERRED', 'CONTESTED'],
-  experiment: ['PLANNED', 'RUNNING', 'COMPLETED', 'FAILED', 'ABANDONED'],
-  finding: ['DRAFT', 'VALIDATED', 'PROMOTED', 'RETRACTED'],
-  knowledge: ['ACTIVE', 'DISPUTED', 'SUPERSEDED', 'RETRACTED'],
-  question: ['OPEN', 'RESOLVED', 'ANSWERED', 'DEFERRED'],
-  decision: ['PROPOSED', 'ACCEPTED', 'SUPERSEDED', 'REVERTED', 'CONTESTED'],
-  episode: ['ACTIVE', 'COMPLETED'],
-};
-
-// ── Required Fields per Node Type ───────────────────────────────────
-
-export const REQUIRED_FIELDS: Record<NodeType, readonly string[]> = {
-  hypothesis: ['id', 'type', 'title', 'status', 'confidence', 'created', 'updated'],
-  experiment: ['id', 'type', 'title', 'status', 'created', 'updated'],
-  finding: ['id', 'type', 'title', 'status', 'confidence', 'created', 'updated'],
-  knowledge: ['id', 'type', 'title', 'status', 'confidence', 'created', 'updated'],
-  question: ['id', 'type', 'title', 'status', 'created', 'updated'],
-  decision: ['id', 'type', 'title', 'status', 'created', 'updated'],
-  episode: ['id', 'type', 'title', 'status', 'created', 'updated'],
-};
+export * from './types.generated.js';
 
 // ── Data Interfaces ─────────────────────────────────────────────────
+
+import type { NodeType } from './types.generated.js';
 
 export interface Link {
   target: string;
@@ -138,14 +17,6 @@ export interface Link {
   dependencyType?: 'LOGICAL' | 'PRACTICAL' | 'TEMPORAL';
   impact?: 'DECISIVE' | 'SIGNIFICANT' | 'MINOR';
 }
-
-export const VALID_SEVERITIES = ['FATAL', 'WEAKENING', 'TENSION'] as const;
-export const VALID_DEPENDENCY_TYPES = ['LOGICAL', 'PRACTICAL', 'TEMPORAL'] as const;
-export const VALID_IMPACTS = ['DECISIVE', 'SIGNIFICANT', 'MINOR'] as const;
-export const VALID_FINDING_TYPES = ['observation', 'insight', 'negative'] as const;
-export const VALID_URGENCIES = ['BLOCKING', 'HIGH', 'MEDIUM', 'LOW'] as const;
-export const VALID_RISK_LEVELS = ['high', 'medium', 'low'] as const;
-export const VALID_REVERSIBILITIES = ['high', 'medium', 'low'] as const;
 
 export interface Node {
   id: string;

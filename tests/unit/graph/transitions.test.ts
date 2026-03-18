@@ -26,6 +26,7 @@ describe('detectTransitions', () => {
   }
 
   describe('hypothesis transitions', () => {
+    // @spec §6.5.3
     it('PROPOSED→TESTING: connected experiment is RUNNING', async () => {
       writeNode('hypotheses', 'hyp-001-test.md', {
         id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'PROPOSED',
@@ -41,6 +42,7 @@ describe('detectTransitions', () => {
       expect(results.some(r => r.nodeId === 'hyp-001' && r.recommendedStatus === 'TESTING')).toBe(true);
     });
 
+    // @spec §6.5.4
     it('TESTING→SUPPORTED: incoming SUPPORTS with strength≥0.7', async () => {
       writeNode('hypotheses', 'hyp-001-test.md', {
         id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'TESTING',
@@ -56,6 +58,7 @@ describe('detectTransitions', () => {
       expect(results.some(r => r.nodeId === 'hyp-001' && r.recommendedStatus === 'SUPPORTED')).toBe(true);
     });
 
+    // @spec §6.5.5
     it('TESTING→REFUTED: incoming CONTRADICTS edge exists', async () => {
       writeNode('hypotheses', 'hyp-001-test.md', {
         id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'TESTING',
@@ -98,6 +101,7 @@ describe('detectTransitions', () => {
   });
 
   describe('knowledge transitions', () => {
+    // @spec §6.6.1
     it('ACTIVE→DISPUTED: incoming CONTRADICTS from finding', async () => {
       writeNode('knowledge', 'knw-001-test.md', {
         id: 'knw-001', type: 'knowledge', title: 'K1', status: 'ACTIVE',

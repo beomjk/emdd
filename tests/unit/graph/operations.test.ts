@@ -219,6 +219,7 @@ describe('getHealth', () => {
   });
 });
 
+// @spec §6.8.1
 describe('getHealth — structural gaps §6.8', () => {
   let tmpDir: string;
   beforeEach(() => { tmpDir = setupProject(); });
@@ -351,6 +352,7 @@ describe('getHealth — structural gaps §6.8', () => {
   });
 });
 
+// @spec §6.9.1
 describe('checkConsolidation', () => {
   it('triggers when finding count exceeds threshold', async () => {
     // sample-graph has 5 findings, threshold is 5 unpromoted
