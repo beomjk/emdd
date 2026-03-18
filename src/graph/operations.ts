@@ -547,6 +547,7 @@ export async function checkConsolidation(graphDir: string): Promise<CheckResult>
 
   const findings: string[] = [];
   const episodes: string[] = [];
+  const experiments: string[] = [];
   const openQuestions: string[] = [];
   const questionCount = { total: 0 };
   const promotedIds = new Set<string>();
@@ -558,6 +559,9 @@ export async function checkConsolidation(graphDir: string): Promise<CheckResult>
         break;
       case 'episode':
         episodes.push(id);
+        break;
+      case 'experiment':
+        experiments.push(id);
         break;
       case 'question':
         questionCount.total++;
@@ -601,6 +605,20 @@ export async function checkConsolidation(graphDir: string): Promise<CheckResult>
       message: 'All questions resolved — consider generating new ones',
       count: 0,
     });
+  }
+
+  // 4. Experiment overload (5+ findings attached)
+  for (const expId of experiments) {
+    const expNode = graph.nodes.get(expId);
+    if (!expNode) continue;
+    const producesCount = expNode.links.filter(l => l.relation === 'produces').length;
+    if (producesCount >= 5) {
+      triggers.push({
+        type: 'experiment_overload',
+        message: `Experiment ${expId} has ${producesCount} findings attached (threshold: 5) — consider splitting`,
+        count: producesCount,
+      });
+    }
   }
 
   // Promotion evaluation

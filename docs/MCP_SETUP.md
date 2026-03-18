@@ -152,12 +152,12 @@ All tools accept a `graphDir` parameter — the path to your EMDD `graph/` direc
 
 ## Prompt Reference
 
-| Prompt | Description |
-|--------|-------------|
-| `context-loading` | Load graph context at the start of a session — summarizes graph state, active hypotheses, and latest episode |
-| `episode-creation` | Guided workflow for writing an Episode node at the end of a session |
-| `consolidation` | Step-by-step guide for running a Consolidation ceremony |
-| `health-review` | Analyze graph health and generate recommendations |
+| Prompt | Parameters | Description |
+|--------|-----------|-------------|
+| `context-loading` | `path` (required) | Load graph context at the start of a session — summarizes graph state, active hypotheses, and latest episode |
+| `episode-creation` | (none) | Guided workflow for writing an Episode node at the end of a session |
+| `consolidation` | `path` (required) | Step-by-step guide for running a Consolidation ceremony |
+| `health-review` | `path` (required) | Analyze graph health and generate recommendations |
 
 Prompts are available in tools that support MCP prompts (e.g., Claude Code).
 

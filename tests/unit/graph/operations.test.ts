@@ -390,6 +390,42 @@ describe('checkConsolidation', () => {
     expect(result.deferredItems).toBeDefined();
     expect(Array.isArray(result.deferredItems)).toBe(true);
   });
+
+  it('does not trigger experiment_overload when produces < 5', async () => {
+    // sample-graph exp-001 has only 1 produces link
+    const result = await checkConsolidation(SAMPLE_GRAPH);
+    expect(result.triggers.some(t => t.type === 'experiment_overload')).toBe(false);
+  });
+
+  it('triggers experiment_overload when experiment has 5+ findings', async () => {
+    const tmpDir = setupProject();
+    try {
+      writeNode(tmpDir, 'experiments', 'exp-001-test.md', {
+        id: 'exp-001', type: 'experiment', title: 'Big Exp', status: 'COMPLETED',
+        created: '2026-01-01', updated: '2026-01-01', tags: [],
+        links: [
+          { target: 'fnd-001', relation: 'produces' },
+          { target: 'fnd-002', relation: 'produces' },
+          { target: 'fnd-003', relation: 'produces' },
+          { target: 'fnd-004', relation: 'produces' },
+          { target: 'fnd-005', relation: 'produces' },
+        ],
+      });
+      for (let i = 1; i <= 5; i++) {
+        writeNode(tmpDir, 'findings', `fnd-00${i}-test.md`, {
+          id: `fnd-00${i}`, type: 'finding', title: `F${i}`, status: 'VALIDATED',
+          confidence: 0.7, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+        });
+      }
+
+      const result = await checkConsolidation(join(tmpDir, 'graph'));
+      const overload = result.triggers.find(t => t.type === 'experiment_overload');
+      expect(overload).toBeDefined();
+      expect(overload!.count).toBe(5);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
 });
 
 describe('getPromotionCandidates', () => {

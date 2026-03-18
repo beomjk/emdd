@@ -52,11 +52,6 @@ export async function backlogCommand(graphDir: string, statusFilter?: string): P
     const episodeStatus = parsed.data?.status ?? '';
     const body = parsed.content;
 
-    // Skip non-DEFERRED episodes when filtering by deferred (episode-level status)
-    if (statusFilter === 'deferred' && episodeStatus !== 'DEFERRED') {
-      continue;
-    }
-
     for (const line of body.split('\n')) {
       const match = line.match(CHECKLIST_RE);
       if (match) {
@@ -74,7 +69,7 @@ export async function backlogCommand(graphDir: string, statusFilter?: string): P
   } else if (statusFilter === 'done') {
     return { items: items.filter(i => i.marker === 'done') };
   } else if (statusFilter === 'deferred') {
-    return { items: items.filter(i => i.marker === 'pending') };
+    return { items: items.filter(i => i.marker === 'deferred') };
   } else if (statusFilter === 'superseded') {
     return { items: items.filter(i => i.marker === 'superseded') };
   }

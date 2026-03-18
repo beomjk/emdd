@@ -102,19 +102,20 @@ describe('backlogCommand', () => {
     expect(result.items[0].text).toBe('Old task');
   });
 
-  it('--status deferred: returns items from DEFERRED episodes only', async () => {
+  it('--status deferred: returns [deferred] marker items from any episode', async () => {
     writeEpisode('epi-001-test.md', {
       id: 'epi-001', type: 'episode', title: 'E1', status: 'ACTIVE',
       created: '2026-03-01', updated: '2026-03-01', tags: [], links: [],
-    }, '## Goals\n\n- [ ] Active Task\n');
+    }, '## Goals\n\n- [ ] Active Task\n- [deferred] Deferred in Active\n');
     writeEpisode('epi-002-test.md', {
       id: 'epi-002', type: 'episode', title: 'E2', status: 'DEFERRED',
       created: '2026-03-01', updated: '2026-03-01', tags: [], links: [],
-    }, '## Goals\n\n- [ ] Deferred Task\n');
+    }, '## Goals\n\n- [ ] Pending in Deferred\n- [deferred] Deferred in Deferred\n');
 
     const result = await backlogCommand(graphDir, 'deferred');
-    expect(result.items.length).toBe(1);
-    expect(result.items[0].text).toBe('Deferred Task');
-    expect(result.items[0].episodeId).toBe('epi-002');
+    expect(result.items.length).toBe(2);
+    expect(result.items.every(i => i.marker === 'deferred')).toBe(true);
+    expect(result.items[0].text).toBe('Deferred in Active');
+    expect(result.items[1].text).toBe('Deferred in Deferred');
   });
 });
