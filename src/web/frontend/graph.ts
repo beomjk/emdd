@@ -194,6 +194,12 @@ export function renderGraph(
     evt.target.scratch('_manuallyPositioned', true);
   });
 
+  // Viewport culling for 500+ node graphs
+  if (graph.nodes.length >= 500) {
+    setupViewportCulling(cy);
+    showPerformanceHint();
+  }
+
   return cy;
 }
 
@@ -333,4 +339,54 @@ export function pulseNode(nodeId: string): void {
       } as any, { duration: 300 });
     },
   });
+}
+
+// ── Viewport culling for large graphs ────────────────────────────────
+
+let cullingTimer: ReturnType<typeof setTimeout> | null = null;
+
+function setupViewportCulling(cyInstance: cytoscape.Core): void {
+  const performCulling = () => {
+    const ext = cyInstance.extent();
+    const pad = (ext.w + ext.h) * 0.2; // 20% padding beyond viewport
+    const x1 = ext.x1 - pad;
+    const y1 = ext.y1 - pad;
+    const x2 = ext.x2 + pad;
+    const y2 = ext.y2 + pad;
+
+    cyInstance.nodes('[!isCluster]').forEach((node) => {
+      const pos = node.position();
+      const visible = pos.x >= x1 && pos.x <= x2 && pos.y >= y1 && pos.y <= y2;
+      if (visible) {
+        node.style('display', 'element');
+      } else {
+        node.style('display', 'none');
+      }
+    });
+  };
+
+  const debouncedCull = () => {
+    if (cullingTimer) clearTimeout(cullingTimer);
+    cullingTimer = setTimeout(performCulling, 100);
+  };
+
+  cyInstance.on('viewport', debouncedCull);
+  cyInstance.on('layoutstop', performCulling);
+}
+
+function showPerformanceHint(): void {
+  const existing = document.querySelector('.perf-hint');
+  if (existing) return;
+
+  const hint = document.createElement('div');
+  hint.className = 'perf-hint';
+  hint.innerHTML = 'Large graph detected. Use <b>filters</b> or <b>local graph mode</b> for better performance.';
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = '×';
+  closeBtn.className = 'perf-hint-close';
+  closeBtn.addEventListener('click', () => hint.remove());
+  hint.appendChild(closeBtn);
+
+  const canvas = document.getElementById('graph-canvas');
+  if (canvas) canvas.appendChild(hint);
 }

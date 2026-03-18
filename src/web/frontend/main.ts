@@ -168,6 +168,9 @@ async function init(): Promise<void> {
   const searchContainer = document.getElementById('search-bar')!;
   renderSearchBar(searchContainer);
 
+  // Render legend
+  renderLegend();
+
   const refreshBtn = document.getElementById('refresh-btn');
   refreshBtn?.addEventListener('click', refresh);
 
@@ -220,6 +223,80 @@ async function init(): Promise<void> {
     });
     layoutSelector.appendChild(select);
   }
+}
+
+function renderLegend(): void {
+  const canvas = document.getElementById('graph-canvas');
+  if (!canvas) return;
+
+  const existing = canvas.querySelector('.legend');
+  if (existing) existing.remove();
+
+  const legend = document.createElement('div');
+  legend.className = 'legend';
+
+  const typeColors: [string, string][] = [
+    ['Hypothesis', '#4A90D9'],
+    ['Experiment', '#7B68EE'],
+    ['Finding', '#50C878'],
+    ['Knowledge', '#DAA520'],
+    ['Question', '#FF8C42'],
+    ['Episode', '#A0A0A0'],
+    ['Decision', '#20B2AA'],
+  ];
+
+  const statusBorders: [string, string, string, number][] = [
+    ['Positive', 'solid', '#2ECC71', 3],
+    ['Negative', 'dashed', '#E74C3C', 2],
+    ['In Progress', 'solid', '#3498DB', 2],
+    ['Initial', 'solid', '#95A5A6', 1],
+    ['Deferred', 'dashed', '#95A5A6', 2],
+    ['Invalid', 'dashed', '#FF9800', 2],
+  ];
+
+  // Node types heading
+  const typeHeading = document.createElement('div');
+  typeHeading.className = 'legend-heading';
+  typeHeading.textContent = 'Node Types';
+  legend.appendChild(typeHeading);
+
+  for (const [label, color] of typeColors) {
+    const item = document.createElement('div');
+    item.className = 'legend-item';
+    const dot = document.createElement('span');
+    dot.className = 'legend-color';
+    dot.style.backgroundColor = color;
+    item.appendChild(dot);
+    item.appendChild(document.createTextNode(label));
+    legend.appendChild(item);
+  }
+
+  // Toggle for status borders
+  const sep = document.createElement('hr');
+  sep.className = 'legend-separator';
+  legend.appendChild(sep);
+
+  const statusHeading = document.createElement('div');
+  statusHeading.className = 'legend-heading';
+  statusHeading.textContent = 'Status Borders';
+  legend.appendChild(statusHeading);
+
+  const details = document.createElement('div');
+  details.className = 'legend-details';
+
+  for (const [label, style, color, width] of statusBorders) {
+    const item = document.createElement('div');
+    item.className = 'legend-item';
+    const sample = document.createElement('span');
+    sample.className = 'legend-border-sample';
+    sample.style.borderTop = `${width}px ${style} ${color}`;
+    item.appendChild(sample);
+    item.appendChild(document.createTextNode(label));
+    details.appendChild(item);
+  }
+
+  legend.appendChild(details);
+  canvas.appendChild(legend);
 }
 
 init().catch(console.error);
