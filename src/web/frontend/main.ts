@@ -4,6 +4,7 @@ import { showDetailPanel, hideDetailPanel, setDepthChangeHandler, getCurrentDept
 import { renderFilters, setFilterChangeHandler } from './filters.js';
 import { renderSearchBar } from './search.js';
 import { renderHealthSidebar } from './sidebar.js';
+import { applyClusters, zoomToCluster } from './clusters.js';
 
 export interface DashboardState {
   graph: SerializedGraph | null;
@@ -125,6 +126,16 @@ function renderDashboard(graph: SerializedGraph): void {
   renderHealthSidebar(sidebar, {
     onNodeClick: (id) => selectNode(id),
   }).catch(console.error);
+
+  // Apply cluster visualization
+  const cyInstance = getCy();
+  if (cyInstance) {
+    applyClusters(cyInstance, {
+      onClusterClick: (cluster) => {
+        if (cyInstance) zoomToCluster(cyInstance, cluster);
+      },
+    }).catch(console.error);
+  }
 
   // Sync filter state
   state.visibleTypes = new Set(types);

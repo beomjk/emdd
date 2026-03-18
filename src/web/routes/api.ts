@@ -79,6 +79,12 @@ export function createApiRoutes(graphDir: string, cache: GraphCache): Hono {
     return c.json(result);
   });
 
+  // GET /api/clusters
+  api.get('/clusters', async (c) => {
+    const clusters = await cache.getClusters();
+    return c.json({ clusters });
+  });
+
   // POST /api/refresh
   api.post('/refresh', async (c) => {
     cache.invalidate();

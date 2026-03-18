@@ -1,7 +1,7 @@
 import type { Graph, HealthReport } from '../graph/types.js';
 import { loadGraph } from '../graph/loader.js';
-import { getHealth } from '../graph/operations.js';
-import type { SerializedGraph, SerializedNode, SerializedEdge } from './types.js';
+import { getHealth, detectClusters } from '../graph/operations.js';
+import type { SerializedGraph, SerializedNode, SerializedEdge, VisualCluster } from './types.js';
 
 export interface GraphCache {
   load(): Promise<SerializedGraph>;
@@ -9,6 +9,7 @@ export interface GraphCache {
   getGraph(): Promise<SerializedGraph>;
   getHealth(): Promise<HealthReport>;
   getRawGraph(): Promise<Graph>;
+  getClusters(): Promise<VisualCluster[]>;
 }
 
 function serializeGraph(graph: Graph): SerializedGraph {
@@ -41,6 +42,7 @@ export function createGraphCache(graphDir: string): GraphCache {
   let cachedGraph: SerializedGraph | null = null;
   let cachedRawGraph: Graph | null = null;
   let cachedHealth: HealthReport | null = null;
+  let cachedClusters: VisualCluster[] | null = null;
 
   return {
     async load(): Promise<SerializedGraph> {
@@ -48,6 +50,7 @@ export function createGraphCache(graphDir: string): GraphCache {
       cachedRawGraph = graph;
       cachedGraph = serializeGraph(graph);
       cachedHealth = null; // invalidate health when graph reloads
+      cachedClusters = null; // invalidate clusters when graph reloads
       return cachedGraph;
     },
 
@@ -55,6 +58,7 @@ export function createGraphCache(graphDir: string): GraphCache {
       cachedGraph = null;
       cachedRawGraph = null;
       cachedHealth = null;
+      cachedClusters = null;
     },
 
     async getGraph(): Promise<SerializedGraph> {
@@ -76,6 +80,14 @@ export function createGraphCache(graphDir: string): GraphCache {
         await this.load();
       }
       return cachedRawGraph!;
+    },
+
+    async getClusters(): Promise<VisualCluster[]> {
+      if (!cachedClusters) {
+        const rawGraph = await this.getRawGraph();
+        cachedClusters = await detectClusters(rawGraph, graphDir);
+      }
+      return cachedClusters;
     },
   };
 }

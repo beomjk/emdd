@@ -1,6 +1,7 @@
 import cytoscape from 'cytoscape';
 import fcose from 'cytoscape-fcose';
 import type { SerializedGraph, SerializedNode } from '../types.js';
+import { getClusterStyles } from './clusters.js';
 
 cytoscape.use(fcose);
 
@@ -150,6 +151,7 @@ export function renderGraph(
           opacity: 1,
         },
       },
+      ...getClusterStyles(),
     ],
     layout: {
       name: 'fcose',

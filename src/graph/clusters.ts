@@ -1,13 +1,32 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { loadGraph } from './loader.js';
+import matter from 'gray-matter';
+import GraphologyDefault from 'graphology';
+import louvainDefault from 'graphology-communities-louvain';
+import type { Graph as EmddGraph, Node } from './types.js';
 
-export interface TopicCluster {
-  name: string;
-  entryPoint: string;
-  entryPointValid: boolean;
-  nodeIds: string[];
-}
+// ESM interop — graphology/louvain export shapes vary by bundler
+const GraphologyGraph = (GraphologyDefault as any).default ?? GraphologyDefault;
+const louvain = (louvainDefault as any).default ?? louvainDefault;
+import type { VisualCluster } from '../web/types.js';
+
+// ── Edge weight configuration for Louvain clustering ────────────────
+
+const EDGE_WEIGHTS: Record<string, number> = {
+  supports: 1.0,
+  contradicts: 1.0,
+  tests: 0.8,
+  produces: 0.8,
+  answers: 0.8,
+  informs: 0.6,
+  depends_on: 0.6,
+  relates_to: 0.3,
+};
+
+const DEFAULT_EDGE_WEIGHT = 0.3;
+const TAG_OVERLAP_BONUS = 0.3;
+
+// ── Topic context (preserved — unrelated to dashboard clustering) ───
 
 export interface TopicContext {
   entryPoints: Array<{ id: string; title: string; type: string }>;
@@ -15,10 +34,10 @@ export interface TopicContext {
   relatedNodes: Array<{ id: string; title: string; type: string }>;
 }
 
-export async function identifyClusters(graphDir: string): Promise<TopicCluster[]> {
+// ── Manual clusters from _index.md YAML frontmatter ─────────────────
+
+export async function identifyClusters(graphDir: string): Promise<VisualCluster[]> {
   const indexPath = path.join(graphDir, '_index.md');
-  const graph = await loadGraph(graphDir);
-  const clusters: TopicCluster[] = [];
 
   let indexContent: string;
   try {
@@ -27,81 +46,169 @@ export async function identifyClusters(graphDir: string): Promise<TopicCluster[]
     return [];
   }
 
-  // Parse cluster sections from _index.md
-  const clusterRegex = /## Cluster:\s*(.+)/g;
-  const entryPointRegex = /\*\*Entry point\*\*:\s*(\S+)/;
-  const nodeIdRegex = /\b([a-z]{3}-\d{3})\b/g;
+  const parsed = matter(indexContent);
+  const clusters = parsed.data.clusters;
+  if (!Array.isArray(clusters)) return [];
 
-  const lines = indexContent.split('\n');
-  let currentCluster: { name: string; entryPoint: string; nodeIds: string[] } | null = null;
-
-  for (const line of lines) {
-    const clusterMatch = line.match(/^## Cluster:\s*(.+)/);
-    if (clusterMatch) {
-      if (currentCluster) {
-        const node = graph.nodes.get(currentCluster.entryPoint);
-        const valid = !!node && (
-          (node.type === 'knowledge' && node.status === 'ACTIVE') ||
-          (node.type === 'finding' && node.status === 'VALIDATED')
-        );
-        clusters.push({
-          name: currentCluster.name,
-          entryPoint: currentCluster.entryPoint,
-          entryPointValid: valid,
-          nodeIds: currentCluster.nodeIds,
-        });
-      }
-      currentCluster = { name: clusterMatch[1].trim(), entryPoint: '', nodeIds: [] };
-      continue;
-    }
-
-    if (currentCluster) {
-      const epMatch = line.match(entryPointRegex);
-      if (epMatch) {
-        currentCluster.entryPoint = epMatch[1];
-      }
-      // Collect all node IDs from the line
-      let match;
-      while ((match = nodeIdRegex.exec(line)) !== null) {
-        if (!currentCluster.nodeIds.includes(match[1])) {
-          currentCluster.nodeIds.push(match[1]);
-        }
-      }
-    }
-  }
-
-  // Push last cluster
-  if (currentCluster) {
-    const node = graph.nodes.get(currentCluster.entryPoint);
-    const valid = !!node && (
-      (node.type === 'knowledge' && node.status === 'ACTIVE') ||
-      (node.type === 'finding' && node.status === 'VALIDATED')
-    );
-    clusters.push({
-      name: currentCluster.name,
-      entryPoint: currentCluster.entryPoint,
-      entryPointValid: valid,
-      nodeIds: currentCluster.nodeIds,
-    });
-  }
-
-  return clusters;
+  return clusters.map((c: { label?: string; members?: string[] }, i: number) => ({
+    id: `manual-${i}`,
+    label: c.label ?? `Manual Cluster ${i}`,
+    nodeIds: Array.isArray(c.members) ? c.members.map(String) : [],
+    isManual: true,
+  }));
 }
 
+// ── Louvain auto-detection ──────────────────────────────────────────
+
+export interface DetectClustersOptions {
+  resolution?: number;
+  minClusterSize?: number;
+}
+
+export async function detectClusters(
+  graph: EmddGraph,
+  graphDir: string,
+  options?: DetectClustersOptions,
+): Promise<VisualCluster[]> {
+  const resolution = options?.resolution ?? 1.0;
+  const minClusterSize = options?.minClusterSize ?? 2;
+
+  // 1. Load manual clusters first — their members are excluded from Louvain
+  const manualClusters = await identifyClusters(graphDir);
+  const manualNodeIds = new Set(manualClusters.flatMap((c) => c.nodeIds));
+
+  // 2. Build graphology instance from EMDD graph (excluding manual cluster members)
+  const g = new GraphologyGraph({ type: 'undirected' });
+  const nodeTagsMap = new Map<string, string[]>();
+
+  for (const [id, node] of graph.nodes) {
+    if (manualNodeIds.has(id)) continue;
+    g.addNode(id);
+    nodeTagsMap.set(id, node.tags ?? []);
+  }
+
+  // Add edges with weights
+  const edgesSeen = new Set<string>();
+  for (const [, node] of graph.nodes) {
+    if (manualNodeIds.has(node.id)) continue;
+    for (const link of node.links) {
+      if (manualNodeIds.has(link.target)) continue;
+      if (!g.hasNode(link.target)) continue;
+
+      const edgeKey = [node.id, link.target].sort().join('::');
+      if (edgesSeen.has(edgeKey)) {
+        // Accumulate weight on existing edge
+        const existing = g.getEdgeAttribute(g.edge(node.id, link.target)!, 'weight') ?? 0;
+        const addWeight = EDGE_WEIGHTS[link.relation] ?? DEFAULT_EDGE_WEIGHT;
+        g.setEdgeAttribute(g.edge(node.id, link.target)!, 'weight', existing + addWeight);
+        continue;
+      }
+
+      const baseWeight = EDGE_WEIGHTS[link.relation] ?? DEFAULT_EDGE_WEIGHT;
+
+      // Tag overlap bonus
+      const sourceTags = nodeTagsMap.get(node.id) ?? [];
+      const targetTags = nodeTagsMap.get(link.target) ?? [];
+      const sharedTags = sourceTags.filter((t) => targetTags.includes(t)).length;
+      const totalWeight = baseWeight + sharedTags * TAG_OVERLAP_BONUS;
+
+      g.addEdge(node.id, link.target, { weight: totalWeight });
+      edgesSeen.add(edgeKey);
+    }
+  }
+
+  // 3. Run Louvain — needs at least 1 edge
+  if (g.size === 0 || g.order < 2) {
+    return [...manualClusters];
+  }
+
+  const communities = louvain(g, { resolution });
+
+  // 4. Group nodes by community
+  const communityMap = new Map<number, string[]>();
+  for (const [nodeId, community] of Object.entries(communities)) {
+    const comm = community as number;
+    if (!communityMap.has(comm)) communityMap.set(comm, []);
+    communityMap.get(comm)!.push(nodeId);
+  }
+
+  // 5. Build auto clusters (filter by minClusterSize)
+  const autoClusters: VisualCluster[] = [];
+  let autoIndex = 0;
+
+  for (const [, members] of communityMap) {
+    if (members.length < minClusterSize) continue;
+
+    const label = generateClusterLabel(members, graph, autoIndex);
+    autoClusters.push({
+      id: `auto-${autoIndex}`,
+      label,
+      nodeIds: members,
+      isManual: false,
+    });
+    autoIndex++;
+  }
+
+  return [...manualClusters, ...autoClusters];
+}
+
+// ── Label generation ────────────────────────────────────────────────
+
+function generateClusterLabel(
+  memberIds: string[],
+  graph: EmddGraph,
+  index: number,
+): string {
+  // Strategy 1: Top 2 most frequent tags
+  const tagCounts = new Map<string, number>();
+  for (const id of memberIds) {
+    const node = graph.nodes.get(id);
+    if (!node) continue;
+    for (const tag of node.tags) {
+      tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
+    }
+  }
+
+  if (tagCounts.size > 0) {
+    const sorted = [...tagCounts.entries()].sort((a, b) => b[1] - a[1]);
+    const topTags = sorted.slice(0, 2).map(([tag]) => tag);
+    return topTags.join('/');
+  }
+
+  // Strategy 2: Highest-confidence knowledge node title
+  let bestKnowledge: { title: string; confidence: number } | null = null;
+  for (const id of memberIds) {
+    const node = graph.nodes.get(id);
+    if (!node || node.type !== 'knowledge') continue;
+    const conf = node.confidence ?? 0;
+    if (!bestKnowledge || conf > bestKnowledge.confidence) {
+      bestKnowledge = { title: node.title, confidence: conf };
+    }
+  }
+
+  if (bestKnowledge) return bestKnowledge.title;
+
+  // Strategy 3: Fallback
+  return `Cluster ${index}`;
+}
+
+// ── loadContextForTopic (preserved — unrelated to dashboard) ────────
+
 export async function loadContextForTopic(graphDir: string, topic: string): Promise<TopicContext> {
+  // Lazy import to avoid circular dependency
+  const { loadGraph } = await import('./loader.js');
   const graph = await loadGraph(graphDir);
   const entryPoints: TopicContext['entryPoints'] = [];
   const openQuestions: TopicContext['openQuestions'] = [];
   const relatedNodes: TopicContext['relatedNodes'] = [];
 
   for (const [, node] of graph.nodes) {
-    const tags = node.tags.map(t => t.toLowerCase());
+    const tags = node.tags.map((t) => t.toLowerCase());
     const titleLower = node.title.toLowerCase();
     const topicLower = topic.toLowerCase();
 
     if (!tags.includes(topicLower) && !titleLower.includes(topicLower)) continue;
 
-    // Entry points: ACTIVE knowledge or VALIDATED findings
     if (
       (node.type === 'knowledge' && node.status === 'ACTIVE') ||
       (node.type === 'finding' && node.status === 'VALIDATED')
@@ -109,12 +216,10 @@ export async function loadContextForTopic(graphDir: string, topic: string): Prom
       entryPoints.push({ id: node.id, title: node.title, type: node.type });
     }
 
-    // Open questions
     if (node.type === 'question' && node.status === 'OPEN') {
       openQuestions.push({ id: node.id, title: node.title });
     }
 
-    // All related
     relatedNodes.push({ id: node.id, title: node.title, type: node.type });
   }
 
