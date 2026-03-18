@@ -119,6 +119,33 @@ The AI agent is a **gardener** of the graph, not an architect:
 <!-- ASSERT §6.2.6: question has 4 statuses (OPEN, RESOLVED, ANSWERED, DEFERRED) -->
 <!-- ASSERT §6.2.7: decision has 5 statuses (PROPOSED, ACCEPTED, SUPERSEDED, REVERTED, CONTESTED) -->
 <!-- ASSERT §6.2.8: episode has 2 statuses (ACTIVE, COMPLETED) -->
+
+<!-- AUTO:node-types -->
+<!-- Generated from graph-schema.yaml — DO NOT EDIT -->
+| Type | Prefix | Directory | Status Count |
+|------|--------|-----------|-------------|
+| decision | dec | decisions | 5 |
+| episode | epi | episodes | 2 |
+| experiment | exp | experiments | 5 |
+| finding | fnd | findings | 4 |
+| hypothesis | hyp | hypotheses | 7 |
+| knowledge | knw | knowledge | 4 |
+| question | qst | questions | 4 |
+<!-- /AUTO:node-types -->
+
+<!-- AUTO:statuses -->
+<!-- Generated from graph-schema.yaml — DO NOT EDIT -->
+| Type | Statuses |
+|------|----------|
+| decision | PROPOSED, ACCEPTED, SUPERSEDED, REVERTED, CONTESTED |
+| episode | ACTIVE, COMPLETED |
+| experiment | PLANNED, RUNNING, COMPLETED, FAILED, ABANDONED |
+| finding | DRAFT, VALIDATED, PROMOTED, RETRACTED |
+| hypothesis | PROPOSED, TESTING, SUPPORTED, REFUTED, REVISED, DEFERRED, CONTESTED |
+| knowledge | ACTIVE, DISPUTED, SUPERSEDED, RETRACTED |
+| question | OPEN, RESOLVED, ANSWERED, DEFERRED |
+<!-- /AUTO:statuses -->
+
 | Type | Color | Meaning | Key Attributes |
 |------|-------|---------|----------------|
 | **Knowledge** | Blue | Confirmed facts, literature, domain rules | `knowledge_type`, `source`, `confidence` |
@@ -275,6 +302,41 @@ During Consolidation, if 3 or more `[deferred]` items have accumulated, conduct 
 <!-- ASSERT §6.5.1: there are exactly 16 edge types -->
 ### 6.4 Edge Types (16)
 
+<!-- AUTO:edge-types -->
+<!-- Generated from graph-schema.yaml — DO NOT EDIT -->
+| # | Edge Type |
+|---|-----------|
+| 1 | answers |
+| 2 | confirms |
+| 3 | context_for |
+| 4 | contradicts |
+| 5 | depends_on |
+| 6 | extends |
+| 7 | informs |
+| 8 | part_of |
+| 9 | produces |
+| 10 | promotes |
+| 11 | relates_to |
+| 12 | resolves |
+| 13 | revises |
+| 14 | spawns |
+| 15 | supports |
+| 16 | tests |
+<!-- /AUTO:edge-types -->
+
+<!-- AUTO:reverse-labels -->
+<!-- Generated from graph-schema.yaml — DO NOT EDIT -->
+| Reverse Label | Forward Edge |
+|---------------|-------------|
+| answered_by | answers |
+| confirmed_by | confirms |
+| produced_by | produces |
+| resolved_by | resolves |
+| spawned_from | spawns |
+| supported_by | supports |
+| tested_by | tests |
+<!-- /AUTO:reverse-labels -->
+
 **Frontmatter notation convention:** The `relation:` field in YAML frontmatter uses lowercase present tense (e.g., `relation: produces`). This maps to the canonical type `PRODUCES`. The uppercase names in the table below are canonical types; frontmatter uses lowercase snake_case.
 
 <!-- ASSERT §6.5.2: reverse labels map confirmed_by→confirms, supported_by→supports, answered_by→answers, spawned_from→spawns, produced_by→produces, tested_by→tests, resolved_by→resolves -->
@@ -320,6 +382,32 @@ During Consolidation, if 3 or more `[deferred]` items have accumulated, conduct 
 <!-- ASSERT §6.5.4: hypothesis transitions: TESTING→SUPPORTED when SUPPORTS edge strength >= 0.7 -->
 <!-- ASSERT §6.5.5: hypothesis transitions: TESTING→REFUTED when CONTRADICTS edge exists -->
 ### 6.5 Hypothesis Status Transitions
+
+<!-- AUTO:transition-rules -->
+<!-- Generated from graph-schema.yaml — DO NOT EDIT -->
+
+**hypothesis**
+
+| From | To | Conditions |
+|------|----|------------|
+| PROPOSED | TESTING | has_linked(type=experiment, status=RUNNING, direction=any) |
+| TESTING | CONTESTED | has_linked(type=decision, status=CONTESTED, direction=incoming) |
+| TESTING | REVISED | has_linked(relation=revises, direction=incoming) |
+| TESTING | SUPPORTED | has_linked(relation=supports, min_strength=0.7, direction=incoming) |
+| TESTING | REFUTED | has_linked(relation=contradicts, direction=incoming) |
+| CONTESTED | REVISED | has_linked(relation=revises, direction=incoming) |
+| CONTESTED | SUPPORTED | has_linked(relation=supports, min_strength=0.7, direction=incoming) AND has_linked(type=decision, status=ACCEPTED, direction=incoming) |
+| CONTESTED | REFUTED | has_linked(relation=contradicts, direction=incoming) AND has_linked(type=decision, status=ACCEPTED, direction=incoming) |
+
+**knowledge**
+
+| From | To | Conditions |
+|------|----|------------|
+| ACTIVE | DISPUTED | has_linked(relation=contradicts, direction=incoming) |
+| ACTIVE | SUPERSEDED | has_linked(relation=revises, type=knowledge, direction=incoming) |
+| DISPUTED | SUPERSEDED | has_linked(relation=revises, type=knowledge, direction=incoming) |
+| DISPUTED | ACTIVE | all_linked_with(relation=contradicts, status=RETRACTED) |
+<!-- /AUTO:transition-rules -->
 
 ```
 PROPOSED -> TESTING       : connected Experiment is RUNNING
@@ -426,6 +514,15 @@ ACTIVE      -> SUPERSEDED  : direct replacement without dispute phase
 <!-- ASSERT §6.7.2: severity weights are FATAL=0.9, WEAKENING=0.6, TENSION=0.3 -->
 <!-- ASSERT §6.7.3: CONFIRMS edge treated as SUPPORTS with strength=1.0 -->
 ### 6.7 Confidence Propagation (Bayesian-inspired)
+
+<!-- AUTO:thresholds -->
+<!-- Generated from graph-schema.yaml — DO NOT EDIT -->
+| Threshold | Value |
+|-----------|-------|
+| min_independent_supports | 2 |
+| promotion_confidence | 0.9 |
+| support_strength_min | 0.7 |
+<!-- /AUTO:thresholds -->
 
 ```python
 def update_hypothesis_confidence(hypothesis):
