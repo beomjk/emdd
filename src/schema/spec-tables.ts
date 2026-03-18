@@ -182,24 +182,34 @@ export async function updateSpecTables(
 
 // ── CLI Entry Point ─────────────────────────────────────────────────
 
+const SPEC_FILES = [
+  'docs/spec/SPEC_EN.md',
+  'docs/spec/SPEC_KO.md',
+];
+
 async function main(): Promise<void> {
-  const result = await updateSpecTables(
-    'graph-schema.yaml',
-    'docs/spec/SPEC_EN.md',
-  );
+  const { accessSync } = await import('node:fs');
 
-  if (result.warnings.length > 0) {
-    for (const w of result.warnings) {
-      console.warn(`WARNING: ${w}`);
+  for (const specFile of SPEC_FILES) {
+    try {
+      accessSync(specFile);
+    } catch {
+      continue; // skip if file doesn't exist
     }
-  }
 
-  if (result.updatedSections.length > 0) {
-    console.log(`Updated sections: ${result.updatedSections.join(', ')}`);
-  }
+    const result = await updateSpecTables('graph-schema.yaml', specFile);
 
-  if (result.unchanged) {
-    console.log('No changes needed');
+    if (result.warnings.length > 0) {
+      for (const w of result.warnings) {
+        console.warn(`WARNING [${specFile}]: ${w}`);
+      }
+    }
+
+    if (result.updatedSections.length > 0) {
+      console.log(`[${specFile}] Updated sections: ${result.updatedSections.join(', ')}`);
+    } else if (result.unchanged) {
+      console.log(`[${specFile}] No changes needed`);
+    }
   }
 }
 
