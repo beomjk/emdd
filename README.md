@@ -1,5 +1,8 @@
 # EMDD: Evolving Mindmap-Driven Development
 
+> [!WARNING]
+> This project is in an **experimental stage**. APIs and file formats may change without notice.
+
 > **A methodology that gives structure to R&D exploration through an AI-maintained evolving knowledge graph -- without killing the exploration itself.**
 
 ## Demo
