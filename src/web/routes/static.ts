@@ -13,7 +13,11 @@ const MIME_TYPES: Record<string, string> = {
 
 export function createStaticRoutes(): Hono {
   const app = new Hono();
-  const webDir = path.resolve(__dirname, '../../web');
+  // In dev (tsx): __dirname = src/web/routes → go up to project root, then dist/web
+  // In prod (node): __dirname = dist/web/routes → go up to dist/web
+  const prodDir = path.resolve(__dirname, '..');
+  const devDir = path.resolve(__dirname, '../../../dist/web');
+  const webDir = fs.existsSync(path.join(prodDir, 'index.html')) ? prodDir : devDir;
 
   function serveFile(filePath: string, mimeType: string) {
     try {
