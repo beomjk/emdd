@@ -583,9 +583,9 @@ Final confidence: 0.42 (rounded)
 | Gap Type | Detection Method | Output |
 |----------|-----------------|--------|
 | **Disconnected Clusters** | Community detection, then inter-cluster edge count < threshold | Auto-suggest Questions |
-| **Untested Hypotheses** | PROPOSED status + N days elapsed | Suggest experiment design |
-| **Blocking Questions** | OPEN + urgency=BLOCKING | Urge immediate resolution |
-| **Stale Knowledge** | Source is N months old + newer Knowledge added to same cluster | Warn that update is needed |
+| **Untested Hypotheses** | PROPOSED status + (N days elapsed **OR** M episodes since updated) | Suggest experiment design |
+| **Blocking Questions** | OPEN + urgency=BLOCKING + (N days **OR** M episodes since updated) | Urge immediate resolution |
+| **Stale Knowledge** | Source is N months old + newer Knowledge added to same cluster (day-only) | Warn that update is needed |
 | **Orphan Findings** | Finding node has no outgoing SPAWNS edges | Suggest new Question/Hypothesis connections |
 
 **Default Thresholds and Configuration:**
@@ -593,9 +593,11 @@ Final confidence: 0.42 (rounded)
 | Gap Type | Default Threshold | Config Key | Rationale |
 |----------|-------------------|------------|-----------|
 | Untested Hypotheses | 5 days in `PROPOSED` | `gaps.untested_days` | A week without testing suggests the hypothesis is either too risky to test first (good — but surface it) or forgotten |
+| Untested Hypotheses | 3 episodes since `updated` | `gaps.untested_episodes` | Matches consolidation cadence; 3 sessions without testing signals neglect regardless of calendar time |
 | Stale Knowledge | 90 days since source date | `gaps.stale_days` | Quarterly review cadence; source material may have updates |
 | Orphan Findings | 0 outgoing edges of type SPAWNS, ANSWERS, or EXTENDS | `gaps.orphan_min_outgoing` | A Finding that doesn't connect forward is value unrealized |
 | Blocking Questions | 7 days at `urgency=BLOCKING` | `gaps.blocking_days` | One week is long enough to confirm the block is real, short enough to prevent stalls |
+| Blocking Questions | 3 episodes since `updated` | `gaps.blocking_episodes` | Same episode-based cadence as untested hypotheses |
 | Disconnected Clusters | < 2 inter-cluster edges | `gaps.min_cluster_edges` | Below 2 edges, clusters are effectively independent research threads |
 
 These thresholds are defaults. Override them per-project by creating a `.emdd.yml` config file in the graph root:
@@ -604,11 +606,22 @@ These thresholds are defaults. Override them per-project by creating a `.emdd.ym
 # .emdd.yml
 gaps:
   untested_days: 7
+  untested_episodes: 3
   stale_days: 60
   orphan_min_outgoing: 1
   blocking_days: 5
+  blocking_episodes: 3
   min_cluster_edges: 3
 ```
+
+**Dual-Trigger Detection (Day + Episode):**
+
+Untested Hypotheses and Blocking Questions use a dual-trigger system: a gap fires when **either** the day threshold **or** the episode threshold is met. Episode count is measured as the number of Episode nodes created *after* the target node's `updated` date (using strict `>` comparison, so episodes created on the same day are excluded).
+
+- `stale_knowledge` remains day-only because it measures real-world source aging, not session activity.
+- `orphan_finding` and `disconnected_cluster` are structural gaps independent of time or sessions.
+
+Each detected gap includes a `triggerType` field (`'days'`, `'episodes'`, or `'both'`) indicating which trigger(s) fired.
 
 <!-- ASSERT §6.9.1: consolidation trigger check is part of context loading protocol -->
 ### 6.9 Topic Clusters and Context Loading

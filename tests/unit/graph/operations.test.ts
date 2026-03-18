@@ -350,6 +350,206 @@ describe('getHealth — structural gaps §6.8', () => {
     expect(report.deferredItems).toBeDefined();
     expect(report.deferredItems).toEqual([]);
   });
+
+  // ── Episode-based dual-trigger gap detection ──────────────────────
+
+  it('detects untested_hypothesis via episode trigger only', async () => {
+    const recentDate = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'Test', status: 'PROPOSED',
+      confidence: 0.5, created: recentDate, updated: recentDate, tags: [], links: [],
+    });
+    // 4 episodes created after hypothesis updated date
+    const afterDate = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    for (let i = 1; i <= 4; i++) {
+      writeNode(tmpDir, 'episodes', `ep-00${i}-test.md`, {
+        id: `ep-00${i}`, type: 'episode', title: `Ep ${i}`,
+        created: afterDate, updated: afterDate, tags: [], links: [],
+      });
+    }
+    writeFileSync(join(tmpDir, '.emdd.yml'), 'gaps:\n  untested_episodes: 3\n  untested_days: 5\n');
+
+    const report = await getHealth(join(tmpDir, 'graph'));
+    const gap = report.gapDetails.find(g => g.type === 'untested_hypothesis');
+    expect(gap).toBeDefined();
+    expect(gap!.triggerType).toBe('episodes');
+  });
+
+  it('detects untested_hypothesis via day trigger only (no episodes)', async () => {
+    const oldDate = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'Test', status: 'PROPOSED',
+      confidence: 0.5, created: oldDate, updated: oldDate, tags: [], links: [],
+    });
+    // No episodes
+
+    const report = await getHealth(join(tmpDir, 'graph'));
+    const gap = report.gapDetails.find(g => g.type === 'untested_hypothesis');
+    expect(gap).toBeDefined();
+    expect(gap!.triggerType).toBe('days');
+  });
+
+  it('reports triggerType=both when day and episode triggers both met', async () => {
+    const oldDate = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'Test', status: 'PROPOSED',
+      confidence: 0.5, created: oldDate, updated: oldDate, tags: [], links: [],
+    });
+    const afterDate = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    for (let i = 1; i <= 4; i++) {
+      writeNode(tmpDir, 'episodes', `ep-00${i}-test.md`, {
+        id: `ep-00${i}`, type: 'episode', title: `Ep ${i}`,
+        created: afterDate, updated: afterDate, tags: [], links: [],
+      });
+    }
+    writeFileSync(join(tmpDir, '.emdd.yml'), 'gaps:\n  untested_episodes: 3\n');
+
+    const report = await getHealth(join(tmpDir, 'graph'));
+    const gap = report.gapDetails.find(g => g.type === 'untested_hypothesis');
+    expect(gap).toBeDefined();
+    expect(gap!.triggerType).toBe('both');
+  });
+
+  it('reports no gap when neither trigger is met', async () => {
+    const recentDate = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'Test', status: 'PROPOSED',
+      confidence: 0.5, created: recentDate, updated: recentDate, tags: [], links: [],
+    });
+    // 1 episode (below threshold of 5)
+    writeNode(tmpDir, 'episodes', 'ep-001-test.md', {
+      id: 'ep-001', type: 'episode', title: 'Ep 1',
+      created: recentDate, updated: recentDate, tags: [], links: [],
+    });
+    writeFileSync(join(tmpDir, '.emdd.yml'), 'gaps:\n  untested_episodes: 5\n  untested_days: 5\n');
+
+    const report = await getHealth(join(tmpDir, 'graph'));
+    expect(report.gapDetails.some(g => g.type === 'untested_hypothesis')).toBe(false);
+  });
+
+  it('detects blocking_question via episode trigger', async () => {
+    const recentDate = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    writeNode(tmpDir, 'questions', 'qst-001-test.md', {
+      id: 'qst-001', type: 'question', title: 'Blocker', status: 'OPEN',
+      urgency: 'BLOCKING', created: recentDate, updated: recentDate, tags: [], links: [],
+    });
+    const afterDate = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    for (let i = 1; i <= 4; i++) {
+      writeNode(tmpDir, 'episodes', `ep-00${i}-test.md`, {
+        id: `ep-00${i}`, type: 'episode', title: `Ep ${i}`,
+        created: afterDate, updated: afterDate, tags: [], links: [],
+      });
+    }
+    writeFileSync(join(tmpDir, '.emdd.yml'), 'gaps:\n  blocking_episodes: 3\n  blocking_days: 10\n');
+
+    const report = await getHealth(join(tmpDir, 'graph'));
+    const gap = report.gapDetails.find(g => g.type === 'blocking_question');
+    expect(gap).toBeDefined();
+    expect(gap!.triggerType).toBe('episodes');
+  });
+
+  it('stale_knowledge ignores episodes (day-only)', async () => {
+    const oldDate = new Date(Date.now() - 100 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const recentDate = new Date().toISOString().slice(0, 10);
+    writeNode(tmpDir, 'knowledge', 'knw-001-old.md', {
+      id: 'knw-001', type: 'knowledge', title: 'Old', status: 'ACTIVE',
+      confidence: 0.9, created: oldDate, updated: oldDate, tags: [], links: [],
+    });
+    writeNode(tmpDir, 'knowledge', 'knw-002-new.md', {
+      id: 'knw-002', type: 'knowledge', title: 'New', status: 'ACTIVE',
+      confidence: 0.9, created: recentDate, updated: recentDate, tags: [], links: [],
+    });
+    // No episodes
+
+    const report = await getHealth(join(tmpDir, 'graph'));
+    const gap = report.gapDetails.find(g => g.type === 'stale_knowledge');
+    expect(gap).toBeDefined();
+    expect(gap!.triggerType).toBeUndefined();
+  });
+
+  it('uses default episode thresholds when no .emdd.yml', async () => {
+    const recentDate = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'Test', status: 'PROPOSED',
+      confidence: 0.5, created: recentDate, updated: recentDate, tags: [], links: [],
+    });
+    // 4 episodes (default untested_episodes: 3, so >= 3 met)
+    const afterDate = new Date().toISOString().slice(0, 10);
+    for (let i = 1; i <= 4; i++) {
+      writeNode(tmpDir, 'episodes', `ep-00${i}-test.md`, {
+        id: `ep-00${i}`, type: 'episode', title: `Ep ${i}`,
+        created: afterDate, updated: afterDate, tags: [], links: [],
+      });
+    }
+    // No .emdd.yml — should use default untested_episodes: 3
+
+    const report = await getHealth(join(tmpDir, 'graph'));
+    expect(report.gapDetails.some(g => g.type === 'untested_hypothesis')).toBe(true);
+  });
+
+  it('respects custom episode threshold from .emdd.yml', async () => {
+    const recentDate = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'Test', status: 'PROPOSED',
+      confidence: 0.5, created: recentDate, updated: recentDate, tags: [], links: [],
+    });
+    const afterDate = new Date().toISOString().slice(0, 10);
+    for (let i = 1; i <= 2; i++) {
+      writeNode(tmpDir, 'episodes', `ep-00${i}-test.md`, {
+        id: `ep-00${i}`, type: 'episode', title: `Ep ${i}`,
+        created: afterDate, updated: afterDate, tags: [], links: [],
+      });
+    }
+    writeFileSync(join(tmpDir, '.emdd.yml'), 'gaps:\n  untested_episodes: 2\n  untested_days: 99\n');
+
+    const report = await getHealth(join(tmpDir, 'graph'));
+    expect(report.gapDetails.some(g => g.type === 'untested_hypothesis')).toBe(true);
+  });
+
+  it('only counts episodes created after node updated date', async () => {
+    const updatedDate = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'Test', status: 'PROPOSED',
+      confidence: 0.5, created: updatedDate, updated: updatedDate, tags: [], links: [],
+    });
+    // 1 episode BEFORE updated date
+    const beforeDate = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    writeNode(tmpDir, 'episodes', 'ep-001-old.md', {
+      id: 'ep-001', type: 'episode', title: 'Old Ep',
+      created: beforeDate, updated: beforeDate, tags: [], links: [],
+    });
+    // 2 episodes AFTER updated date
+    const afterDate = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    for (let i = 2; i <= 3; i++) {
+      writeNode(tmpDir, 'episodes', `ep-00${i}-new.md`, {
+        id: `ep-00${i}`, type: 'episode', title: `New Ep ${i}`,
+        created: afterDate, updated: afterDate, tags: [], links: [],
+      });
+    }
+    writeFileSync(join(tmpDir, '.emdd.yml'), 'gaps:\n  untested_episodes: 3\n  untested_days: 99\n');
+
+    // Only 2 episodes after updated, threshold is 3 → not detected
+    const report = await getHealth(join(tmpDir, 'graph'));
+    expect(report.gapDetails.some(g => g.type === 'untested_hypothesis')).toBe(false);
+  });
+
+  it('skips episodes without created field in count', async () => {
+    const recentDate = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'Test', status: 'PROPOSED',
+      confidence: 0.5, created: recentDate, updated: recentDate, tags: [], links: [],
+    });
+    // Episode without created field
+    writeNode(tmpDir, 'episodes', 'ep-001-nocreated.md', {
+      id: 'ep-001', type: 'episode', title: 'No Created',
+      updated: recentDate, tags: [], links: [],
+    });
+    writeFileSync(join(tmpDir, '.emdd.yml'), 'gaps:\n  untested_episodes: 1\n  untested_days: 99\n');
+
+    // Episode has no created → count 0, threshold 1 → not detected, no error
+    const report = await getHealth(join(tmpDir, 'graph'));
+    expect(report.gapDetails.some(g => g.type === 'untested_hypothesis')).toBe(false);
+  });
 });
 
 // @spec §6.9.1

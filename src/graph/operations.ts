@@ -271,45 +271,89 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
   const gapDetails: GapDetail[] = [];
   const now = new Date();
 
-  // 1. Untested hypotheses: PROPOSED + N days elapsed
+  // Helper: count episodes created after a given date
+  function countEpisodesSince(sinceDate: Date): number {
+    let count = 0;
+    for (const node of graph.nodes.values()) {
+      if (node.type === 'episode') {
+        const created = node.meta.created ? new Date(String(node.meta.created)) : null;
+        if (created && created > sinceDate) count++;
+      }
+    }
+    return count;
+  }
+
+  // 1. Untested hypotheses: PROPOSED + (N days elapsed OR M episodes since updated)
   const untestedIds: string[] = [];
+  let untestedAnyDays = false;
+  let untestedAnyEpisodes = false;
   for (const node of graph.nodes.values()) {
     if (node.type === 'hypothesis' && node.status === 'PROPOSED') {
-      const created = node.meta.created ? new Date(String(node.meta.created)) : null;
-      if (created) {
-        const daysElapsed = Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
-        if (daysElapsed >= config.gaps.untested_days) {
+      const updated = node.meta.updated ? new Date(String(node.meta.updated))
+        : node.meta.created ? new Date(String(node.meta.created)) : null;
+      if (updated) {
+        const daysElapsed = Math.floor((now.getTime() - updated.getTime()) / (1000 * 60 * 60 * 24));
+        const daysMet = daysElapsed >= config.gaps.untested_days;
+        const episodesMet = countEpisodesSince(updated) >= config.gaps.untested_episodes;
+        if (daysMet || episodesMet) {
           untestedIds.push(node.id);
+          if (daysMet) untestedAnyDays = true;
+          if (episodesMet) untestedAnyEpisodes = true;
         }
       }
     }
   }
   if (untestedIds.length > 0) {
+    const triggerType: 'days' | 'episodes' | 'both' =
+      untestedAnyDays && untestedAnyEpisodes ? 'both'
+        : untestedAnyDays ? 'days' : 'episodes';
+    const triggerInfo = triggerType === 'days'
+      ? `${config.gaps.untested_days}+ days`
+      : triggerType === 'episodes'
+        ? `${config.gaps.untested_episodes}+ episodes`
+        : `${config.gaps.untested_days}+ days and/or ${config.gaps.untested_episodes}+ episodes`;
     gapDetails.push({
       type: 'untested_hypothesis',
       nodeIds: untestedIds,
-      message: `${untestedIds.length} hypothesis(es) in PROPOSED for ${config.gaps.untested_days}+ days`,
+      message: `${untestedIds.length} hypothesis(es) in PROPOSED for ${triggerInfo}`,
+      triggerType,
     });
   }
 
-  // 2. Blocking questions: OPEN + urgency=BLOCKING + N days
+  // 2. Blocking questions: OPEN + urgency=BLOCKING + (N days OR M episodes)
   const blockingIds: string[] = [];
+  let blockingAnyDays = false;
+  let blockingAnyEpisodes = false;
   for (const node of graph.nodes.values()) {
     if (node.type === 'question' && node.status === 'OPEN' && node.meta.urgency === 'BLOCKING') {
-      const created = node.meta.created ? new Date(String(node.meta.created)) : null;
-      if (created) {
-        const daysElapsed = Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
-        if (daysElapsed >= config.gaps.blocking_days) {
+      const updated = node.meta.updated ? new Date(String(node.meta.updated))
+        : node.meta.created ? new Date(String(node.meta.created)) : null;
+      if (updated) {
+        const daysElapsed = Math.floor((now.getTime() - updated.getTime()) / (1000 * 60 * 60 * 24));
+        const daysMet = daysElapsed >= config.gaps.blocking_days;
+        const episodesMet = countEpisodesSince(updated) >= config.gaps.blocking_episodes;
+        if (daysMet || episodesMet) {
           blockingIds.push(node.id);
+          if (daysMet) blockingAnyDays = true;
+          if (episodesMet) blockingAnyEpisodes = true;
         }
       }
     }
   }
   if (blockingIds.length > 0) {
+    const triggerType: 'days' | 'episodes' | 'both' =
+      blockingAnyDays && blockingAnyEpisodes ? 'both'
+        : blockingAnyDays ? 'days' : 'episodes';
+    const triggerInfo = triggerType === 'days'
+      ? `${config.gaps.blocking_days}+ days`
+      : triggerType === 'episodes'
+        ? `${config.gaps.blocking_episodes}+ episodes`
+        : `${config.gaps.blocking_days}+ days and/or ${config.gaps.blocking_episodes}+ episodes`;
     gapDetails.push({
       type: 'blocking_question',
       nodeIds: blockingIds,
-      message: `${blockingIds.length} blocking question(s) open for ${config.gaps.blocking_days}+ days`,
+      message: `${blockingIds.length} blocking question(s) open for ${triggerInfo}`,
+      triggerType,
     });
   }
 

@@ -48,7 +48,8 @@ export async function healthCommand(targetPath: string | undefined, options?: He
     console.log('=== Gap Details ===');
     console.log('');
     for (const gap of report.gapDetails) {
-      console.log(`  [${gap.type}] ${gap.message}`);
+      const trigger = gap.triggerType ? ` [${gap.triggerType}]` : '';
+      console.log(`  [${gap.type}]${trigger} ${gap.message}`);
       console.log(`    Nodes: ${gap.nodeIds.join(', ')}`);
     }
     console.log('');

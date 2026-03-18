@@ -522,10 +522,21 @@ def update_hypothesis_confidence(hypothesis):
 | Gap Type | 탐지 방법 | 출력 |
 |----------|----------|------|
 | **Disconnected Clusters** | 커뮤니티 탐지 후 클러스터 간 엣지 수 < threshold | Question 자동 제안 |
-| **Untested Hypotheses** | PROPOSED 상태 + N일 경과 | 실험 설계 제안 |
-| **Blocking Questions** | OPEN + urgency=BLOCKING | 즉시 해소 촉구 |
-| **Stale Knowledge** | N개월 된 source + 같은 클러스터에 새 Knowledge 추가 | 업데이트 필요 경고 |
+| **Untested Hypotheses** | PROPOSED 상태 + (N일 경과 **또는** updated 이후 M개 에피소드) | 실험 설계 제안 |
+| **Blocking Questions** | OPEN + urgency=BLOCKING + (N일 경과 **또는** updated 이후 M개 에피소드) | 즉시 해소 촉구 |
+| **Stale Knowledge** | N개월 된 source + 같은 클러스터에 새 Knowledge 추가 (일수 기반만) | 업데이트 필요 경고 |
 | **Orphan Findings** | Finding 노드에 outgoing SPAWNS 없음 | 새 질문/가설 연결 제안 |
+
+**Dual-Trigger 탐지 (일수 + 에피소드):**
+
+Untested Hypotheses와 Blocking Questions는 이중 트리거 시스템을 사용한다: 일수 임계값 **또는** 에피소드 임계값 중 하나라도 충족되면 발동한다. 에피소드 수는 대상 노드의 `updated` 날짜 *이후*에 생성된 Episode 노드 수로 측정한다 (strict `>` 비교, 같은 날 생성된 에피소드는 제외).
+
+- `stale_knowledge`는 외부 소스의 실제 노후화를 측정하므로 일수 기반만 유지한다.
+- `orphan_finding`과 `disconnected_cluster`는 시간이나 세션과 무관한 구조적 공백이다.
+
+각 탐지된 gap에는 `triggerType` 필드 (`'days'`, `'episodes'`, `'both'`)가 포함되어 어떤 트리거가 발동했는지 표시한다.
+
+기본 에피소드 임계값: `untested_episodes: 3`, `blocking_episodes: 3` (Consolidation 케이던스와 동일).
 
 ### 6.9 토픽 클러스터와 컨텍스트 로딩
 
