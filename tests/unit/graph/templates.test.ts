@@ -9,7 +9,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FIXTURES = path.resolve(__dirname, '../../fixtures');
 
 describe('renderTemplate', () => {
-  it.each(NODE_TYPES)('%s 타입 영문 템플릿을 생성한다', (type) => {
+  it.each(NODE_TYPES)('generates English template for %s type', (type) => {
     const output = renderTemplate(type, 'test-slug', { locale: 'en' });
     const parsed = matter(output);
     expect(parsed.data.type).toBe(type);
@@ -20,7 +20,7 @@ describe('renderTemplate', () => {
     expect(typeof parsed.content).toBe('string');
   });
 
-  it.each(NODE_TYPES)('%s 타입 한국어 템플릿을 생성한다', (type) => {
+  it.each(NODE_TYPES)('generates Korean template for %s type', (type) => {
     const output = renderTemplate(type, 'test-slug', { locale: 'ko' });
     const parsed = matter(output);
     expect(parsed.data.type).toBe(type);
@@ -28,44 +28,44 @@ describe('renderTemplate', () => {
     expect(parsed.content).toMatch(/[가-힣]/);
   });
 
-  it('hypothesis 템플릿에 confidence 필드가 포함된다', () => {
+  it('hypothesis template includes confidence field', () => {
     const output = renderTemplate('hypothesis', 'test', { locale: 'en' });
     const parsed = matter(output);
     expect(parsed.data.confidence).toBeDefined();
     expect(typeof parsed.data.confidence).toBe('number');
   });
 
-  it('finding 템플릿에 confidence 필드가 포함된다', () => {
+  it('finding template includes confidence field', () => {
     const output = renderTemplate('finding', 'test', { locale: 'en' });
     const parsed = matter(output);
     expect(parsed.data.confidence).toBeDefined();
   });
 
-  it('experiment 템플릿에 confidence 필드가 없다', () => {
+  it('experiment template does not include confidence field', () => {
     const output = renderTemplate('experiment', 'test', { locale: 'en' });
     const parsed = matter(output);
     expect(parsed.data.confidence).toBeUndefined();
   });
 
-  it('title에 slug가 포함된다', () => {
+  it('title includes the slug', () => {
     const output = renderTemplate('hypothesis', 'my-test-slug', { locale: 'en' });
     const parsed = matter(output);
     expect(parsed.data.title).toContain('my-test-slug');
   });
 
-  it('links가 빈 배열로 초기화된다', () => {
+  it('initializes links as empty array', () => {
     const output = renderTemplate('hypothesis', 'test', { locale: 'en' });
     const parsed = matter(output);
     expect(parsed.data.links).toEqual([]);
   });
 
-  it('tags가 빈 배열로 초기화된다', () => {
+  it('initializes tags as empty array', () => {
     const output = renderTemplate('hypothesis', 'test', { locale: 'en' });
     const parsed = matter(output);
     expect(parsed.data.tags).toEqual([]);
   });
 
-  it('episode 템플릿에 체크리스트가 포함된다', () => {
+  it('episode template includes checklist', () => {
     const output = renderTemplate('episode', 'test', { locale: 'en' });
     expect(output).toContain('- [ ]');
   });
@@ -164,17 +164,17 @@ describe('type-specific template fields', () => {
 });
 
 describe('nextId', () => {
-  it('빈 디렉토리에서 001을 반환한다', () => {
+  it('returns 001 for empty directory', () => {
     const id = nextId(path.join(FIXTURES, 'empty-graph'), 'hypothesis');
     expect(id).toBe('hyp-001');
   });
 
-  it('기존 노드가 있으면 다음 번호를 반환한다', () => {
+  it('returns next number when nodes already exist', () => {
     const id = nextId(path.join(FIXTURES, 'sample-graph'), 'hypothesis');
     expect(id).toBe('hyp-003');
   });
 
-  it('각 타입별로 올바른 prefix를 사용한다', () => {
+  it('uses correct prefix for each type', () => {
     expect(nextId(path.join(FIXTURES, 'empty-graph'), 'experiment')).toBe('exp-001');
     expect(nextId(path.join(FIXTURES, 'empty-graph'), 'finding')).toBe('fnd-001');
     expect(nextId(path.join(FIXTURES, 'empty-graph'), 'knowledge')).toBe('knw-001');
@@ -185,39 +185,39 @@ describe('nextId', () => {
 });
 
 describe('sanitizeSlug', () => {
-  it('경로 순회 문자를 제거한다', () => {
+  it('removes path traversal characters', () => {
     expect(sanitizeSlug('../../etc/passwd')).toBe('etc-passwd');
   });
 
-  it('특수문자를 제거한다', () => {
+  it('removes special characters', () => {
     expect(sanitizeSlug('hello@world!#$%')).toBe('helloworld');
   });
 
-  it('반복 하이픈을 단일 하이픈으로 변환한다', () => {
+  it('collapses repeated hyphens into single hyphen', () => {
     expect(sanitizeSlug('foo---bar')).toBe('foo-bar');
   });
 
-  it('빈 결과에 대해 에러를 던진다', () => {
+  it('throws error for empty result', () => {
     expect(() => sanitizeSlug('...')).toThrow('Slug is empty after sanitization');
   });
 
-  it('80자를 초과하면 잘린다', () => {
+  it('truncates slugs exceeding 80 characters', () => {
     const long = 'a'.repeat(100);
     expect(sanitizeSlug(long).length).toBe(80);
   });
 
-  it('정상적인 slug는 그대로 반환한다', () => {
+  it('returns valid slug as-is', () => {
     expect(sanitizeSlug('my-valid-slug_01')).toBe('my-valid-slug_01');
   });
 });
 
 describe('nodePath', () => {
-  it('올바른 경로를 생성한다', () => {
+  it('generates correct path', () => {
     const p = nodePath('/project/graph', 'hypothesis', 'hyp-001', 'test-slug');
     expect(p).toBe('/project/graph/hypotheses/hyp-001-test-slug.md');
   });
 
-  it('각 타입별로 올바른 디렉토리를 사용한다', () => {
+  it('uses correct directory for each type', () => {
     expect(nodePath('/g', 'experiment', 'exp-001', 's')).toBe('/g/experiments/exp-001-s.md');
     expect(nodePath('/g', 'finding', 'fnd-001', 's')).toBe('/g/findings/fnd-001-s.md');
     expect(nodePath('/g', 'knowledge', 'knw-001', 's')).toBe('/g/knowledge/knw-001-s.md');
