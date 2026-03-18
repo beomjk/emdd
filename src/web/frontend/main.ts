@@ -5,6 +5,8 @@ import { renderFilters, setFilterChangeHandler } from './filters.js';
 import { renderSearchBar } from './search.js';
 import { renderHealthSidebar } from './sidebar.js';
 import { applyClusters, zoomToCluster } from './clusters.js';
+import { switchLayout } from './graph.js';
+import type { LayoutMode } from './graph.js';
 
 export interface DashboardState {
   graph: SerializedGraph | null;
@@ -168,6 +170,29 @@ async function init(): Promise<void> {
 
   const refreshBtn = document.getElementById('refresh-btn');
   refreshBtn?.addEventListener('click', refresh);
+
+  // Render layout selector dropdown
+  const layoutSelector = document.getElementById('layout-selector');
+  if (layoutSelector) {
+    const select = document.createElement('select');
+    select.id = 'layout-select';
+    select.title = 'Switch graph layout';
+    const forceOpt = document.createElement('option');
+    forceOpt.value = 'force';
+    forceOpt.textContent = 'Force-directed';
+    forceOpt.selected = true;
+    const hierOpt = document.createElement('option');
+    hierOpt.value = 'hierarchical';
+    hierOpt.textContent = 'Hierarchical';
+    select.appendChild(forceOpt);
+    select.appendChild(hierOpt);
+    select.addEventListener('change', () => {
+      const mode = select.value as LayoutMode;
+      state.layout = mode;
+      switchLayout(mode);
+    });
+    layoutSelector.appendChild(select);
+  }
 }
 
 init().catch(console.error);

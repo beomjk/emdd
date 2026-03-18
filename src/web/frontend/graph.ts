@@ -1,9 +1,11 @@
 import cytoscape from 'cytoscape';
 import fcose from 'cytoscape-fcose';
+import dagre from 'cytoscape-dagre';
 import type { SerializedGraph, SerializedNode } from '../types.js';
 import { getClusterStyles } from './clusters.js';
 
 cytoscape.use(fcose);
+cytoscape.use(dagre);
 
 // ── Visual encoding ──────────────────────────────────────────────────
 
@@ -187,7 +189,86 @@ export function renderGraph(
     }
   });
 
+  // Track manually dragged nodes — they stay pinned across layout switches
+  cy.on('drag', 'node[!isCluster]', (evt) => {
+    evt.target.scratch('_manuallyPositioned', true);
+  });
+
   return cy;
+}
+
+// ── Layout switching ────────────────────────────────────────────────
+
+// Hierarchical tier order: question → hypothesis → experiment → finding → knowledge
+// Lower tier = higher rank (top of screen)
+const TYPE_TIER: Record<string, number> = {
+  question: 0,
+  hypothesis: 1,
+  experiment: 2,
+  finding: 3,
+  knowledge: 4,
+  episode: 2,   // episodes parallel experiments
+  decision: 3,  // decisions parallel findings
+};
+
+export type LayoutMode = 'force' | 'hierarchical';
+
+let currentLayout: LayoutMode = 'force';
+
+export function getCurrentLayout(): LayoutMode {
+  return currentLayout;
+}
+
+export function switchLayout(mode: LayoutMode): void {
+  if (!cy) return;
+  currentLayout = mode;
+
+  // Collect pinned node positions
+  const pinnedPositions = new Map<string, { x: number; y: number }>();
+  cy.nodes('[!isCluster]').forEach((node) => {
+    if (node.scratch('_manuallyPositioned')) {
+      pinnedPositions.set(node.id(), { ...node.position() });
+    }
+  });
+
+  const layoutOptions: any = mode === 'hierarchical'
+    ? {
+        name: 'dagre',
+        rankDir: 'TB',
+        nodeSep: 50,
+        rankSep: 80,
+        animate: true,
+        animationDuration: 500,
+        nodeDimensionsIncludeLabels: true,
+        // Assign tier-based rank to enforce research flow direction
+        sort: (a: any, b: any) => {
+          const tierA = TYPE_TIER[a.data('type')] ?? 2;
+          const tierB = TYPE_TIER[b.data('type')] ?? 2;
+          return tierA - tierB;
+        },
+      }
+    : {
+        name: 'fcose',
+        animate: true,
+        animationDuration: 500,
+        quality: 'proof',
+        nodeDimensionsIncludeLabels: true,
+      };
+
+  const layout = cy.layout(layoutOptions);
+  layout.run();
+
+  // After layout completes, restore pinned positions
+  if (pinnedPositions.size > 0) {
+    layout.on('layoutstop', () => {
+      pinnedPositions.forEach((pos, id) => {
+        const node = cy!.getElementById(id);
+        if (node.length > 0) {
+          node.animate({ position: pos } as any, { duration: 200 });
+        }
+      });
+    });
+  }
 }
 
 // ── Local graph (ego) highlighting ───────────────────────────────────

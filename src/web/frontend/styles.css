@@ -63,6 +63,16 @@ body {
 }
 #refresh-btn:hover { background: #f0f0f0; }
 
+#layout-select {
+  padding: 4px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #fff;
+  font-size: 13px;
+  cursor: pointer;
+}
+#layout-select:hover { background: #f0f0f0; }
+
 #app {
   flex: 1;
   display: flex;
