@@ -171,6 +171,33 @@ async function init(): Promise<void> {
   const refreshBtn = document.getElementById('refresh-btn');
   refreshBtn?.addEventListener('click', refresh);
 
+  // Export button — download standalone HTML
+  const exportBtn = document.getElementById('export-btn');
+  exportBtn?.addEventListener('click', async () => {
+    const params = new URLSearchParams();
+    params.set('layout', state.layout);
+    if (state.visibleTypes.size > 0 && state.graph) {
+      const allTypes = new Set(state.graph.nodes.map((n) => n.type));
+      if (state.visibleTypes.size < allTypes.size) {
+        params.set('types', [...state.visibleTypes].join(','));
+      }
+    }
+    if (state.visibleStatuses.size > 0 && state.graph) {
+      const allStatuses = new Set(state.graph.nodes.map((n) => n.status).filter(Boolean));
+      if (state.visibleStatuses.size < allStatuses.size) {
+        params.set('statuses', [...state.visibleStatuses].join(','));
+      }
+    }
+    const res = await fetch(`/api/export?${params}`);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'graph-dashboard.html';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
   // Render layout selector dropdown
   const layoutSelector = document.getElementById('layout-selector');
   if (layoutSelector) {

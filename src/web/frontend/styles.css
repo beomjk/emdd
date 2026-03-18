@@ -61,7 +61,16 @@ body {
   cursor: pointer;
   font-size: 13px;
 }
-#refresh-btn:hover { background: #f0f0f0; }
+#refresh-btn:hover, #export-btn:hover { background: #f0f0f0; }
+
+#export-btn {
+  padding: 4px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 13px;
+}
 
 #layout-select {
   padding: 4px 8px;

@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { GraphCache } from '../cache.js';
 import { readNode, getNeighbors, getPromotionCandidates, checkConsolidation } from '../../graph/operations.js';
+import { generateExportHtml } from '../export.js';
 
 export function createApiRoutes(graphDir: string, cache: GraphCache): Hono {
   const api = new Hono();
@@ -77,6 +78,19 @@ export function createApiRoutes(graphDir: string, cache: GraphCache): Hono {
   api.get('/consolidation', async (c) => {
     const result = await checkConsolidation(graphDir);
     return c.json(result);
+  });
+
+  // GET /api/export
+  api.get('/export', async (c) => {
+    const graph = await cache.getGraph();
+    const layout = (c.req.query('layout') ?? 'force') as 'force' | 'hierarchical';
+    const typesParam = c.req.query('types');
+    const statusesParam = c.req.query('statuses');
+    const types = typesParam ? typesParam.split(',').filter(Boolean) : undefined;
+    const statuses = statusesParam ? statusesParam.split(',').filter(Boolean) : undefined;
+
+    const { html } = generateExportHtml(graph, { layout, types, statuses });
+    return c.html(html);
   });
 
   // GET /api/clusters
