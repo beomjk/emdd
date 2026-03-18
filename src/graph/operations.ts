@@ -3,7 +3,7 @@ import path from 'node:path';
 import matter from 'gray-matter';
 import { loadGraph } from './loader.js';
 import { nextId, renderTemplate, nodePath, sanitizeSlug } from './templates.js';
-import { NODE_TYPES, NODE_TYPE_DIRS, ALL_VALID_RELATIONS, REVERSE_LABELS } from './types.js';
+import { NODE_TYPES, NODE_TYPE_DIRS, ALL_VALID_RELATIONS, REVERSE_LABELS, THRESHOLDS } from './types.js';
 import type {
   Node,
   NodeType,
@@ -677,7 +677,7 @@ export async function getPromotionCandidates(graphDir: string): Promise<PromoteC
     const confidence = node.confidence ?? 0;
     const supportsCount = node.links.filter(l => l.relation === 'supports').length;
     const isDeFacto = deFactoIds.has(id);
-    const meetsConfidence = confidence >= 0.9 && supportsCount >= 2;
+    const meetsConfidence = confidence >= THRESHOLDS.promotion_confidence && supportsCount >= THRESHOLDS.min_independent_supports;
 
     if (!meetsConfidence && !isDeFacto) continue;
 

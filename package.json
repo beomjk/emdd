@@ -14,7 +14,8 @@
   ],
   "main": "./dist/index.js",
   "scripts": {
-    "build": "tsc && cp src/rules/*.md dist/rules/",
+    "gen:schema": "tsx src/schema/codegen.ts",
+    "build": "npm run gen:schema && tsc && cp src/rules/*.md dist/rules/",
     "dev": "tsx src/cli.ts",
     "test": "vitest",
     "test:run": "vitest run --passWithNoTests",
