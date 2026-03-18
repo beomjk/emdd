@@ -1,4 +1,6 @@
 import type { SerializedGraph } from '../types.js';
+import { renderGraph, highlightNeighbors, clearHighlights, getCy } from './graph.js';
+import { showDetailPanel, hideDetailPanel, setDepthChangeHandler, getCurrentDepth } from './detail-panel.js';
 
 export interface DashboardState {
   graph: SerializedGraph | null;
@@ -23,12 +25,26 @@ async function fetchGraph(): Promise<SerializedGraph> {
   return res.json();
 }
 
-async function refresh(): Promise<void> {
-  await fetch('/api/refresh', { method: 'POST' });
-  const graph = await fetchGraph();
-  state.graph = graph;
-  render(graph);
-  showToast(`Refreshed at ${new Date().toLocaleTimeString()}`);
+async function fetchNeighbors(nodeId: string, depth: number): Promise<string[]> {
+  const res = await fetch(`/api/neighbors/${nodeId}?depth=${depth}`);
+  if (!res.ok) return [];
+  const data = await res.json();
+  return (data.neighbors ?? []).map((n: { id: string }) => n.id);
+}
+
+async function selectNode(nodeId: string): Promise<void> {
+  state.selectedNodeId = nodeId;
+  await showDetailPanel(nodeId);
+
+  const depth = getCurrentDepth();
+  const neighborIds = await fetchNeighbors(nodeId, depth);
+  highlightNeighbors(neighborIds, nodeId);
+}
+
+function deselectNode(): void {
+  state.selectedNodeId = null;
+  hideDetailPanel();
+  clearHighlights();
 }
 
 function showToast(message: string): void {
@@ -46,24 +62,45 @@ function showToast(message: string): void {
   }, 2000);
 }
 
-function render(graph: SerializedGraph): void {
+async function refresh(): Promise<void> {
+  await fetch('/api/refresh', { method: 'POST' });
+  const graph = await fetchGraph();
+  state.graph = graph;
+  renderDashboard(graph);
+  showToast(`Refreshed at ${new Date().toLocaleTimeString()}`);
+}
+
+function renderDashboard(graph: SerializedGraph): void {
   const emptyState = document.getElementById('empty-state')!;
-  const cy = document.getElementById('cy')!;
+  const cyContainer = document.getElementById('cy')!;
 
   if (graph.nodes.length === 0) {
     emptyState.classList.remove('hidden');
-    cy.classList.add('hidden');
-  } else {
-    emptyState.classList.add('hidden');
-    cy.classList.remove('hidden');
-    // Cytoscape rendering will be wired in Phase 3 (T021)
+    cyContainer.classList.add('hidden');
+    return;
   }
+
+  emptyState.classList.add('hidden');
+  cyContainer.classList.remove('hidden');
+
+  renderGraph(cyContainer, graph, {
+    onNodeClick: (id) => selectNode(id),
+    onNodeSelect: (id) => selectNode(id),
+    onBackgroundClick: () => deselectNode(),
+  });
 }
+
+// Depth change handler — re-fetch neighbors for selected node
+setDepthChangeHandler(async (depth) => {
+  if (!state.selectedNodeId) return;
+  const neighborIds = await fetchNeighbors(state.selectedNodeId, depth);
+  highlightNeighbors(neighborIds, state.selectedNodeId);
+});
 
 async function init(): Promise<void> {
   const graph = await fetchGraph();
   state.graph = graph;
-  render(graph);
+  renderDashboard(graph);
 
   const refreshBtn = document.getElementById('refresh-btn');
   refreshBtn?.addEventListener('click', refresh);
