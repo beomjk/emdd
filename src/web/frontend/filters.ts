@@ -41,18 +41,21 @@ function createToggleButton(
   const btn = document.createElement('button');
   btn.className = 'filter-btn';
   btn.textContent = label;
-  btn.style.cssText = `
-    padding: 2px 8px; margin: 2px; border-radius: 3px; cursor: pointer;
-    font-size: 11px; border: 1px solid ${color ?? '#ccc'};
-    background: ${active ? (color ?? '#555') : '#fff'};
-    color: ${active ? '#fff' : '#555'};
-    opacity: ${active ? '1' : '0.5'};
-  `;
+  btn.dataset.filterColor = color ?? '#555';
+  const applyStyle = (el: HTMLButtonElement, isActive: boolean) => {
+    const c = el.dataset.filterColor ?? '#555';
+    el.style.cssText = `
+      padding: 2px 8px; margin: 2px; border-radius: 3px; cursor: pointer;
+      font-size: 11px; border: 1px solid ${color ?? '#ccc'};
+      background: ${isActive ? c : '#fff'};
+      color: ${isActive ? '#fff' : '#555'};
+      opacity: ${isActive ? '1' : '0.5'};
+    `;
+  };
+  applyStyle(btn, active);
   btn.addEventListener('click', () => {
     const nowActive = btn.style.opacity === '0.5';
-    btn.style.background = nowActive ? (color ?? '#555') : '#fff';
-    btn.style.color = nowActive ? '#fff' : '#555';
-    btn.style.opacity = nowActive ? '1' : '0.5';
+    applyStyle(btn, nowActive);
     onClick(nowActive);
   });
   return btn;
@@ -64,6 +67,8 @@ function applyFilters(): void {
 
   cy.batch(() => {
     cy.nodes().forEach((node) => {
+      // Skip cluster compound nodes — they follow their children's visibility
+      if (node.data('isCluster')) return;
       const type = node.data('type') as string;
       const status = node.data('status') as string;
       const typeVisible = filterState.visibleTypes.has(type);
@@ -157,13 +162,13 @@ export function renderFilters(
     filterState.visibleTypes = new Set(types);
     filterState.visibleStatuses = new Set(statuses);
     filterState.visibleEdgeTypes = new Set(edgeTypes);
-    // Reset all buttons visually
+    // Reset all buttons visually to active state
     container.querySelectorAll('.filter-btn').forEach((btn) => {
-      const el = btn as HTMLElement;
-      el.style.opacity = '1';
+      const el = btn as HTMLButtonElement;
+      const c = el.dataset.filterColor ?? '#555';
+      el.style.background = c;
       el.style.color = '#fff';
-      // Re-read border color for background
-      el.style.background = el.style.borderColor || '#555';
+      el.style.opacity = '1';
     });
     applyFilters();
   });
