@@ -1787,6 +1787,6 @@ The researcher responds. Sometimes following the suggestion, sometimes heading i
 3. **CLI-Slash integration**: Slash commands (`emdd-episode`, `emdd-context`, `emdd-consolidation`, `emdd-health`) rewritten to directly invoke CLI commands. Four new CLI commands added:
    - `emdd update <node-id> --set key=value`: update frontmatter fields (with confidence range validation)
    - `emdd link <source-id> <target-id> <relation>`: add a link between nodes (relation validation, duplicate skip)
-   - `emdd done <episode-id> "<item>"`: change status marker of an Episode "What's Next" item
-   - `emdd backlog [--status pending|deferred|all]`: consolidated query of incomplete items across all Episodes (deduplication)
+   - `emdd done <episode-id> "<item>" [--marker <done|deferred|superseded>]`: change status marker of an Episode "What's Next" item (default: done)
+   - `emdd backlog [--status pending|done|deferred|superseded|all]`: consolidated query of incomplete items across all Episodes (deduplication)
    - `init` command substitutes `{EMDD_PY}` placeholder with the actual path during installation

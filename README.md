@@ -102,12 +102,12 @@ See the [Quick Start Guide](docs/QUICK_START.md) for a full walkthrough.
 | `emdd new <type> <slug>` | Create a node (hypothesis, experiment, finding, ...) |
 | `emdd link <source> <target> <relation>` | Add a link between nodes |
 | `emdd update <node-id> --set key=value` | Update node frontmatter |
-| `emdd done <episode-id> "<item>"` | Mark an episode item as done |
+| `emdd done <episode-id> "<item>"` | Mark an episode item with a status marker (`--marker <done\|deferred\|superseded>`) |
 | `emdd lint [path]` | Validate schema and link integrity |
 | `emdd health [path]` | Show graph health dashboard (`--all`) |
 | `emdd check [path]` | Check consolidation triggers |
 | `emdd promote [path]` | Identify promotion candidates |
-| `emdd backlog [path]` | List incomplete items across all episodes (`--status <pending\|all\|deferred>`) |
+| `emdd backlog [path]` | List incomplete items across all episodes (`--status <pending\|done\|deferred\|superseded\|all>`) |
 | `emdd index [path]` | Generate `_index.md` |
 | `emdd graph [path]` | Generate `_graph.mmd` (Mermaid) |
 | `emdd confidence [path]` | Propagate confidence across the graph |

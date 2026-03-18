@@ -11,7 +11,7 @@ nodeTypes:
     directory: decisions
     statuses: [PROPOSED, ACCEPTED, SUPERSEDED, REVERTED, CONTESTED]
     requiredFields: [id, type, title, status, created, updated]
-    optionalFields: [tags, links, reversibility]
+    optionalFields: [tags, links, reversibility, alternatives_considered, rationale]
 
   - name: episode
     prefix: epi
@@ -39,7 +39,7 @@ nodeTypes:
     directory: hypotheses
     statuses: [PROPOSED, TESTING, SUPPORTED, REFUTED, REVISED, DEFERRED, CONTESTED]
     requiredFields: [id, type, title, status, confidence, created, updated]
-    optionalFields: [tags, links, kill_criteria, risk_level]
+    optionalFields: [tags, links, kill_criterion, risk_level, priority, branch_group, branch_role]
 
   - name: knowledge
     prefix: knw
