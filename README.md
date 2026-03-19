@@ -117,6 +117,8 @@ See the [Quick Start Guide](docs/QUICK_START.md) for a full walkthrough.
 | `emdd transitions [path]` | Detect recommended status transitions |
 | `emdd kill-check [path]` | Check kill criteria status for hypotheses |
 | `emdd branches [path]` | List and analyze branch groups |
+| `emdd serve [path]` | Start web dashboard server (`-p, --port`, `--no-open`) |
+| `emdd export-html [output]` | Export graph as standalone HTML file (`--layout force\|hierarchical`, `--types`, `--statuses`) |
 | `emdd mcp` | Start MCP server (stdio transport) |
 
 The `init` command supports `--lang en|ko` for bilingual project setup.
