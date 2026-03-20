@@ -1,4 +1,5 @@
 import { createEdge } from '../graph/operations.js';
+import type { EdgeAttributes } from '../graph/types.js';
 
 /**
  * Add a link from source node to target node with the given relation.
@@ -9,6 +10,7 @@ export async function linkCommand(
   source: string,
   target: string,
   relation: string,
+  attrs?: EdgeAttributes,
 ): Promise<void> {
-  await createEdge(graphDir, source, target, relation);
+  await createEdge(graphDir, source, target, relation, attrs);
 }

@@ -8,14 +8,17 @@ export * from './types.generated.js';
 
 import type { NodeType } from './types.generated.js';
 
-export interface Link {
-  target: string;
-  relation: string;
+export interface EdgeAttributes {
   strength?: number;
   severity?: 'FATAL' | 'WEAKENING' | 'TENSION';
   completeness?: number;
   dependencyType?: 'LOGICAL' | 'PRACTICAL' | 'TEMPORAL';
   impact?: 'DECISIVE' | 'SIGNIFICANT' | 'MINOR';
+}
+
+export interface Link extends EdgeAttributes {
+  target: string;
+  relation: string;
 }
 
 export interface Node {
@@ -53,7 +56,7 @@ export interface CreateNodeResult {
   path: string;
 }
 
-export interface CreateEdgeResult {
+export interface CreateEdgeResult extends EdgeAttributes {
   source: string;
   target: string;
   relation: string;

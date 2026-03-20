@@ -3,7 +3,7 @@ import path from 'node:path';
 import matter from 'gray-matter';
 import { loadGraph } from './loader.js';
 import { nextId, renderTemplate, nodePath, sanitizeSlug } from './templates.js';
-import { NODE_TYPES, NODE_TYPE_DIRS, ALL_VALID_RELATIONS, REVERSE_LABELS, THRESHOLDS } from './types.js';
+import { NODE_TYPES, NODE_TYPE_DIRS, ALL_VALID_RELATIONS, REVERSE_LABELS, THRESHOLDS, VALID_SEVERITIES, VALID_DEPENDENCY_TYPES, VALID_IMPACTS } from './types.js';
 import type {
   Node,
   NodeType,
@@ -13,6 +13,7 @@ import type {
   CreateEdgeResult,
   CreateNodePlan,
   CreateEdgePlan,
+  EdgeAttributes,
   FileOp,
   HealthReport,
   GapDetail,
@@ -134,6 +135,28 @@ export async function createNode(
 
 // ── createEdge ──────────────────────────────────────────────────────
 
+function validateEdgeAttributes(attrs: EdgeAttributes): void {
+  if (attrs.strength !== undefined) {
+    if (typeof attrs.strength !== 'number' || isNaN(attrs.strength) || attrs.strength < 0 || attrs.strength > 1) {
+      throw new Error(`strength must be a number between 0.0 and 1.0, got ${attrs.strength}`);
+    }
+  }
+  if (attrs.severity !== undefined && !(VALID_SEVERITIES as readonly string[]).includes(attrs.severity)) {
+    throw new Error(`Invalid severity "${attrs.severity}". Valid: ${VALID_SEVERITIES.join(', ')}`);
+  }
+  if (attrs.completeness !== undefined) {
+    if (typeof attrs.completeness !== 'number' || isNaN(attrs.completeness) || attrs.completeness < 0 || attrs.completeness > 1) {
+      throw new Error(`completeness must be a number between 0.0 and 1.0, got ${attrs.completeness}`);
+    }
+  }
+  if (attrs.dependencyType !== undefined && !(VALID_DEPENDENCY_TYPES as readonly string[]).includes(attrs.dependencyType)) {
+    throw new Error(`Invalid dependencyType "${attrs.dependencyType}". Valid: ${VALID_DEPENDENCY_TYPES.join(', ')}`);
+  }
+  if (attrs.impact !== undefined && !(VALID_IMPACTS as readonly string[]).includes(attrs.impact)) {
+    throw new Error(`Invalid impact "${attrs.impact}". Valid: ${VALID_IMPACTS.join(', ')}`);
+  }
+}
+
 /**
  * Plan the creation of an edge (pure computation after graph load).
  */
@@ -142,6 +165,7 @@ export async function planCreateEdge(
   source: string,
   target: string,
   relation: string,
+  attrs?: EdgeAttributes,
 ): Promise<CreateEdgePlan> {
   // Validate relation
   if (!ALL_VALID_RELATIONS.has(relation)) {
@@ -167,19 +191,31 @@ export async function planCreateEdge(
   const raw = fs.readFileSync(filePath, 'utf-8');
   const parsed = matter(raw);
 
+  // Deep-clone data to avoid mutating gray-matter's internal cache
+  const data: Record<string, unknown> = structuredClone(parsed.data);
+
   // Ensure links array exists
-  if (!Array.isArray(parsed.data.links)) {
-    parsed.data.links = [];
+  if (!Array.isArray(data.links)) {
+    data.links = [];
   }
 
-  // Add link
-  parsed.data.links.push({ target, relation: canonical });
+  // Add link with optional attributes
+  const link: Record<string, unknown> = { target, relation: canonical };
+  if (attrs) {
+    validateEdgeAttributes(attrs);
+    if (attrs.strength !== undefined) link.strength = attrs.strength;
+    if (attrs.severity !== undefined) link.severity = attrs.severity;
+    if (attrs.completeness !== undefined) link.completeness = attrs.completeness;
+    if (attrs.dependencyType !== undefined) link.dependencyType = attrs.dependencyType;
+    if (attrs.impact !== undefined) link.impact = attrs.impact;
+  }
+  (data.links as unknown[]).push(link);
 
   // Auto-update the `updated` field
-  parsed.data.updated = new Date().toISOString().slice(0, 10);
+  data.updated = new Date().toISOString().slice(0, 10);
 
   // Compute new file content
-  const output = matter.stringify(parsed.content, parsed.data);
+  const output = matter.stringify(parsed.content, data);
   const ops: FileOp[] = [{ kind: 'write', path: filePath, content: output }];
 
   return { source, target, relation: canonical, ops };
@@ -188,16 +224,24 @@ export async function planCreateEdge(
 /**
  * Add an edge (link) from source to target with the given relation.
  * Validates relation, source existence, and target existence.
+ * Optional attrs: strength, severity, completeness, dependencyType, impact.
  */
 export async function createEdge(
   graphDir: string,
   source: string,
   target: string,
   relation: string,
+  attrs?: EdgeAttributes,
 ): Promise<CreateEdgeResult> {
-  const plan = await planCreateEdge(graphDir, source, target, relation);
+  const plan = await planCreateEdge(graphDir, source, target, relation, attrs);
   await executeOps(plan.ops);
-  return { source: plan.source, target: plan.target, relation: plan.relation };
+  const result: CreateEdgeResult = { source: plan.source, target: plan.target, relation: plan.relation };
+  if (attrs?.strength !== undefined) result.strength = attrs.strength;
+  if (attrs?.severity !== undefined) result.severity = attrs.severity;
+  if (attrs?.completeness !== undefined) result.completeness = attrs.completeness;
+  if (attrs?.dependencyType !== undefined) result.dependencyType = attrs.dependencyType;
+  if (attrs?.impact !== undefined) result.impact = attrs.impact;
+  return result;
 }
 
 // ── getHealth ───────────────────────────────────────────────────────

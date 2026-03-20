@@ -18,21 +18,21 @@ nodeTypes:
     directory: episodes
     statuses: [ACTIVE, COMPLETED]
     requiredFields: [id, type, title, status, created, updated]
-    optionalFields: [tags, links]
+    optionalFields: [tags, links, trigger, duration, outcome, spawned, dead_ends]
 
   - name: experiment
     prefix: exp
     directory: experiments
     statuses: [PLANNED, RUNNING, COMPLETED, FAILED, ABANDONED]
     requiredFields: [id, type, title, status, created, updated]
-    optionalFields: [tags, links]
+    optionalFields: [tags, links, config, results, artifacts]
 
   - name: finding
     prefix: fnd
     directory: findings
     statuses: [DRAFT, VALIDATED, PROMOTED, RETRACTED]
     requiredFields: [id, type, title, status, confidence, created, updated]
-    optionalFields: [tags, links, finding_type]
+    optionalFields: [tags, links, finding_type, sources]
 
   - name: hypothesis
     prefix: hyp
@@ -46,14 +46,14 @@ nodeTypes:
     directory: knowledge
     statuses: [ACTIVE, DISPUTED, SUPERSEDED, RETRACTED]
     requiredFields: [id, type, title, status, confidence, created, updated]
-    optionalFields: [tags, links]
+    optionalFields: [tags, links, knowledge_type, source]
 
   - name: question
     prefix: qst
     directory: questions
     statuses: [OPEN, RESOLVED, ANSWERED, DEFERRED]
     requiredFields: [id, type, title, status, created, updated]
-    optionalFields: [tags, links, urgency]
+    optionalFields: [tags, links, urgency, question_type, answer_summary]
 
 edgeTypes:
   forward:

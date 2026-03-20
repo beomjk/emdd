@@ -20,6 +20,7 @@ import { branchesCommand } from './commands/branches.js';
 import { serveCommand } from './commands/serve.js';
 import { exportHtmlCommand } from './commands/export-html.js';
 import { resolveGraphDir } from './graph/loader.js';
+import type { EdgeAttributes } from './graph/types.js';
 import { startMcpServer } from './mcp-server/index.js';
 import { VERSION } from './version.js';
 
@@ -142,9 +143,21 @@ program
   .command('link <source> <target> <relation>')
   .description('Add a link between nodes')
   .option('--path <path>', 'Project path')
+  .option('--strength <n>', 'Link strength 0.0-1.0 (for supports/confirms)', parseFloat)
+  .option('--severity <s>', 'Severity: FATAL|WEAKENING|TENSION (for contradicts)')
+  .option('--completeness <n>', 'Completeness 0.0-1.0 (for answers)', parseFloat)
+  .option('--dependency-type <t>', 'Type: LOGICAL|PRACTICAL|TEMPORAL (for depends_on)')
+  .option('--impact <i>', 'Impact: DECISIVE|SIGNIFICANT|MINOR (for informs)')
   .action(withCliErrorHandling(async (source, target, relation, options) => {
     const graphDir = resolveGraphDir(options.path);
-    await linkCommand(graphDir, source, target, relation);
+    const attrs: EdgeAttributes = {};
+    if (options.strength !== undefined) attrs.strength = options.strength;
+    if (options.severity) attrs.severity = options.severity;
+    if (options.completeness !== undefined) attrs.completeness = options.completeness;
+    if (options.dependencyType) attrs.dependencyType = options.dependencyType;
+    if (options.impact) attrs.impact = options.impact;
+    const hasAttrs = Object.keys(attrs).length > 0;
+    await linkCommand(graphDir, source, target, relation, hasAttrs ? attrs : undefined);
     console.log(`Linked ${source} -> ${target} (${relation})`);
   }));
 

@@ -195,6 +195,107 @@ describe('createEdge', () => {
       createEdge(join(tmpDir, 'graph'), 'hyp-001', 'hyp-001', 'invalid_relation')
     ).rejects.toThrow();
   });
+
+  it('creates edge with strength attribute', async () => {
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'Test',
+      status: 'PROPOSED', confidence: 0.5,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+    writeNode(tmpDir, 'experiments', 'exp-001-test.md', {
+      id: 'exp-001', type: 'experiment', title: 'Test Exp',
+      status: 'COMPLETED',
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+
+    const result = await createEdge(join(tmpDir, 'graph'), 'exp-001', 'hyp-001', 'supports', { strength: 0.8 });
+    expect(result.strength).toBe(0.8);
+
+    const content = readFileSync(join(tmpDir, 'graph', 'experiments', 'exp-001-test.md'), 'utf-8');
+    const parsed = matter(content);
+    expect(parsed.data.links[0].strength).toBe(0.8);
+  });
+
+  it('creates edge with severity attribute', async () => {
+    writeNode(tmpDir, 'findings', 'fnd-001-test.md', {
+      id: 'fnd-001', type: 'finding', title: 'Test Finding',
+      status: 'VALIDATED', confidence: 0.7,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'Test',
+      status: 'TESTING', confidence: 0.5,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+
+    const result = await createEdge(join(tmpDir, 'graph'), 'fnd-001', 'hyp-001', 'contradicts', { severity: 'FATAL' });
+    expect(result.severity).toBe('FATAL');
+
+    const content = readFileSync(join(tmpDir, 'graph', 'findings', 'fnd-001-test.md'), 'utf-8');
+    const parsed = matter(content);
+    expect(parsed.data.links[0].severity).toBe('FATAL');
+  });
+
+  it('creates edge with multiple attributes', async () => {
+    writeNode(tmpDir, 'findings', 'fnd-001-test.md', {
+      id: 'fnd-001', type: 'finding', title: 'Test Finding',
+      status: 'VALIDATED', confidence: 0.7,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+    writeNode(tmpDir, 'questions', 'qst-001-test.md', {
+      id: 'qst-001', type: 'question', title: 'Test Q',
+      status: 'OPEN',
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+
+    const result = await createEdge(join(tmpDir, 'graph'), 'fnd-001', 'qst-001', 'answers', { completeness: 0.7 });
+    expect(result.completeness).toBe(0.7);
+    expect(result.relation).toBe('answers');
+  });
+
+  it('throws on invalid strength range', async () => {
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'Test',
+      status: 'PROPOSED', confidence: 0.5,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+    writeNode(tmpDir, 'experiments', 'exp-001-test.md', {
+      id: 'exp-001', type: 'experiment', title: 'Test Exp',
+      status: 'COMPLETED',
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+
+    await expect(
+      createEdge(join(tmpDir, 'graph'), 'exp-001', 'hyp-001', 'supports', { strength: 1.5 })
+    ).rejects.toThrow(/strength/);
+  });
+
+  it('throws on invalid severity value', async () => {
+    writeNode(tmpDir, 'findings', 'fnd-001-test.md', {
+      id: 'fnd-001', type: 'finding', title: 'Test Finding',
+      status: 'VALIDATED', confidence: 0.7,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'Test',
+      status: 'TESTING', confidence: 0.5,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+
+    await expect(
+      createEdge(join(tmpDir, 'graph'), 'fnd-001', 'hyp-001', 'contradicts', { severity: 'INVALID' as any })
+    ).rejects.toThrow(/severity/);
+  });
 });
 
 describe('getHealth', () => {
