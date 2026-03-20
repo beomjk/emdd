@@ -27,6 +27,7 @@ import type {
 } from './types.js';
 import { loadConfig } from './config.js';
 export { detectClusters, identifyClusters } from './clusters.js';
+import { t } from '../i18n/index.js';
 import type { Locale } from '../i18n/index.js';
 
 // ── listNodes ───────────────────────────────────────────────────────
@@ -101,7 +102,7 @@ export function planCreateNode(
   lang?: string,
 ): CreateNodePlan {
   if (!NODE_TYPES.includes(type as NodeType)) {
-    throw new Error(`Invalid node type: ${type}. Valid types: ${NODE_TYPES.join(', ')}`);
+    throw new Error(t('error.invalid_node_type', { type, valid: NODE_TYPES.join(', ') }));
   }
 
   const nodeType = type as NodeType;
@@ -142,22 +143,22 @@ export async function createNode(
 function validateEdgeAttributes(attrs: EdgeAttributes): void {
   if (attrs.strength !== undefined) {
     if (typeof attrs.strength !== 'number' || isNaN(attrs.strength) || attrs.strength < 0 || attrs.strength > 1) {
-      throw new Error(`strength must be a number between 0.0 and 1.0, got ${attrs.strength}`);
+      throw new Error(t('error.invalid_strength', { value: String(attrs.strength) }));
     }
   }
   if (attrs.severity !== undefined && !(VALID_SEVERITIES as readonly string[]).includes(attrs.severity)) {
-    throw new Error(`Invalid severity "${attrs.severity}". Valid: ${VALID_SEVERITIES.join(', ')}`);
+    throw new Error(t('error.invalid_severity', { value: String(attrs.severity), valid: VALID_SEVERITIES.join(', ') }));
   }
   if (attrs.completeness !== undefined) {
     if (typeof attrs.completeness !== 'number' || isNaN(attrs.completeness) || attrs.completeness < 0 || attrs.completeness > 1) {
-      throw new Error(`completeness must be a number between 0.0 and 1.0, got ${attrs.completeness}`);
+      throw new Error(t('error.invalid_completeness', { value: String(attrs.completeness) }));
     }
   }
   if (attrs.dependencyType !== undefined && !(VALID_DEPENDENCY_TYPES as readonly string[]).includes(attrs.dependencyType)) {
-    throw new Error(`Invalid dependencyType "${attrs.dependencyType}". Valid: ${VALID_DEPENDENCY_TYPES.join(', ')}`);
+    throw new Error(t('error.invalid_dependency_type', { value: String(attrs.dependencyType), valid: VALID_DEPENDENCY_TYPES.join(', ') }));
   }
   if (attrs.impact !== undefined && !(VALID_IMPACTS as readonly string[]).includes(attrs.impact)) {
-    throw new Error(`Invalid impact "${attrs.impact}". Valid: ${VALID_IMPACTS.join(', ')}`);
+    throw new Error(t('error.invalid_impact', { value: String(attrs.impact), valid: VALID_IMPACTS.join(', ') }));
   }
 }
 
@@ -174,7 +175,7 @@ export async function planCreateEdge(
   // Validate relation
   if (!ALL_VALID_RELATIONS.has(relation)) {
     const valid = [...ALL_VALID_RELATIONS].sort().join(', ');
-    throw new Error(`Invalid relation: ${relation}. Valid: ${valid}`);
+    throw new Error(t('error.invalid_relation', { relation, valid }));
   }
 
   // Normalize reverse labels
@@ -183,12 +184,12 @@ export async function planCreateEdge(
   const graph = await loadGraph(graphDir);
   const sourceNode = graph.nodes.get(source);
   if (!sourceNode) {
-    throw new Error(`Source node not found: ${source}`);
+    throw new Error(t('error.source_not_found', { id: source }));
   }
 
   const targetNode = graph.nodes.get(target);
   if (!targetNode) {
-    throw new Error(`Target node not found: ${target}`);
+    throw new Error(t('error.target_not_found', { id: target }));
   }
 
   const filePath = sourceNode.path;
@@ -560,7 +561,7 @@ export async function getNeighbors(
   const graph = await loadGraph(graphDir);
   const startNode = graph.nodes.get(nodeId);
   if (!startNode) {
-    throw new Error(`Node not found: ${nodeId}`);
+    throw new Error(t('error.node_not_found', { id: nodeId }));
   }
 
   // Build reverse index for incoming edges
@@ -818,7 +819,7 @@ export async function updateNode(
   const node = graph.nodes.get(nodeId);
 
   if (!node) {
-    throw new Error(`Node not found: ${nodeId}`);
+    throw new Error(t('error.node_not_found', { id: nodeId }));
   }
 
   const filePath = node.path;
@@ -830,33 +831,33 @@ export async function updateNode(
     if (key === 'confidence') {
       const num = parseFloat(value);
       if (isNaN(num) || num < 0 || num > 1) {
-        throw new Error(`Invalid confidence value: "${value}" (must be 0-1)`);
+        throw new Error(t('error.invalid_confidence', { value }));
       }
       data[key] = num;
     } else if (key === 'status') {
       const validStatuses = VALID_STATUSES[node.type];
       if (!validStatuses.includes(value)) {
-        throw new Error(`Invalid status "${value}" for ${node.type}. Valid: ${validStatuses.join(', ')}`);
+        throw new Error(t('error.invalid_status', { value, type: node.type, valid: validStatuses.join(', ') }));
       }
       data[key] = value;
     } else if (key === 'finding_type') {
       if (!(VALID_FINDING_TYPES as readonly string[]).includes(value)) {
-        throw new Error(`Invalid finding_type "${value}". Valid: ${VALID_FINDING_TYPES.join(', ')}`);
+        throw new Error(t('error.invalid_finding_type', { value, valid: VALID_FINDING_TYPES.join(', ') }));
       }
       data[key] = value;
     } else if (key === 'urgency') {
       if (!(VALID_URGENCIES as readonly string[]).includes(value)) {
-        throw new Error(`Invalid urgency "${value}". Valid: ${VALID_URGENCIES.join(', ')}`);
+        throw new Error(t('error.invalid_urgency', { value, valid: VALID_URGENCIES.join(', ') }));
       }
       data[key] = value;
     } else if (key === 'risk_level') {
       if (!(VALID_RISK_LEVELS as readonly string[]).includes(value)) {
-        throw new Error(`Invalid risk_level "${value}". Valid: ${VALID_RISK_LEVELS.join(', ')}`);
+        throw new Error(t('error.invalid_risk_level', { value, valid: VALID_RISK_LEVELS.join(', ') }));
       }
       data[key] = value;
     } else if (key === 'reversibility') {
       if (!(VALID_REVERSIBILITIES as readonly string[]).includes(value)) {
-        throw new Error(`Invalid reversibility "${value}". Valid: ${VALID_REVERSIBILITIES.join(', ')}`);
+        throw new Error(t('error.invalid_reversibility', { value, valid: VALID_REVERSIBILITIES.join(', ') }));
       }
       data[key] = value;
     } else if ((value.startsWith('[') || value.startsWith('{')) && value.length > 1) {
@@ -896,7 +897,7 @@ export async function deleteEdge(
   if (relation) {
     if (!ALL_VALID_RELATIONS.has(relation)) {
       const valid = [...ALL_VALID_RELATIONS].sort().join(', ');
-      throw new Error(`Invalid relation: ${relation}. Valid: ${valid}`);
+      throw new Error(t('error.invalid_relation', { relation, valid }));
     }
     canonical = REVERSE_LABELS[relation] ?? relation;
   }
@@ -904,12 +905,12 @@ export async function deleteEdge(
   const graph = await loadGraph(graphDir);
   const sourceNode = graph.nodes.get(source);
   if (!sourceNode) {
-    throw new Error(`Source node not found: ${source}`);
+    throw new Error(t('error.source_not_found', { id: source }));
   }
 
   const targetNode = graph.nodes.get(target);
   if (!targetNode) {
-    throw new Error(`Target node not found: ${target}`);
+    throw new Error(t('error.target_not_found', { id: target }));
   }
 
   const filePath = sourceNode.path;
@@ -932,7 +933,7 @@ export async function deleteEdge(
 
   if (deletedRelations.length === 0) {
     const relStr = relation ? ` with relation '${relation}'` : '';
-    throw new Error(`No matching link from ${source} to ${target}${relStr}`);
+    throw new Error(t('error.no_matching_link', { source, target, relation: relStr }));
   }
 
   data.links = remaining;
@@ -961,14 +962,14 @@ export async function markDone(
   marker: DoneMarker = 'done',
 ): Promise<MarkDoneResult> {
   if (!VALID_MARKERS.includes(marker)) {
-    throw new Error(`Invalid marker: ${marker}. Valid markers: ${VALID_MARKERS.join(', ')}`);
+    throw new Error(t('error.invalid_marker', { marker, valid: VALID_MARKERS.join(', ') }));
   }
 
   const graph = await loadGraph(graphDir);
   const node = graph.nodes.get(episodeId);
 
   if (!node) {
-    throw new Error(`Node not found: ${episodeId}`);
+    throw new Error(t('error.node_not_found', { id: episodeId }));
   }
 
   const filePath = node.path;
@@ -995,13 +996,13 @@ export async function markDone(
 
   if (uncheckedMatches.length === 0) {
     if (alreadyMarked.length > 0) {
-      throw new Error(`Item already marked in ${episodeId}: ${item}`);
+      throw new Error(t('error.item_already_marked', { id: episodeId, item }));
     }
-    throw new Error(`Item not found in ${episodeId}: ${item}`);
+    throw new Error(t('error.item_not_found', { id: episodeId, item }));
   }
 
   if (uncheckedMatches.length > 1) {
-    throw new Error(`Multiple matches for '${item}' in ${episodeId}`);
+    throw new Error(t('error.multiple_matches', { item, id: episodeId }));
   }
 
   lines[uncheckedMatches[0]] = lines[uncheckedMatches[0]].replace('- [ ]', `- [${marker}]`);
