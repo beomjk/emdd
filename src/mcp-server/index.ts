@@ -16,6 +16,7 @@ import { registerGaps } from './tools/gaps.js';
 import { registerUpdateNode } from './tools/update-node.js';
 import { registerDeleteEdge } from './tools/delete-edge.js';
 import { registerMarkDone } from './tools/mark-done.js';
+import { registerAnalyzeRefutation } from './tools/analyze-refutation.js';
 import { registerContextLoading } from './prompts/context-loading.js';
 import { registerEpisodeCreation } from './prompts/episode-creation.js';
 import { registerConsolidation } from './prompts/consolidation.js';
@@ -42,6 +43,7 @@ export function createEmddMcpServer(): McpServer {
   registerUpdateNode(server);
   registerDeleteEdge(server);
   registerMarkDone(server);
+  registerAnalyzeRefutation(server);
 
   // Prompts
   registerContextLoading(server);

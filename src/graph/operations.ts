@@ -3,7 +3,7 @@ import path from 'node:path';
 import matter from 'gray-matter';
 import { loadGraph } from './loader.js';
 import { nextId, renderTemplate, nodePath, sanitizeSlug } from './templates.js';
-import { NODE_TYPES, NODE_TYPE_DIRS, ALL_VALID_RELATIONS, REVERSE_LABELS, THRESHOLDS, VALID_SEVERITIES, VALID_DEPENDENCY_TYPES, VALID_IMPACTS } from './types.js';
+import { NODE_TYPES, NODE_TYPE_DIRS, ALL_VALID_RELATIONS, REVERSE_LABELS, THRESHOLDS, VALID_SEVERITIES, VALID_DEPENDENCY_TYPES, VALID_IMPACTS, VALID_STATUSES, VALID_FINDING_TYPES, VALID_URGENCIES, VALID_RISK_LEVELS, VALID_REVERSIBILITIES } from './types.js';
 import type {
   Node,
   NodeType,
@@ -833,6 +833,38 @@ export async function updateNode(
         throw new Error(`Invalid confidence value: "${value}" (must be 0-1)`);
       }
       data[key] = num;
+    } else if (key === 'status') {
+      const validStatuses = VALID_STATUSES[node.type];
+      if (!validStatuses.includes(value)) {
+        throw new Error(`Invalid status "${value}" for ${node.type}. Valid: ${validStatuses.join(', ')}`);
+      }
+      data[key] = value;
+    } else if (key === 'finding_type') {
+      if (!(VALID_FINDING_TYPES as readonly string[]).includes(value)) {
+        throw new Error(`Invalid finding_type "${value}". Valid: ${VALID_FINDING_TYPES.join(', ')}`);
+      }
+      data[key] = value;
+    } else if (key === 'urgency') {
+      if (!(VALID_URGENCIES as readonly string[]).includes(value)) {
+        throw new Error(`Invalid urgency "${value}". Valid: ${VALID_URGENCIES.join(', ')}`);
+      }
+      data[key] = value;
+    } else if (key === 'risk_level') {
+      if (!(VALID_RISK_LEVELS as readonly string[]).includes(value)) {
+        throw new Error(`Invalid risk_level "${value}". Valid: ${VALID_RISK_LEVELS.join(', ')}`);
+      }
+      data[key] = value;
+    } else if (key === 'reversibility') {
+      if (!(VALID_REVERSIBILITIES as readonly string[]).includes(value)) {
+        throw new Error(`Invalid reversibility "${value}". Valid: ${VALID_REVERSIBILITIES.join(', ')}`);
+      }
+      data[key] = value;
+    } else if ((value.startsWith('[') || value.startsWith('{')) && value.length > 1) {
+      try {
+        data[key] = JSON.parse(value);
+      } catch {
+        data[key] = value;
+      }
     } else {
       data[key] = value;
     }

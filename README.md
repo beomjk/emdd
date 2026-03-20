@@ -103,8 +103,10 @@ See the [Quick Start Guide](docs/QUICK_START.md) for a full walkthrough.
 | `emdd init [path]` | Initialize a new EMDD project (`--tool claude\|cursor\|windsurf\|cline\|copilot\|all`, `--lang en\|ko`) |
 | `emdd list [path]` | List nodes (`--type`, `--status` filters) |
 | `emdd new <type> <slug>` | Create a node (hypothesis, experiment, finding, ...) |
-| `emdd link <source> <target> <relation>` | Add a link between nodes |
-| `emdd update <node-id> --set key=value` | Update node frontmatter |
+| `emdd link <source> <target> <relation>` | Add a link between nodes (`--strength`, `--severity`, `--completeness`, `--dependency-type`, `--impact`) |
+| `emdd unlink <source> <target> [relation]` | Remove a link between nodes |
+| `emdd read <node-id>` | Read a node by ID, showing frontmatter and body |
+| `emdd update <node-id> --set key=value` | Update node frontmatter (supports JSON arrays/objects) |
 | `emdd done <episode-id> "<item>"` | Mark an episode item with a status marker (`--marker <done\|deferred\|superseded>`) |
 | `emdd lint [path]` | Validate schema and link integrity |
 | `emdd health [path]` | Show graph health dashboard (`--all`) |

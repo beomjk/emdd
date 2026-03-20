@@ -586,7 +586,7 @@ Final confidence: 0.42 (rounded)
 | **Untested Hypotheses** | PROPOSED status + (N days elapsed **OR** M episodes since updated) | Suggest experiment design |
 | **Blocking Questions** | OPEN + urgency=BLOCKING + (N days **OR** M episodes since updated) | Urge immediate resolution |
 | **Stale Knowledge** | Source is N months old + newer Knowledge added to same cluster (day-only) | Warn that update is needed |
-| **Orphan Findings** | Finding node has no outgoing SPAWNS edges | Suggest new Question/Hypothesis connections |
+| **Orphan Findings** | Finding node has no outgoing SPAWNS, ANSWERS, or EXTENDS edges | Suggest new Question/Hypothesis connections |
 
 **Default Thresholds and Configuration:**
 

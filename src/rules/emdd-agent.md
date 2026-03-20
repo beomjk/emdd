@@ -16,16 +16,16 @@
 ## Authority Scope
 
 **No approval needed:**
-- Recording experiment metrics as Finding/Result nodes
-- Updating Experiment status (PLANNED -> RUNNING -> COMPLETED)
-- Time-based attribute updates (updated field)
+- Recording experiment metrics as Finding/Result nodes → `create-node`, `create-edge`
+- Updating Experiment status (PLANNED -> RUNNING -> COMPLETED) → `update-node`
+- Time-based attribute updates (updated field) → `update-node`
 
 **Approval required:**
-- Changing Hypothesis confidence
-- Creating new Hypothesis or Question nodes
-- Adding or deleting edges
-- Changing Knowledge status (DISPUTED/RETRACTED)
-- Creating Decision nodes
+- Changing Hypothesis confidence → `update-node`
+- Creating new Hypothesis or Question nodes → `create-node`
+- Adding or deleting edges → `create-edge`, `delete-edge`
+- Changing Knowledge status (DISPUTED/RETRACTED) → `update-node`
+- Creating Decision nodes → `create-node`
 
 **Forbidden:**
 - Deleting any node (archive/deprecate instead)
@@ -33,8 +33,39 @@
 
 ## Graph Maintenance Tasks
 
-- After experiments: update related node statuses and confidence scores (with approval)
-- Check Consolidation triggers after creating Episodes or Findings
-- Identify orphan nodes (nodes with no outgoing links)
-- Detect stale nodes (untested hypotheses older than 3 days)
-- Flag structural gaps between clusters
+- After experiments: update related node statuses and confidence scores (with approval) → `update-node`, `confidence`
+- Check Consolidation triggers after creating Episodes or Findings → `check`
+- Identify orphan nodes (nodes with no outgoing links) → `graph_gaps`
+- Detect stale nodes (untested hypotheses older than 3 days) → `graph_gaps`
+- Flag structural gaps between clusters → `graph_gaps`
+
+## Available MCP Tools
+
+**Read operations:**
+- `list-nodes` — List nodes with optional type/status filters
+- `read-node` — Read a single node (frontmatter + body)
+- `neighbors` — Get a node's neighbors and connections
+- `branch-groups` — List and analyze branch groups
+
+**Write operations:**
+- `create-node` — Create a new node
+- `create-edge` — Add a link between nodes
+- `update-node` — Update node frontmatter fields
+- `delete-edge` — Remove a link between nodes
+- `mark-done` — Mark an episode checklist item
+
+**Analysis operations:**
+- `health` — Compute graph health report
+- `check` — Check consolidation triggers
+- `promote` — Identify promotion candidates
+- `confidence` — Propagate confidence across the graph
+- `transitions` — Detect recommended status transitions
+- `kill-check` — Check kill criteria for hypotheses
+- `graph_gaps` — Detect structural gaps (orphans, stale, disconnected)
+- `analyze-refutation` — Analyze refutation impact on hypotheses
+
+**Prompts:**
+- `context-loading` — Load graph context for a session
+- `episode-creation` — Guide episode creation
+- `consolidation` — Guide consolidation workflow
+- `health-review` — Guide health review workflow

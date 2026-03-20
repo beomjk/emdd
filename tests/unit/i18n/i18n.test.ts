@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { getLocale, setLocale, t } from '../../../src/i18n/index.js';
+import { messages as enMessages } from '../../../src/i18n/en.js';
+import { messages as koMessages } from '../../../src/i18n/ko.js';
 
 describe('getLocale', () => {
   const originalEnv = process.env.EMDD_LANG;
@@ -66,5 +68,23 @@ describe('setLocale / t()', () => {
     expect(t('health.title')).toBe('EMDD Health Dashboard');
     setLocale('ko');
     expect(t('health.title')).toBe('EMDD 건강 대시보드');
+  });
+});
+
+describe('i18n key symmetry', () => {
+  it('en and ko have identical key sets', () => {
+    const enKeys = Object.keys(enMessages).sort();
+    const koKeys = Object.keys(koMessages).sort();
+    expect(enKeys).toEqual(koKeys);
+  });
+
+  it('no en keys missing in ko', () => {
+    const missing = Object.keys(enMessages).filter(k => !(k in koMessages));
+    expect(missing).toEqual([]);
+  });
+
+  it('no ko keys missing in en', () => {
+    const missing = Object.keys(koMessages).filter(k => !(k in enMessages));
+    expect(missing).toEqual([]);
   });
 });

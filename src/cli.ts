@@ -10,6 +10,7 @@ import { updateCommand } from './commands/update.js';
 import { linkCommand } from './commands/link.js';
 import { doneCommand } from './commands/done.js';
 import { unlinkCommand } from './commands/unlink.js';
+import { readCommand } from './commands/read.js';
 import { indexCommand } from './commands/index.js';
 import { graphCommand } from './commands/graph.js';
 import { backlogCommand } from './commands/backlog.js';
@@ -70,6 +71,15 @@ program
   .option('--status <status>', 'Filter by status')
   .action(withCliErrorHandling(async (path, options) => {
     await listCommand(path, options);
+  }));
+
+program
+  .command('read <node-id>')
+  .description('Read a node by ID, showing frontmatter and body')
+  .option('--path <path>', 'Project path')
+  .action(withCliErrorHandling(async (nodeId, options) => {
+    const graphDir = resolveGraphDir(options.path);
+    await readCommand(graphDir, nodeId);
   }));
 
 program

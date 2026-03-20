@@ -1071,6 +1071,125 @@ describe('updateNode', () => {
       updateNode(join(tmpDir, 'graph'), 'hyp-999', { status: 'TESTING' })
     ).rejects.toThrow(/not found/);
   });
+
+  it('rejects invalid status for hypothesis', async () => {
+    writeNode(tmpDir, 'hypotheses', 'hyp-002-val.md', {
+      id: 'hyp-002', type: 'hypothesis', title: 'Validation',
+      status: 'PROPOSED', confidence: 0.5,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+
+    await expect(
+      updateNode(join(tmpDir, 'graph'), 'hyp-002', { status: 'BOGUS' })
+    ).rejects.toThrow(/Invalid status "BOGUS"/);
+  });
+
+  it('accepts valid status for hypothesis', async () => {
+    writeNode(tmpDir, 'hypotheses', 'hyp-002-val.md', {
+      id: 'hyp-002', type: 'hypothesis', title: 'Validation',
+      status: 'PROPOSED', confidence: 0.5,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+
+    const result = await updateNode(join(tmpDir, 'graph'), 'hyp-002', { status: 'TESTING' });
+    expect(result.updatedFields).toContain('status');
+  });
+
+  it('rejects invalid finding_type', async () => {
+    writeNode(tmpDir, 'findings', 'fnd-001-val.md', {
+      id: 'fnd-001', type: 'finding', title: 'Validation',
+      status: 'DRAFT', confidence: 0.5,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+
+    await expect(
+      updateNode(join(tmpDir, 'graph'), 'fnd-001', { finding_type: 'bogus' })
+    ).rejects.toThrow(/Invalid finding_type "bogus"/);
+  });
+
+  it('rejects invalid urgency', async () => {
+    writeNode(tmpDir, 'questions', 'qst-001-val.md', {
+      id: 'qst-001', type: 'question', title: 'Validation',
+      status: 'OPEN',
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+
+    await expect(
+      updateNode(join(tmpDir, 'graph'), 'qst-001', { urgency: 'CRITICAL' })
+    ).rejects.toThrow(/Invalid urgency "CRITICAL"/);
+  });
+
+  it('rejects invalid risk_level', async () => {
+    writeNode(tmpDir, 'hypotheses', 'hyp-002-val.md', {
+      id: 'hyp-002', type: 'hypothesis', title: 'Validation',
+      status: 'PROPOSED', confidence: 0.5,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+
+    await expect(
+      updateNode(join(tmpDir, 'graph'), 'hyp-002', { risk_level: 'extreme' })
+    ).rejects.toThrow(/Invalid risk_level "extreme"/);
+  });
+
+  it('rejects invalid reversibility', async () => {
+    writeNode(tmpDir, 'decisions', 'dec-001-val.md', {
+      id: 'dec-001', type: 'decision', title: 'Validation',
+      status: 'PROPOSED',
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+
+    await expect(
+      updateNode(join(tmpDir, 'graph'), 'dec-001', { reversibility: 'impossible' })
+    ).rejects.toThrow(/Invalid reversibility "impossible"/);
+  });
+
+  it('parses JSON array values', async () => {
+    writeNode(tmpDir, 'hypotheses', 'hyp-003-json.md', {
+      id: 'hyp-003', type: 'hypothesis', title: 'JSON test',
+      status: 'PROPOSED', confidence: 0.5,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+
+    await updateNode(join(tmpDir, 'graph'), 'hyp-003', { tags: '["alpha","beta"]' });
+    const content = readFileSync(join(tmpDir, 'graph', 'hypotheses', 'hyp-003-json.md'), 'utf-8');
+    const parsed = matter(content);
+    expect(parsed.data.tags).toEqual(['alpha', 'beta']);
+  });
+
+  it('parses JSON object values', async () => {
+    writeNode(tmpDir, 'experiments', 'exp-001-json.md', {
+      id: 'exp-001', type: 'experiment', title: 'JSON test',
+      status: 'PLANNED',
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+
+    await updateNode(join(tmpDir, 'graph'), 'exp-001', { config: '{"key":"val"}' });
+    const content = readFileSync(join(tmpDir, 'graph', 'experiments', 'exp-001-json.md'), 'utf-8');
+    const parsed = matter(content);
+    expect(parsed.data.config).toEqual({ key: 'val' });
+  });
+
+  it('keeps invalid JSON as string', async () => {
+    writeNode(tmpDir, 'hypotheses', 'hyp-003-json.md', {
+      id: 'hyp-003', type: 'hypothesis', title: 'JSON test',
+      status: 'PROPOSED', confidence: 0.5,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+
+    await updateNode(join(tmpDir, 'graph'), 'hyp-003', { note: '{invalid json' });
+    const content = readFileSync(join(tmpDir, 'graph', 'hypotheses', 'hyp-003-json.md'), 'utf-8');
+    const parsed = matter(content);
+    expect(parsed.data.note).toBe('{invalid json');
+  });
 });
 
 describe('deleteEdge', () => {

@@ -330,4 +330,17 @@ describe('MCP Server — tools', () => {
       expect(errText).toMatch(/not found/i);
     });
   });
+
+  describe('analyze-refutation', () => {
+    it('returns refutation analysis for sample graph', async () => {
+      const result = await callTool(client, 'analyze-refutation', {
+        graphDir: SAMPLE_GRAPH,
+      }) as { affectedHypotheses: unknown[]; pivotCeremonyTriggered: boolean; retractedKnowledgeIds: string[] };
+      expect(result).toHaveProperty('affectedHypotheses');
+      expect(result).toHaveProperty('pivotCeremonyTriggered');
+      expect(result).toHaveProperty('retractedKnowledgeIds');
+      expect(Array.isArray(result.affectedHypotheses)).toBe(true);
+      expect(Array.isArray(result.retractedKnowledgeIds)).toBe(true);
+    });
+  });
 });
