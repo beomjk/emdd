@@ -13,6 +13,9 @@ import { registerKillCheck } from './tools/kill-check.js';
 import { registerBranchGroups } from './tools/branch-groups.js';
 import { registerNeighbors } from './tools/neighbors.js';
 import { registerGaps } from './tools/gaps.js';
+import { registerUpdateNode } from './tools/update-node.js';
+import { registerDeleteEdge } from './tools/delete-edge.js';
+import { registerMarkDone } from './tools/mark-done.js';
 import { registerContextLoading } from './prompts/context-loading.js';
 import { registerEpisodeCreation } from './prompts/episode-creation.js';
 import { registerConsolidation } from './prompts/consolidation.js';
@@ -36,6 +39,9 @@ export function createEmddMcpServer(): McpServer {
   registerBranchGroups(server);
   registerNeighbors(server);
   registerGaps(server);
+  registerUpdateNode(server);
+  registerDeleteEdge(server);
+  registerMarkDone(server);
 
   // Prompts
   registerContextLoading(server);

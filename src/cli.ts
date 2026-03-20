@@ -9,6 +9,7 @@ import { promoteCommand } from './commands/promote.js';
 import { updateCommand } from './commands/update.js';
 import { linkCommand } from './commands/link.js';
 import { doneCommand } from './commands/done.js';
+import { unlinkCommand } from './commands/unlink.js';
 import { indexCommand } from './commands/index.js';
 import { graphCommand } from './commands/graph.js';
 import { backlogCommand } from './commands/backlog.js';
@@ -159,6 +160,17 @@ program
     const hasAttrs = Object.keys(attrs).length > 0;
     await linkCommand(graphDir, source, target, relation, hasAttrs ? attrs : undefined);
     console.log(`Linked ${source} -> ${target} (${relation})`);
+  }));
+
+program
+  .command('unlink <source> <target> [relation]')
+  .description('Remove a link between nodes')
+  .option('--path <path>', 'Project path')
+  .action(withCliErrorHandling(async (source, target, relation, options) => {
+    const graphDir = resolveGraphDir(options.path);
+    await unlinkCommand(graphDir, source, target, relation);
+    const relStr = relation ? ` (${relation})` : '';
+    console.log(`Unlinked ${source} -> ${target}${relStr}`);
   }));
 
 program

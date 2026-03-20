@@ -222,4 +222,112 @@ describe('MCP Server — tools', () => {
       }
     });
   });
+
+  // ── update-node ───────────────────────────────────────────────────
+
+  describe('update-node', () => {
+    let tmpDir: string;
+
+    beforeEach(() => {
+      tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'emdd-mcp-update-'));
+      fs.cpSync(SAMPLE_GRAPH, tmpDir, { recursive: true });
+    });
+
+    it('updates fields and returns result', async () => {
+      const result = await callTool(client, 'update-node', {
+        graphDir: tmpDir,
+        nodeId: 'hyp-001',
+        updates: { status: 'TESTING' },
+      }) as { nodeId: string; updatedFields: string[]; updatedDate: string };
+      expect(result.nodeId).toBe('hyp-001');
+      expect(result.updatedFields).toEqual(['status']);
+    });
+
+    it('fails for nonexistent node', async () => {
+      const errText = await callToolError(client, 'update-node', {
+        graphDir: tmpDir,
+        nodeId: 'hyp-999',
+        updates: { status: 'TESTING' },
+      });
+      expect(errText).toMatch(/not found/i);
+    });
+  });
+
+  // ── delete-edge ───────────────────────────────────────────────────
+
+  describe('delete-edge', () => {
+    let tmpDir: string;
+
+    beforeEach(() => {
+      tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'emdd-mcp-deledge-'));
+      fs.cpSync(SAMPLE_GRAPH, tmpDir, { recursive: true });
+    });
+
+    it('deletes a link with relation', async () => {
+      // First add a link, then delete it
+      await callTool(client, 'create-edge', {
+        graphDir: tmpDir,
+        source: 'fnd-002',
+        target: 'hyp-001',
+        relation: 'supports',
+      });
+      const result = await callTool(client, 'delete-edge', {
+        graphDir: tmpDir,
+        source: 'fnd-002',
+        target: 'hyp-001',
+        relation: 'supports',
+      }) as { deletedCount: number };
+      expect(result.deletedCount).toBeGreaterThanOrEqual(1);
+    });
+
+    it('fails for nonexistent source', async () => {
+      const errText = await callToolError(client, 'delete-edge', {
+        graphDir: tmpDir,
+        source: 'nonexistent-999',
+        target: 'hyp-001',
+        relation: 'supports',
+      });
+      expect(errText).toMatch(/not found/i);
+    });
+  });
+
+  // ── mark-done ─────────────────────────────────────────────────────
+
+  describe('mark-done', () => {
+    let tmpDir: string;
+
+    beforeEach(() => {
+      tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'emdd-mcp-done-'));
+      fs.cpSync(SAMPLE_GRAPH, tmpDir, { recursive: true });
+    });
+
+    it('marks a checklist item', async () => {
+      // Read an episode to find a checklist item
+      const epiPath = path.join(tmpDir, 'episodes');
+      const files = fs.readdirSync(epiPath);
+      const epiFile = files.find(f => f.endsWith('.md'));
+      if (!epiFile) return; // skip if no episodes
+
+      const content = fs.readFileSync(path.join(epiPath, epiFile), 'utf-8');
+      const match = content.match(/- \[ \] (.+)/);
+      if (!match) return; // skip if no unchecked items
+
+      const epiId = epiFile.match(/^(epi-\d{3})/)?.[1];
+      const result = await callTool(client, 'mark-done', {
+        graphDir: tmpDir,
+        episodeId: epiId,
+        item: match[1],
+      }) as { episodeId: string; marker: string };
+      expect(result.marker).toBe('done');
+    });
+
+    it('fails for nonexistent episode', async () => {
+      const errText = await callToolError(client, 'mark-done', {
+        graphDir: tmpDir,
+        episodeId: 'epi-999',
+        item: 'some task',
+      });
+      expect(errText).toMatch(/not found/i);
+    });
+  });
 });

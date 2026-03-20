@@ -25,6 +25,9 @@ import {
   checkConsolidation,
   getPromotionCandidates,
   getNeighbors,
+  updateNode,
+  deleteEdge,
+  markDone,
 } from '../../../src/graph/operations.js';
 
 // Helper to create a minimal EMDD project with nodes
@@ -1010,5 +1013,239 @@ describe('getNeighbors', () => {
     expect(neighbors.length).toBe(1);
     expect(neighbors[0].id).toBe('fnd-001');
     expect(neighbors[0].direction).toBe('incoming');
+  });
+});
+
+describe('updateNode', () => {
+  let tmpDir: string;
+  beforeEach(() => { tmpDir = setupProject(); });
+  afterEach(() => { rmSync(tmpDir, { recursive: true, force: true }); });
+
+  it('updates frontmatter fields and returns result', async () => {
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'Test',
+      status: 'PROPOSED', confidence: 0.5,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+
+    const result = await updateNode(join(tmpDir, 'graph'), 'hyp-001', { status: 'TESTING' });
+    expect(result.nodeId).toBe('hyp-001');
+    expect(result.updatedFields).toEqual(['status']);
+    expect(result.updatedDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+
+    const content = readFileSync(join(tmpDir, 'graph', 'hypotheses', 'hyp-001-test.md'), 'utf-8');
+    const parsed = matter(content);
+    expect(parsed.data.status).toBe('TESTING');
+  });
+
+  it('parses confidence as number', async () => {
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'Test',
+      status: 'PROPOSED', confidence: 0.5,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+
+    await updateNode(join(tmpDir, 'graph'), 'hyp-001', { confidence: '0.8' });
+    const content = readFileSync(join(tmpDir, 'graph', 'hypotheses', 'hyp-001-test.md'), 'utf-8');
+    const parsed = matter(content);
+    expect(parsed.data.confidence).toBe(0.8);
+  });
+
+  it('throws on invalid confidence', async () => {
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'Test',
+      status: 'PROPOSED', confidence: 0.5,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+
+    await expect(
+      updateNode(join(tmpDir, 'graph'), 'hyp-001', { confidence: '1.5' })
+    ).rejects.toThrow(/confidence/);
+  });
+
+  it('throws on nonexistent node', async () => {
+    await expect(
+      updateNode(join(tmpDir, 'graph'), 'hyp-999', { status: 'TESTING' })
+    ).rejects.toThrow(/not found/);
+  });
+});
+
+describe('deleteEdge', () => {
+  let tmpDir: string;
+  beforeEach(() => { tmpDir = setupProject(); });
+  afterEach(() => { rmSync(tmpDir, { recursive: true, force: true }); });
+
+  it('deletes a specific link by relation', async () => {
+    writeNode(tmpDir, 'findings', 'fnd-001-test.md', {
+      id: 'fnd-001', type: 'finding', title: 'F1', status: 'VALIDATED',
+      confidence: 0.7, created: '2026-01-01', updated: '2026-01-01', tags: [],
+      links: [{ target: 'hyp-001', relation: 'supports', strength: 0.8 }],
+    });
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'TESTING',
+      confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+    });
+
+    const result = await deleteEdge(join(tmpDir, 'graph'), 'fnd-001', 'hyp-001', 'supports');
+    expect(result.deletedCount).toBe(1);
+    expect(result.deletedRelations).toEqual(['supports']);
+
+    const content = readFileSync(join(tmpDir, 'graph', 'findings', 'fnd-001-test.md'), 'utf-8');
+    const parsed = matter(content);
+    expect(parsed.data.links).toEqual([]);
+  });
+
+  it('deletes all links to target when relation omitted', async () => {
+    writeNode(tmpDir, 'findings', 'fnd-001-test.md', {
+      id: 'fnd-001', type: 'finding', title: 'F1', status: 'VALIDATED',
+      confidence: 0.7, created: '2026-01-01', updated: '2026-01-01', tags: [],
+      links: [
+        { target: 'hyp-001', relation: 'supports' },
+        { target: 'hyp-001', relation: 'informs' },
+        { target: 'hyp-002', relation: 'supports' },
+      ],
+    });
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'TESTING',
+      confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+    });
+    writeNode(tmpDir, 'hypotheses', 'hyp-002-test.md', {
+      id: 'hyp-002', type: 'hypothesis', title: 'H2', status: 'TESTING',
+      confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+    });
+
+    const result = await deleteEdge(join(tmpDir, 'graph'), 'fnd-001', 'hyp-001');
+    expect(result.deletedCount).toBe(2);
+
+    const content = readFileSync(join(tmpDir, 'graph', 'findings', 'fnd-001-test.md'), 'utf-8');
+    const parsed = matter(content);
+    expect(parsed.data.links).toHaveLength(1);
+    expect(parsed.data.links[0].target).toBe('hyp-002');
+  });
+
+  it('normalizes reverse labels', async () => {
+    writeNode(tmpDir, 'experiments', 'exp-001-test.md', {
+      id: 'exp-001', type: 'experiment', title: 'E1', status: 'COMPLETED',
+      created: '2026-01-01', updated: '2026-01-01', tags: [],
+      links: [{ target: 'hyp-001', relation: 'tests' }],
+    });
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'TESTING',
+      confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+    });
+
+    // 'tested_by' is a reverse label of 'tests'
+    const result = await deleteEdge(join(tmpDir, 'graph'), 'exp-001', 'hyp-001', 'tested_by');
+    expect(result.deletedCount).toBe(1);
+  });
+
+  it('throws when no matching link found', async () => {
+    writeNode(tmpDir, 'findings', 'fnd-001-test.md', {
+      id: 'fnd-001', type: 'finding', title: 'F1', status: 'VALIDATED',
+      confidence: 0.7, created: '2026-01-01', updated: '2026-01-01', tags: [],
+      links: [{ target: 'hyp-002', relation: 'supports' }],
+    });
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'TESTING',
+      confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+    });
+
+    await expect(
+      deleteEdge(join(tmpDir, 'graph'), 'fnd-001', 'hyp-001', 'supports')
+    ).rejects.toThrow(/No matching link/);
+  });
+
+  it('throws on nonexistent source', async () => {
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'TESTING',
+      confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+    });
+
+    await expect(
+      deleteEdge(join(tmpDir, 'graph'), 'fnd-999', 'hyp-001', 'supports')
+    ).rejects.toThrow(/Source node not found/);
+  });
+
+  it('auto-updates the updated field', async () => {
+    writeNode(tmpDir, 'findings', 'fnd-001-test.md', {
+      id: 'fnd-001', type: 'finding', title: 'F1', status: 'VALIDATED',
+      confidence: 0.7, created: '2026-01-01', updated: '2026-01-01', tags: [],
+      links: [{ target: 'hyp-001', relation: 'supports' }],
+    });
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'TESTING',
+      confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+    });
+
+    await deleteEdge(join(tmpDir, 'graph'), 'fnd-001', 'hyp-001', 'supports');
+    const content = readFileSync(join(tmpDir, 'graph', 'findings', 'fnd-001-test.md'), 'utf-8');
+    const parsed = matter(content);
+    expect(parsed.data.updated).not.toBe('2026-01-01');
+  });
+});
+
+describe('markDone', () => {
+  let tmpDir: string;
+  beforeEach(() => { tmpDir = setupProject(); });
+  afterEach(() => { rmSync(tmpDir, { recursive: true, force: true }); });
+
+  it('marks a checklist item and returns result', async () => {
+    writeNode(tmpDir, 'episodes', 'epi-001-test.md', {
+      id: 'epi-001', type: 'episode', title: 'Test Episode',
+      created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+    }, '## Checklist\n- [ ] Do something\n- [ ] Do another thing\n');
+
+    const result = await markDone(join(tmpDir, 'graph'), 'epi-001', 'Do something');
+    expect(result.episodeId).toBe('epi-001');
+    expect(result.item).toBe('Do something');
+    expect(result.marker).toBe('done');
+
+    const content = readFileSync(join(tmpDir, 'graph', 'episodes', 'epi-001-test.md'), 'utf-8');
+    expect(content).toContain('- [done] Do something');
+    expect(content).toContain('- [ ] Do another thing');
+  });
+
+  it('supports different markers', async () => {
+    writeNode(tmpDir, 'episodes', 'epi-001-test.md', {
+      id: 'epi-001', type: 'episode', title: 'Test Episode',
+      created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+    }, '## Checklist\n- [ ] Deferred task\n');
+
+    const result = await markDone(join(tmpDir, 'graph'), 'epi-001', 'Deferred task', 'deferred');
+    expect(result.marker).toBe('deferred');
+
+    const content = readFileSync(join(tmpDir, 'graph', 'episodes', 'epi-001-test.md'), 'utf-8');
+    expect(content).toContain('- [deferred] Deferred task');
+  });
+
+  it('throws on already marked item', async () => {
+    writeNode(tmpDir, 'episodes', 'epi-001-test.md', {
+      id: 'epi-001', type: 'episode', title: 'Test Episode',
+      created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+    }, '## Checklist\n- [done] Already done\n');
+
+    await expect(
+      markDone(join(tmpDir, 'graph'), 'epi-001', 'Already done')
+    ).rejects.toThrow(/already marked/);
+  });
+
+  it('throws on item not found', async () => {
+    writeNode(tmpDir, 'episodes', 'epi-001-test.md', {
+      id: 'epi-001', type: 'episode', title: 'Test Episode',
+      created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+    }, '## Checklist\n- [ ] Some task\n');
+
+    await expect(
+      markDone(join(tmpDir, 'graph'), 'epi-001', 'Nonexistent task')
+    ).rejects.toThrow(/not found/);
+  });
+
+  it('throws on nonexistent node', async () => {
+    await expect(
+      markDone(join(tmpDir, 'graph'), 'epi-999', 'Some task')
+    ).rejects.toThrow(/not found/);
   });
 });

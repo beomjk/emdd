@@ -62,6 +62,27 @@ export interface CreateEdgeResult extends EdgeAttributes {
   relation: string;
 }
 
+export interface UpdateNodeResult {
+  nodeId: string;
+  updatedFields: string[];
+  updatedDate: string;
+}
+
+export interface DeleteEdgeResult {
+  source: string;
+  target: string;
+  deletedCount: number;
+  deletedRelations: string[];
+}
+
+export type DoneMarker = 'done' | 'deferred' | 'superseded';
+
+export interface MarkDoneResult {
+  episodeId: string;
+  item: string;
+  marker: DoneMarker;
+}
+
 export interface GapDetail {
   type: 'untested_hypothesis' | 'blocking_question' | 'stale_knowledge' | 'orphan_finding' | 'disconnected_cluster';
   nodeIds: string[];

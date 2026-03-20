@@ -20,6 +20,10 @@ import type {
   CheckResult,
   CheckTrigger,
   PromoteCandidate,
+  UpdateNodeResult,
+  DeleteEdgeResult,
+  DoneMarker,
+  MarkDoneResult,
 } from './types.js';
 import { loadConfig } from './config.js';
 export { detectClusters, identifyClusters } from './clusters.js';
@@ -796,4 +800,181 @@ export async function getPromotionCandidates(graphDir: string): Promise<PromoteC
   }
 
   return candidates;
+}
+
+// ── updateNode ─────────────────────────────────────────────────────
+
+/**
+ * Update frontmatter fields on a node.
+ * Automatically sets `updated` to today's date.
+ * Parses numeric strings for `confidence`.
+ */
+export async function updateNode(
+  graphDir: string,
+  nodeId: string,
+  updates: Record<string, string>,
+): Promise<UpdateNodeResult> {
+  const graph = await loadGraph(graphDir);
+  const node = graph.nodes.get(nodeId);
+
+  if (!node) {
+    throw new Error(`Node not found: ${nodeId}`);
+  }
+
+  const filePath = node.path;
+  const raw = fs.readFileSync(filePath, 'utf-8');
+  const parsed = matter(raw);
+  const data: Record<string, unknown> = structuredClone(parsed.data);
+
+  for (const [key, value] of Object.entries(updates)) {
+    if (key === 'confidence') {
+      const num = parseFloat(value);
+      if (isNaN(num) || num < 0 || num > 1) {
+        throw new Error(`Invalid confidence value: "${value}" (must be 0-1)`);
+      }
+      data[key] = num;
+    } else {
+      data[key] = value;
+    }
+  }
+
+  const updatedDate = new Date().toISOString().slice(0, 10);
+  data.updated = updatedDate;
+
+  const output = matter.stringify(parsed.content, data);
+  fs.writeFileSync(filePath, output);
+
+  return { nodeId, updatedFields: Object.keys(updates), updatedDate };
+}
+
+// ── deleteEdge ─────────────────────────────────────────────────────
+
+/**
+ * Remove link(s) from source to target.
+ * If relation is specified, removes only matching links.
+ * If relation is omitted, removes all links from source to target.
+ */
+export async function deleteEdge(
+  graphDir: string,
+  source: string,
+  target: string,
+  relation?: string,
+): Promise<DeleteEdgeResult> {
+  let canonical: string | undefined;
+  if (relation) {
+    if (!ALL_VALID_RELATIONS.has(relation)) {
+      const valid = [...ALL_VALID_RELATIONS].sort().join(', ');
+      throw new Error(`Invalid relation: ${relation}. Valid: ${valid}`);
+    }
+    canonical = REVERSE_LABELS[relation] ?? relation;
+  }
+
+  const graph = await loadGraph(graphDir);
+  const sourceNode = graph.nodes.get(source);
+  if (!sourceNode) {
+    throw new Error(`Source node not found: ${source}`);
+  }
+
+  const targetNode = graph.nodes.get(target);
+  if (!targetNode) {
+    throw new Error(`Target node not found: ${target}`);
+  }
+
+  const filePath = sourceNode.path;
+  const raw = fs.readFileSync(filePath, 'utf-8');
+  const parsed = matter(raw);
+  const data: Record<string, unknown> = structuredClone(parsed.data);
+
+  const links = Array.isArray(data.links) ? data.links as Record<string, unknown>[] : [];
+  const deletedRelations: string[] = [];
+
+  const remaining = links.filter(link => {
+    const matches = canonical
+      ? String(link.target) === target && String(link.relation) === canonical
+      : String(link.target) === target;
+    if (matches) {
+      deletedRelations.push(String(link.relation));
+    }
+    return !matches;
+  });
+
+  if (deletedRelations.length === 0) {
+    const relStr = relation ? ` with relation '${relation}'` : '';
+    throw new Error(`No matching link from ${source} to ${target}${relStr}`);
+  }
+
+  data.links = remaining;
+  data.updated = new Date().toISOString().slice(0, 10);
+
+  const output = matter.stringify(parsed.content, data);
+  fs.writeFileSync(filePath, output);
+
+  return { source, target, deletedCount: deletedRelations.length, deletedRelations };
+}
+
+// ── markDone ───────────────────────────────────────────────────────
+
+const VALID_MARKERS: DoneMarker[] = ['done', 'deferred', 'superseded'];
+const COMPLETED_MARKERS = ['x', 'X', 'done', 'deferred', 'superseded'];
+
+/**
+ * Mark a checklist item in an episode node with a marker.
+ * Finds `- [ ] {item}` in the body and replaces with `- [{marker}] {item}`.
+ * Throws if the item is not found or already marked.
+ */
+export async function markDone(
+  graphDir: string,
+  episodeId: string,
+  item: string,
+  marker: DoneMarker = 'done',
+): Promise<MarkDoneResult> {
+  if (!VALID_MARKERS.includes(marker)) {
+    throw new Error(`Invalid marker: ${marker}. Valid markers: ${VALID_MARKERS.join(', ')}`);
+  }
+
+  const graph = await loadGraph(graphDir);
+  const node = graph.nodes.get(episodeId);
+
+  if (!node) {
+    throw new Error(`Node not found: ${episodeId}`);
+  }
+
+  const filePath = node.path;
+  const raw = fs.readFileSync(filePath, 'utf-8');
+
+  const lines = raw.split('\n');
+  const uncheckedMatches: number[] = [];
+  const alreadyMarked: number[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].includes(item)) {
+      if (lines[i].includes('- [ ]')) {
+        uncheckedMatches.push(i);
+      } else {
+        for (const m of COMPLETED_MARKERS) {
+          if (lines[i].includes(`- [${m}]`)) {
+            alreadyMarked.push(i);
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  if (uncheckedMatches.length === 0) {
+    if (alreadyMarked.length > 0) {
+      throw new Error(`Item already marked in ${episodeId}: ${item}`);
+    }
+    throw new Error(`Item not found in ${episodeId}: ${item}`);
+  }
+
+  if (uncheckedMatches.length > 1) {
+    throw new Error(`Multiple matches for '${item}' in ${episodeId}`);
+  }
+
+  lines[uncheckedMatches[0]] = lines[uncheckedMatches[0]].replace('- [ ]', `- [${marker}]`);
+
+  fs.writeFileSync(filePath, lines.join('\n'));
+
+  return { episodeId, item, marker };
 }
