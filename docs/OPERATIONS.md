@@ -434,7 +434,7 @@ emdd update exp-003 --set status=COMPLETED
 # - name: Update EMDD
 #   run: |
 #     emdd update exp-004 --set status=COMPLETED
-#     # Note: emdd update sets flat key-value pairs; for nested metadata, edit the file directly
+#     emdd update exp-004 --set config.learning_rate=0.01  # dot-notation for nested fields
 ```
 
 #### Recipe: Paper → Knowledge Node

@@ -810,6 +810,19 @@ export async function getPromotionCandidates(graphDir: string): Promise<PromoteC
  * Automatically sets `updated` to today's date.
  * Parses numeric strings for `confidence`.
  */
+function setByDotPath(obj: Record<string, unknown>, path: string, value: unknown): void {
+  const keys = path.split('.');
+  let current: Record<string, unknown> = obj;
+  for (let i = 0; i < keys.length - 1; i++) {
+    const k = keys[i];
+    if (current[k] == null || typeof current[k] !== 'object' || Array.isArray(current[k])) {
+      current[k] = {};
+    }
+    current = current[k] as Record<string, unknown>;
+  }
+  current[keys[keys.length - 1]] = value;
+}
+
 export async function updateNode(
   graphDir: string,
   nodeId: string,
@@ -862,12 +875,12 @@ export async function updateNode(
       data[key] = value;
     } else if ((value.startsWith('[') || value.startsWith('{')) && value.length > 1) {
       try {
-        data[key] = JSON.parse(value);
+        setByDotPath(data, key, JSON.parse(value));
       } catch {
-        data[key] = value;
+        setByDotPath(data, key, value);
       }
     } else {
-      data[key] = value;
+      setByDotPath(data, key, value);
     }
   }
 

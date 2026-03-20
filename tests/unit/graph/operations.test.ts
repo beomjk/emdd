@@ -1190,6 +1190,94 @@ describe('updateNode', () => {
     const parsed = matter(content);
     expect(parsed.data.note).toBe('{invalid json');
   });
+
+  it('sets nested field on existing object via dot-notation', async () => {
+    writeNode(tmpDir, 'experiments', 'exp-001-dot.md', {
+      id: 'exp-001', type: 'experiment', title: 'Dot test',
+      status: 'PLANNED', confidence: 0.5,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [], config: { batch_size: 32 },
+    });
+
+    await updateNode(join(tmpDir, 'graph'), 'exp-001', { 'config.learning_rate': '0.01' });
+    const content = readFileSync(join(tmpDir, 'graph', 'experiments', 'exp-001-dot.md'), 'utf-8');
+    const parsed = matter(content);
+    expect(parsed.data.config.learning_rate).toBe('0.01');
+    expect(parsed.data.config.batch_size).toBe(32);
+  });
+
+  it('creates intermediate object for dot-notation when parent does not exist', async () => {
+    writeNode(tmpDir, 'hypotheses', 'hyp-004-dot.md', {
+      id: 'hyp-004', type: 'hypothesis', title: 'Dot create',
+      status: 'PROPOSED', confidence: 0.5,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+
+    await updateNode(join(tmpDir, 'graph'), 'hyp-004', { 'meta.reviewer': 'John' });
+    const content = readFileSync(join(tmpDir, 'graph', 'hypotheses', 'hyp-004-dot.md'), 'utf-8');
+    const parsed = matter(content);
+    expect(parsed.data.meta).toEqual({ reviewer: 'John' });
+  });
+
+  it('supports deeply nested dot-notation (3+ levels)', async () => {
+    writeNode(tmpDir, 'experiments', 'exp-002-deep.md', {
+      id: 'exp-002', type: 'experiment', title: 'Deep dot',
+      status: 'PLANNED', confidence: 0.5,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [], results: {},
+    });
+
+    await updateNode(join(tmpDir, 'graph'), 'exp-002', { 'results.metrics.accuracy': '0.95' });
+    const content = readFileSync(join(tmpDir, 'graph', 'experiments', 'exp-002-deep.md'), 'utf-8');
+    const parsed = matter(content);
+    expect(parsed.data.results.metrics.accuracy).toBe('0.95');
+  });
+
+  it('parses JSON value with dot-notation key', async () => {
+    writeNode(tmpDir, 'experiments', 'exp-003-djson.md', {
+      id: 'exp-003', type: 'experiment', title: 'Dot JSON',
+      status: 'PLANNED', confidence: 0.5,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [], results: {},
+    });
+
+    await updateNode(join(tmpDir, 'graph'), 'exp-003', { 'results.confusion': '[[1,0],[0,1]]' });
+    const content = readFileSync(join(tmpDir, 'graph', 'experiments', 'exp-003-djson.md'), 'utf-8');
+    const parsed = matter(content);
+    expect(parsed.data.results.confusion).toEqual([[1, 0], [0, 1]]);
+  });
+
+  it('handles multiple dot-notation keys in a single call', async () => {
+    writeNode(tmpDir, 'experiments', 'exp-004-multi.md', {
+      id: 'exp-004', type: 'experiment', title: 'Multi dot',
+      status: 'PLANNED', confidence: 0.5,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [], config: {},
+    });
+
+    await updateNode(join(tmpDir, 'graph'), 'exp-004', { 'config.lr': '0.001', 'config.epochs': '10' });
+    const content = readFileSync(join(tmpDir, 'graph', 'experiments', 'exp-004-multi.md'), 'utf-8');
+    const parsed = matter(content);
+    expect(parsed.data.config.lr).toBe('0.001');
+    expect(parsed.data.config.epochs).toBe('10');
+  });
+
+  it('dot-notation key does not trigger top-level enum validation', async () => {
+    writeNode(tmpDir, 'hypotheses', 'hyp-005-bypass.md', {
+      id: 'hyp-005', type: 'hypothesis', title: 'Bypass test',
+      status: 'PROPOSED', confidence: 0.5,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+
+    await expect(
+      updateNode(join(tmpDir, 'graph'), 'hyp-005', { 'meta.status': 'ANYTHING' }),
+    ).resolves.not.toThrow();
+    const content = readFileSync(join(tmpDir, 'graph', 'hypotheses', 'hyp-005-bypass.md'), 'utf-8');
+    const parsed = matter(content);
+    expect(parsed.data.meta.status).toBe('ANYTHING');
+  });
 });
 
 describe('deleteEdge', () => {

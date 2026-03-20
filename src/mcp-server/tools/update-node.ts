@@ -10,7 +10,7 @@ export function registerUpdateNode(server: McpServer): void {
     {
       graphDir: z.string().describe('Path to the EMDD graph directory'),
       nodeId: z.string().describe('Node ID to update (e.g., hyp-001)'),
-      updates: z.record(z.string(), z.string()).describe('Key-value pairs to set on frontmatter (e.g., {"status": "TESTING", "confidence": "0.7"})'),
+      updates: z.record(z.string(), z.string()).describe('Key-value pairs to set on frontmatter. Use dot-notation for nested fields (e.g., {"config.learning_rate": "0.01", "status": "TESTING"})'),
     },
     async ({ graphDir, nodeId, updates }) =>
       withErrorHandling(async () => {
