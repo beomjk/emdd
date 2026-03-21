@@ -25,6 +25,11 @@ import { resolveGraphDir } from './graph/loader.js';
 import type { EdgeAttributes } from './graph/types.js';
 import { startMcpServer } from './mcp-server/index.js';
 import { VERSION } from './version.js';
+import { CommandRegistry } from './registry/registry.js';
+import { CliAdapter } from './registry/cli-adapter.js';
+import { listNodesDef } from './registry/commands/list-nodes.js';
+import { createNodeDef } from './registry/commands/create-node.js';
+import { healthDef } from './registry/commands/health.js';
 
 function withCliErrorHandling<T extends unknown[]>(
   fn: (...args: T) => Promise<void>,
@@ -47,6 +52,19 @@ program
   .description('CLI for Evolving Mindmap-Driven Development')
   .version(VERSION);
 
+// ── Registry-based commands (take precedence over legacy) ─────────
+const registry = new CommandRegistry();
+registry.register(listNodesDef);
+registry.register(createNodeDef);
+registry.register(healthDef);
+new CliAdapter(registry).attachTo(program);
+
+/** Check if a command name is already registered by the registry */
+function isRegistered(name: string): boolean {
+  return program.commands.some(c => c.name() === name);
+}
+
+// ── Legacy commands (skipped if already registered by registry) ────
 program
   .command('init [path]')
   .description('Initialize EMDD project')
@@ -56,6 +74,7 @@ program
     initCommand(path, options);
   }));
 
+// new: positional args (new <type> <slug>) — legacy retained until adapter supports positional args
 program
   .command('new <type> <slug>')
   .description('Create a new node')

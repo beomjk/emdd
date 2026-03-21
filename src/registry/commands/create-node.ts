@@ -1,0 +1,31 @@
+import { z } from 'zod';
+import { createNode } from '../../graph/operations.js';
+import { NODE_TYPES } from '../../graph/types.js';
+import type { CreateNodeResult, NodeType } from '../../graph/types.js';
+import { t } from '../../i18n/index.js';
+import type { CommandDef } from '../types.js';
+
+const schema = z.object({
+  type: z.string().describe('Node type (hypothesis, experiment, finding, etc.)'),
+  slug: z.string().describe('URL-friendly slug for the node'),
+  lang: z.string().optional().describe('Language locale (default: en)'),
+});
+
+export const createNodeDef: CommandDef<typeof schema, CreateNodeResult> = {
+  name: 'create-node',
+  description: { en: 'Create a new node', ko: '새 노드 생성' },
+  category: 'write',
+  schema,
+  cli: false, // CLI uses legacy positional args (new <type> <slug>); registry serves MCP only until Phase 6
+
+  async execute(input) {
+    if (!NODE_TYPES.includes(input.type as NodeType)) {
+      throw new Error(t('new.invalid_type', { type: input.type, valid: NODE_TYPES.join(', ') }));
+    }
+    return createNode(input.graphDir, input.type, input.slug, input.lang);
+  },
+
+  format(result, _locale) {
+    return t('new.created', { type: result.type, id: result.id });
+  },
+};

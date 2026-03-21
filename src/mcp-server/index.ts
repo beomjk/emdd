@@ -22,16 +22,29 @@ import { registerEpisodeCreation } from './prompts/episode-creation.js';
 import { registerConsolidation } from './prompts/consolidation.js';
 import { registerHealthReview } from './prompts/health-review.js';
 import { VERSION } from '../version.js';
+import { CommandRegistry } from '../registry/registry.js';
+import { McpAdapter } from '../registry/mcp-adapter.js';
+import { listNodesDef } from '../registry/commands/list-nodes.js';
+import { createNodeDef } from '../registry/commands/create-node.js';
+import { healthDef } from '../registry/commands/health.js';
+
+/** Names registered by the registry (used to skip legacy duplicates) */
+const registryNames = new Set([listNodesDef.name, createNodeDef.name, healthDef.name]);
 
 export function createEmddMcpServer(): McpServer {
   const server = new McpServer({ name: 'emdd', version: VERSION });
 
-  // Tools
-  registerListNodes(server);
+  // Registry-based tools (take precedence)
+  const registry = new CommandRegistry();
+  registry.register(listNodesDef);
+  registry.register(createNodeDef);
+  registry.register(healthDef);
+  new McpAdapter(registry).registerTools(server);
+
+  // Legacy tools (skip those already registered by registry)
+  // list-nodes, create-node, health are now served by registry
   registerReadNode(server);
-  registerCreateNode(server);
   registerCreateEdge(server);
-  registerHealth(server);
   registerCheck(server);
   registerPromote(server);
   registerConfidence(server);
