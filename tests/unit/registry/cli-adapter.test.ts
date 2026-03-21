@@ -209,6 +209,7 @@ describe('CliAdapter', () => {
     it('outputs error as JSON when --json is set', async () => {
       const executeFn = vi.fn().mockRejectedValue(new Error('boom'));
       const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
 
       registry.register(makeCommand({
         name: 'test-cmd',
@@ -221,8 +222,10 @@ describe('CliAdapter', () => {
       const jsonOutput = logSpy.mock.calls[0][0];
       const parsed = JSON.parse(jsonOutput);
       expect(parsed.error).toBe('boom');
+      expect(exitSpy).toHaveBeenCalledWith(1);
 
       logSpy.mockRestore();
+      exitSpy.mockRestore();
     });
   });
 

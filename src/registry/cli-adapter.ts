@@ -97,6 +97,7 @@ export class CliAdapter {
           const message = err instanceof Error ? err.message : String(err);
           if (json) {
             console.log(JSON.stringify({ error: message }, null, 2));
+            process.exit(1);
           } else {
             console.error(`Error: ${message}`);
             process.exit(1);
