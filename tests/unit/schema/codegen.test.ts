@@ -267,6 +267,33 @@ describe('generateTypesFile', () => {
     expect(noPolicyOutput).not.toContain('TRANSITION_POLICY_DEFAULT');
   });
 
+  // ── CEREMONY_TRIGGERS ──
+
+  it('generates CEREMONY_TRIGGERS from ceremonies section', () => {
+    const ceremonyOutput = generateTypesFile(makeTestSchema({
+      ceremonies: {
+        consolidation: {
+          triggers: {
+            unpromoted_findings_threshold: 5,
+            episodes_threshold: 3,
+            all_questions_resolved: true,
+            experiment_overload_threshold: 5,
+          },
+        },
+      },
+    }));
+    expect(ceremonyOutput).toContain('export const CEREMONY_TRIGGERS');
+    expect(ceremonyOutput).toContain('unpromoted_findings_threshold: 5,');
+    expect(ceremonyOutput).toContain('episodes_threshold: 3,');
+    expect(ceremonyOutput).toContain('all_questions_resolved: true,');
+    expect(ceremonyOutput).toContain('experiment_overload_threshold: 5,');
+  });
+
+  it('omits CEREMONY_TRIGGERS when schema section is absent', () => {
+    const noCeremonyOutput = generateTypesFile(makeTestSchema());
+    expect(noCeremonyOutput).not.toContain('CEREMONY_TRIGGERS');
+  });
+
   // ── Schema change detection ──
 
   it('modifying schema input changes generated output', () => {

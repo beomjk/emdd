@@ -193,6 +193,14 @@ validValues:
 transitionPolicy:
   mode: strict
 
+ceremonies:
+  consolidation:
+    triggers:
+      unpromoted_findings_threshold: 5
+      episodes_threshold: 3
+      all_questions_resolved: true
+      experiment_overload_threshold: 5
+
 edgeAttributeAffinity:
   supports: [strength]
   contradicts: [severity]

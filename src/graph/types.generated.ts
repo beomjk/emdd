@@ -201,3 +201,14 @@ export const EDGE_ATTRIBUTE_AFFINITY: Record<string, readonly string[]> = {
 // ── Transition Policy ────────────────────────────────────────────────
 
 export const TRANSITION_POLICY_DEFAULT = 'strict' as const;
+
+// ── Ceremony Triggers ────────────────────────────────────────────────
+
+export const CEREMONY_TRIGGERS: Record<string, Record<string, number | boolean>> = {
+  consolidation: {
+    all_questions_resolved: true,
+    episodes_threshold: 3,
+    experiment_overload_threshold: 5,
+    unpromoted_findings_threshold: 5,
+  },
+};

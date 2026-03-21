@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { checkConsolidation, getHealth } from '../../graph/operations.js';
+import { CEREMONY_TRIGGERS } from '../../graph/types.js';
 
 export function registerConsolidation(server: McpServer): void {
   server.prompt(
@@ -10,6 +11,7 @@ export function registerConsolidation(server: McpServer): void {
     async ({ path: graphDir }) => {
       const checkResult = await checkConsolidation(graphDir);
       const health = await getHealth(graphDir);
+      const ct = CEREMONY_TRIGGERS.consolidation ?? {} as Record<string, number | boolean>;
 
       const triggersSection = checkResult.triggers.length > 0
         ? checkResult.triggers.map(t => `  - [TRIGGERED] ${t.message}`).join('\n')
@@ -27,10 +29,10 @@ ${triggersSection}
 - Average confidence: ${health.avgConfidence !== null ? health.avgConfidence.toFixed(2) : 'N/A'}
 
 ## Consolidation Triggers (run if any apply)
-- 5 or more Finding nodes added since last Consolidation
-- 3 or more Episode nodes added since last Consolidation
+- ${ct.unpromoted_findings_threshold} or more Finding nodes added since last Consolidation
+- ${ct.episodes_threshold} or more Episode nodes added since last Consolidation
 - 0 open Questions (the illusion that research is "done")
-- An Experiment has become a catch-all with 5+ Findings attached
+- An Experiment has become a catch-all with ${ct.experiment_overload_threshold}+ Findings attached
 
 ## Step-by-Step Consolidation Procedure
 
@@ -41,7 +43,7 @@ Review all Finding nodes. For each Finding with high confidence (>= 0.8) and str
 - Use the \`promote\` tool to identify candidates automatically.
 
 ### Step 2: Splitting
-Review Experiments with many attached Findings (5+):
+Review Experiments with many attached Findings (${ct.experiment_overload_threshold}+):
 - Split bloated Experiments into focused sub-experiments.
 - Reassign Findings to the appropriate sub-experiment.
 

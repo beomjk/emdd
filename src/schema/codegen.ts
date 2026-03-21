@@ -20,6 +20,7 @@ export function generateTypesFile(schema: GraphSchema): string {
     generateValidValuesSection(schema),
     generateEdgeAttributeAffinitySection(schema),
     generateTransitionPolicySection(schema),
+    generateCeremonyTriggersSection(schema),
     '', // trailing newline
   ];
 
@@ -226,6 +227,30 @@ function generateValidValuesSection(schema: GraphSchema): string {
     lines.push(`export const ${constName} = [${vals}] as const;`);
   }
 
+  return lines.join('\n');
+}
+
+function generateCeremonyTriggersSection(schema: GraphSchema): string {
+  if (!schema.ceremonies) return '';
+
+  const lines: string[] = [];
+  lines.push('');
+  lines.push(sectionComment('Ceremony Triggers'));
+  lines.push('');
+  lines.push('export const CEREMONY_TRIGGERS: Record<string, Record<string, number | boolean>> = {');
+
+  const ceremonyNames = Object.keys(schema.ceremonies).sort();
+  for (const name of ceremonyNames) {
+    const ceremony = schema.ceremonies[name];
+    const triggerEntries = Object.entries(ceremony.triggers).sort(([a], [b]) => a.localeCompare(b));
+    lines.push(`  ${name}: {`);
+    for (const [key, value] of triggerEntries) {
+      lines.push(`    ${key}: ${value},`);
+    }
+    lines.push('  },');
+  }
+
+  lines.push('};');
   return lines.join('\n');
 }
 

@@ -3,7 +3,7 @@ import path from 'node:path';
 import matter from 'gray-matter';
 import { loadGraph } from './loader.js';
 import { nextId, renderTemplate, nodePath, sanitizeSlug } from './templates.js';
-import { NODE_TYPES, NODE_TYPE_DIRS, ALL_VALID_RELATIONS, REVERSE_LABELS, THRESHOLDS, VALID_SEVERITIES, VALID_DEPENDENCY_TYPES, VALID_IMPACTS, VALID_STATUSES, VALID_FINDING_TYPES, VALID_URGENCIES, VALID_RISK_LEVELS, VALID_REVERSIBILITIES, EDGE_ATTRIBUTE_AFFINITY, TRANSITION_POLICY_DEFAULT, TRANSITION_TABLE, MANUAL_TRANSITIONS } from './types.js';
+import { NODE_TYPES, NODE_TYPE_DIRS, ALL_VALID_RELATIONS, REVERSE_LABELS, THRESHOLDS, VALID_SEVERITIES, VALID_DEPENDENCY_TYPES, VALID_IMPACTS, VALID_STATUSES, VALID_FINDING_TYPES, VALID_URGENCIES, VALID_RISK_LEVELS, VALID_REVERSIBILITIES, EDGE_ATTRIBUTE_AFFINITY, TRANSITION_POLICY_DEFAULT, TRANSITION_TABLE, MANUAL_TRANSITIONS, CEREMONY_TRIGGERS } from './types.js';
 import { validateTransition } from './transition-engine.js';
 import type {
   Node,
@@ -719,27 +719,34 @@ export async function checkConsolidation(graphDir: string): Promise<CheckResult>
     }
   }
 
-  // 1. Unpromoted findings threshold (5)
+  // Ceremony thresholds from schema
+  const ct = CEREMONY_TRIGGERS.consolidation ?? {};
+  const findingsThreshold = (ct.unpromoted_findings_threshold as number) ?? 5;
+  const episodesThreshold = (ct.episodes_threshold as number) ?? 3;
+  const allQuestionsResolved = ct.all_questions_resolved as boolean ?? true;
+  const overloadThreshold = (ct.experiment_overload_threshold as number) ?? 5;
+
+  // 1. Unpromoted findings threshold
   const unpromoted = findings.filter(id => !promotedIds.has(id));
-  if (unpromoted.length >= 5) {
+  if (unpromoted.length >= findingsThreshold) {
     triggers.push({
       type: 'findings',
-      message: `Findings pending consolidation: ${unpromoted.length} (threshold: 5)`,
+      message: `Findings pending consolidation: ${unpromoted.length} (threshold: ${findingsThreshold})`,
       count: unpromoted.length,
     });
   }
 
-  // 2. Episode accumulation threshold (3)
-  if (episodes.length >= 3) {
+  // 2. Episode accumulation threshold
+  if (episodes.length >= episodesThreshold) {
     triggers.push({
       type: 'episodes',
-      message: `Episodes since last consolidation: ${episodes.length} (threshold: 3)`,
+      message: `Episodes since last consolidation: ${episodes.length} (threshold: ${episodesThreshold})`,
       count: episodes.length,
     });
   }
 
-  // 3. All questions resolved
-  if (questionCount.total > 0 && openQuestions.length === 0) {
+  // 3. All questions resolved (boolean trigger: total > 0 && open === 0)
+  if (allQuestionsResolved && questionCount.total > 0 && openQuestions.length === 0) {
     triggers.push({
       type: 'questions',
       message: 'All questions resolved — consider generating new ones',
@@ -747,15 +754,15 @@ export async function checkConsolidation(graphDir: string): Promise<CheckResult>
     });
   }
 
-  // 4. Experiment overload (5+ findings attached)
+  // 4. Experiment overload (produces edge count)
   for (const expId of experiments) {
     const expNode = graph.nodes.get(expId);
     if (!expNode) continue;
     const producesCount = expNode.links.filter(l => l.relation === 'produces').length;
-    if (producesCount >= 5) {
+    if (producesCount >= overloadThreshold) {
       triggers.push({
         type: 'experiment_overload',
-        message: `Experiment ${expId} has ${producesCount} findings attached (threshold: 5) — consider splitting`,
+        message: `Experiment ${expId} has ${producesCount} findings attached (threshold: ${overloadThreshold}) — consider splitting`,
         count: producesCount,
       });
     }

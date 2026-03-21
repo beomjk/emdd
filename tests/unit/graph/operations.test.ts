@@ -805,6 +805,35 @@ describe('checkConsolidation', () => {
   });
 });
 
+// ── Ceremony Triggers from Schema (T062) ──
+
+describe('checkConsolidation — schema-declared thresholds', () => {
+  it('uses CEREMONY_TRIGGERS constants (no hardcoded magic numbers)', async () => {
+    // Grep checkConsolidation source for hardcoded 5 or 3 in threshold comparisons
+    const fs = await import('node:fs');
+    const opsSource = fs.readFileSync(
+      new URL('../../../src/graph/operations.ts', import.meta.url), 'utf-8'
+    );
+
+    // Extract checkConsolidation function body
+    const fnStart = opsSource.indexOf('export async function checkConsolidation');
+    const fnBody = opsSource.slice(fnStart, fnStart + 2000);
+
+    // Should reference CEREMONY_TRIGGERS, not hardcoded numbers
+    expect(fnBody).toContain('CEREMONY_TRIGGERS');
+    // Should NOT have the old hardcoded comparisons
+    expect(fnBody).not.toMatch(/>= 5\b/);
+    expect(fnBody).not.toMatch(/>= 3\b/);
+  });
+
+  it('triggers consolidation based on schema thresholds', async () => {
+    // sample-graph: 5 findings (== threshold 5), 3 episodes (== threshold 3)
+    const result = await checkConsolidation(SAMPLE_GRAPH);
+    expect(result.triggers.some(t => t.type === 'findings')).toBe(true);
+    expect(result.triggers.some(t => t.type === 'episodes')).toBe(true);
+  });
+});
+
 describe('getPromotionCandidates', () => {
   it('returns empty when no candidates exist', async () => {
     const candidates = await getPromotionCandidates(EMPTY_GRAPH);
