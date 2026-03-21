@@ -124,6 +124,49 @@
           }
         }
       }
+    },
+    "edgeAttributeAffinity": {
+      "type": "object",
+      "description": "Edge type → allowed attribute names mapping. Edge types not listed do not allow any attributes.",
+      "additionalProperties": {
+        "type": "array",
+        "items": { "type": "string" }
+      }
+    },
+    "transitionPolicy": {
+      "type": "object",
+      "required": ["mode"],
+      "additionalProperties": false,
+      "description": "Transition enforcement policy",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["strict", "warn", "off"],
+          "description": "Enforcement level for state transitions"
+        }
+      }
+    },
+    "ceremonies": {
+      "type": "object",
+      "description": "Ceremony trigger thresholds and flags",
+      "additionalProperties": {
+        "type": "object",
+        "description": "Named ceremony (e.g., consolidation)",
+        "properties": {
+          "triggers": {
+            "type": "object",
+            "description": "Trigger thresholds (number) and flags (boolean)",
+            "additionalProperties": {
+              "oneOf": [
+                { "type": "number" },
+                { "type": "boolean" }
+              ]
+            }
+          }
+        },
+        "required": ["triggers"],
+        "additionalProperties": false
+      }
     }
   }
 }

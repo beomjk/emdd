@@ -35,6 +35,14 @@ const EdgeTypeDefinitionsZod = z.object({
   reverse: z.record(z.string(), z.string()),
 });
 
+const TransitionPolicyZod = z.object({
+  mode: z.enum(['strict', 'warn', 'off']),
+});
+
+const CeremonyZod = z.object({
+  triggers: z.record(z.string(), z.union([z.number(), z.boolean()])),
+});
+
 // ── Main Schema ─────────────────────────────────────────────────────
 
 export const GraphSchemaZod = z.object({
@@ -45,6 +53,9 @@ export const GraphSchemaZod = z.object({
   transitions: z.record(z.string(), z.array(TransitionRuleZod)),
   validValues: z.record(z.string(), z.array(z.string())),
   manualTransitions: z.record(z.string(), z.array(ManualTransitionRuleZod)).optional(),
+  edgeAttributeAffinity: z.record(z.string(), z.array(z.string())).optional(),
+  transitionPolicy: TransitionPolicyZod.optional(),
+  ceremonies: z.record(z.string(), CeremonyZod).optional(),
 });
 
 // ── Exported Types ──────────────────────────────────────────────────
@@ -191,6 +202,20 @@ export function validateReferentialIntegrity(schema: GraphSchema): ValidationErr
             });
           }
         }
+      }
+    }
+  }
+
+  // ── Edge attribute affinity check ──
+  if (schema.edgeAttributeAffinity) {
+    const forwardEdges = new Set(schema.edgeTypes.forward);
+    for (const edgeType of Object.keys(schema.edgeAttributeAffinity)) {
+      if (!forwardEdges.has(edgeType)) {
+        errors.push({
+          path: `edgeAttributeAffinity.${edgeType}`,
+          message: `references non-existent forward edge type "${edgeType}"`,
+          severity: 'ERROR',
+        });
       }
     }
   }
