@@ -13,7 +13,7 @@ export const listNodesDef: CommandDef<typeof schema, Node[]> = {
   description: { en: 'List nodes, optionally filtered by type and/or status', ko: '노드 목록 조회 (타입/상태 필터 가능)' },
   category: 'read',
   schema,
-  cli: false, // CLI uses legacy positional args (list [path]); registry serves MCP only until Phase 6
+  cli: { commandName: 'list' },
 
   async execute(input) {
     const filter: NodeFilter = {};

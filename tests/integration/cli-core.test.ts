@@ -4,12 +4,17 @@ import { mkdtempSync, existsSync, readFileSync, readdirSync, rmSync } from 'node
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
-const CLI = './node_modules/.bin/tsx src/cli.ts';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const PROJECT_ROOT = path.resolve(__dirname, '../..');
+const CLI = `${PROJECT_ROOT}/node_modules/.bin/tsx ${PROJECT_ROOT}/src/cli.ts`;
 
 function run(args: string, cwd?: string): string {
   return execSync(`${CLI} ${args}`, {
     encoding: 'utf-8',
-    cwd: cwd ?? process.cwd(),
+    cwd: cwd ?? PROJECT_ROOT,
     env: { ...process.env, FORCE_COLOR: '0' },
   });
 }
@@ -77,25 +82,25 @@ describe('emdd new', () => {
   });
 
   it('creates a hypothesis node file', () => {
-    run(`new hypothesis test-hyp --path ${tmpDir}`);
+    run(`new --type hypothesis --slug test-hyp`, tmpDir);
     const files = readdirSync(join(tmpDir, 'graph', 'hypotheses'));
     expect(files.some(f => f.includes('hyp-001'))).toBe(true);
   });
 
   it('returns error for invalid type', () => {
-    const { exitCode } = runMayFail(`new invalid-type test --path ${tmpDir}`);
+    const { exitCode } = runMayFail(`new --type invalid-type --slug test`, tmpDir);
     expect(exitCode).not.toBe(0);
   });
 
   it('increments ID on consecutive creation', () => {
-    run(`new hypothesis first --path ${tmpDir}`);
-    run(`new hypothesis second --path ${tmpDir}`);
+    run(`new --type hypothesis --slug first`, tmpDir);
+    run(`new --type hypothesis --slug second`, tmpDir);
     const files = readdirSync(join(tmpDir, 'graph', 'hypotheses'));
     expect(files.some(f => f.includes('hyp-002'))).toBe(true);
   });
 
   it('prints creation message', () => {
-    const result = run(`new hypothesis test-hyp --path ${tmpDir}`);
+    const result = run(`new --type hypothesis --slug test-hyp`, tmpDir);
     expect(result).toMatch(/hyp-001/);
   });
 });
@@ -113,15 +118,15 @@ describe('emdd lint', () => {
   });
 
   it('returns exit code 0 for valid graph', () => {
-    run(`new hypothesis test --path ${tmpDir}`);
-    const { exitCode } = runMayFail(`lint ${tmpDir}`);
+    run(`new --type hypothesis --slug test`, tmpDir);
+    const { exitCode } = runMayFail(`lint`, tmpDir);
     expect(exitCode).toBe(0);
   });
 
   it('prints no-error message for valid graph', () => {
-    run(`new hypothesis test --path ${tmpDir}`);
-    const result = run(`lint ${tmpDir}`);
-    expect(result.toLowerCase()).toMatch(/valid|clean|no error/);
+    run(`new --type hypothesis --slug test`, tmpDir);
+    const result = run(`lint`, tmpDir);
+    expect(result.toLowerCase()).toMatch(/valid|clean|no.*error/);
   });
 });
 
@@ -138,15 +143,15 @@ describe('emdd health', () => {
   });
 
   it('prints health dashboard', () => {
-    run(`new hypothesis test --path ${tmpDir}`);
-    const result = run(`health ${tmpDir}`);
+    run(`new --type hypothesis --slug test`, tmpDir);
+    const result = run(`health`, tmpDir);
     expect(result.toLowerCase()).toContain('health');
   });
 
   it('displays node count', () => {
-    run(`new hypothesis test1 --path ${tmpDir}`);
-    run(`new experiment test2 --path ${tmpDir}`);
-    const result = run(`health ${tmpDir}`);
+    run(`new --type hypothesis --slug test1`, tmpDir);
+    run(`new --type experiment --slug test2`, tmpDir);
+    const result = run(`health`, tmpDir);
     // Should show node counts
     expect(result).toMatch(/[12]/);
   });

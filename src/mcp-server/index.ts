@@ -1,22 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { registerListNodes } from './tools/list-nodes.js';
-import { registerReadNode } from './tools/read-node.js';
-import { registerCreateNode } from './tools/create-node.js';
-import { registerCreateEdge } from './tools/create-edge.js';
-import { registerHealth } from './tools/health.js';
-import { registerCheck } from './tools/check.js';
-import { registerPromote } from './tools/promote.js';
-import { registerConfidence } from './tools/confidence.js';
-import { registerTransitions } from './tools/transitions.js';
-import { registerKillCheck } from './tools/kill-check.js';
-import { registerBranchGroups } from './tools/branch-groups.js';
-import { registerNeighbors } from './tools/neighbors.js';
-import { registerGaps } from './tools/gaps.js';
-import { registerUpdateNode } from './tools/update-node.js';
-import { registerDeleteEdge } from './tools/delete-edge.js';
-import { registerMarkDone } from './tools/mark-done.js';
-import { registerAnalyzeRefutation } from './tools/analyze-refutation.js';
 import { registerContextLoading } from './prompts/context-loading.js';
 import { registerEpisodeCreation } from './prompts/episode-creation.js';
 import { registerConsolidation } from './prompts/consolidation.js';
@@ -27,38 +10,59 @@ import { McpAdapter } from '../registry/mcp-adapter.js';
 import { listNodesDef } from '../registry/commands/list-nodes.js';
 import { createNodeDef } from '../registry/commands/create-node.js';
 import { healthDef } from '../registry/commands/health.js';
-
-/** Names registered by the registry (used to skip legacy duplicates) */
-const registryNames = new Set([listNodesDef.name, createNodeDef.name, healthDef.name]);
+import { readNodeDef } from '../registry/commands/read-node.js';
+import { neighborsDef } from '../registry/commands/neighbors.js';
+import { gapsDef } from '../registry/commands/gaps.js';
+import { createEdgeDef } from '../registry/commands/create-edge.js';
+import { deleteEdgeDef } from '../registry/commands/delete-edge.js';
+import { updateNodeDef } from '../registry/commands/update-node.js';
+import { markDoneDef } from '../registry/commands/mark-done.js';
+import { checkDef } from '../registry/commands/check.js';
+import { promoteDef } from '../registry/commands/promote.js';
+import { confidencePropagateDef } from '../registry/commands/confidence-propagate.js';
+import { transitionsDef } from '../registry/commands/transitions.js';
+import { killCheckDef } from '../registry/commands/kill-check.js';
+import { branchGroupsDef } from '../registry/commands/branch-groups.js';
+import { lintDef } from '../registry/commands/lint.js';
+import { backlogDef } from '../registry/commands/backlog.js';
+import { indexGraphDef } from '../registry/commands/index-graph.js';
+import { analyzeRefutationDef } from '../registry/commands/analyze-refutation.js';
 
 export function createEmddMcpServer(): McpServer {
   const server = new McpServer({ name: 'emdd', version: VERSION });
 
-  // Registry-based tools (take precedence)
+  // All tools served from registry
   const registry = new CommandRegistry();
+
+  // Read
   registry.register(listNodesDef);
+  registry.register(readNodeDef);
+  registry.register(neighborsDef);
+  registry.register(gapsDef);
+
+  // Write
   registry.register(createNodeDef);
+  registry.register(createEdgeDef);
+  registry.register(deleteEdgeDef);
+  registry.register(updateNodeDef);
+  registry.register(markDoneDef);
+
+  // Analysis
   registry.register(healthDef);
+  registry.register(checkDef);
+  registry.register(promoteDef);
+  registry.register(confidencePropagateDef);
+  registry.register(transitionsDef);
+  registry.register(killCheckDef);
+  registry.register(branchGroupsDef);
+  registry.register(lintDef);
+  registry.register(backlogDef);
+  registry.register(indexGraphDef);
+  registry.register(analyzeRefutationDef);
+
   new McpAdapter(registry).registerTools(server);
 
-  // Legacy tools (skip those already registered by registry)
-  // list-nodes, create-node, health are now served by registry
-  registerReadNode(server);
-  registerCreateEdge(server);
-  registerCheck(server);
-  registerPromote(server);
-  registerConfidence(server);
-  registerTransitions(server);
-  registerKillCheck(server);
-  registerBranchGroups(server);
-  registerNeighbors(server);
-  registerGaps(server);
-  registerUpdateNode(server);
-  registerDeleteEdge(server);
-  registerMarkDone(server);
-  registerAnalyzeRefutation(server);
-
-  // Prompts
+  // Prompts (not part of registry)
   registerContextLoading(server);
   registerEpisodeCreation(server);
   registerConsolidation(server);

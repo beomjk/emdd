@@ -1,28 +1,9 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
 import { initCommand } from './commands/init.js';
-import { newCommand } from './commands/new.js';
-import { lintCommand } from './commands/lint.js';
-import { healthCommand } from './commands/health.js';
-import { checkCommand } from './commands/check.js';
-import { promoteCommand } from './commands/promote.js';
-import { updateCommand } from './commands/update.js';
-import { linkCommand } from './commands/link.js';
-import { doneCommand } from './commands/done.js';
-import { unlinkCommand } from './commands/unlink.js';
-import { readCommand } from './commands/read.js';
-import { indexCommand } from './commands/index.js';
 import { graphCommand } from './commands/graph.js';
-import { backlogCommand } from './graph/backlog.js';
-import { listCommand } from './commands/list.js';
-import { confidenceCommand } from './commands/confidence.js';
-import { transitionsCommand } from './commands/transitions.js';
-import { killCheckCommand } from './commands/kill-check.js';
-import { branchesCommand } from './commands/branches.js';
 import { serveCommand } from './commands/serve.js';
 import { exportHtmlCommand } from './commands/export-html.js';
-import { resolveGraphDir } from './graph/loader.js';
-import type { EdgeAttributes } from './graph/types.js';
 import { startMcpServer } from './mcp-server/index.js';
 import { VERSION } from './version.js';
 import { CommandRegistry } from './registry/registry.js';
@@ -30,6 +11,23 @@ import { CliAdapter } from './registry/cli-adapter.js';
 import { listNodesDef } from './registry/commands/list-nodes.js';
 import { createNodeDef } from './registry/commands/create-node.js';
 import { healthDef } from './registry/commands/health.js';
+import { readNodeDef } from './registry/commands/read-node.js';
+import { neighborsDef } from './registry/commands/neighbors.js';
+import { gapsDef } from './registry/commands/gaps.js';
+import { createEdgeDef } from './registry/commands/create-edge.js';
+import { deleteEdgeDef } from './registry/commands/delete-edge.js';
+import { updateNodeDef } from './registry/commands/update-node.js';
+import { markDoneDef } from './registry/commands/mark-done.js';
+import { checkDef } from './registry/commands/check.js';
+import { promoteDef } from './registry/commands/promote.js';
+import { confidencePropagateDef } from './registry/commands/confidence-propagate.js';
+import { transitionsDef } from './registry/commands/transitions.js';
+import { killCheckDef } from './registry/commands/kill-check.js';
+import { branchGroupsDef } from './registry/commands/branch-groups.js';
+import { lintDef } from './registry/commands/lint.js';
+import { backlogDef } from './registry/commands/backlog.js';
+import { indexGraphDef } from './registry/commands/index-graph.js';
+import { analyzeRefutationDef } from './registry/commands/analyze-refutation.js';
 
 function withCliErrorHandling<T extends unknown[]>(
   fn: (...args: T) => Promise<void>,
@@ -52,19 +50,38 @@ program
   .description('CLI for Evolving Mindmap-Driven Development')
   .version(VERSION);
 
-// ── Registry-based commands (take precedence over legacy) ─────────
+// ── Registry-based commands ─────────────────────────────────────────
 const registry = new CommandRegistry();
+
+// Read commands
 registry.register(listNodesDef);
+registry.register(readNodeDef);
+registry.register(neighborsDef);
+registry.register(gapsDef);
+
+// Write commands
 registry.register(createNodeDef);
+registry.register(createEdgeDef);
+registry.register(deleteEdgeDef);
+registry.register(updateNodeDef);
+registry.register(markDoneDef);
+
+// Analysis commands
 registry.register(healthDef);
+registry.register(checkDef);
+registry.register(promoteDef);
+registry.register(confidencePropagateDef);
+registry.register(transitionsDef);
+registry.register(killCheckDef);
+registry.register(branchGroupsDef);
+registry.register(lintDef);
+registry.register(backlogDef);
+registry.register(indexGraphDef);
+registry.register(analyzeRefutationDef);
+
 new CliAdapter(registry).attachTo(program);
 
-/** Check if a command name is already registered by the registry */
-function isRegistered(name: string): boolean {
-  return program.commands.some(c => c.name() === name);
-}
-
-// ── Legacy commands (skipped if already registered by registry) ────
+// ── Non-registry commands (init, graph, serve, export-html, mcp) ──
 program
   .command('init [path]')
   .description('Initialize EMDD project')
@@ -74,244 +91,14 @@ program
     initCommand(path, options);
   }));
 
-// new: positional args (new <type> <slug>) — legacy retained until adapter supports positional args
-program
-  .command('new <type> <slug>')
-  .description('Create a new node')
-  .option('--path <path>', 'Project path')
-  .action(withCliErrorHandling(async (type, slug, options) => {
-    await newCommand(type, slug, options);
-  }));
-
-program
-  .command('list [path]')
-  .description('List nodes, optionally filtered by type and/or status')
-  .option('--type <type>', 'Filter by node type')
-  .option('--status <status>', 'Filter by status')
-  .action(withCliErrorHandling(async (path, options) => {
-    await listCommand(path, options);
-  }));
-
-program
-  .command('read <node-id>')
-  .description('Read a node by ID, showing frontmatter and body')
-  .option('--path <path>', 'Project path')
-  .action(withCliErrorHandling(async (nodeId, options) => {
-    const graphDir = resolveGraphDir(options.path);
-    await readCommand(graphDir, nodeId);
-  }));
-
-program
-  .command('lint [path]')
-  .description('Validate graph schema and links')
-  .action(withCliErrorHandling(async (path) => {
-    await lintCommand(path);
-  }));
-
-program
-  .command('health [path]')
-  .description('Show health dashboard')
-  .option('--all', 'Show full detail including gap analysis')
-  .action(withCliErrorHandling(async (path, options) => {
-    await healthCommand(path, { all: options.all });
-  }));
-
-program
-  .command('check [path]')
-  .description('Check consolidation triggers')
-  .action(withCliErrorHandling(async (path) => {
-    const graphDir = resolveGraphDir(path);
-    const result = await checkCommand(graphDir);
-    if (result.triggers.length === 0) {
-      console.log('No consolidation triggers active.');
-    } else {
-      for (const trigger of result.triggers) {
-        console.log(`TRIGGER  ${trigger.type}  ${trigger.message}`);
-      }
-    }
-  }));
-
-program
-  .command('promote [path]')
-  .description('Identify findings eligible for promotion')
-  .action(withCliErrorHandling(async (path) => {
-    const graphDir = resolveGraphDir(path);
-    const result = await promoteCommand(graphDir);
-    if (result.candidates.length === 0) {
-      console.log('No promotion candidates found.');
-    } else {
-      for (const c of result.candidates) {
-        console.log(`CANDIDATE  ${c.id}  confidence=${c.confidence}  supports=${c.supports}`);
-      }
-    }
-  }));
-
-program
-  .command('update <node-id>')
-  .description('Update frontmatter fields on a node')
-  .option('--set <key=value...>', 'Key-value pairs to set')
-  .option('--transition-policy <mode>', 'Transition policy: strict|warn|off')
-  .option('--path <path>', 'Project path')
-  .action(withCliErrorHandling(async (nodeId, options) => {
-    const graphDir = resolveGraphDir(options.path);
-    const updates: Record<string, string> = {};
-    if (options.set) {
-      const pairs = Array.isArray(options.set) ? options.set : [options.set];
-      for (const pair of pairs) {
-        const eqIdx = pair.indexOf('=');
-        if (eqIdx === -1) {
-          console.error(`Invalid key=value: ${pair}`);
-          process.exit(1);
-        }
-        updates[pair.slice(0, eqIdx)] = pair.slice(eqIdx + 1);
-      }
-    }
-    const updateOptions = options.transitionPolicy ? { transitionPolicy: options.transitionPolicy as 'strict' | 'warn' | 'off' } : undefined;
-    await updateCommand(graphDir, nodeId, updates, updateOptions);
-    console.log(`Updated ${nodeId}`);
-  }));
-
-program
-  .command('link <source> <target> <relation>')
-  .description('Add a link between nodes')
-  .option('--path <path>', 'Project path')
-  .option('--strength <n>', 'Link strength 0.0-1.0 (for supports/confirms)', parseFloat)
-  .option('--severity <s>', 'Severity: FATAL|WEAKENING|TENSION (for contradicts)')
-  .option('--completeness <n>', 'Completeness 0.0-1.0 (for answers)', parseFloat)
-  .option('--dependency-type <t>', 'Type: LOGICAL|PRACTICAL|TEMPORAL (for depends_on)')
-  .option('--impact <i>', 'Impact: DECISIVE|SIGNIFICANT|MINOR (for informs)')
-  .action(withCliErrorHandling(async (source, target, relation, options) => {
-    const graphDir = resolveGraphDir(options.path);
-    const attrs: EdgeAttributes = {};
-    if (options.strength !== undefined) attrs.strength = options.strength;
-    if (options.severity) attrs.severity = options.severity;
-    if (options.completeness !== undefined) attrs.completeness = options.completeness;
-    if (options.dependencyType) attrs.dependencyType = options.dependencyType;
-    if (options.impact) attrs.impact = options.impact;
-    const hasAttrs = Object.keys(attrs).length > 0;
-    await linkCommand(graphDir, source, target, relation, hasAttrs ? attrs : undefined);
-    console.log(`Linked ${source} -> ${target} (${relation})`);
-  }));
-
-program
-  .command('unlink <source> <target> [relation]')
-  .description('Remove a link between nodes')
-  .option('--path <path>', 'Project path')
-  .action(withCliErrorHandling(async (source, target, relation, options) => {
-    const graphDir = resolveGraphDir(options.path);
-    await unlinkCommand(graphDir, source, target, relation);
-    const relStr = relation ? ` (${relation})` : '';
-    console.log(`Unlinked ${source} -> ${target}${relStr}`);
-  }));
-
-program
-  .command('done <episode-id> <item>')
-  .description('Mark a checklist item with a status marker')
-  .option('--path <path>', 'Project path')
-  .option('--marker <marker>', 'Marker type (done|deferred|superseded)', 'done')
-  .action(withCliErrorHandling(async (episodeId, item, options) => {
-    const graphDir = resolveGraphDir(options.path);
-    await doneCommand(graphDir, episodeId, item, options.marker);
-    console.log(`Marked as [${options.marker}]: ${item}`);
-  }));
-
-program
-  .command('index [path]')
-  .description('Generate _index.md for the graph')
-  .action(withCliErrorHandling(async (path) => {
-    const graphDir = resolveGraphDir(path);
-    const result = await indexCommand(graphDir);
-    console.log(`Index generated: ${result.nodeCount} nodes`);
-  }));
-
 program
   .command('graph [path]')
   .description('Generate _graph.mmd Mermaid diagram')
   .action(withCliErrorHandling(async (path) => {
+    const { resolveGraphDir } = await import('./graph/loader.js');
     const graphDir = resolveGraphDir(path);
     const result = await graphCommand(graphDir);
     console.log(`Graph generated: ${result.nodeCount} nodes, ${result.edgeCount} edges`);
-  }));
-
-program
-  .command('backlog [path]')
-  .description('Show unchecked backlog items')
-  .option('--status <status>', 'Filter by status (pending|done|deferred|superseded|all)')
-  .action(withCliErrorHandling(async (path, options) => {
-    const graphDir = resolveGraphDir(path);
-    const result = await backlogCommand(graphDir, options.status);
-    if (result.items.length === 0) {
-      console.log('No backlog items.');
-    } else {
-      for (const item of result.items) {
-        const markerStr = item.marker === 'pending' ? '[ ]' : `[${item.marker}]`;
-        console.log(`${markerStr} ${item.episodeId}  ${item.text}`);
-      }
-    }
-  }));
-
-program
-  .command('confidence [path]')
-  .description('Propagate confidence across the graph')
-  .action(withCliErrorHandling(async (path) => {
-    const graphDir = resolveGraphDir(path);
-    const results = await confidenceCommand(graphDir);
-    if (results.length === 0) {
-      console.log('No confidence changes detected.');
-    } else {
-      for (const r of results) {
-        console.log(`${r.nodeId}  ${r.oldConfidence.toFixed(2)} → ${r.newConfidence.toFixed(2)}`);
-      }
-    }
-  }));
-
-program
-  .command('transitions [path]')
-  .description('Detect recommended status transitions')
-  .action(withCliErrorHandling(async (path) => {
-    const graphDir = resolveGraphDir(path);
-    const results = await transitionsCommand(graphDir);
-    if (results.length === 0) {
-      console.log('No status transitions recommended.');
-    } else {
-      for (const r of results) {
-        console.log(`${r.nodeId}  ${r.currentStatus} → ${r.recommendedStatus}  (${r.reason})`);
-      }
-    }
-  }));
-
-program
-  .command('kill-check [path]')
-  .description('Check kill criteria status for hypotheses')
-  .action(withCliErrorHandling(async (path) => {
-    const graphDir = resolveGraphDir(path);
-    const alerts = await killCheckCommand(graphDir);
-    if (alerts.length === 0) {
-      console.log('No kill criterion alerts.');
-    } else {
-      for (const a of alerts) {
-        console.log(`ALERT  ${a.hypothesisId}  [${a.trigger}]  ${a.message}`);
-      }
-    }
-  }));
-
-program
-  .command('branches [path]')
-  .description('List and analyze branch groups')
-  .action(withCliErrorHandling(async (path) => {
-    const graphDir = resolveGraphDir(path);
-    const groups = await branchesCommand(graphDir);
-    if (groups.length === 0) {
-      console.log('No branch groups found.');
-    } else {
-      for (const g of groups) {
-        const status = g.convergenceReady ? `CONVERGENCE READY: ${g.convergenceReason}` : 'OPEN';
-        console.log(`${g.groupId}  [${status}]  ${g.candidates.length} candidates`);
-        for (const w of g.warnings) {
-          console.log(`  WARNING: ${w}`);
-        }
-      }
-    }
   }));
 
 program

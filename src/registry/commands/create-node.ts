@@ -16,7 +16,7 @@ export const createNodeDef: CommandDef<typeof schema, CreateNodeResult> = {
   description: { en: 'Create a new node', ko: '새 노드 생성' },
   category: 'write',
   schema,
-  cli: false, // CLI uses legacy positional args (new <type> <slug>); registry serves MCP only until Phase 6
+  cli: { commandName: 'new' },
 
   async execute(input) {
     if (!NODE_TYPES.includes(input.type as NodeType)) {

@@ -14,8 +14,6 @@ export const healthDef: CommandDef<typeof schema, HealthReport> = {
   description: { en: 'Show health dashboard', ko: '건강 대시보드 표시' },
   category: 'analysis',
   schema,
-  cli: false, // CLI uses legacy positional args (health [path]); registry serves MCP only until Phase 6
-
   async execute(input) {
     return getHealth(input.graphDir);
   },

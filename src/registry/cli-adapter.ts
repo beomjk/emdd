@@ -63,6 +63,21 @@ export class CliAdapter {
         // Remove adapter-injected keys from options before passing to execute
         const { json: _j, lang: _l, ...input } = options;
 
+        // Convert variadic record options (string[]) to Record<string, string>
+        for (const [key, val] of Object.entries(def.schema.shape)) {
+          const inner = unwrapZod(val as z.ZodType);
+          if (zodDefType(inner) === 'record' && Array.isArray(input[key])) {
+            const record: Record<string, string> = {};
+            for (const pair of input[key] as string[]) {
+              const eqIdx = pair.indexOf('=');
+              if (eqIdx > 0) {
+                record[pair.slice(0, eqIdx)] = pair.slice(eqIdx + 1);
+              }
+            }
+            input[key] = record;
+          }
+        }
+
         try {
           const output = await def.execute({ ...input, graphDir } as z.infer<typeof def.schema> & { graphDir: string });
 
