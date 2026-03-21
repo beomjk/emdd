@@ -4,9 +4,10 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import matter from 'gray-matter';
 
-import { indexCommand } from '../../../src/commands/index.js';
-import { graphCommand } from '../../../src/commands/graph.js';
-import { backlogCommand } from '../../../src/commands/backlog.js';
+import { graphCommand } from '../../../src/cli/graph.js';
+import { generateIndex, backlogCommand } from '../../../src/graph/operations.js';
+import { loadGraph } from '../../../src/graph/loader.js';
+import { writeFileSync as fsWriteFileSync } from 'node:fs';
 
 function setupProject(): string {
   const dir = mkdtempSync(join(tmpdir(), 'emdd-utils-'));
@@ -35,7 +36,9 @@ describe('indexCommand', () => {
       tags: [], links: [],
     });
 
-    await indexCommand(join(tmpDir, 'graph'));
+    const graph = await loadGraph(join(tmpDir, 'graph'));
+    const indexContent = generateIndex(graph);
+    fsWriteFileSync(join(tmpDir, 'graph', '_index.md'), indexContent);
 
     expect(existsSync(join(tmpDir, 'graph', '_index.md'))).toBe(true);
   });
@@ -48,7 +51,9 @@ describe('indexCommand', () => {
       tags: [], links: [],
     });
 
-    await indexCommand(join(tmpDir, 'graph'));
+    const graph = await loadGraph(join(tmpDir, 'graph'));
+    const indexContent = generateIndex(graph);
+    fsWriteFileSync(join(tmpDir, 'graph', '_index.md'), indexContent);
 
     const content = readFileSync(join(tmpDir, 'graph', '_index.md'), 'utf-8');
     expect(content).toContain('hyp-001');
@@ -63,8 +68,8 @@ describe('indexCommand', () => {
       tags: [], links: [],
     });
 
-    const result = await indexCommand(join(tmpDir, 'graph'));
-    expect(result.nodeCount).toBe(1);
+    const graph = await loadGraph(join(tmpDir, 'graph'));
+    expect(graph.nodes.size).toBe(1);
   });
 });
 

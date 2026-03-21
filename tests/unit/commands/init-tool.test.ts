@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mkdtempSync, rmSync, mkdirSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { initCommand } from '../../../src/commands/init.js';
+import { initCommand } from '../../../src/cli/init.js';
 
 describe('emdd init --tool', () => {
   let tmpDir: string;

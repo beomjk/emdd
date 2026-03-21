@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
-import { initCommand } from './commands/init.js';
-import { graphCommand } from './commands/graph.js';
-import { serveCommand } from './commands/serve.js';
-import { exportHtmlCommand } from './commands/export-html.js';
+import { initCommand } from './cli/init.js';
+import { graphCommand } from './cli/graph.js';
+import { serveCommand } from './cli/serve.js';
+import { exportHtmlCommand } from './cli/export-html.js';
 import { startMcpServer } from './mcp-server/index.js';
 import { VERSION } from './version.js';
 import { CommandRegistry } from './registry/registry.js';

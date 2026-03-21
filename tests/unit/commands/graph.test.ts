@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, readFileSync, writeFileSync, mkdirSync, existsSync
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import matter from 'gray-matter';
-import { graphCommand } from '../../../src/commands/graph.js';
+import { graphCommand } from '../../../src/cli/graph.js';
 
 function setupProject(): string {
   const dir = mkdtempSync(join(tmpdir(), 'emdd-graph-'));
