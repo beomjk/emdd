@@ -121,17 +121,14 @@ describe('Registry pilot — MCP integration', () => {
     });
   });
 
-  describe('legacy/registry coexistence', () => {
-    it('legacy tools are still available alongside registry tools', async () => {
+  describe('MCP tool registration completeness', () => {
+    it('all expected tools are registered', async () => {
       const tools = await client.listTools();
       const names = tools.tools.map(t => t.name);
 
-      // Registry tools
       expect(names).toContain('list-nodes');
       expect(names).toContain('create-node');
       expect(names).toContain('health');
-
-      // Legacy tools that are NOT in registry
       expect(names).toContain('read-node');
       expect(names).toContain('create-edge');
       expect(names).toContain('check');

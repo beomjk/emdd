@@ -1,10 +1,11 @@
 import { z } from 'zod';
 import { listBranchGroups } from '../../graph/operations.js';
+import type { BranchGroup } from '../../graph/branch-groups.js';
 import type { CommandDef } from '../types.js';
 
 const schema = z.object({});
 
-export const branchGroupsDef: CommandDef<typeof schema, unknown[]> = {
+export const branchGroupsDef: CommandDef<typeof schema, BranchGroup[]> = {
   name: 'branch-groups',
   description: { en: 'List hypothesis branch groups', ko: '가설 브랜치 그룹 목록' },
   category: 'analysis',
@@ -16,10 +17,17 @@ export const branchGroupsDef: CommandDef<typeof schema, unknown[]> = {
   },
 
   format(results, _locale) {
-    const arr = results as Array<{ rootId: string; members: string[] }>;
-    if (arr.length === 0) return 'No branch groups found.';
-    return arr.map(g =>
-      `${g.rootId}: ${g.members.join(', ')}`
-    ).join('\n');
+    if (results.length === 0) return 'No branch groups found.';
+    return results.map(g => {
+      const memberIds = g.candidates.map(c => c.id).join(', ');
+      const lines = [`${g.groupId}: ${memberIds}`];
+      if (g.convergenceReady) {
+        lines.push(`  Convergence ready: ${g.convergenceReason}`);
+      }
+      if (g.warnings.length > 0) {
+        lines.push(...g.warnings.map(w => `  Warning: ${w}`));
+      }
+      return lines.join('\n');
+    }).join('\n');
   },
 };

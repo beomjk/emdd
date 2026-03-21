@@ -6,28 +6,8 @@ import { serveCommand } from './cli/serve.js';
 import { exportHtmlCommand } from './cli/export-html.js';
 import { startMcpServer } from './mcp-server/index.js';
 import { VERSION } from './version.js';
-import { CommandRegistry } from './registry/registry.js';
 import { CliAdapter } from './registry/cli-adapter.js';
-import { listNodesDef } from './registry/commands/list-nodes.js';
-import { createNodeDef } from './registry/commands/create-node.js';
-import { healthDef } from './registry/commands/health.js';
-import { readNodeDef } from './registry/commands/read-node.js';
-import { neighborsDef } from './registry/commands/neighbors.js';
-import { gapsDef } from './registry/commands/gaps.js';
-import { createEdgeDef } from './registry/commands/create-edge.js';
-import { deleteEdgeDef } from './registry/commands/delete-edge.js';
-import { updateNodeDef } from './registry/commands/update-node.js';
-import { markDoneDef } from './registry/commands/mark-done.js';
-import { checkDef } from './registry/commands/check.js';
-import { promoteDef } from './registry/commands/promote.js';
-import { confidencePropagateDef } from './registry/commands/confidence-propagate.js';
-import { transitionsDef } from './registry/commands/transitions.js';
-import { killCheckDef } from './registry/commands/kill-check.js';
-import { branchGroupsDef } from './registry/commands/branch-groups.js';
-import { lintDef } from './registry/commands/lint.js';
-import { backlogDef } from './registry/commands/backlog.js';
-import { indexGraphDef } from './registry/commands/index-graph.js';
-import { analyzeRefutationDef } from './registry/commands/analyze-refutation.js';
+import { createDefaultRegistry } from './registry/all-commands.js';
 
 function withCliErrorHandling<T extends unknown[]>(
   fn: (...args: T) => Promise<void>,
@@ -51,33 +31,7 @@ program
   .version(VERSION);
 
 // ── Registry-based commands ─────────────────────────────────────────
-const registry = new CommandRegistry();
-
-// Read commands
-registry.register(listNodesDef);
-registry.register(readNodeDef);
-registry.register(neighborsDef);
-registry.register(gapsDef);
-
-// Write commands
-registry.register(createNodeDef);
-registry.register(createEdgeDef);
-registry.register(deleteEdgeDef);
-registry.register(updateNodeDef);
-registry.register(markDoneDef);
-
-// Analysis commands
-registry.register(healthDef);
-registry.register(checkDef);
-registry.register(promoteDef);
-registry.register(confidencePropagateDef);
-registry.register(transitionsDef);
-registry.register(killCheckDef);
-registry.register(branchGroupsDef);
-registry.register(lintDef);
-registry.register(backlogDef);
-registry.register(indexGraphDef);
-registry.register(analyzeRefutationDef);
+const registry = createDefaultRegistry();
 
 new CliAdapter(registry).attachTo(program);
 

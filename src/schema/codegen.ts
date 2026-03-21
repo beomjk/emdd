@@ -237,7 +237,7 @@ function generateCeremonyTriggersSection(schema: GraphSchema): string {
   lines.push('');
   lines.push(sectionComment('Ceremony Triggers'));
   lines.push('');
-  lines.push('export const CEREMONY_TRIGGERS: Record<string, Record<string, number | boolean>> = {');
+  lines.push('export const CEREMONY_TRIGGERS = {');
 
   const ceremonyNames = Object.keys(schema.ceremonies).sort();
   for (const name of ceremonyNames) {
@@ -250,7 +250,7 @@ function generateCeremonyTriggersSection(schema: GraphSchema): string {
     lines.push('  },');
   }
 
-  lines.push('};');
+  lines.push('} as const satisfies Record<string, Record<string, number | boolean>>;');
   return lines.join('\n');
 }
 

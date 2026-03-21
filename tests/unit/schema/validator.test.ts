@@ -294,4 +294,65 @@ describe('validateReferentialIntegrity', () => {
     expect(VALID_PRESET_FNS).toContain('all_linked_with');
     expect(VALID_PRESET_FNS).toHaveLength(4);
   });
+
+  it('detects edgeAttributeAffinity referencing non-existent edge type', () => {
+    const schema = makeMinimalSchema({
+      edgeAttributeAffinity: {
+        nonexistent_edge: ['strength'],
+      },
+    });
+    const errors = validateReferentialIntegrity(schema);
+    expect(errors.some(e => e.message.includes('nonexistent_edge'))).toBe(true);
+    expect(errors.some(e => e.path.includes('edgeAttributeAffinity'))).toBe(true);
+  });
+
+  it('accepts valid edgeAttributeAffinity with known edge types', () => {
+    const schema = makeMinimalSchema({
+      edgeAttributeAffinity: {
+        supports: ['strength'],
+      },
+    });
+    const errors = validateReferentialIntegrity(schema);
+    expect(errors.filter(e => e.path.includes('edgeAttributeAffinity'))).toEqual([]);
+  });
+});
+
+// ── New Schema Sections (Zod structural) ─────────────────────────────
+
+describe('New schema sections structural validation', () => {
+  it('rejects transitionPolicy with invalid mode', () => {
+    const raw = { ...makeMinimalSchema(), transitionPolicy: { mode: 'invalid' } };
+    const result = GraphSchemaZod.safeParse(raw);
+    expect(result.success).toBe(false);
+  });
+
+  it('accepts valid transitionPolicy modes', () => {
+    for (const mode of ['strict', 'warn', 'off']) {
+      const raw = { ...makeMinimalSchema(), transitionPolicy: { mode } };
+      const result = GraphSchemaZod.safeParse(raw);
+      expect(result.success).toBe(true);
+    }
+  });
+
+  it('accepts ceremonies with valid trigger values', () => {
+    const raw = {
+      ...makeMinimalSchema(),
+      ceremonies: {
+        consolidation: { triggers: { threshold: 5, flag: true } },
+      },
+    };
+    const result = GraphSchemaZod.safeParse(raw);
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects ceremonies with string trigger value', () => {
+    const raw = {
+      ...makeMinimalSchema(),
+      ceremonies: {
+        consolidation: { triggers: { threshold: 'not_a_number' } },
+      },
+    };
+    const result = GraphSchemaZod.safeParse(raw);
+    expect(result.success).toBe(false);
+  });
 });

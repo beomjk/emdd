@@ -8,6 +8,7 @@ export * from './types.generated.js';
 
 import type { NodeType } from './types.generated.js';
 
+/** Fields must match attributes declared in graph-schema.yaml edgeAttributeAffinity */
 export interface EdgeAttributes {
   strength?: number;
   severity?: 'FATAL' | 'WEAKENING' | 'TENSION';

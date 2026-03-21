@@ -10,6 +10,10 @@ export const messages: Record<string, string> = {
   'health.link_density': '링크 밀도',
   'health.recent_activity': '최근 활동',
   'health.gaps': '구조적 공백',
+  'health.gap_details': '갭 상세',
+  'health.nodes': '노드',
+  'health.affinity_violations': '어피니티 위반',
+  'health.deferred_items': '보류 항목',
 
   // CLI 설명
   'cli.description': '진화하는 마인드맵 주도 개발을 위한 CLI',

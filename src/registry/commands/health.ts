@@ -49,13 +49,25 @@ export const healthDef: CommandDef<typeof schema, HealthReport> = {
     lines.push('');
 
     if (report.gapDetails.length > 0) {
-      lines.push('=== Gap Details ===');
+      lines.push(`=== ${t('health.gap_details')} ===`);
       lines.push('');
       for (const gap of report.gapDetails) {
         const trigger = gap.triggerType ? ` [${gap.triggerType}]` : '';
         lines.push(`  [${gap.type}]${trigger} ${gap.message}`);
-        lines.push(`    Nodes: ${gap.nodeIds.join(', ')}`);
+        lines.push(`    ${t('health.nodes')}: ${gap.nodeIds.join(', ')}`);
       }
+      lines.push('');
+    }
+
+    if (report.affinityViolations.length > 0) {
+      lines.push(`${t('health.affinity_violations')}:`);
+      for (const v of report.affinityViolations) lines.push(`  ${v}`);
+      lines.push('');
+    }
+
+    if (report.deferredItems.length > 0) {
+      lines.push(`${t('health.deferred_items')}:`);
+      for (const d of report.deferredItems) lines.push(`  ${d}`);
       lines.push('');
     }
 

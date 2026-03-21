@@ -4,7 +4,7 @@ import type { $ZodEnumDef, $ZodOptionalDef } from 'zod/v4/core';
 import chalk from 'chalk';
 import type { CommandRegistry } from './registry.js';
 import { resolveGraphDir } from '../graph/loader.js';
-import { getLocale } from '../i18n/index.js';
+import { getLocale, setLocale } from '../i18n/index.js';
 
 /** Get the Zod v4 def.type string */
 function zodDefType(schema: z.ZodType): string {
@@ -44,10 +44,11 @@ export class CliAdapter {
       // Map Zod schema to commander options
       this.addSchemaOptions(cmd, def.schema);
 
-      // Add --json and --lang per-command flags (skip if schema already defines them)
+      // Add --json, --lang, --graphDir per-command flags (skip if schema already defines them)
       const schemaKeys = new Set(Object.keys(def.schema.shape));
       if (!schemaKeys.has('json')) cmd.option('--json', 'Output as JSON');
       if (!schemaKeys.has('lang')) cmd.option('--lang <locale>', 'Language locale');
+      if (!schemaKeys.has('graphDir')) cmd.option('--graphDir <path>', 'Path to graph directory');
 
       // CLI aliases
       if (def.cli && typeof def.cli === 'object' && def.cli.aliases) {
@@ -58,10 +59,13 @@ export class CliAdapter {
       cmd.action(async (options: Record<string, unknown>) => {
         const json = Boolean(options.json);
         const locale = getLocale(options.lang as string | undefined);
-        const graphDir = resolveGraphDir();
+        setLocale(locale);
 
-        // Remove adapter-injected keys from options before passing to execute
-        const { json: _j, lang: _l, ...input } = options;
+        // Strip only adapter-injected keys; preserve schema-defined keys (e.g. create-node's lang)
+        const input: Record<string, unknown> = { ...options };
+        delete input.json;
+        if (!schemaKeys.has('lang')) delete input.lang;
+        delete input.graphDir;
 
         // Convert variadic record options (string[]) to Record<string, string>
         for (const [key, val] of Object.entries(def.schema.shape)) {
@@ -72,6 +76,8 @@ export class CliAdapter {
               const eqIdx = pair.indexOf('=');
               if (eqIdx > 0) {
                 record[pair.slice(0, eqIdx)] = pair.slice(eqIdx + 1);
+              } else {
+                console.error(chalk.yellow(`Warning: ignored malformed --${key} entry "${pair}" (expected key=value)`));
               }
             }
             input[key] = record;
@@ -79,6 +85,7 @@ export class CliAdapter {
         }
 
         try {
+          const graphDir = resolveGraphDir(options.graphDir as string | undefined);
           const output = await def.execute({ ...input, graphDir } as z.infer<typeof def.schema> & { graphDir: string });
 
           if (json) {

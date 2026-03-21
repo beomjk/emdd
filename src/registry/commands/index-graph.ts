@@ -14,7 +14,7 @@ interface IndexResult {
 export const indexGraphDef: CommandDef<typeof schema, IndexResult> = {
   name: 'index-graph',
   description: { en: 'Generate the _index.md file', ko: '_index.md 파일 생성' },
-  category: 'analysis',
+  category: 'write',
   schema,
   cli: { commandName: 'index' },
 

@@ -1,10 +1,11 @@
 import { z } from 'zod';
 import { checkKillCriteria } from '../../graph/operations.js';
+import type { KillCriterionAlert } from '../../graph/kill-criterion.js';
 import type { CommandDef } from '../types.js';
 
 const schema = z.object({});
 
-export const killCheckDef: CommandDef<typeof schema, unknown[]> = {
+export const killCheckDef: CommandDef<typeof schema, KillCriterionAlert[]> = {
   name: 'kill-check',
   description: { en: 'Check kill criteria alerts', ko: '킬 크라이테리아 경고 확인' },
   category: 'analysis',
@@ -15,8 +16,7 @@ export const killCheckDef: CommandDef<typeof schema, unknown[]> = {
   },
 
   format(results, _locale) {
-    const arr = results as Array<{ nodeId: string; criterion: string; message: string }>;
-    if (arr.length === 0) return 'No kill criteria alerts.';
-    return arr.map(r => `[${r.nodeId}] ${r.criterion}: ${r.message}`).join('\n');
+    if (results.length === 0) return 'No kill criteria alerts.';
+    return results.map(r => `[${r.hypothesisId}] ${r.killCriterion}: ${r.message}`).join('\n');
   },
 };

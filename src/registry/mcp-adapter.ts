@@ -27,7 +27,7 @@ export class McpAdapter {
           try {
             const graphDir = (input.graphDir as string) || resolveGraphDir();
             const { graphDir: _g, ...rest } = input;
-            const output = await def.execute({ ...rest, graphDir } as any);
+            const output = await def.execute({ ...rest, graphDir } as z.infer<typeof def.schema> & { graphDir: string });
             return {
               content: [{ type: 'text' as const, text: JSON.stringify(output, null, 2) }],
             };

@@ -204,11 +204,11 @@ export const TRANSITION_POLICY_DEFAULT = 'strict' as const;
 
 // ── Ceremony Triggers ────────────────────────────────────────────────
 
-export const CEREMONY_TRIGGERS: Record<string, Record<string, number | boolean>> = {
+export const CEREMONY_TRIGGERS = {
   consolidation: {
     all_questions_resolved: true,
     episodes_threshold: 3,
     experiment_overload_threshold: 5,
     unpromoted_findings_threshold: 5,
   },
-};
+} as const satisfies Record<string, Record<string, number | boolean>>;

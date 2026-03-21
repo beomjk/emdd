@@ -10,6 +10,10 @@ export const messages: Record<string, string> = {
   'health.link_density': 'Link Density',
   'health.recent_activity': 'Recent Activity',
   'health.gaps': 'Structural Gaps',
+  'health.gap_details': 'Gap Details',
+  'health.nodes': 'Nodes',
+  'health.affinity_violations': 'Affinity Violations',
+  'health.deferred_items': 'Deferred Items',
 
   // CLI descriptions
   'cli.description': 'CLI for Evolving Mindmap-Driven Development',

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { readNode } from '../../graph/operations.js';
 import type { NodeDetail } from '../../graph/types.js';
+import { t } from '../../i18n/index.js';
 import type { CommandDef } from '../types.js';
 
 const schema = z.object({
@@ -16,7 +17,7 @@ export const readNodeDef: CommandDef<typeof schema, NodeDetail> = {
 
   async execute(input) {
     const detail = await readNode(input.graphDir, input.nodeId);
-    if (!detail) throw new Error(`Node not found: ${input.nodeId}`);
+    if (!detail) throw new Error(t('error.node_not_found', { id: input.nodeId }));
     return detail;
   },
 

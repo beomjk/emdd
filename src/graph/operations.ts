@@ -149,10 +149,10 @@ export async function createNode(
 
 // ── createEdge ──────────────────────────────────────────────────────
 
-const KNOWN_ATTR_KEYS = ['strength', 'severity', 'completeness', 'dependencyType', 'impact'] as const;
+const KNOWN_ATTR_KEYS = [...new Set(Object.values(EDGE_ATTRIBUTE_AFFINITY).flat())] as const;
 
 function validateEdgeAffinity(relation: string, attrs: EdgeAttributes): void {
-  const providedKeys = KNOWN_ATTR_KEYS.filter(k => attrs[k] !== undefined);
+  const providedKeys = KNOWN_ATTR_KEYS.filter(k => attrs[k as keyof EdgeAttributes] !== undefined);
   if (providedKeys.length === 0) return;
 
   const allowed = EDGE_ATTRIBUTE_AFFINITY[relation];
@@ -720,11 +720,11 @@ export async function checkConsolidation(graphDir: string): Promise<CheckResult>
   }
 
   // Ceremony thresholds from schema
-  const ct = CEREMONY_TRIGGERS.consolidation ?? {};
-  const findingsThreshold = (ct.unpromoted_findings_threshold as number) ?? 5;
-  const episodesThreshold = (ct.episodes_threshold as number) ?? 3;
-  const allQuestionsResolved = ct.all_questions_resolved as boolean ?? true;
-  const overloadThreshold = (ct.experiment_overload_threshold as number) ?? 5;
+  const ct = CEREMONY_TRIGGERS.consolidation;
+  const findingsThreshold = ct.unpromoted_findings_threshold;
+  const episodesThreshold = ct.episodes_threshold;
+  const allQuestionsResolved = ct.all_questions_resolved;
+  const overloadThreshold = ct.experiment_overload_threshold;
 
   // 1. Unpromoted findings threshold
   const unpromoted = findings.filter(id => !promotedIds.has(id));
@@ -945,6 +945,8 @@ export async function updateNode(
           }
         }
         // Node types without transition rules (decision, episode) → enum-only, no rejection
+      } else if (policy === 'warn') {
+        warnings.push(`Node type "${node.type}" has no transition rules; policy "warn" has no effect`);
       }
 
       data[key] = value;
