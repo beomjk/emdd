@@ -13,7 +13,7 @@ import { unlinkCommand } from './commands/unlink.js';
 import { readCommand } from './commands/read.js';
 import { indexCommand } from './commands/index.js';
 import { graphCommand } from './commands/graph.js';
-import { backlogCommand } from './commands/backlog.js';
+import { backlogCommand } from './graph/backlog.js';
 import { listCommand } from './commands/list.js';
 import { confidenceCommand } from './commands/confidence.js';
 import { transitionsCommand } from './commands/transitions.js';

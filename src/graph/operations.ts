@@ -27,6 +27,14 @@ import type {
 } from './types.js';
 import { loadConfig } from './config.js';
 export { detectClusters, identifyClusters } from './clusters.js';
+export { lintNode, lintGraph } from './validator.js';
+export { analyzeRefutation } from './refutation.js';
+export { detectTransitions } from './transitions.js';
+export { propagateConfidence } from './confidence.js';
+export { checkKillCriteria } from './kill-criterion.js';
+export { listBranchGroups } from './branch-groups.js';
+export { generateIndex } from './index-generator.js';
+export { backlogCommand } from './backlog.js';
 import { t } from '../i18n/index.js';
 import type { Locale } from '../i18n/index.js';
 
