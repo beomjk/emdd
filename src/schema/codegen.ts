@@ -18,6 +18,7 @@ export function generateTypesFile(schema: GraphSchema): string {
     generateThresholdsSection(schema),
     generateTransitionsSection(schema),
     generateValidValuesSection(schema),
+    generateEdgeAttributeAffinitySection(schema),
     '', // trailing newline
   ];
 
@@ -223,6 +224,25 @@ function generateValidValuesSection(schema: GraphSchema): string {
     const vals = values.map(v => `'${v}'`).join(', ');
     lines.push(`export const ${constName} = [${vals}] as const;`);
   }
+
+  return lines.join('\n');
+}
+
+function generateEdgeAttributeAffinitySection(schema: GraphSchema): string {
+  if (!schema.edgeAttributeAffinity) return '';
+
+  const entries = Object.entries(schema.edgeAttributeAffinity).sort(([a], [b]) => a.localeCompare(b));
+  const lines: string[] = [];
+
+  lines.push('');
+  lines.push(sectionComment('Edge Attribute Affinity'));
+  lines.push('');
+  lines.push('export const EDGE_ATTRIBUTE_AFFINITY: Record<string, readonly string[]> = {');
+  for (const [edgeType, attrs] of entries) {
+    const vals = attrs.map(a => `'${a}'`).join(', ');
+    lines.push(`  ${edgeType}: [${vals}],`);
+  }
+  lines.push('};');
 
   return lines.join('\n');
 }

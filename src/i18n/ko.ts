@@ -90,6 +90,8 @@ export const messages: Record<string, string> = {
   'error.invalid_completeness': 'completeness는 0.0에서 1.0 사이의 숫자여야 합니다. 입력값: {value}',
   'error.invalid_dependency_type': '잘못된 dependencyType "{value}". 유효한 값: {valid}',
   'error.invalid_impact': '잘못된 impact "{value}". 유효한 값: {valid}',
+  'error.edge_affinity_invalid_attr': '에지 어피니티 위반: "{relation}"은(는) [{allowed}]만 허용하지만, 허용되지 않는 속성이 있습니다: [{invalid}]',
+  'error.edge_affinity_no_attrs': '에지 어피니티 위반: "{relation}"은(는) 속성을 허용하지 않지만, 속성이 있습니다: [{invalid}]',
   'error.invalid_relation': '잘못된 관계: {relation}. 유효한 값: {valid}',
   'error.source_not_found': '소스 노드를 찾을 수 없습니다: {id}',
   'error.target_not_found': '대상 노드를 찾을 수 없습니다: {id}',

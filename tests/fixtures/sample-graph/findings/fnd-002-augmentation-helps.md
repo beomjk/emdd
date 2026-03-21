@@ -10,8 +10,10 @@ tags: [augmentation]
 links:
   - target: hyp-001
     relation: supports
+    strength: 0.85
   - target: exp-001
     relation: supports
+    strength: 0.85
 ---
 
 ## Summary

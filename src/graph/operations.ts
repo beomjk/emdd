@@ -3,7 +3,7 @@ import path from 'node:path';
 import matter from 'gray-matter';
 import { loadGraph } from './loader.js';
 import { nextId, renderTemplate, nodePath, sanitizeSlug } from './templates.js';
-import { NODE_TYPES, NODE_TYPE_DIRS, ALL_VALID_RELATIONS, REVERSE_LABELS, THRESHOLDS, VALID_SEVERITIES, VALID_DEPENDENCY_TYPES, VALID_IMPACTS, VALID_STATUSES, VALID_FINDING_TYPES, VALID_URGENCIES, VALID_RISK_LEVELS, VALID_REVERSIBILITIES } from './types.js';
+import { NODE_TYPES, NODE_TYPE_DIRS, ALL_VALID_RELATIONS, REVERSE_LABELS, THRESHOLDS, VALID_SEVERITIES, VALID_DEPENDENCY_TYPES, VALID_IMPACTS, VALID_STATUSES, VALID_FINDING_TYPES, VALID_URGENCIES, VALID_RISK_LEVELS, VALID_REVERSIBILITIES, EDGE_ATTRIBUTE_AFFINITY } from './types.js';
 import type {
   Node,
   NodeType,
@@ -148,6 +148,23 @@ export async function createNode(
 
 // ── createEdge ──────────────────────────────────────────────────────
 
+const KNOWN_ATTR_KEYS = ['strength', 'severity', 'completeness', 'dependencyType', 'impact'] as const;
+
+function validateEdgeAffinity(relation: string, attrs: EdgeAttributes): void {
+  const providedKeys = KNOWN_ATTR_KEYS.filter(k => attrs[k] !== undefined);
+  if (providedKeys.length === 0) return;
+
+  const allowed = EDGE_ATTRIBUTE_AFFINITY[relation];
+  if (!allowed) {
+    // Edge type has no affinity mapping → no attributes allowed
+    throw new Error(t('error.edge_affinity_no_attrs', { relation, invalid: providedKeys.join(', ') }));
+  }
+  const invalid = providedKeys.filter(k => !allowed.includes(k));
+  if (invalid.length > 0) {
+    throw new Error(t('error.edge_affinity_invalid_attr', { relation, allowed: allowed.join(', '), invalid: invalid.join(', ') }));
+  }
+}
+
 function validateEdgeAttributes(attrs: EdgeAttributes): void {
   if (attrs.strength !== undefined) {
     if (typeof attrs.strength !== 'number' || isNaN(attrs.strength) || attrs.strength < 0 || attrs.strength > 1) {
@@ -215,6 +232,7 @@ export async function planCreateEdge(
   // Add link with optional attributes
   const link: Record<string, unknown> = { target, relation: canonical };
   if (attrs) {
+    validateEdgeAffinity(canonical, attrs);
     validateEdgeAttributes(attrs);
     if (attrs.strength !== undefined) link.strength = attrs.strength;
     if (attrs.severity !== undefined) link.severity = attrs.severity;
@@ -532,6 +550,24 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
     if (node.status === 'DEFERRED') deferredItems.push(id);
   }
 
+  // Edge attribute affinity violations
+  const affinityViolations: string[] = [];
+  for (const node of graph.nodes.values()) {
+    for (const link of node.links) {
+      const attrKeys = KNOWN_ATTR_KEYS.filter(k => (link as Record<string, unknown>)[k] !== undefined);
+      if (attrKeys.length === 0) continue;
+      const allowed = EDGE_ATTRIBUTE_AFFINITY[link.relation];
+      if (!allowed) {
+        affinityViolations.push(`${node.id} → ${link.target} [${link.relation}]: no attributes allowed, but has [${attrKeys.join(', ')}]`);
+      } else {
+        const invalid = attrKeys.filter(k => !allowed.includes(k));
+        if (invalid.length > 0) {
+          affinityViolations.push(`${node.id} → ${link.target} [${link.relation}]: allows [${allowed.join(', ')}], but has disallowed [${invalid.join(', ')}]`);
+        }
+      }
+    }
+  }
+
   return {
     totalNodes,
     totalEdges,
@@ -543,6 +579,7 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
     gaps,
     gapDetails,
     deferredItems,
+    affinityViolations,
   };
 }
 

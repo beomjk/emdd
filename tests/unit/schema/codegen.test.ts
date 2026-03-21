@@ -210,6 +210,42 @@ describe('generateTypesFile', () => {
     }
   });
 
+  // ── EDGE_ATTRIBUTE_AFFINITY ──
+
+  it('generates EDGE_ATTRIBUTE_AFFINITY from edgeAttributeAffinity', () => {
+    const affinityOutput = generateTypesFile(makeTestSchema({
+      edgeAttributeAffinity: {
+        supports: ['strength'],
+        contradicts: ['severity'],
+        confirms: ['strength'],
+      },
+    }));
+    expect(affinityOutput).toContain('export const EDGE_ATTRIBUTE_AFFINITY: Record<string, readonly string[]> = {');
+    expect(affinityOutput).toContain("  confirms: ['strength'],");
+    expect(affinityOutput).toContain("  contradicts: ['severity'],");
+    expect(affinityOutput).toContain("  supports: ['strength'],");
+  });
+
+  it('EDGE_ATTRIBUTE_AFFINITY keys are sorted alphabetically', () => {
+    const affinityOutput = generateTypesFile(makeTestSchema({
+      edgeAttributeAffinity: {
+        supports: ['strength'],
+        contradicts: ['severity'],
+        confirms: ['strength'],
+      },
+    }));
+    const confirmIdx = affinityOutput.indexOf("  confirms: ['strength'],");
+    const contradictIdx = affinityOutput.indexOf("  contradicts: ['severity'],");
+    const supportIdx = affinityOutput.indexOf("  supports: ['strength'],");
+    expect(confirmIdx).toBeLessThan(contradictIdx);
+    expect(contradictIdx).toBeLessThan(supportIdx);
+  });
+
+  it('omits EDGE_ATTRIBUTE_AFFINITY when schema section is absent', () => {
+    const noAffinityOutput = generateTypesFile(makeTestSchema());
+    expect(noAffinityOutput).not.toContain('EDGE_ATTRIBUTE_AFFINITY');
+  });
+
   // ── Schema change detection ──
 
   it('modifying schema input changes generated output', () => {

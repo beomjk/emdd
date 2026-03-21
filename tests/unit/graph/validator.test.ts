@@ -325,3 +325,38 @@ describe('lintGraph', () => {
     expect(errors).toEqual([]);
   });
 });
+
+// ── Affinity validation in lintNode/lintGraph (T022) ──
+
+describe('lintNode — edge attribute affinity', () => {
+  it('returns no affinity errors for valid edge attributes', async () => {
+    const node = await loadNode(path.join(FIXTURES, 'sample-graph/findings/fnd-002-augmentation-helps.md'));
+    expect(node).not.toBeNull();
+    const errors = lintNode(node!);
+    // fnd-002 has supports + strength (valid affinity)
+    expect(errors.filter(e => e.message.includes('affinity'))).toEqual([]);
+  });
+
+  it('reports error for supports edge with disallowed attribute (severity)', async () => {
+    const node = await loadNode(path.join(FIXTURES, 'affinity-violations/findings/fnd-001-bad-supports.md'));
+    expect(node).not.toBeNull();
+    const errors = lintNode(node!);
+    expect(errors.some(e => e.severity === 'error' && e.message.includes('affinity'))).toBe(true);
+  });
+
+  it('reports error for relates_to edge with any attribute (no affinity entry)', async () => {
+    const node = await loadNode(path.join(FIXTURES, 'affinity-violations/findings/fnd-002-bad-relates.md'));
+    expect(node).not.toBeNull();
+    const errors = lintNode(node!);
+    expect(errors.some(e => e.severity === 'error' && e.message.includes('affinity'))).toBe(true);
+  });
+});
+
+describe('lintGraph — edge attribute affinity', () => {
+  it('detects affinity violations across graph', async () => {
+    const graph = await loadGraph(path.join(FIXTURES, 'affinity-violations'));
+    const errors = lintGraph(graph);
+    const affinityErrors = errors.filter(e => e.message.includes('affinity'));
+    expect(affinityErrors.length).toBeGreaterThan(0);
+  });
+});

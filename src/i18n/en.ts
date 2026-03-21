@@ -90,6 +90,8 @@ export const messages: Record<string, string> = {
   'error.invalid_completeness': 'completeness must be a number between 0.0 and 1.0, got {value}',
   'error.invalid_dependency_type': 'Invalid dependencyType "{value}". Valid: {valid}',
   'error.invalid_impact': 'Invalid impact "{value}". Valid: {valid}',
+  'error.edge_affinity_invalid_attr': 'Edge affinity violation: "{relation}" allows [{allowed}], but got disallowed attribute(s): [{invalid}]',
+  'error.edge_affinity_no_attrs': 'Edge affinity violation: "{relation}" does not allow any attributes, but got: [{invalid}]',
   'error.invalid_relation': 'Invalid relation: {relation}. Valid: {valid}',
   'error.source_not_found': 'Source node not found: {id}',
   'error.target_not_found': 'Target node not found: {id}',

@@ -3,6 +3,7 @@ import {
   VALID_STATUSES, REQUIRED_FIELDS, ALL_VALID_RELATIONS,
   VALID_SEVERITIES, VALID_DEPENDENCY_TYPES, VALID_IMPACTS,
   VALID_FINDING_TYPES, VALID_URGENCIES, VALID_RISK_LEVELS, VALID_REVERSIBILITIES,
+  EDGE_ATTRIBUTE_AFFINITY,
 } from './types.js';
 import { t } from '../i18n/index.js';
 
@@ -153,6 +154,29 @@ export function lintNode(node: Node): LintError[] {
         message: `Invalid impact "${link.impact}". Valid: ${VALID_IMPACTS.join(', ')}`,
         severity: 'warning',
       });
+    }
+
+    // Edge attribute affinity validation
+    const attrKeys = (['strength', 'severity', 'completeness', 'dependencyType', 'impact'] as const)
+      .filter(k => (link as Record<string, unknown>)[k] !== undefined);
+    if (attrKeys.length > 0) {
+      const allowed = EDGE_ATTRIBUTE_AFFINITY[link.relation];
+      if (!allowed) {
+        errors.push({
+          nodeId: id, field: 'links',
+          message: `Edge affinity violation: "${link.relation}" does not allow any attributes, but has [${attrKeys.join(', ')}]`,
+          severity: 'error',
+        });
+      } else {
+        const invalid = attrKeys.filter(k => !allowed.includes(k));
+        if (invalid.length > 0) {
+          errors.push({
+            nodeId: id, field: 'links',
+            message: `Edge affinity violation: "${link.relation}" allows [${allowed.join(', ')}], but has disallowed [${invalid.join(', ')}]`,
+            severity: 'error',
+          });
+        }
+      }
     }
   }
 

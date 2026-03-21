@@ -299,6 +299,62 @@ describe('createEdge', () => {
       createEdge(join(tmpDir, 'graph'), 'fnd-001', 'hyp-001', 'contradicts', { severity: 'INVALID' as any })
     ).rejects.toThrow(/severity/);
   });
+
+  // ── Affinity validation (T022) ──
+
+  it('allows valid affinity combo: supports + strength', async () => {
+    writeNode(tmpDir, 'experiments', 'exp-001-test.md', {
+      id: 'exp-001', type: 'experiment', title: 'Test Exp',
+      status: 'COMPLETED', created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'Test',
+      status: 'PROPOSED', confidence: 0.5,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+
+    const result = await createEdge(join(tmpDir, 'graph'), 'exp-001', 'hyp-001', 'supports', { strength: 0.8 });
+    expect(result.strength).toBe(0.8);
+  });
+
+  it('rejects invalid affinity combo: supports + severity', async () => {
+    writeNode(tmpDir, 'experiments', 'exp-001-test.md', {
+      id: 'exp-001', type: 'experiment', title: 'Test Exp',
+      status: 'COMPLETED', created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'Test',
+      status: 'PROPOSED', confidence: 0.5,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+
+    await expect(
+      createEdge(join(tmpDir, 'graph'), 'exp-001', 'hyp-001', 'supports', { severity: 'FATAL' })
+    ).rejects.toThrow(/affinity/i);
+  });
+
+  it('rejects attributes on edge type with no affinity entry (relates_to)', async () => {
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'Test',
+      status: 'PROPOSED', confidence: 0.5,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+    writeNode(tmpDir, 'hypotheses', 'hyp-002-test.md', {
+      id: 'hyp-002', type: 'hypothesis', title: 'Test2',
+      status: 'PROPOSED', confidence: 0.5,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+
+    await expect(
+      createEdge(join(tmpDir, 'graph'), 'hyp-001', 'hyp-002', 'relates_to', { strength: 0.5 })
+    ).rejects.toThrow(/affinity/i);
+  });
 });
 
 describe('getHealth', () => {
@@ -320,6 +376,23 @@ describe('getHealth', () => {
     const report = await getHealth(SAMPLE_GRAPH);
     // gaps is an array of string descriptions
     expect(Array.isArray(report.gaps)).toBe(true);
+  });
+
+  // ── Affinity scan (T022) ──
+
+  it('reports no affinity violations on valid sample-graph', async () => {
+    const report = await getHealth(SAMPLE_GRAPH);
+    expect(report.affinityViolations).toEqual([]);
+  });
+
+  it('reports affinity violations on fixture with invalid edges', async () => {
+    const AFFINITY_VIOLATIONS = path.join(FIXTURES, 'affinity-violations');
+    const report = await getHealth(AFFINITY_VIOLATIONS);
+    expect(report.affinityViolations.length).toBeGreaterThan(0);
+    // supports + severity is a violation
+    expect(report.affinityViolations.some((v: string) => v.includes('supports') && v.includes('severity'))).toBe(true);
+    // relates_to + strength is a violation (no affinity entry)
+    expect(report.affinityViolations.some((v: string) => v.includes('relates_to') && v.includes('strength'))).toBe(true);
   });
 });
 

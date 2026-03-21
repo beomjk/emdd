@@ -186,3 +186,14 @@ export const VALID_REVERSIBILITIES = ['high', 'medium', 'low'] as const;
 export const VALID_RISK_LEVELS = ['high', 'medium', 'low'] as const;
 export const VALID_SEVERITIES = ['FATAL', 'WEAKENING', 'TENSION'] as const;
 export const VALID_URGENCIES = ['BLOCKING', 'HIGH', 'MEDIUM', 'LOW'] as const;
+
+// ── Edge Attribute Affinity ──────────────────────────────────────────
+
+export const EDGE_ATTRIBUTE_AFFINITY: Record<string, readonly string[]> = {
+  answers: ['completeness'],
+  confirms: ['strength'],
+  contradicts: ['severity'],
+  depends_on: ['dependencyType'],
+  informs: ['impact'],
+  supports: ['strength'],
+};
