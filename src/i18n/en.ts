@@ -85,6 +85,8 @@ export const messages: Record<string, string> = {
   'error.graph_not_found': 'No graph/ directory found',
   'error.node_not_found': 'Node not found: {id}',
   'error.invalid_node_type': 'Invalid node type: {type}. Valid types: {valid}',
+  'error.transition_no_rule': 'No transition rule from {from}→{to} (valid paths: {validPaths})',
+  'error.transition_conditions_unmet': 'Transition {from}→{to} conditions not met: {conditions}',
   'error.invalid_strength': 'strength must be a number between 0.0 and 1.0, got {value}',
   'error.invalid_severity': 'Invalid severity "{value}". Valid: {valid}',
   'error.invalid_completeness': 'completeness must be a number between 0.0 and 1.0, got {value}',

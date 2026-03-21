@@ -246,6 +246,27 @@ describe('generateTypesFile', () => {
     expect(noAffinityOutput).not.toContain('EDGE_ATTRIBUTE_AFFINITY');
   });
 
+  // ── TRANSITION_POLICY_DEFAULT ──
+
+  it('generates TRANSITION_POLICY_DEFAULT from transitionPolicy', () => {
+    const policyOutput = generateTypesFile(makeTestSchema({
+      transitionPolicy: { mode: 'strict' },
+    }));
+    expect(policyOutput).toContain("export const TRANSITION_POLICY_DEFAULT = 'strict' as const;");
+  });
+
+  it('generates TRANSITION_POLICY_DEFAULT with warn mode', () => {
+    const policyOutput = generateTypesFile(makeTestSchema({
+      transitionPolicy: { mode: 'warn' },
+    }));
+    expect(policyOutput).toContain("export const TRANSITION_POLICY_DEFAULT = 'warn' as const;");
+  });
+
+  it('omits TRANSITION_POLICY_DEFAULT when schema section is absent', () => {
+    const noPolicyOutput = generateTypesFile(makeTestSchema());
+    expect(noPolicyOutput).not.toContain('TRANSITION_POLICY_DEFAULT');
+  });
+
   // ── Schema change detection ──
 
   it('modifying schema input changes generated output', () => {

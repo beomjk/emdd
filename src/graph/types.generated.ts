@@ -197,3 +197,7 @@ export const EDGE_ATTRIBUTE_AFFINITY: Record<string, readonly string[]> = {
   informs: ['impact'],
   supports: ['strength'],
 };
+
+// ── Transition Policy ────────────────────────────────────────────────
+
+export const TRANSITION_POLICY_DEFAULT = 'strict' as const;

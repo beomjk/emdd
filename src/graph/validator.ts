@@ -158,7 +158,7 @@ export function lintNode(node: Node): LintError[] {
 
     // Edge attribute affinity validation
     const attrKeys = (['strength', 'severity', 'completeness', 'dependencyType', 'impact'] as const)
-      .filter(k => (link as Record<string, unknown>)[k] !== undefined);
+      .filter(k => (link as unknown as Record<string, unknown>)[k] !== undefined);
     if (attrKeys.length > 0) {
       const allowed = EDGE_ATTRIBUTE_AFFINITY[link.relation];
       if (!allowed) {

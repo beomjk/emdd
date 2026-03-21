@@ -8,6 +8,7 @@ export async function updateCommand(
   graphDir: string,
   nodeId: string,
   updates: Record<string, string>,
+  options?: { transitionPolicy?: 'strict' | 'warn' | 'off' },
 ): Promise<void> {
-  await updateNode(graphDir, nodeId, updates);
+  await updateNode(graphDir, nodeId, updates, options);
 }

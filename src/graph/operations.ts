@@ -3,7 +3,8 @@ import path from 'node:path';
 import matter from 'gray-matter';
 import { loadGraph } from './loader.js';
 import { nextId, renderTemplate, nodePath, sanitizeSlug } from './templates.js';
-import { NODE_TYPES, NODE_TYPE_DIRS, ALL_VALID_RELATIONS, REVERSE_LABELS, THRESHOLDS, VALID_SEVERITIES, VALID_DEPENDENCY_TYPES, VALID_IMPACTS, VALID_STATUSES, VALID_FINDING_TYPES, VALID_URGENCIES, VALID_RISK_LEVELS, VALID_REVERSIBILITIES, EDGE_ATTRIBUTE_AFFINITY } from './types.js';
+import { NODE_TYPES, NODE_TYPE_DIRS, ALL_VALID_RELATIONS, REVERSE_LABELS, THRESHOLDS, VALID_SEVERITIES, VALID_DEPENDENCY_TYPES, VALID_IMPACTS, VALID_STATUSES, VALID_FINDING_TYPES, VALID_URGENCIES, VALID_RISK_LEVELS, VALID_REVERSIBILITIES, EDGE_ATTRIBUTE_AFFINITY, TRANSITION_POLICY_DEFAULT, TRANSITION_TABLE, MANUAL_TRANSITIONS } from './types.js';
+import { validateTransition } from './transition-engine.js';
 import type {
   Node,
   NodeType,
@@ -554,7 +555,7 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
   const affinityViolations: string[] = [];
   for (const node of graph.nodes.values()) {
     for (const link of node.links) {
-      const attrKeys = KNOWN_ATTR_KEYS.filter(k => (link as Record<string, unknown>)[k] !== undefined);
+      const attrKeys = KNOWN_ATTR_KEYS.filter(k => (link as unknown as Record<string, unknown>)[k] !== undefined);
       if (attrKeys.length === 0) continue;
       const allowed = EDGE_ATTRIBUTE_AFFINITY[link.relation];
       if (!allowed) {
@@ -872,6 +873,7 @@ export async function updateNode(
   graphDir: string,
   nodeId: string,
   updates: Record<string, string>,
+  options?: { transitionPolicy?: 'strict' | 'warn' | 'off' },
 ): Promise<UpdateNodeResult> {
   const graph = await loadGraph(graphDir);
   const node = graph.nodes.get(nodeId);
@@ -879,6 +881,9 @@ export async function updateNode(
   if (!node) {
     throw new Error(t('error.node_not_found', { id: nodeId }));
   }
+
+  const policy = options?.transitionPolicy ?? TRANSITION_POLICY_DEFAULT;
+  const warnings: string[] = [];
 
   const filePath = node.path;
   const raw = fs.readFileSync(filePath, 'utf-8');
@@ -897,6 +902,44 @@ export async function updateNode(
       if (!validStatuses.includes(value)) {
         throw new Error(t('error.invalid_status', { value, type: node.type, valid: validStatuses.join(', ') }));
       }
+
+      // Transition policy enforcement
+      if (value !== node.status && policy !== 'off' && node.status) {
+        const transitionRules = TRANSITION_TABLE[node.type];
+        if (transitionRules) {
+          const manualRules = MANUAL_TRANSITIONS[node.type];
+          const result = validateTransition(node, graph, transitionRules, value, manualRules);
+          if (!result.valid) {
+            // Determine violation type: no rule exists vs conditions unmet
+            const hasRule = transitionRules.some(r => r.from === node.status && r.to === value);
+            const validPaths = transitionRules
+              .filter(r => r.from === node.status)
+              .map(r => r.to);
+            const manualPaths = (manualRules ?? [])
+              .filter(r => r.from === 'ANY' || r.from === node.status)
+              .map(r => r.to);
+            const allPaths = [...new Set([...validPaths, ...manualPaths])];
+
+            let message: string;
+            if (hasRule) {
+              const failedRule = transitionRules.find(r => r.from === node.status && r.to === value)!;
+              const condDesc = failedRule.conditions.map(c => `${c.fn}(${JSON.stringify(c.args)})`).join(', ');
+              message = t('error.transition_conditions_unmet', { from: node.status, to: value, conditions: condDesc });
+            } else {
+              message = t('error.transition_no_rule', { from: node.status, to: value, validPaths: allPaths.join(', ') || 'none' });
+            }
+
+            if (policy === 'strict') {
+              throw new Error(message);
+            } else {
+              // warn mode
+              warnings.push(message);
+            }
+          }
+        }
+        // Node types without transition rules (decision, episode) → enum-only, no rejection
+      }
+
       data[key] = value;
     } else if (key === 'finding_type') {
       if (!(VALID_FINDING_TYPES as readonly string[]).includes(value)) {
@@ -935,7 +978,9 @@ export async function updateNode(
   const output = matter.stringify(parsed.content, data);
   fs.writeFileSync(filePath, output);
 
-  return { nodeId, updatedFields: Object.keys(updates), updatedDate };
+  const result: UpdateNodeResult = { nodeId, updatedFields: Object.keys(updates), updatedDate };
+  if (warnings.length > 0) result.warnings = warnings;
+  return result;
 }
 
 // ── deleteEdge ─────────────────────────────────────────────────────

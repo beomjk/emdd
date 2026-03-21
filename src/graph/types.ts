@@ -66,6 +66,7 @@ export interface UpdateNodeResult {
   nodeId: string;
   updatedFields: string[];
   updatedDate: string;
+  warnings?: string[];
 }
 
 export interface DeleteEdgeResult {

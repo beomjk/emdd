@@ -1102,7 +1102,7 @@ describe('updateNode', () => {
       tags: [], links: [],
     });
 
-    const result = await updateNode(join(tmpDir, 'graph'), 'hyp-001', { status: 'TESTING' });
+    const result = await updateNode(join(tmpDir, 'graph'), 'hyp-001', { status: 'TESTING' }, { transitionPolicy: 'off' });
     expect(result.nodeId).toBe('hyp-001');
     expect(result.updatedFields).toEqual(['status']);
     expect(result.updatedDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
@@ -1166,7 +1166,7 @@ describe('updateNode', () => {
       tags: [], links: [],
     });
 
-    const result = await updateNode(join(tmpDir, 'graph'), 'hyp-002', { status: 'TESTING' });
+    const result = await updateNode(join(tmpDir, 'graph'), 'hyp-002', { status: 'TESTING' }, { transitionPolicy: 'off' });
     expect(result.updatedFields).toContain('status');
   });
 
@@ -1350,6 +1350,118 @@ describe('updateNode', () => {
     const content = readFileSync(join(tmpDir, 'graph', 'hypotheses', 'hyp-005-bypass.md'), 'utf-8');
     const parsed = matter(content);
     expect(parsed.data.meta.status).toBe('ANYTHING');
+  });
+});
+
+// ── Transition Policy Enforcement (T029) ──
+
+describe('updateNode — transition policy', () => {
+  let tmpDir: string;
+  beforeEach(() => { tmpDir = setupProject(); });
+  afterEach(() => { rmSync(tmpDir, { recursive: true, force: true }); });
+
+  // Helper: hypothesis with PROPOSED status and a linked RUNNING experiment
+  function setupValidTransition() {
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'Test',
+      status: 'PROPOSED', confidence: 0.5,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [{ target: 'exp-001', relation: 'tests' }],
+    });
+    writeNode(tmpDir, 'experiments', 'exp-001-test.md', {
+      id: 'exp-001', type: 'experiment', title: 'Exp',
+      status: 'RUNNING',
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [{ target: 'hyp-001', relation: 'tests' }],
+    });
+  }
+
+  // Helper: hypothesis with no linked experiment (transition conditions unmet)
+  function setupInvalidTransition() {
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'Test',
+      status: 'PROPOSED', confidence: 0.5,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+  }
+
+  // ── strict mode ──
+
+  it('strict: allows valid transition (PROPOSED→TESTING with linked experiment)', async () => {
+    setupValidTransition();
+    const result = await updateNode(join(tmpDir, 'graph'), 'hyp-001', { status: 'TESTING' }, { transitionPolicy: 'strict' });
+    expect(result.updatedFields).toContain('status');
+    expect(result.warnings).toBeUndefined();
+  });
+
+  it('strict: rejects when no transition rule exists (PROPOSED→SUPPORTED)', async () => {
+    setupValidTransition();
+    await expect(
+      updateNode(join(tmpDir, 'graph'), 'hyp-001', { status: 'SUPPORTED' }, { transitionPolicy: 'strict' })
+    ).rejects.toThrow();
+  });
+
+  it('strict: rejects when conditions unmet (PROPOSED→TESTING without experiment)', async () => {
+    setupInvalidTransition();
+    await expect(
+      updateNode(join(tmpDir, 'graph'), 'hyp-001', { status: 'TESTING' }, { transitionPolicy: 'strict' })
+    ).rejects.toThrow();
+  });
+
+  // ── warn mode ──
+
+  it('warn: allows transition with warning when conditions unmet', async () => {
+    setupInvalidTransition();
+    const result = await updateNode(join(tmpDir, 'graph'), 'hyp-001', { status: 'TESTING' }, { transitionPolicy: 'warn' });
+    expect(result.updatedFields).toContain('status');
+    expect(result.warnings).toBeDefined();
+    expect(result.warnings!.length).toBeGreaterThan(0);
+  });
+
+  it('warn: allows valid transition without warnings', async () => {
+    setupValidTransition();
+    const result = await updateNode(join(tmpDir, 'graph'), 'hyp-001', { status: 'TESTING' }, { transitionPolicy: 'warn' });
+    expect(result.updatedFields).toContain('status');
+    expect(result.warnings).toBeUndefined();
+  });
+
+  // ── off mode ──
+
+  it('off: allows any valid-enum transition without checking rules', async () => {
+    setupInvalidTransition();
+    const result = await updateNode(join(tmpDir, 'graph'), 'hyp-001', { status: 'TESTING' }, { transitionPolicy: 'off' });
+    expect(result.updatedFields).toContain('status');
+    expect(result.warnings).toBeUndefined();
+  });
+
+  // ── manual transitions ──
+
+  it('strict: allows manual transition (ANY→DEFERRED) regardless of policy', async () => {
+    setupInvalidTransition();
+    const result = await updateNode(join(tmpDir, 'graph'), 'hyp-001', { status: 'DEFERRED' }, { transitionPolicy: 'strict' });
+    expect(result.updatedFields).toContain('status');
+  });
+
+  // ── node types without transition rules ──
+
+  it('strict: decision type uses enum-only validation (no transition rules)', async () => {
+    writeNode(tmpDir, 'decisions', 'dec-001-test.md', {
+      id: 'dec-001', type: 'decision', title: 'Test',
+      status: 'PROPOSED',
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+    const result = await updateNode(join(tmpDir, 'graph'), 'dec-001', { status: 'ACCEPTED' }, { transitionPolicy: 'strict' });
+    expect(result.updatedFields).toContain('status');
+  });
+
+  // ── non-status updates unaffected ──
+
+  it('non-status updates work regardless of policy', async () => {
+    setupInvalidTransition();
+    const result = await updateNode(join(tmpDir, 'graph'), 'hyp-001', { confidence: '0.8' }, { transitionPolicy: 'strict' });
+    expect(result.updatedFields).toContain('confidence');
   });
 });
 

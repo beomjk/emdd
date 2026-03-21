@@ -190,6 +190,9 @@ validValues:
   severities: [FATAL, WEAKENING, TENSION]
   urgencies: [BLOCKING, HIGH, MEDIUM, LOW]
 
+transitionPolicy:
+  mode: strict
+
 edgeAttributeAffinity:
   supports: [strength]
   contradicts: [severity]

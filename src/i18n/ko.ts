@@ -85,6 +85,8 @@ export const messages: Record<string, string> = {
   'error.graph_not_found': 'graph/ 디렉토리를 찾을 수 없습니다',
   'error.node_not_found': '노드를 찾을 수 없습니다: {id}',
   'error.invalid_node_type': '잘못된 노드 타입: {type}. 유효한 타입: {valid}',
+  'error.transition_no_rule': '{from}→{to}에 대한 전이 규칙이 없습니다 (유효 경로: {validPaths})',
+  'error.transition_conditions_unmet': '전이 {from}→{to} 조건 미충족: {conditions}',
   'error.invalid_strength': 'strength는 0.0에서 1.0 사이의 숫자여야 합니다. 입력값: {value}',
   'error.invalid_severity': '잘못된 severity "{value}". 유효한 값: {valid}',
   'error.invalid_completeness': 'completeness는 0.0에서 1.0 사이의 숫자여야 합니다. 입력값: {value}',

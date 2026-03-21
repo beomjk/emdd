@@ -150,6 +150,7 @@ program
   .command('update <node-id>')
   .description('Update frontmatter fields on a node')
   .option('--set <key=value...>', 'Key-value pairs to set')
+  .option('--transition-policy <mode>', 'Transition policy: strict|warn|off')
   .option('--path <path>', 'Project path')
   .action(withCliErrorHandling(async (nodeId, options) => {
     const graphDir = resolveGraphDir(options.path);
@@ -165,7 +166,8 @@ program
         updates[pair.slice(0, eqIdx)] = pair.slice(eqIdx + 1);
       }
     }
-    await updateCommand(graphDir, nodeId, updates);
+    const updateOptions = options.transitionPolicy ? { transitionPolicy: options.transitionPolicy as 'strict' | 'warn' | 'off' } : undefined;
+    await updateCommand(graphDir, nodeId, updates, updateOptions);
     console.log(`Updated ${nodeId}`);
   }));
 

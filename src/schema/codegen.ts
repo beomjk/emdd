@@ -19,6 +19,7 @@ export function generateTypesFile(schema: GraphSchema): string {
     generateTransitionsSection(schema),
     generateValidValuesSection(schema),
     generateEdgeAttributeAffinitySection(schema),
+    generateTransitionPolicySection(schema),
     '', // trailing newline
   ];
 
@@ -224,6 +225,18 @@ function generateValidValuesSection(schema: GraphSchema): string {
     const vals = values.map(v => `'${v}'`).join(', ');
     lines.push(`export const ${constName} = [${vals}] as const;`);
   }
+
+  return lines.join('\n');
+}
+
+function generateTransitionPolicySection(schema: GraphSchema): string {
+  if (!schema.transitionPolicy) return '';
+
+  const lines: string[] = [];
+  lines.push('');
+  lines.push(sectionComment('Transition Policy'));
+  lines.push('');
+  lines.push(`export const TRANSITION_POLICY_DEFAULT = '${schema.transitionPolicy.mode}' as const;`);
 
   return lines.join('\n');
 }
