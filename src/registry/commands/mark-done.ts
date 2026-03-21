@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { markDone } from '../../graph/operations.js';
 import type { MarkDoneResult } from '../../graph/types.js';
+import { t } from '../../i18n/index.js';
 import type { CommandDef } from '../types.js';
 
 const schema = z.object({
@@ -21,6 +22,6 @@ export const markDoneDef: CommandDef<typeof schema, MarkDoneResult> = {
   },
 
   format(result, _locale) {
-    return `Marked "${result.item}" as ${result.marker} in ${result.episodeId}`;
+    return t('format.item_marked', { item: result.item, marker: result.marker, episodeId: result.episodeId });
   },
 };

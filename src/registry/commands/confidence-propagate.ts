@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { propagateConfidence } from '../../graph/operations.js';
 import type { ConfidenceResult } from '../../graph/confidence.js';
+import { t } from '../../i18n/index.js';
 import type { CommandDef } from '../types.js';
 
 const schema = z.object({});
@@ -17,7 +18,7 @@ export const confidencePropagateDef: CommandDef<typeof schema, ConfidenceResult[
   },
 
   format(results, _locale) {
-    if (results.length === 0) return 'No confidence changes.';
+    if (results.length === 0) return t('format.no_confidence');
     return results.map(r =>
       `${r.nodeId}: ${r.oldConfidence.toFixed(2)} → ${r.newConfidence.toFixed(2)}`
     ).join('\n');

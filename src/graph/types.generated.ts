@@ -187,6 +187,18 @@ export const VALID_RISK_LEVELS = ['high', 'medium', 'low'] as const;
 export const VALID_SEVERITIES = ['FATAL', 'WEAKENING', 'TENSION'] as const;
 export const VALID_URGENCIES = ['BLOCKING', 'HIGH', 'MEDIUM', 'LOW'] as const;
 
+// ── Edge Attributes Interface ────────────────────────────────────────
+
+export interface EdgeAttributes {
+  completeness?: number;
+  dependencyType?: typeof VALID_DEPENDENCY_TYPES[number];
+  impact?: typeof VALID_IMPACTS[number];
+  severity?: typeof VALID_SEVERITIES[number];
+  strength?: number;
+}
+
+export const EDGE_ATTRIBUTE_NAMES = ['completeness', 'dependencyType', 'impact', 'severity', 'strength'] as const;
+
 // ── Edge Attribute Affinity ──────────────────────────────────────────
 
 export const EDGE_ATTRIBUTE_AFFINITY: Record<string, readonly string[]> = {

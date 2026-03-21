@@ -5,9 +5,7 @@ import type { HealthReport } from '../../graph/types.js';
 import { t } from '../../i18n/index.js';
 import type { CommandDef } from '../types.js';
 
-const schema = z.object({
-  all: z.boolean().optional().describe('Show full detail including gap analysis'),
-});
+const schema = z.object({});
 
 export const healthDef: CommandDef<typeof schema, HealthReport> = {
   name: 'health',

@@ -3,6 +3,7 @@ import { generateIndex } from '../../graph/operations.js';
 import { loadGraph } from '../../graph/loader.js';
 import { writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { t } from '../../i18n/index.js';
 import type { CommandDef } from '../types.js';
 
 const schema = z.object({});
@@ -26,6 +27,6 @@ export const indexGraphDef: CommandDef<typeof schema, IndexResult> = {
   },
 
   format(result, _locale) {
-    return `Generated index for ${result.nodeCount} nodes.`;
+    return t('format.index_generated', { count: String(result.nodeCount) });
   },
 };

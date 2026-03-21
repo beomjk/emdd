@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { updateNode } from '../../graph/operations.js';
 import type { UpdateNodeResult } from '../../graph/types.js';
+import { t } from '../../i18n/index.js';
 import type { CommandDef } from '../types.js';
 
 const schema = z.object({
@@ -22,6 +23,6 @@ export const updateNodeDef: CommandDef<typeof schema, UpdateNodeResult> = {
   },
 
   format(result, _locale) {
-    return `Updated ${result.nodeId}: ${result.updatedFields.join(', ')}`;
+    return t('format.node_updated', { nodeId: result.nodeId, fields: result.updatedFields.join(', ') });
   },
 };

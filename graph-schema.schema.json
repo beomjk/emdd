@@ -125,6 +125,21 @@
         }
       }
     },
+    "edgeAttributes": {
+      "type": "object",
+      "description": "Edge attribute definitions with type information. Keys are attribute names.",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["type"],
+        "properties": {
+          "type": { "type": "string", "enum": ["number", "enum"] },
+          "min": { "type": "number" },
+          "max": { "type": "number" },
+          "valuesRef": { "type": "string", "description": "Key in validValues to reference for enum types" }
+        },
+        "additionalProperties": false
+      }
+    },
     "edgeAttributeAffinity": {
       "type": "object",
       "description": "Edge type → allowed attribute names mapping. Edge types not listed do not allow any attributes.",

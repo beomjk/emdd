@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { getNeighbors } from '../../graph/operations.js';
 import type { NeighborNode } from '../../graph/operations.js';
+import { t } from '../../i18n/index.js';
 import type { CommandDef } from '../types.js';
 
 const schema = z.object({
@@ -20,7 +21,7 @@ export const neighborsDef: CommandDef<typeof schema, NeighborNode[]> = {
   },
 
   format(neighbors, _locale) {
-    if (neighbors.length === 0) return 'No neighbors found.';
+    if (neighbors.length === 0) return t('format.no_neighbors');
     return neighbors.map(n => {
       const dir = n.direction === 'outgoing' ? '→' : '←';
       return `${dir} [${n.id}] ${n.title}  ${n.type}  ${n.relation}`;

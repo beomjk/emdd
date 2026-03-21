@@ -1,10 +1,12 @@
 import { z } from 'zod';
 import { listNodes } from '../../graph/operations.js';
 import type { Node, NodeFilter, NodeType } from '../../graph/types.js';
+import { NODE_TYPES } from '../../graph/types.js';
+import { t } from '../../i18n/index.js';
 import type { CommandDef } from '../types.js';
 
 const schema = z.object({
-  type: z.string().optional().describe('Filter by node type'),
+  type: z.enum(NODE_TYPES as unknown as [string, ...string[]]).optional().describe('Filter by node type'),
   status: z.string().optional().describe('Filter by status'),
 });
 
@@ -23,7 +25,7 @@ export const listNodesDef: CommandDef<typeof schema, Node[]> = {
   },
 
   format(nodes, _locale) {
-    if (nodes.length === 0) return 'No nodes found.';
+    if (nodes.length === 0) return t('format.no_nodes');
     return nodes.map(n => {
       const status = n.status ?? '-';
       const conf = n.confidence != null ? ` (${n.confidence.toFixed(2)})` : '';

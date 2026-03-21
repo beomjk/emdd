@@ -44,6 +44,7 @@ export const messages: Record<string, string> = {
   'lint.errors_found': '{count}개 오류 발견',
   'lint.warnings_found': '{count}개 경고 발견',
   'lint.missing_field': '필수 필드 누락: {field}',
+  'lint.invalid_type': '잘못된 노드 타입: "{type}". 유효한 타입: {valid}',
   'lint.invalid_status': '타입 {type}에 대한 잘못된 상태 "{status}". 유효한 값: {valid}',
   'lint.confidence_range': '신뢰도는 0.0에서 1.0 사이여야 합니다. 입력값: {value}',
   'lint.invalid_relation': '잘못된 링크 관계: {relation}',
@@ -84,6 +85,27 @@ export const messages: Record<string, string> = {
   // 백로그
   'backlog.title': '백로그 항목',
   'backlog.empty': '대기 중인 백로그 항목 없음',
+
+  // 포맷 출력
+  'format.link_created': '{source} → {target} 연결됨 [{relation}]',
+  'format.edge_deleted': '{source} → {target}에서 {count}개 링크 삭제됨',
+  'format.node_updated': '{nodeId} 업데이트됨: {fields}',
+  'format.item_marked': '{episodeId}에서 "{item}"을(를) {marker}로 표시',
+  'format.no_neighbors': '이웃 노드가 없습니다.',
+  'format.no_nodes': '노드가 없습니다.',
+  'format.no_gaps': '갭이 없습니다.',
+  'format.no_promote': '승격 후보가 없습니다.',
+  'format.no_confidence': '신뢰도 변경 없음.',
+  'format.index_generated': '{count}개 노드에 대한 인덱스 생성됨.',
+  'format.no_branches': '브랜치 그룹이 없습니다.',
+  'format.convergence': '수렴 준비 완료: {reason}',
+  'format.no_kill': '킬 기준 경고 없음.',
+  'format.no_transitions': '가능한 전이가 없습니다.',
+  'format.no_affected': '영향 받는 가설 없음.',
+  'format.affected_count': '영향 받는 가설 ({count}개):',
+  'format.pivot_triggered': '피벗 세레모니 트리거됨 ({count}개 철회: {ids})',
+  'format.no_backlog': '백로그 항목 없음.',
+  'format.lint_summary': '{errors}개 오류, {warnings}개 경고',
 
   // 오류
   'error.graph_not_found': 'graph/ 디렉토리를 찾을 수 없습니다',

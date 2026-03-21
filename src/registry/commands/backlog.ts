@@ -1,9 +1,13 @@
 import { z } from 'zod';
 import { backlogCommand } from '../../graph/operations.js';
 import type { BacklogResult } from '../../graph/backlog.js';
+import { t } from '../../i18n/index.js';
 import type { CommandDef } from '../types.js';
 
-const schema = z.object({});
+const schema = z.object({
+  status: z.enum(['pending', 'done', 'deferred', 'superseded', 'all']).optional()
+    .describe('Filter by item status (default: pending)'),
+});
 
 export const backlogDef: CommandDef<typeof schema, BacklogResult> = {
   name: 'backlog',
@@ -12,11 +16,11 @@ export const backlogDef: CommandDef<typeof schema, BacklogResult> = {
   schema,
 
   async execute(input) {
-    return backlogCommand(input.graphDir);
+    return backlogCommand(input.graphDir, input.status);
   },
 
   format(result, _locale) {
-    if (result.items.length === 0) return 'No backlog items.';
+    if (result.items.length === 0) return t('format.no_backlog');
     return result.items.map(item =>
       `[${item.marker}] ${item.text} (${item.episodeId})`
     ).join('\n');

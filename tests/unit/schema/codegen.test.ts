@@ -210,6 +210,49 @@ describe('generateTypesFile', () => {
     }
   });
 
+  // ── EdgeAttributes Interface ──
+
+  it('generates EdgeAttributes interface from edgeAttributes', () => {
+    const output = generateTypesFile(makeTestSchema({
+      edgeAttributes: {
+        strength: { type: 'number', min: 0, max: 1 },
+        severity: { type: 'enum', valuesRef: 'severities' },
+      },
+    }));
+    expect(output).toContain('export interface EdgeAttributes {');
+    expect(output).toContain('severity?: typeof VALID_SEVERITIES[number];');
+    expect(output).toContain('strength?: number;');
+    expect(output).toContain('}');
+  });
+
+  it('generates EDGE_ATTRIBUTE_NAMES from edgeAttributes', () => {
+    const output = generateTypesFile(makeTestSchema({
+      edgeAttributes: {
+        strength: { type: 'number', min: 0, max: 1 },
+        severity: { type: 'enum', valuesRef: 'severities' },
+      },
+    }));
+    expect(output).toContain("export const EDGE_ATTRIBUTE_NAMES = ['severity', 'strength'] as const;");
+  });
+
+  it('EdgeAttributes keys are sorted alphabetically', () => {
+    const output = generateTypesFile(makeTestSchema({
+      edgeAttributes: {
+        zeta: { type: 'number' },
+        alpha: { type: 'number' },
+      },
+    }));
+    const alphaIdx = output.indexOf('alpha?: number;');
+    const zetaIdx = output.indexOf('zeta?: number;');
+    expect(alphaIdx).toBeLessThan(zetaIdx);
+  });
+
+  it('omits EdgeAttributes when edgeAttributes section is absent', () => {
+    const output = generateTypesFile(makeTestSchema());
+    expect(output).not.toContain('export interface EdgeAttributes');
+    expect(output).not.toContain('EDGE_ATTRIBUTE_NAMES');
+  });
+
   // ── EDGE_ATTRIBUTE_AFFINITY ──
 
   it('generates EDGE_ATTRIBUTE_AFFINITY from edgeAttributeAffinity', () => {

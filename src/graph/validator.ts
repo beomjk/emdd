@@ -3,7 +3,7 @@ import {
   VALID_STATUSES, REQUIRED_FIELDS, ALL_VALID_RELATIONS,
   VALID_SEVERITIES, VALID_DEPENDENCY_TYPES, VALID_IMPACTS,
   VALID_FINDING_TYPES, VALID_URGENCIES, VALID_RISK_LEVELS, VALID_REVERSIBILITIES,
-  EDGE_ATTRIBUTE_AFFINITY,
+  EDGE_ATTRIBUTE_AFFINITY, EDGE_ATTRIBUTE_NAMES,
 } from './types.js';
 import { t } from '../i18n/index.js';
 
@@ -40,7 +40,7 @@ export function lintNode(node: Node): LintError[] {
     errors.push({
       nodeId: id,
       field: 'type',
-      message: t('lint.missing_field', { field: 'type' }),
+      message: t('lint.invalid_type', { type: node.type, valid: validTypes.join(', ') }),
       severity: 'error',
     });
     return errors;
@@ -105,6 +105,9 @@ export function lintNode(node: Node): LintError[] {
     });
   }
 
+  // Known attribute keys from schema-generated EDGE_ATTRIBUTE_NAMES
+  const knownAttrKeys: readonly string[] = EDGE_ATTRIBUTE_NAMES;
+
   // Check link relations and edge attributes
   for (const link of node.links) {
     if (!ALL_VALID_RELATIONS.has(link.relation)) {
@@ -157,7 +160,6 @@ export function lintNode(node: Node): LintError[] {
     }
 
     // Edge attribute affinity validation
-    const knownAttrKeys = [...new Set(Object.values(EDGE_ATTRIBUTE_AFFINITY).flat())];
     const attrKeys = knownAttrKeys
       .filter(k => (link as unknown as Record<string, unknown>)[k] !== undefined);
     if (attrKeys.length > 0) {

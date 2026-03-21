@@ -18,6 +18,7 @@ export function generateTypesFile(schema: GraphSchema): string {
     generateThresholdsSection(schema),
     generateTransitionsSection(schema),
     generateValidValuesSection(schema),
+    generateEdgeAttributesInterfaceSection(schema),
     generateEdgeAttributeAffinitySection(schema),
     generateTransitionPolicySection(schema),
     generateCeremonyTriggersSection(schema),
@@ -262,6 +263,34 @@ function generateTransitionPolicySection(schema: GraphSchema): string {
   lines.push(sectionComment('Transition Policy'));
   lines.push('');
   lines.push(`export const TRANSITION_POLICY_DEFAULT = '${schema.transitionPolicy.mode}' as const;`);
+
+  return lines.join('\n');
+}
+
+function generateEdgeAttributesInterfaceSection(schema: GraphSchema): string {
+  if (!schema.edgeAttributes) return '';
+
+  const entries = Object.entries(schema.edgeAttributes).sort(([a], [b]) => a.localeCompare(b));
+  const lines: string[] = [];
+
+  lines.push('');
+  lines.push(sectionComment('Edge Attributes Interface'));
+  lines.push('');
+  lines.push('export interface EdgeAttributes {');
+  for (const [name, def] of entries) {
+    if (def.type === 'number') {
+      lines.push(`  ${name}?: number;`);
+    } else if (def.type === 'enum' && def.valuesRef) {
+      const constName = `VALID_${camelToScreamingSnake(def.valuesRef)}`;
+      lines.push(`  ${name}?: typeof ${constName}[number];`);
+    }
+  }
+  lines.push('}');
+
+  // Also export the known attribute names for runtime use
+  lines.push('');
+  const attrNames = entries.map(([n]) => `'${n}'`).join(', ');
+  lines.push(`export const EDGE_ATTRIBUTE_NAMES = [${attrNames}] as const;`);
 
   return lines.join('\n');
 }

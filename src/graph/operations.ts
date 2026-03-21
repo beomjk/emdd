@@ -3,7 +3,7 @@ import path from 'node:path';
 import matter from 'gray-matter';
 import { loadGraph } from './loader.js';
 import { nextId, renderTemplate, nodePath, sanitizeSlug } from './templates.js';
-import { NODE_TYPES, NODE_TYPE_DIRS, ALL_VALID_RELATIONS, REVERSE_LABELS, THRESHOLDS, VALID_SEVERITIES, VALID_DEPENDENCY_TYPES, VALID_IMPACTS, VALID_STATUSES, VALID_FINDING_TYPES, VALID_URGENCIES, VALID_RISK_LEVELS, VALID_REVERSIBILITIES, EDGE_ATTRIBUTE_AFFINITY, TRANSITION_POLICY_DEFAULT, TRANSITION_TABLE, MANUAL_TRANSITIONS, CEREMONY_TRIGGERS } from './types.js';
+import { NODE_TYPES, NODE_TYPE_DIRS, ALL_VALID_RELATIONS, REVERSE_LABELS, THRESHOLDS, VALID_SEVERITIES, VALID_DEPENDENCY_TYPES, VALID_IMPACTS, VALID_STATUSES, VALID_FINDING_TYPES, VALID_URGENCIES, VALID_RISK_LEVELS, VALID_REVERSIBILITIES, EDGE_ATTRIBUTE_AFFINITY, EDGE_ATTRIBUTE_NAMES, TRANSITION_POLICY_DEFAULT, TRANSITION_TABLE, MANUAL_TRANSITIONS, CEREMONY_TRIGGERS } from './types.js';
 import { validateTransition } from './transition-engine.js';
 import type {
   Node,
@@ -149,7 +149,7 @@ export async function createNode(
 
 // ── createEdge ──────────────────────────────────────────────────────
 
-const KNOWN_ATTR_KEYS = [...new Set(Object.values(EDGE_ATTRIBUTE_AFFINITY).flat())] as const;
+const KNOWN_ATTR_KEYS = EDGE_ATTRIBUTE_NAMES;
 
 function validateEdgeAffinity(relation: string, attrs: EdgeAttributes): void {
   const providedKeys = KNOWN_ATTR_KEYS.filter(k => attrs[k as keyof EdgeAttributes] !== undefined);
@@ -945,8 +945,6 @@ export async function updateNode(
           }
         }
         // Node types without transition rules (decision, episode) → enum-only, no rejection
-      } else if (policy === 'warn') {
-        warnings.push(`Node type "${node.type}" has no transition rules; policy "warn" has no effect`);
       }
 
       data[key] = value;

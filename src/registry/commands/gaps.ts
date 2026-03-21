@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { getHealth } from '../../graph/operations.js';
 import type { GapDetail } from '../../graph/types.js';
+import { t } from '../../i18n/index.js';
 import type { CommandDef } from '../types.js';
 
 const schema = z.object({});
@@ -23,7 +24,7 @@ export const gapsDef: CommandDef<typeof schema, GapsResult> = {
   },
 
   format(result, _locale) {
-    if (result.gapDetails.length === 0 && result.gaps.length === 0) return 'No gaps found.';
+    if (result.gapDetails.length === 0 && result.gaps.length === 0) return t('format.no_gaps');
     const lines: string[] = [];
     for (const gap of result.gaps) lines.push(`- ${gap}`);
     for (const detail of result.gapDetails) {

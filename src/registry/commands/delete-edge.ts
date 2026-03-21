@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { deleteEdge } from '../../graph/operations.js';
 import type { DeleteEdgeResult } from '../../graph/types.js';
+import { t } from '../../i18n/index.js';
 import type { CommandDef } from '../types.js';
 
 const schema = z.object({
@@ -21,6 +22,6 @@ export const deleteEdgeDef: CommandDef<typeof schema, DeleteEdgeResult> = {
   },
 
   format(result, _locale) {
-    return `Deleted ${result.deletedCount} link(s) from ${result.source} → ${result.target}`;
+    return t('format.edge_deleted', { count: String(result.deletedCount), source: result.source, target: result.target });
   },
 };

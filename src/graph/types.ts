@@ -6,16 +6,9 @@ export * from './types.generated.js';
 
 // ── Data Interfaces ─────────────────────────────────────────────────
 
-import type { NodeType } from './types.generated.js';
+import type { NodeType, EdgeAttributes } from './types.generated.js';
 
-/** Fields must match attributes declared in graph-schema.yaml edgeAttributeAffinity */
-export interface EdgeAttributes {
-  strength?: number;
-  severity?: 'FATAL' | 'WEAKENING' | 'TENSION';
-  completeness?: number;
-  dependencyType?: 'LOGICAL' | 'PRACTICAL' | 'TEMPORAL';
-  impact?: 'DECISIVE' | 'SIGNIFICANT' | 'MINOR';
-}
+export type { EdgeAttributes };
 
 export interface Link extends EdgeAttributes {
   target: string;

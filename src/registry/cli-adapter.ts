@@ -11,14 +11,16 @@ function zodDefType(schema: z.ZodType): string {
   return schema._zod.def.type;
 }
 
-/** Unwrap optional/default wrappers to get the inner type */
+/** Unwrap optional/default wrappers recursively to get the inner type */
 function unwrapZod(schema: z.ZodType): z.ZodType {
-  const t = zodDefType(schema);
-  if (t === 'optional' || t === 'default') {
-    const def = schema._zod.def as $ZodOptionalDef;
-    return def.innerType as z.ZodType;
+  let current = schema;
+  let t = zodDefType(current);
+  while (t === 'optional' || t === 'default') {
+    const def = current._zod.def as $ZodOptionalDef;
+    current = def.innerType as z.ZodType;
+    t = zodDefType(current);
   }
-  return schema;
+  return current;
 }
 
 /** Get enum values from a ZodEnum via def.entries */
@@ -104,11 +106,10 @@ export class CliAdapter {
           const message = err instanceof Error ? err.message : String(err);
           if (json) {
             console.log(JSON.stringify({ error: message }, null, 2));
-            process.exit(1);
           } else {
             console.error(`Error: ${message}`);
-            process.exit(1);
           }
+          process.exit(1);
         }
       });
     }

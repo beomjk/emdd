@@ -43,6 +43,13 @@ const CeremonyZod = z.object({
   triggers: z.record(z.string(), z.union([z.number(), z.boolean()])),
 });
 
+const EdgeAttributeDefZod = z.object({
+  type: z.enum(['number', 'enum']),
+  min: z.number().optional(),
+  max: z.number().optional(),
+  valuesRef: z.string().optional(),
+});
+
 // ── Main Schema ─────────────────────────────────────────────────────
 
 export const GraphSchemaZod = z.object({
@@ -53,6 +60,7 @@ export const GraphSchemaZod = z.object({
   transitions: z.record(z.string(), z.array(TransitionRuleZod)),
   validValues: z.record(z.string(), z.array(z.string())),
   manualTransitions: z.record(z.string(), z.array(ManualTransitionRuleZod)).optional(),
+  edgeAttributes: z.record(z.string(), EdgeAttributeDefZod).optional(),
   edgeAttributeAffinity: z.record(z.string(), z.array(z.string())).optional(),
   transitionPolicy: TransitionPolicyZod.optional(),
   ceremonies: z.record(z.string(), CeremonyZod).optional(),
@@ -206,16 +214,41 @@ export function validateReferentialIntegrity(schema: GraphSchema): ValidationErr
     }
   }
 
+  // ── Edge attribute definitions check ──
+  if (schema.edgeAttributes) {
+    for (const [attrName, attrDef] of Object.entries(schema.edgeAttributes)) {
+      if (attrDef.type === 'enum' && attrDef.valuesRef) {
+        if (!schema.validValues[attrDef.valuesRef]) {
+          errors.push({
+            path: `edgeAttributes.${attrName}.valuesRef`,
+            message: `references non-existent validValues key "${attrDef.valuesRef}"`,
+            severity: 'ERROR',
+          });
+        }
+      }
+    }
+  }
+
   // ── Edge attribute affinity check ──
   if (schema.edgeAttributeAffinity) {
     const forwardEdges = new Set(schema.edgeTypes.forward);
-    for (const edgeType of Object.keys(schema.edgeAttributeAffinity)) {
+    const knownAttrs = schema.edgeAttributes ? new Set(Object.keys(schema.edgeAttributes)) : new Set<string>();
+    for (const [edgeType, attrs] of Object.entries(schema.edgeAttributeAffinity)) {
       if (!forwardEdges.has(edgeType)) {
         errors.push({
           path: `edgeAttributeAffinity.${edgeType}`,
           message: `references non-existent forward edge type "${edgeType}"`,
           severity: 'ERROR',
         });
+      }
+      for (const attr of attrs) {
+        if (knownAttrs.size > 0 && !knownAttrs.has(attr)) {
+          errors.push({
+            path: `edgeAttributeAffinity.${edgeType}`,
+            message: `attribute "${attr}" is not defined in edgeAttributes (known: ${[...knownAttrs].join(', ')})`,
+            severity: 'WARNING',
+          });
+        }
       }
     }
   }

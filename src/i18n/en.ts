@@ -44,6 +44,7 @@ export const messages: Record<string, string> = {
   'lint.errors_found': '{count} error(s) found',
   'lint.warnings_found': '{count} warning(s) found',
   'lint.missing_field': 'Missing required field: {field}',
+  'lint.invalid_type': 'Invalid node type: "{type}". Valid: {valid}',
   'lint.invalid_status': 'Invalid status "{status}" for type {type}. Valid: {valid}',
   'lint.confidence_range': 'Confidence must be between 0.0 and 1.0, got {value}',
   'lint.invalid_relation': 'Invalid link relation: {relation}',
@@ -84,6 +85,27 @@ export const messages: Record<string, string> = {
   // Backlog
   'backlog.title': 'Backlog Items',
   'backlog.empty': 'No pending backlog items',
+
+  // Format output
+  'format.link_created': 'Linked {source} → {target} [{relation}]',
+  'format.edge_deleted': 'Deleted {count} link(s) from {source} → {target}',
+  'format.node_updated': 'Updated {nodeId}: {fields}',
+  'format.item_marked': 'Marked "{item}" as {marker} in {episodeId}',
+  'format.no_neighbors': 'No neighbors found.',
+  'format.no_nodes': 'No nodes found.',
+  'format.no_gaps': 'No gaps found.',
+  'format.no_promote': 'No promotion candidates.',
+  'format.no_confidence': 'No confidence changes.',
+  'format.index_generated': 'Generated index for {count} nodes.',
+  'format.no_branches': 'No branch groups found.',
+  'format.convergence': 'Convergence ready: {reason}',
+  'format.no_kill': 'No kill criteria alerts.',
+  'format.no_transitions': 'No available transitions.',
+  'format.no_affected': 'No affected hypotheses.',
+  'format.affected_count': 'Affected hypotheses ({count}):',
+  'format.pivot_triggered': 'Pivot ceremony triggered ({count} retracted: {ids})',
+  'format.no_backlog': 'No backlog items.',
+  'format.lint_summary': '{errors} error(s), {warnings} warning(s)',
 
   // Errors
   'error.graph_not_found': 'No graph/ directory found',

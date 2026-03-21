@@ -108,6 +108,36 @@ describe('CliAdapter', () => {
       expect(opt).toBeDefined();
     });
 
+    it('unwraps z.number().optional().default() to number (recursive unwrap)', () => {
+      registry.register(makeCommand({
+        name: 'test-cmd',
+        schema: z.object({
+          depth: z.number().optional().default(1).describe('BFS depth'),
+        }),
+      }));
+      adapter.attachTo(program);
+
+      const cmd = program.commands.find(c => c.name() === 'test-cmd');
+      const opt = cmd!.options.find(o => o.long === '--depth');
+      expect(opt).toBeDefined();
+      // parseFloat should be set as the argument parser
+      expect(opt!.parseArg).toBe(parseFloat);
+    });
+
+    it('maps z.record() to variadic --key <key=value...>', () => {
+      registry.register(makeCommand({
+        name: 'test-cmd',
+        schema: z.object({
+          set: z.record(z.string(), z.string()).describe('Key-value pairs'),
+        }),
+      }));
+      adapter.attachTo(program);
+
+      const cmd = program.commands.find(c => c.name() === 'test-cmd');
+      const opt = cmd!.options.find(o => o.long === '--set');
+      expect(opt).toBeDefined();
+    });
+
     it('uses cli.commandName override', () => {
       registry.register(makeCommand({
         name: 'list-nodes',

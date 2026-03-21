@@ -1,13 +1,13 @@
 import { z } from 'zod';
 import { createNode } from '../../graph/operations.js';
 import { NODE_TYPES } from '../../graph/types.js';
-import type { CreateNodeResult, NodeType } from '../../graph/types.js';
+import type { CreateNodeResult } from '../../graph/types.js';
 import { t } from '../../i18n/index.js';
 import type { CommandDef } from '../types.js';
 
 const schema = z.object({
-  type: z.string().describe('Node type (hypothesis, experiment, finding, etc.)'),
-  slug: z.string().describe('URL-friendly slug for the node'),
+  type: z.enum(NODE_TYPES as unknown as [string, ...string[]]).describe('Node type (hypothesis, experiment, finding, etc.)'),
+  slug: z.string().min(1).max(80).regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/, 'Slug: alphanumeric start, then alphanumeric/dash/underscore').describe('URL-friendly slug for the node'),
   lang: z.string().optional().describe('Language locale (default: en)'),
 });
 
@@ -19,9 +19,6 @@ export const createNodeDef: CommandDef<typeof schema, CreateNodeResult> = {
   cli: { commandName: 'new' },
 
   async execute(input) {
-    if (!NODE_TYPES.includes(input.type as NodeType)) {
-      throw new Error(t('new.invalid_type', { type: input.type, valid: NODE_TYPES.join(', ') }));
-    }
     return createNode(input.graphDir, input.type, input.slug, input.lang);
   },
 

@@ -110,7 +110,8 @@ describe('Registry pilot — MCP integration', () => {
         type: 'invalid_type',
         slug: 'test',
       });
-      expect(errMsg).toContain('invalid_type');
+      // z.enum validation rejects with "Invalid option" listing valid types
+      expect(errMsg).toMatch(/invalid/i);
     });
   });
 
