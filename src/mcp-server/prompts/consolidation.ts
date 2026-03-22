@@ -63,6 +63,10 @@ Find Findings without outgoing links:
 - Add \`supports\`, \`contradicts\`, or \`spawns\` edges as appropriate.
 - Every Finding should connect to at least one Hypothesis or Question.
 
+### Step 6: Record Consolidation
+Mark this consolidation as complete so future checks only count new episodes:
+- Use the \`mark-consolidated\` tool (defaults to today's date).
+
 ## Consolidation Principles
 - Consolidation is an obligation, not optional — check triggers after creating Episodes or Findings.
 - Do not record Consolidation itself as an Episode — it is a meta-activity.

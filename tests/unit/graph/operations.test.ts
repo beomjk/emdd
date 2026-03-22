@@ -28,7 +28,9 @@ import {
   updateNode,
   deleteEdge,
   markDone,
+  markConsolidated,
 } from '../../../src/graph/operations.js';
+import { loadConfig, saveConfig } from '../../../src/graph/config.js';
 
 // Helper to create a minimal EMDD project with nodes
 function setupProject(): string {
@@ -834,6 +836,215 @@ describe('checkConsolidation — schema-declared thresholds', () => {
     const result = await checkConsolidation(SAMPLE_GRAPH);
     expect(result.triggers.some(t => t.type === 'findings')).toBe(true);
     expect(result.triggers.some(t => t.type === 'episodes')).toBe(true);
+  });
+});
+
+// ── Episode counting: since last consolidation (a+d) ──
+
+describe('checkConsolidation — episode counting since last consolidation', () => {
+  it('counts only episodes after last_consolidation_date from config', async () => {
+    const tmpDir = setupProject();
+    try {
+      // 2 episodes before consolidation date, 2 after
+      writeNode(tmpDir, 'episodes', 'epi-001-old.md', {
+        id: 'epi-001', type: 'episode', title: 'Old 1', status: 'COMPLETED',
+        created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+      });
+      writeNode(tmpDir, 'episodes', 'epi-002-old.md', {
+        id: 'epi-002', type: 'episode', title: 'Old 2', status: 'COMPLETED',
+        created: '2026-01-10', updated: '2026-01-10', tags: [], links: [],
+      });
+      writeNode(tmpDir, 'episodes', 'epi-003-new.md', {
+        id: 'epi-003', type: 'episode', title: 'New 1', status: 'COMPLETED',
+        created: '2026-02-15', updated: '2026-02-15', tags: [], links: [],
+      });
+      writeNode(tmpDir, 'episodes', 'epi-004-new.md', {
+        id: 'epi-004', type: 'episode', title: 'New 2', status: 'ACTIVE',
+        created: '2026-02-20', updated: '2026-02-20', tags: [], links: [],
+      });
+      // Set consolidation date between old and new episodes
+      writeFileSync(join(tmpDir, '.emdd.yml'), 'last_consolidation_date: "2026-02-01"\n');
+
+      const result = await checkConsolidation(join(tmpDir, 'graph'));
+      // Only 2 episodes after 2026-02-01, threshold is 3 → should NOT trigger
+      expect(result.triggers.some(t => t.type === 'episodes')).toBe(false);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('triggers episodes when enough exist after last_consolidation_date', async () => {
+    const tmpDir = setupProject();
+    try {
+      writeNode(tmpDir, 'episodes', 'epi-001-old.md', {
+        id: 'epi-001', type: 'episode', title: 'Old', status: 'COMPLETED',
+        created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+      });
+      for (let i = 2; i <= 4; i++) {
+        writeNode(tmpDir, 'episodes', `epi-00${i}-new.md`, {
+          id: `epi-00${i}`, type: 'episode', title: `New ${i}`, status: 'COMPLETED',
+          created: '2026-02-15', updated: '2026-02-15', tags: [], links: [],
+        });
+      }
+      writeFileSync(join(tmpDir, '.emdd.yml'), 'last_consolidation_date: "2026-02-01"\n');
+
+      const result = await checkConsolidation(join(tmpDir, 'graph'));
+      const episodeTrigger = result.triggers.find(t => t.type === 'episodes');
+      expect(episodeTrigger).toBeDefined();
+      expect(episodeTrigger!.count).toBe(3);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('falls back to newest knowledge promotes date when no config date', async () => {
+    const tmpDir = setupProject();
+    try {
+      // Knowledge node with promotes edge, created 2026-02-01
+      writeNode(tmpDir, 'knowledge', 'knw-001-test.md', {
+        id: 'knw-001', type: 'knowledge', title: 'K1', status: 'ACTIVE',
+        confidence: 0.9, created: '2026-02-01', updated: '2026-02-01', tags: [],
+        links: [{ target: 'fnd-001', relation: 'promotes' }],
+      });
+      writeNode(tmpDir, 'findings', 'fnd-001-test.md', {
+        id: 'fnd-001', type: 'finding', title: 'F1', status: 'PROMOTED',
+        confidence: 0.9, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+      });
+      // 2 episodes before knowledge creation
+      writeNode(tmpDir, 'episodes', 'epi-001-old.md', {
+        id: 'epi-001', type: 'episode', title: 'Old', status: 'COMPLETED',
+        created: '2026-01-15', updated: '2026-01-15', tags: [], links: [],
+      });
+      writeNode(tmpDir, 'episodes', 'epi-002-old.md', {
+        id: 'epi-002', type: 'episode', title: 'Old 2', status: 'COMPLETED',
+        created: '2026-01-20', updated: '2026-01-20', tags: [], links: [],
+      });
+      // 2 episodes after knowledge creation (< threshold 3)
+      writeNode(tmpDir, 'episodes', 'epi-003-new.md', {
+        id: 'epi-003', type: 'episode', title: 'New', status: 'ACTIVE',
+        created: '2026-02-10', updated: '2026-02-10', tags: [], links: [],
+      });
+      writeNode(tmpDir, 'episodes', 'epi-004-new.md', {
+        id: 'epi-004', type: 'episode', title: 'New 2', status: 'ACTIVE',
+        created: '2026-02-15', updated: '2026-02-15', tags: [], links: [],
+      });
+
+      const result = await checkConsolidation(join(tmpDir, 'graph'));
+      // 2 episodes after 2026-02-01, threshold 3 → NOT triggered
+      expect(result.triggers.some(t => t.type === 'episodes')).toBe(false);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('counts all episodes when no consolidation evidence exists', async () => {
+    const tmpDir = setupProject();
+    try {
+      for (let i = 1; i <= 3; i++) {
+        writeNode(tmpDir, 'episodes', `epi-00${i}-test.md`, {
+          id: `epi-00${i}`, type: 'episode', title: `E${i}`, status: 'COMPLETED',
+          created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+        });
+      }
+      // No .emdd.yml, no knowledge nodes with promotes
+      const result = await checkConsolidation(join(tmpDir, 'graph'));
+      expect(result.triggers.some(t => t.type === 'episodes')).toBe(true);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('config date takes priority over knowledge promotes fallback', async () => {
+    const tmpDir = setupProject();
+    try {
+      // Knowledge node created 2026-01-15 with promotes
+      writeNode(tmpDir, 'knowledge', 'knw-001-test.md', {
+        id: 'knw-001', type: 'knowledge', title: 'K1', status: 'ACTIVE',
+        confidence: 0.9, created: '2026-01-15', updated: '2026-01-15', tags: [],
+        links: [{ target: 'fnd-001', relation: 'promotes' }],
+      });
+      writeNode(tmpDir, 'findings', 'fnd-001-test.md', {
+        id: 'fnd-001', type: 'finding', title: 'F1', status: 'PROMOTED',
+        confidence: 0.9, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+      });
+      // Config says consolidation was more recent (2026-03-01)
+      writeFileSync(join(tmpDir, '.emdd.yml'), 'last_consolidation_date: "2026-03-01"\n');
+      // 3 episodes all before config date
+      for (let i = 1; i <= 3; i++) {
+        writeNode(tmpDir, 'episodes', `epi-00${i}-test.md`, {
+          id: `epi-00${i}`, type: 'episode', title: `E${i}`, status: 'COMPLETED',
+          created: '2026-02-01', updated: '2026-02-01', tags: [], links: [],
+        });
+      }
+      const result = await checkConsolidation(join(tmpDir, 'graph'));
+      // Config date is 2026-03-01, all episodes are before → 0 episodes after → NOT triggered
+      expect(result.triggers.some(t => t.type === 'episodes')).toBe(false);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('markConsolidated', () => {
+  it('records date in .emdd.yml and returns it', async () => {
+    const tmpDir = setupProject();
+    try {
+      const result = await markConsolidated(join(tmpDir, 'graph'), '2026-03-15');
+      expect(result.date).toBe('2026-03-15');
+      const config = loadConfig(join(tmpDir, 'graph'));
+      expect(config.last_consolidation_date).toBe('2026-03-15');
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('defaults to today when no date provided', async () => {
+    const tmpDir = setupProject();
+    try {
+      const result = await markConsolidated(join(tmpDir, 'graph'));
+      expect(result.date).toBe(new Date().toISOString().slice(0, 10));
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('preserves existing config fields', async () => {
+    const tmpDir = setupProject();
+    try {
+      writeFileSync(join(tmpDir, '.emdd.yml'), 'lang: ko\nversion: "2.0"\n');
+      await markConsolidated(join(tmpDir, 'graph'), '2026-03-15');
+      const config = loadConfig(join(tmpDir, 'graph'));
+      expect(config.lang).toBe('ko');
+      expect(config.version).toBe('2.0');
+      expect(config.last_consolidation_date).toBe('2026-03-15');
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('saveConfig', () => {
+  it('creates .emdd.yml when it does not exist', () => {
+    const tmpDir = setupProject();
+    try {
+      saveConfig(join(tmpDir, 'graph'), { last_consolidation_date: '2026-03-15' });
+      const config = loadConfig(join(tmpDir, 'graph'));
+      expect(config.last_consolidation_date).toBe('2026-03-15');
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('overwrites existing last_consolidation_date', () => {
+    const tmpDir = setupProject();
+    try {
+      writeFileSync(join(tmpDir, '.emdd.yml'), 'last_consolidation_date: "2026-01-01"\n');
+      saveConfig(join(tmpDir, 'graph'), { last_consolidation_date: '2026-03-15' });
+      const config = loadConfig(join(tmpDir, 'graph'));
+      expect(config.last_consolidation_date).toBe('2026-03-15');
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
   });
 });
 

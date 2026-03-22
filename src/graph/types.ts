@@ -78,6 +78,10 @@ export interface MarkDoneResult {
   marker: DoneMarker;
 }
 
+export interface MarkConsolidatedResult {
+  date: string;
+}
+
 export interface GapDetail {
   type: 'untested_hypothesis' | 'blocking_question' | 'stale_knowledge' | 'orphan_finding' | 'disconnected_cluster';
   nodeIds: string[];

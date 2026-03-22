@@ -12,6 +12,7 @@ import { createEdgeDef } from './commands/create-edge.js';
 import { deleteEdgeDef } from './commands/delete-edge.js';
 import { updateNodeDef } from './commands/update-node.js';
 import { markDoneDef } from './commands/mark-done.js';
+import { markConsolidatedDef } from './commands/mark-consolidated.js';
 import { indexGraphDef } from './commands/index-graph.js';
 
 // Analysis commands
@@ -41,6 +42,7 @@ export function createDefaultRegistry(): CommandRegistry {
   registry.register(deleteEdgeDef);
   registry.register(updateNodeDef);
   registry.register(markDoneDef);
+  registry.register(markConsolidatedDef);
   registry.register(indexGraphDef);
 
   // Analysis commands

@@ -16,6 +16,7 @@ export interface EmddConfig {
   lang: string;
   version: string;
   gaps: GapThresholds;
+  last_consolidation_date?: string;
 }
 
 export const DEFAULT_CONFIG: EmddConfig = {
@@ -66,5 +67,29 @@ export function loadConfig(graphDir: string): EmddConfig {
       blocking_episodes: typeof gaps.blocking_episodes === 'number' ? gaps.blocking_episodes : DEFAULT_CONFIG.gaps.blocking_episodes,
       min_cluster_edges: typeof gaps.min_cluster_edges === 'number' ? gaps.min_cluster_edges : DEFAULT_CONFIG.gaps.min_cluster_edges,
     },
+    last_consolidation_date: typeof parsed.last_consolidation_date === 'string'
+      ? parsed.last_consolidation_date : undefined,
   };
+}
+
+export function saveConfig(graphDir: string, updates: Partial<EmddConfig>): void {
+  const configPath = path.join(path.dirname(graphDir), '.emdd.yml');
+
+  let existing: Record<string, unknown> = {};
+  try {
+    const raw = fs.readFileSync(configPath, 'utf-8');
+    const parsed = yaml.load(raw) as Record<string, unknown>;
+    if (parsed && typeof parsed === 'object') existing = parsed;
+  } catch { /* file doesn't exist yet — start fresh */ }
+
+  if (updates.lang !== undefined) existing.lang = updates.lang;
+  if (updates.version !== undefined) existing.version = updates.version;
+  if (updates.last_consolidation_date !== undefined) {
+    existing.last_consolidation_date = updates.last_consolidation_date;
+  }
+  if (updates.gaps !== undefined) {
+    existing.gaps = { ...(existing.gaps as Record<string, unknown> ?? {}), ...updates.gaps };
+  }
+
+  fs.writeFileSync(configPath, yaml.dump(existing, { lineWidth: -1 }), 'utf-8');
 }

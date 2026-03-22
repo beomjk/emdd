@@ -53,6 +53,7 @@ export const messages: Record<string, string> = {
   'format.edge_deleted': '{source} → {target}에서 {count}개 링크 삭제됨',
   'format.node_updated': '{nodeId} 업데이트됨: {fields}',
   'format.item_marked': '{episodeId}에서 "{item}"을(를) {marker}로 표시',
+  'format.consolidated_marked': '통합 기록됨: {date}',
   'format.no_neighbors': '이웃 노드가 없습니다.',
   'format.no_nodes': '노드가 없습니다.',
   'format.no_gaps': '갭이 없습니다.',

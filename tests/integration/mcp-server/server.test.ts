@@ -30,9 +30,9 @@ describe('MCP Server — server metadata', () => {
     expect(info?.version).toBe(VERSION);
   });
 
-  it('lists 20 tools', async () => {
+  it('lists 21 tools', async () => {
     const result = await client.listTools();
-    expect(result.tools).toHaveLength(20);
+    expect(result.tools).toHaveLength(21);
     const names = result.tools.map(t => t.name).sort();
     expect(names).toEqual([
       'analyze-refutation',
@@ -50,6 +50,7 @@ describe('MCP Server — server metadata', () => {
       'kill-check',
       'lint',
       'list-nodes',
+      'mark-consolidated',
       'mark-done',
       'promote',
       'read-node',

@@ -53,6 +53,7 @@ export const messages: Record<string, string> = {
   'format.edge_deleted': 'Deleted {count} link(s) from {source} → {target}',
   'format.node_updated': 'Updated {nodeId}: {fields}',
   'format.item_marked': 'Marked "{item}" as {marker} in {episodeId}',
+  'format.consolidated_marked': 'Consolidation recorded: {date}',
   'format.no_neighbors': 'No neighbors found.',
   'format.no_nodes': 'No nodes found.',
   'format.no_gaps': 'No gaps found.',

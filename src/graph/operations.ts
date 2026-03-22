@@ -29,7 +29,8 @@ import type {
   DoneMarker,
   MarkDoneResult,
 } from './types.js';
-import { loadConfig } from './config.js';
+import { loadConfig, saveConfig } from './config.js';
+import type { EmddConfig } from './config.js';
 export { detectClusters, identifyClusters } from './clusters.js';
 export { lintNode, lintGraph } from './validator.js';
 import { lintGraph as _lintGraph } from './validator.js';
@@ -277,6 +278,46 @@ export async function createEdge(
   return result;
 }
 
+// ── Shared helpers ──────────────────────────────────────────────────
+
+/** Count episodes in the graph created after `sinceDate`. */
+function countEpisodesSince(graph: Graph, sinceDate: Date): number {
+  let count = 0;
+  for (const node of graph.nodes.values()) {
+    if (node.type === 'episode') {
+      const created = node.meta.created ? new Date(String(node.meta.created)) : null;
+      if (created && created > sinceDate) count++;
+    }
+  }
+  return count;
+}
+
+/**
+ * Determine the anchor date for "since last consolidation" counting.
+ * Priority: (a) last_consolidation_date from .emdd.yml
+ *           (d) newest created date among Knowledge nodes with promotes edges
+ *           null if no consolidation evidence exists
+ */
+function resolveConsolidationAnchor(config: EmddConfig, graph: Graph): Date | null {
+  // (a) Explicit config date
+  if (config.last_consolidation_date) {
+    const d = new Date(config.last_consolidation_date);
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  // (d) Fallback: newest created date among Knowledge nodes with promotes edge
+  let newest: Date | null = null;
+  for (const node of graph.nodes.values()) {
+    if (node.type === 'knowledge' && node.links.some(l => l.relation === 'promotes')) {
+      const created = node.meta.created ? new Date(String(node.meta.created)) : null;
+      if (created && (!newest || created > newest)) {
+        newest = created;
+      }
+    }
+  }
+  return newest;
+}
+
 // ── getHealth ───────────────────────────────────────────────────────
 
 /**
@@ -359,18 +400,6 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
     return t('gap.trigger_both', { days: String(daysVal), episodes: String(episodesVal) });
   }
 
-  // Helper: count episodes created after a given date
-  function countEpisodesSince(sinceDate: Date): number {
-    let count = 0;
-    for (const node of graph.nodes.values()) {
-      if (node.type === 'episode') {
-        const created = node.meta.created ? new Date(String(node.meta.created)) : null;
-        if (created && created > sinceDate) count++;
-      }
-    }
-    return count;
-  }
-
   // 1. Untested hypotheses: PROPOSED + (N days elapsed OR M episodes since updated)
   const untestedIds: string[] = [];
   let untestedAnyDays = false;
@@ -382,7 +411,7 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
       if (updated) {
         const daysElapsed = Math.floor((now.getTime() - updated.getTime()) / (1000 * 60 * 60 * 24));
         const daysMet = daysElapsed >= config.gaps.untested_days;
-        const episodesMet = countEpisodesSince(updated) >= config.gaps.untested_episodes;
+        const episodesMet = countEpisodesSince(graph, updated) >= config.gaps.untested_episodes;
         if (daysMet || episodesMet) {
           untestedIds.push(node.id);
           if (daysMet) untestedAnyDays = true;
@@ -415,7 +444,7 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
       if (updated) {
         const daysElapsed = Math.floor((now.getTime() - updated.getTime()) / (1000 * 60 * 60 * 24));
         const daysMet = daysElapsed >= config.gaps.blocking_days;
-        const episodesMet = countEpisodesSince(updated) >= config.gaps.blocking_episodes;
+        const episodesMet = countEpisodesSince(graph, updated) >= config.gaps.blocking_episodes;
         if (daysMet || episodesMet) {
           blockingIds.push(node.id);
           if (daysMet) blockingAnyDays = true;
@@ -721,6 +750,9 @@ export async function checkConsolidation(graphDir: string): Promise<CheckResult>
   const allQuestionsResolved = ct.all_questions_resolved;
   const overloadThreshold = ct.experiment_overload_threshold;
 
+  // Load config early — needed for episode anchor and orphan thresholds
+  const config = loadConfig(graphDir);
+
   // 1. Unpromoted findings threshold
   const unpromoted = findings.filter(id => !promotedIds.has(id));
   if (unpromoted.length >= findingsThreshold) {
@@ -731,12 +763,16 @@ export async function checkConsolidation(graphDir: string): Promise<CheckResult>
     });
   }
 
-  // 2. Episode accumulation threshold
-  if (episodes.length >= episodesThreshold) {
+  // 2. Episode accumulation threshold (since last consolidation)
+  const anchorDate = resolveConsolidationAnchor(config, graph);
+  const episodeCount = anchorDate
+    ? countEpisodesSince(graph, anchorDate)
+    : episodes.length;
+  if (episodeCount >= episodesThreshold) {
     triggers.push({
       type: 'episodes',
-      message: t('check.episodes_threshold', { count: String(episodes.length), threshold: String(episodesThreshold) }),
-      count: episodes.length,
+      message: t('check.episodes_threshold', { count: String(episodeCount), threshold: String(episodesThreshold) }),
+      count: episodeCount,
     });
   }
 
@@ -768,7 +804,6 @@ export async function checkConsolidation(graphDir: string): Promise<CheckResult>
 
   // Orphan findings: findings with forward edges <= configurable threshold
   const orphanFindings: string[] = [];
-  const config = loadConfig(graphDir);
   for (const [id, node] of graph.nodes) {
     if (node.type !== 'finding') continue;
     const forwardEdges = node.links.filter(l => FORWARD_RELATIONS.has(l.relation));
@@ -1137,4 +1172,17 @@ export async function writeIndex(graphDir: string): Promise<{ nodeCount: number 
   const indexContent = _generateIndex(graph);
   fs.writeFileSync(path.join(graphDir, '_index.md'), indexContent);
   return { nodeCount: graph.nodes.size };
+}
+
+// ── markConsolidated ──────────────────────────────────────────────
+
+import type { MarkConsolidatedResult } from './types.js';
+
+/**
+ * Record a consolidation date to reset episode counting.
+ */
+export async function markConsolidated(graphDir: string, date?: string): Promise<MarkConsolidatedResult> {
+  const d = date ?? new Date().toISOString().slice(0, 10);
+  saveConfig(graphDir, { last_consolidation_date: d });
+  return { date: d };
 }
