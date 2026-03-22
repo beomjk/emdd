@@ -866,5 +866,98 @@ describe('CliAdapter', () => {
         expect(helpText).toContain(`[${arg}]`);
       }
     });
+
+    it('T034: all positional args use [brackets] (optional in Commander for backward compat)', () => {
+      registry.register(makeCommand({
+        name: 'test-cmd',
+        schema: z.object({
+          id: z.string().describe('Required ID'),
+          filter: z.string().optional().describe('Optional filter'),
+        }),
+        cli: { positional: ['id', 'filter'] },
+      }));
+      adapter.attachTo(program);
+
+      const cmd = program.commands.find(c => c.name() === 'test-cmd');
+      const helpText = cmd!.helpInformation();
+      expect(helpText).toContain('[id]');
+      expect(helpText).toContain('[filter]');
+    });
+
+    it('T035: throws when positional key is not in schema', () => {
+      registry.register(makeCommand({
+        name: 'test-cmd',
+        schema: z.object({
+          id: z.string().describe('ID'),
+        }),
+        cli: { positional: ['id', 'nonexistent'] },
+      }));
+      expect(() => adapter.attachTo(program)).toThrow(/positional key.*nonexistent.*not found/i);
+    });
+
+    it('T036: enum choices shown in positional arg description', () => {
+      registry.register(makeCommand({
+        name: 'test-cmd',
+        schema: z.object({
+          mode: z.enum(['alpha', 'beta', 'gamma']).describe('Mode'),
+        }),
+        cli: { positional: ['mode'] },
+      }));
+      adapter.attachTo(program);
+
+      const cmd = program.commands.find(c => c.name() === 'test-cmd');
+      const arg = cmd!.registeredArguments[0];
+      expect(arg.description).toContain('alpha|beta|gamma');
+    });
+
+    it('T037: delete-edge positional + optional --relation flag', async () => {
+      const executeFn = vi.fn().mockResolvedValue({ deletedCount: 1, source: 'hyp-001', target: 'knw-001' });
+      registry.register({ ...deleteEdgeDef, execute: executeFn, format: () => 'ok' } as any);
+      adapter.attachTo(program);
+
+      await program.parseAsync(['node', 'emdd', 'unlink', 'hyp-001', 'knw-001', '--relation', 'supports']);
+
+      const input = executeFn.mock.calls[0][0];
+      expect(input.source).toBe('hyp-001');
+      expect(input.target).toBe('knw-001');
+      expect(input.relation).toBe('supports');
+    });
+
+    it('T038: mark-done positional + optional --marker flag', async () => {
+      const executeFn = vi.fn().mockResolvedValue({ episodeId: 'epi-001', item: 'Task A', marker: 'deferred' });
+      registry.register({ ...markDoneDef, execute: executeFn, format: () => 'ok' } as any);
+      adapter.attachTo(program);
+
+      await program.parseAsync(['node', 'emdd', 'done', 'epi-001', 'Task A', '--marker', 'deferred']);
+
+      const input = executeFn.mock.calls[0][0];
+      expect(input.episodeId).toBe('epi-001');
+      expect(input.item).toBe('Task A');
+      expect(input.marker).toBe('deferred');
+    });
+
+    it('T039: neighbors positional + optional --depth flag', async () => {
+      const executeFn = vi.fn().mockResolvedValue([]);
+      registry.register({ ...neighborsDef, execute: executeFn, format: () => 'ok' } as any);
+      adapter.attachTo(program);
+
+      await program.parseAsync(['node', 'emdd', 'neighbors', 'hyp-001', '--depth', '3']);
+
+      const input = executeFn.mock.calls[0][0];
+      expect(input.nodeId).toBe('hyp-001');
+      expect(input.depth).toBe(3);
+    });
+
+    it('T040: rejects invalid enum value via positional input', async () => {
+      const executeFn = vi.fn().mockResolvedValue({ type: 'hypothesis', id: 'hyp-001' });
+      registry.register({ ...createNodeDef, execute: executeFn, format: () => 'ok' } as any);
+      adapter.attachTo(program);
+
+      await program.parseAsync(['node', 'emdd', 'new', 'invalid-type', 'my-slug']);
+
+      expect(executeFn).not.toHaveBeenCalled();
+      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('Input validation failed'));
+    });
   });
 });

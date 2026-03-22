@@ -39,18 +39,24 @@ export class CliAdapter {
     for (const def of this.registry.getAll()) {
       if (def.cli === false) continue;
 
-      const cmdName = (def.cli && typeof def.cli === 'object' && def.cli.commandName)
-        ? def.cli.commandName
-        : def.name;
+      const cliOpts = (def.cli && typeof def.cli === 'object') ? def.cli : undefined;
+      const cmdName = cliOpts?.commandName ?? def.name;
 
       const cmd = program.command(cmdName);
       cmd.description(def.description);
 
       // Register positional arguments before schema options
-      const positionalKeys = (def.cli && typeof def.cli === 'object' && def.cli.positional) || [];
+      const positionalKeys = cliOpts?.positional ?? [];
       for (const key of positionalKeys) {
-        const zodField = def.schema.shape[key] as z.ZodType | undefined;
-        const desc = zodField?.description || key;
+        if (!(key in def.schema.shape)) {
+          throw new Error(`Positional key "${key}" not found in schema for command "${def.name}"`);
+        }
+        const zodField = def.schema.shape[key] as z.ZodType;
+        const inner = unwrapZod(zodField);
+        let desc = zodField.description || key;
+        if (zodDefType(inner) === 'enum') {
+          desc = `${desc} (${getEnumValues(inner).join('|')})`;
+        }
         cmd.argument(`[${key}]`, desc);
       }
 
@@ -64,12 +70,12 @@ export class CliAdapter {
       if (!schemaKeys.has('graphDir')) cmd.option('--graphDir <path>', 'Path to graph directory');
 
       // CLI aliases
-      if (def.cli && typeof def.cli === 'object' && def.cli.aliases) {
-        cmd.aliases(def.cli.aliases);
+      if (cliOpts?.aliases) {
+        cmd.aliases(cliOpts.aliases);
       }
 
       // Action handler
-      cmd.action(async (...args: any[]) => {
+      cmd.action(async (...args: unknown[]) => {
         const options = args[positionalKeys.length] as Record<string, unknown>;
 
         // Merge positional values into options (positional takes precedence)
