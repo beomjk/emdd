@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -6,6 +6,10 @@ import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { CommandRegistry } from '../../../src/registry/registry.js';
 import { McpAdapter } from '../../../src/registry/mcp-adapter.js';
 import type { CommandDef } from '../../../src/registry/types.js';
+
+vi.mock('../../../src/graph/loader.js', () => ({
+  resolveGraphDir: (p?: string) => p ?? '/mock/graph',
+}));
 
 function makeCommand(overrides: Partial<CommandDef> & { name: string }): CommandDef {
   return {
@@ -91,6 +95,22 @@ describe('McpAdapter', () => {
       // graphDir should be in the input schema
       const schema = tool!.inputSchema as { properties?: Record<string, unknown> };
       expect(schema.properties).toHaveProperty('graphDir');
+
+      await cleanup();
+    });
+
+    it('does not overwrite schema-defined lang field', async () => {
+      registry.register(makeCommand({
+        name: 'with-lang',
+        schema: z.object({ lang: z.string().optional().describe('Custom lang field') }),
+      }));
+      const { client, cleanup } = await setupMcp(registry);
+
+      const tools = await client.listTools();
+      const tool = tools.tools.find(t => t.name === 'with-lang');
+      expect(tool).toBeDefined();
+      const schema = tool!.inputSchema as { properties?: Record<string, { description?: string }> };
+      expect(schema.properties?.lang?.description).toBe('Custom lang field');
 
       await cleanup();
     });

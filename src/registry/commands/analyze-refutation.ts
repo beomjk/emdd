@@ -24,7 +24,7 @@ export const analyzeRefutationDef: CommandDef<typeof schema, RefutationAnalysis>
     } else {
       lines.push(t('format.affected_count', { count: String(result.affectedHypotheses.length) }));
       for (const h of result.affectedHypotheses) {
-        lines.push(`  ${h.hypothesisId} [${h.severity}] via ${h.knowledgeId}: ${h.oldConfidence.toFixed(2)} -> ${h.newConfidence.toFixed(2)}`);
+        lines.push(`  ${h.hypothesisId} [${h.severity}] ${t('format.via')} ${h.knowledgeId}: ${h.oldConfidence.toFixed(2)} → ${h.newConfidence.toFixed(2)}`);
       }
     }
 

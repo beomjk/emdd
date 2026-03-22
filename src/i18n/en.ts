@@ -45,6 +45,8 @@ export const messages: Record<string, string> = {
   'format.confidence': 'confidence',
   'format.tags': 'tags',
   'format.links': 'links',
+  'format.supports': 'supports',
+  'format.via': 'via',
 
   // Format output
   'format.link_created': 'Linked {source} → {target} [{relation}]',

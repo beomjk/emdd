@@ -11,7 +11,7 @@ export function registerConsolidation(server: McpServer): void {
     async ({ path: graphDir }) => {
       const checkResult = await checkConsolidation(graphDir);
       const health = await getHealth(graphDir);
-      const ct = CEREMONY_TRIGGERS.consolidation ?? {} as Record<string, number | boolean>;
+      const ct = CEREMONY_TRIGGERS.consolidation;
 
       const triggersSection = checkResult.triggers.length > 0
         ? checkResult.triggers.map(t => `  - [TRIGGERED] ${t.message}`).join('\n')

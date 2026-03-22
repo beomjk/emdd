@@ -116,6 +116,9 @@ export function lintNode(node: Node): LintError[] {
       });
     }
 
+    // Severity rationale: range/enum violations → 'warning' (value out of bounds),
+    // affinity violations → 'error' (attribute should not exist on this relation).
+
     // Numeric range checks driven by schema-declared EDGE_ATTRIBUTE_RANGES
     for (const [attrName, { min, max }] of Object.entries(EDGE_ATTRIBUTE_RANGES)) {
       const val = (link as unknown as Record<string, unknown>)[attrName];

@@ -15,12 +15,18 @@ export class McpAdapter {
         ? def.mcp.toolName
         : def.name;
 
-      // Augment schema with optional graphDir and lang parameters
-      const augmentedSchema = def.schema.extend({
-        graphDir: z.string().optional().describe('Path to the EMDD graph directory'),
-        lang: z.string().optional().describe('Language locale (en or ko)'),
-      });
+      // Augment schema with optional graphDir and lang parameters (skip if already defined)
       const schemaKeys = new Set(Object.keys(def.schema.shape));
+      const extraFields: Record<string, z.ZodType> = {};
+      if (!schemaKeys.has('graphDir')) {
+        extraFields.graphDir = z.string().optional().describe('Path to the EMDD graph directory');
+      }
+      if (!schemaKeys.has('lang')) {
+        extraFields.lang = z.string().optional().describe('Language locale (en or ko)');
+      }
+      const augmentedSchema = Object.keys(extraFields).length > 0
+        ? def.schema.extend(extraFields)
+        : def.schema;
 
       server.tool(
         toolName,

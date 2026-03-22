@@ -214,6 +214,7 @@ describe('format() functions', () => {
         retractedKnowledgeIds: ['kno-001'],
       });
       expect(out).toContain('hyp-001');
+      expect(out).toContain('→');
       expect(out).toContain('Pivot ceremony triggered');
     });
   });

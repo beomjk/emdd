@@ -27,7 +27,7 @@ export const checkDef: CommandDef<typeof schema, CheckResult> = {
     if (result.promotionCandidates.length > 0) {
       lines.push('');
       lines.push(`${t('promote.title')}:`);
-      for (const c of result.promotionCandidates) lines.push(`  ${c.id} (confidence: ${c.confidence})`);
+      for (const c of result.promotionCandidates) lines.push(`  ${c.id} (${t('format.confidence')}: ${c.confidence})`);
     }
     return lines.join('\n');
   },

@@ -45,6 +45,8 @@ export const messages: Record<string, string> = {
   'format.confidence': '신뢰도',
   'format.tags': '태그',
   'format.links': '링크',
+  'format.supports': '지지',
+  'format.via': '경유',
 
   // 포맷 출력
   'format.link_created': '{source} → {target} 연결됨 [{relation}]',

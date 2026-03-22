@@ -12,7 +12,7 @@ import type { CommandDef } from '../../../src/registry/types.js';
 
 function makeCommand(overrides: Partial<CommandDef> & { name: string }): CommandDef {
   return {
-    description: { en: 'Test command', ko: '테스트 커맨드' },
+    description: 'Test command',
     category: 'read',
     schema: z.object({}),
     execute: async () => ({}),

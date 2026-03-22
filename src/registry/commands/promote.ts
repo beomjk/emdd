@@ -19,7 +19,7 @@ export const promoteDef: CommandDef<typeof schema, PromoteCandidate[]> = {
   format(candidates) {
     if (candidates.length === 0) return t('format.no_promote');
     return candidates.map(c =>
-      `${c.id}: confidence=${c.confidence}, supports=${c.supports} (${c.reason})`
+      `${c.id}: ${t('format.confidence')}=${c.confidence}, ${t('format.supports')}=${c.supports} (${c.reason})`
     ).join('\n');
   },
 };
