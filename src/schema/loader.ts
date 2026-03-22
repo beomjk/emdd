@@ -33,7 +33,12 @@ export async function loadSchema(schemaPath?: string): Promise<GraphSchema> {
   }
 
   // Referential integrity checks (Phase 2)
-  const riErrors = validateReferentialIntegrity(result.data);
+  const riResults = validateReferentialIntegrity(result.data);
+  const riErrors = riResults.filter((e) => e.severity === 'ERROR');
+  const riWarnings = riResults.filter((e) => e.severity === 'WARNING');
+  for (const w of riWarnings) {
+    console.warn(`graph-schema.yaml warning: ${w.path}: ${w.message}`);
+  }
   if (riErrors.length > 0) {
     const messages = riErrors.map((e) => `  - ${e.path}: ${e.message}`);
     throw new Error(

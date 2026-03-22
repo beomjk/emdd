@@ -834,6 +834,43 @@ describe('checkConsolidation — schema-declared thresholds', () => {
   });
 });
 
+describe('hardcoded constants detection — consolidation prompt', () => {
+  it('uses THRESHOLDS constants (no hardcoded promotion values)', async () => {
+    const fs = await import('node:fs');
+    const src = fs.readFileSync(
+      new URL('../../../src/mcp-server/prompts/consolidation.ts', import.meta.url), 'utf-8'
+    );
+    // Should reference THRESHOLDS, not hardcoded promotion values
+    expect(src).toContain('THRESHOLDS');
+    expect(src).toContain('THRESHOLDS.promotion_confidence');
+    expect(src).toContain('THRESHOLDS.min_independent_supports');
+    // Should NOT have the old hardcoded values in template strings
+    expect(src).not.toMatch(/>= 0\.8\b/);
+    expect(src).not.toMatch(/>= 0\.9\b/);
+  });
+});
+
+describe('hardcoded constants detection — createEdge attributes', () => {
+  it('uses EDGE_ATTRIBUTE_NAMES loop (no hardcoded attr names in return section)', async () => {
+    const fs = await import('node:fs');
+    const src = fs.readFileSync(
+      new URL('../../../src/graph/operations.ts', import.meta.url), 'utf-8'
+    );
+    // Extract createEdge function body (from signature to the next section comment)
+    const fnStart = src.indexOf('export async function createEdge');
+    const fnEnd = src.indexOf('\n// ──', fnStart + 1);
+    const fnBody = src.slice(fnStart, fnEnd > fnStart ? fnEnd : fnStart + 500);
+    // Should use schema-driven loop
+    expect(fnBody).toContain('EDGE_ATTRIBUTE_NAMES');
+    // Should NOT have individual hardcoded if-statements for each attribute
+    expect(fnBody).not.toMatch(/attrs\?\.strength/);
+    expect(fnBody).not.toMatch(/attrs\?\.severity/);
+    expect(fnBody).not.toMatch(/attrs\?\.completeness/);
+    expect(fnBody).not.toMatch(/attrs\?\.dependencyType/);
+    expect(fnBody).not.toMatch(/attrs\?\.impact/);
+  });
+});
+
 describe('getPromotionCandidates', () => {
   it('returns empty when no candidates exist', async () => {
     const candidates = await getPromotionCandidates(EMPTY_GRAPH);
@@ -1716,5 +1753,27 @@ describe('markDone', () => {
     await expect(
       markDone(join(tmpDir, 'graph'), 'epi-999', 'Some task')
     ).rejects.toThrow(/not found/);
+  });
+
+  it('throws on invalid marker string', async () => {
+    writeNode(tmpDir, 'episodes', 'epi-001-test.md', {
+      id: 'epi-001', type: 'episode', title: 'Test Episode',
+      created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+    }, '## Checklist\n- [ ] Some task\n');
+
+    await expect(
+      markDone(join(tmpDir, 'graph'), 'epi-001', 'Some task', 'invalid' as any)
+    ).rejects.toThrow(/invalid marker/i);
+  });
+
+  it('throws on multiple matching checklist items', async () => {
+    writeNode(tmpDir, 'episodes', 'epi-001-test.md', {
+      id: 'epi-001', type: 'episode', title: 'Test Episode',
+      created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+    }, '## Checklist\n- [ ] Duplicate task\n- [ ] Duplicate task\n');
+
+    await expect(
+      markDone(join(tmpDir, 'graph'), 'epi-001', 'Duplicate task')
+    ).rejects.toThrow(/multiple/i);
   });
 });

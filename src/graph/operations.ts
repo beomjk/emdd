@@ -261,11 +261,11 @@ export async function createEdge(
   const plan = await planCreateEdge(graphDir, source, target, relation, attrs);
   await executeOps(plan.ops);
   const result: CreateEdgeResult = { source: plan.source, target: plan.target, relation: plan.relation };
-  if (attrs?.strength !== undefined) result.strength = attrs.strength;
-  if (attrs?.severity !== undefined) result.severity = attrs.severity;
-  if (attrs?.completeness !== undefined) result.completeness = attrs.completeness;
-  if (attrs?.dependencyType !== undefined) result.dependencyType = attrs.dependencyType;
-  if (attrs?.impact !== undefined) result.impact = attrs.impact;
+  if (attrs) {
+    for (const attr of EDGE_ATTRIBUTE_NAMES) {
+      if (attrs[attr] !== undefined) (result as unknown as Record<string, unknown>)[attr] = attrs[attr];
+    }
+  }
   return result;
 }
 

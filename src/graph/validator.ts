@@ -120,7 +120,7 @@ export function lintNode(node: Node): LintError[] {
     // Numeric range checks driven by schema-declared EDGE_ATTRIBUTE_RANGES
     for (const [attrName, { min, max }] of Object.entries(EDGE_ATTRIBUTE_RANGES)) {
       const val = (link as unknown as Record<string, unknown>)[attrName];
-      if (val !== undefined && (typeof val !== 'number' || (min !== undefined && val < min) || (max !== undefined && val > max))) {
+      if (val !== undefined && (typeof val !== 'number' || isNaN(val as number) || (min !== undefined && val < min) || (max !== undefined && val > max))) {
         errors.push({
           nodeId: id, field: 'links',
           message: `Edge attribute ${attrName} must be between ${min ?? '-Infinity'} and ${max ?? 'Infinity'}, got ${val}`,

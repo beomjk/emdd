@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { checkConsolidation, getHealth } from '../../graph/operations.js';
-import { CEREMONY_TRIGGERS } from '../../graph/types.js';
+import { CEREMONY_TRIGGERS, THRESHOLDS } from '../../graph/types.js';
 
 export function registerConsolidation(server: McpServer): void {
   server.prompt(
@@ -37,7 +37,7 @@ ${triggersSection}
 ## Step-by-Step Consolidation Procedure
 
 ### Step 1: Promotion
-Review all Finding nodes. For each Finding with high confidence (>= 0.8) and strong evidence (2+ supporting links):
+Review all Finding nodes. For each Finding with high confidence (>= ${THRESHOLDS.promotion_confidence}) and strong evidence (${THRESHOLDS.min_independent_supports}+ supporting links):
 - Promote it to a Knowledge node using the \`create-node\` tool (type: knowledge).
 - Add a \`promotes\` edge from the new Knowledge node to the original Finding.
 - Use the \`promote\` tool to identify candidates automatically.

@@ -267,6 +267,16 @@ describe('edge attribute validation', () => {
     const errors = lintNode(node);
     expect(errors.filter(e => e.severity === 'warning')).toEqual([]);
   });
+
+  it('warns on NaN strength value', () => {
+    const node = {
+      id: 'test-001', type: 'finding' as const, title: 'Test', path: '/fake.md',
+      status: 'DRAFT', confidence: 0.5, tags: [], meta: {},
+      links: [{ target: 'hyp-001', relation: 'supports', strength: NaN }],
+    };
+    const errors = lintNode(node);
+    expect(errors.some(e => e.field === 'links' && e.severity === 'warning' && e.message.includes('strength'))).toBe(true);
+  });
 });
 
 describe('type-specific meta validation', () => {
@@ -358,5 +368,20 @@ describe('lintGraph — edge attribute affinity', () => {
     const errors = lintGraph(graph);
     const affinityErrors = errors.filter(e => e.message.includes('affinity'));
     expect(affinityErrors.length).toBeGreaterThan(0);
+  });
+});
+
+describe('hardcoded constants detection — lintNode NaN guard', () => {
+  it('includes isNaN check in numeric range validation', async () => {
+    const fs = await import('node:fs');
+    const src = fs.readFileSync(
+      new URL('../../../src/graph/validator.ts', import.meta.url), 'utf-8'
+    );
+    // Extract the numeric range check section (skip import, find usage site)
+    const importEnd = src.indexOf('EDGE_ATTRIBUTE_RANGES') + 'EDGE_ATTRIBUTE_RANGES'.length;
+    const rangeStart = src.indexOf('EDGE_ATTRIBUTE_RANGES', importEnd);
+    const rangeBlock = src.slice(rangeStart, rangeStart + 300);
+    // Must include isNaN guard (matching operations.ts pattern)
+    expect(rangeBlock).toMatch(/isNaN/);
   });
 });
