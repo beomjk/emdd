@@ -237,7 +237,8 @@ describe('MCP Server — tools', () => {
       const result = await callTool(client, 'update-node', {
         graphDir: tmpDir,
         nodeId: 'hyp-001',
-        updates: { status: 'TESTING' },
+        set: { status: 'TESTING' },
+        transitionPolicy: 'off',
       }) as { nodeId: string; updatedFields: string[]; updatedDate: string };
       expect(result.nodeId).toBe('hyp-001');
       expect(result.updatedFields).toEqual(['status']);
@@ -247,7 +248,8 @@ describe('MCP Server — tools', () => {
       const errText = await callToolError(client, 'update-node', {
         graphDir: tmpDir,
         nodeId: 'hyp-999',
-        updates: { status: 'TESTING' },
+        set: { status: 'TESTING' },
+        transitionPolicy: 'off',
       });
       expect(errText).toMatch(/not found/i);
     });

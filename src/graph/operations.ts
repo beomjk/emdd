@@ -3,12 +3,16 @@ import path from 'node:path';
 import matter from 'gray-matter';
 import { loadGraph } from './loader.js';
 import { nextId, renderTemplate, nodePath, sanitizeSlug } from './templates.js';
-import { NODE_TYPES, NODE_TYPE_DIRS, ALL_VALID_RELATIONS, REVERSE_LABELS, THRESHOLDS, VALID_SEVERITIES, VALID_DEPENDENCY_TYPES, VALID_IMPACTS, VALID_STATUSES, VALID_FINDING_TYPES, VALID_URGENCIES, VALID_RISK_LEVELS, VALID_REVERSIBILITIES } from './types.js';
+import { NODE_TYPES, NODE_TYPE_DIRS, ALL_VALID_RELATIONS, REVERSE_LABELS, THRESHOLDS, VALID_STATUSES, VALID_FINDING_TYPES, VALID_URGENCIES, VALID_RISK_LEVELS, VALID_REVERSIBILITIES, EDGE_ATTRIBUTE_NAMES, EDGE_ATTRIBUTE_RANGES, EDGE_ATTRIBUTE_ENUM_VALUES, TRANSITION_POLICY_DEFAULT, TRANSITION_TABLE, MANUAL_TRANSITIONS, CEREMONY_TRIGGERS } from './types.js';
+import { checkEdgeAffinity, getPresentAttrKeys } from './edge-attrs.js';
+import { validateTransition } from './transition-engine.js';
+import { FORWARD_RELATIONS, collectDeferredIds } from './utils.js';
 import type {
   Node,
   NodeType,
   NodeFilter,
   NodeDetail,
+  Graph,
   CreateNodeResult,
   CreateEdgeResult,
   CreateNodePlan,
@@ -27,6 +31,24 @@ import type {
 } from './types.js';
 import { loadConfig } from './config.js';
 export { detectClusters, identifyClusters } from './clusters.js';
+export { lintNode, lintGraph } from './validator.js';
+import { lintGraph as _lintGraph } from './validator.js';
+
+/**
+ * Convenience facade: load graph from directory and lint in one call.
+ */
+export async function lintGraphFromDir(graphDir: string) {
+  const graph = await loadGraph(graphDir);
+  return _lintGraph(graph);
+}
+export { analyzeRefutation } from './refutation.js';
+export { detectTransitions } from './transitions.js';
+export { propagateConfidence } from './confidence.js';
+export { checkKillCriteria } from './kill-criterion.js';
+export { listBranchGroups } from './branch-groups.js';
+export { generateIndex } from './index-generator.js';
+export { getBacklog } from './backlog.js';
+import { generateIndex as _generateIndex } from './index-generator.js';
 import { t } from '../i18n/index.js';
 import type { Locale } from '../i18n/index.js';
 
@@ -140,25 +162,32 @@ export async function createNode(
 
 // ── createEdge ──────────────────────────────────────────────────────
 
+function validateEdgeAffinity(relation: string, attrs: EdgeAttributes): void {
+  const violation = checkEdgeAffinity(relation, getPresentAttrKeys(attrs as unknown as Record<string, unknown>));
+  if (!violation) return;
+
+  if (violation.allowedAttrs === null) {
+    throw new Error(t('error.edge_affinity_no_attrs', { relation, invalid: violation.invalidAttrs.join(', ') }));
+  }
+  throw new Error(t('error.edge_affinity_invalid_attr', { relation, allowed: violation.allowedAttrs.join(', '), invalid: violation.invalidAttrs.join(', ') }));
+}
+
 function validateEdgeAttributes(attrs: EdgeAttributes): void {
-  if (attrs.strength !== undefined) {
-    if (typeof attrs.strength !== 'number' || isNaN(attrs.strength) || attrs.strength < 0 || attrs.strength > 1) {
-      throw new Error(t('error.invalid_strength', { value: String(attrs.strength) }));
+  // Numeric range checks driven by schema-declared EDGE_ATTRIBUTE_RANGES
+  for (const [attrName, { min, max }] of Object.entries(EDGE_ATTRIBUTE_RANGES)) {
+    const val = (attrs as Record<string, unknown>)[attrName];
+    if (val !== undefined) {
+      if (typeof val !== 'number' || isNaN(val) || (min !== undefined && val < min) || (max !== undefined && val > max)) {
+        throw new Error(t('error.invalid_range', { attr: attrName, value: String(val), min: String(min ?? '-Infinity'), max: String(max ?? 'Infinity') }));
+      }
     }
   }
-  if (attrs.severity !== undefined && !(VALID_SEVERITIES as readonly string[]).includes(attrs.severity)) {
-    throw new Error(t('error.invalid_severity', { value: String(attrs.severity), valid: VALID_SEVERITIES.join(', ') }));
-  }
-  if (attrs.completeness !== undefined) {
-    if (typeof attrs.completeness !== 'number' || isNaN(attrs.completeness) || attrs.completeness < 0 || attrs.completeness > 1) {
-      throw new Error(t('error.invalid_completeness', { value: String(attrs.completeness) }));
+  // Enum attribute checks (driven by schema-declared EDGE_ATTRIBUTE_ENUM_VALUES)
+  for (const [attrName, validValues] of Object.entries(EDGE_ATTRIBUTE_ENUM_VALUES)) {
+    const val = (attrs as Record<string, unknown>)[attrName];
+    if (val !== undefined && !(validValues as readonly string[]).includes(String(val))) {
+      throw new Error(t('error.invalid_enum_attr', { attr: attrName, value: String(val), valid: validValues.join(', ') }));
     }
-  }
-  if (attrs.dependencyType !== undefined && !(VALID_DEPENDENCY_TYPES as readonly string[]).includes(attrs.dependencyType)) {
-    throw new Error(t('error.invalid_dependency_type', { value: String(attrs.dependencyType), valid: VALID_DEPENDENCY_TYPES.join(', ') }));
-  }
-  if (attrs.impact !== undefined && !(VALID_IMPACTS as readonly string[]).includes(attrs.impact)) {
-    throw new Error(t('error.invalid_impact', { value: String(attrs.impact), valid: VALID_IMPACTS.join(', ') }));
   }
 }
 
@@ -207,12 +236,11 @@ export async function planCreateEdge(
   // Add link with optional attributes
   const link: Record<string, unknown> = { target, relation: canonical };
   if (attrs) {
+    validateEdgeAffinity(canonical, attrs);
     validateEdgeAttributes(attrs);
-    if (attrs.strength !== undefined) link.strength = attrs.strength;
-    if (attrs.severity !== undefined) link.severity = attrs.severity;
-    if (attrs.completeness !== undefined) link.completeness = attrs.completeness;
-    if (attrs.dependencyType !== undefined) link.dependencyType = attrs.dependencyType;
-    if (attrs.impact !== undefined) link.impact = attrs.impact;
+    for (const attr of EDGE_ATTRIBUTE_NAMES) {
+      if (attrs[attr] !== undefined) link[attr] = attrs[attr];
+    }
   }
   (data.links as unknown[]).push(link);
 
@@ -241,11 +269,11 @@ export async function createEdge(
   const plan = await planCreateEdge(graphDir, source, target, relation, attrs);
   await executeOps(plan.ops);
   const result: CreateEdgeResult = { source: plan.source, target: plan.target, relation: plan.relation };
-  if (attrs?.strength !== undefined) result.strength = attrs.strength;
-  if (attrs?.severity !== undefined) result.severity = attrs.severity;
-  if (attrs?.completeness !== undefined) result.completeness = attrs.completeness;
-  if (attrs?.dependencyType !== undefined) result.dependencyType = attrs.dependencyType;
-  if (attrs?.impact !== undefined) result.impact = attrs.impact;
+  if (attrs) {
+    for (const attr of EDGE_ATTRIBUTE_NAMES) {
+      if (attrs[attr] !== undefined) (result as unknown as Record<string, unknown>)[attr] = attrs[attr];
+    }
+  }
   return result;
 }
 
@@ -304,22 +332,32 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
   // Structural gaps (basic)
   const gaps: string[] = [];
   if (byType['hypothesis'] > 0 && byType['experiment'] === 0) {
-    gaps.push('No experiments — hypotheses lack testing');
+    gaps.push(t('gap.no_experiments'));
   }
   if (byType['finding'] > 0 && byType['knowledge'] === 0) {
-    gaps.push('No knowledge nodes — findings not consolidated');
+    gaps.push(t('gap.no_knowledge'));
   }
   if (byType['experiment'] > 0 && byType['finding'] === 0) {
-    gaps.push('No findings — experiments lack documented results');
+    gaps.push(t('gap.no_findings'));
   }
   if (totalNodes > 0 && totalEdges === 0) {
-    gaps.push('No edges — graph is disconnected');
+    gaps.push(t('gap.no_edges'));
   }
 
   // Advanced gap detection (§6.8)
   const config = loadConfig(graphDir);
   const gapDetails: GapDetail[] = [];
   const now = new Date();
+
+  function formatTriggerInfo(
+    triggerType: 'days' | 'episodes' | 'both',
+    daysVal: number,
+    episodesVal: number,
+  ): string {
+    if (triggerType === 'days') return t('gap.trigger_days', { days: String(daysVal) });
+    if (triggerType === 'episodes') return t('gap.trigger_episodes', { episodes: String(episodesVal) });
+    return t('gap.trigger_both', { days: String(daysVal), episodes: String(episodesVal) });
+  }
 
   // Helper: count episodes created after a given date
   function countEpisodesSince(sinceDate: Date): number {
@@ -357,15 +395,11 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
     const triggerType: 'days' | 'episodes' | 'both' =
       untestedAnyDays && untestedAnyEpisodes ? 'both'
         : untestedAnyDays ? 'days' : 'episodes';
-    const triggerInfo = triggerType === 'days'
-      ? `${config.gaps.untested_days}+ days`
-      : triggerType === 'episodes'
-        ? `${config.gaps.untested_episodes}+ episodes`
-        : `${config.gaps.untested_days}+ days and/or ${config.gaps.untested_episodes}+ episodes`;
+    const triggerInfo = formatTriggerInfo(triggerType, config.gaps.untested_days, config.gaps.untested_episodes);
     gapDetails.push({
       type: 'untested_hypothesis',
       nodeIds: untestedIds,
-      message: `${untestedIds.length} hypothesis(es) in PROPOSED for ${triggerInfo}`,
+      message: t('gap.untested_hypothesis', { count: String(untestedIds.length), triggerInfo }),
       triggerType,
     });
   }
@@ -394,25 +428,20 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
     const triggerType: 'days' | 'episodes' | 'both' =
       blockingAnyDays && blockingAnyEpisodes ? 'both'
         : blockingAnyDays ? 'days' : 'episodes';
-    const triggerInfo = triggerType === 'days'
-      ? `${config.gaps.blocking_days}+ days`
-      : triggerType === 'episodes'
-        ? `${config.gaps.blocking_episodes}+ episodes`
-        : `${config.gaps.blocking_days}+ days and/or ${config.gaps.blocking_episodes}+ episodes`;
+    const triggerInfo = formatTriggerInfo(triggerType, config.gaps.blocking_days, config.gaps.blocking_episodes);
     gapDetails.push({
       type: 'blocking_question',
       nodeIds: blockingIds,
-      message: `${blockingIds.length} blocking question(s) open for ${triggerInfo}`,
+      message: t('gap.blocking_question', { count: String(blockingIds.length), triggerInfo }),
       triggerType,
     });
   }
 
   // 3. Orphan findings: no outgoing SPAWNS, ANSWERS, or EXTENDS edges
   const orphanIds: string[] = [];
-  const forwardRelations = new Set(['spawns', 'answers', 'extends']);
   for (const node of graph.nodes.values()) {
     if (node.type === 'finding') {
-      const forwardEdges = node.links.filter(l => forwardRelations.has(l.relation));
+      const forwardEdges = node.links.filter(l => FORWARD_RELATIONS.has(l.relation));
       if (forwardEdges.length <= config.gaps.orphan_min_outgoing) {
         orphanIds.push(node.id);
       }
@@ -422,7 +451,7 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
     gapDetails.push({
       type: 'orphan_finding',
       nodeIds: orphanIds,
-      message: `${orphanIds.length} finding(s) with no outgoing spawns/answers/extends edges`,
+      message: t('gap.orphan_finding', { count: String(orphanIds.length) }),
     });
   }
 
@@ -451,7 +480,7 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
     gapDetails.push({
       type: 'stale_knowledge',
       nodeIds: staleIds,
-      message: `${staleIds.length} knowledge node(s) stale for ${config.gaps.stale_days}+ days`,
+      message: t('gap.stale_knowledge', { count: String(staleIds.length), days: String(config.gaps.stale_days) }),
     });
   }
 
@@ -508,20 +537,31 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
       if (interClusterEdges < config.gaps.min_cluster_edges) {
         const clusterNodeIds = components
           .filter(c => c.length > 0)
-          .map(c => c[0]); // representative node from each cluster
+          .map(c => c[0]);
         gapDetails.push({
           type: 'disconnected_cluster',
           nodeIds: clusterNodeIds,
-          message: `${components.length} disconnected clusters with only ${interClusterEdges} inter-cluster edge(s)`,
+          message: t('gap.disconnected_cluster', { count: String(components.length), edges: String(interClusterEdges) }),
         });
       }
     }
   }
 
   // Deferred items (OPERATIONS.md §7.4: display not-pursued items in health report)
-  const deferredItems: string[] = [];
-  for (const [id, node] of graph.nodes) {
-    if (node.status === 'DEFERRED') deferredItems.push(id);
+  const deferredItems = collectDeferredIds(graph);
+
+  // Edge attribute affinity violations
+  const affinityViolations: string[] = [];
+  for (const node of graph.nodes.values()) {
+    for (const link of node.links) {
+      const violation = checkEdgeAffinity(link.relation, getPresentAttrKeys(link as unknown as Record<string, unknown>));
+      if (!violation) continue;
+      if (violation.allowedAttrs === null) {
+        affinityViolations.push(`${node.id} → ${link.target} [${link.relation}]: no attributes allowed, but has [${violation.invalidAttrs.join(', ')}]`);
+      } else {
+        affinityViolations.push(`${node.id} → ${link.target} [${link.relation}]: allows [${violation.allowedAttrs.join(', ')}], but has disallowed [${violation.invalidAttrs.join(', ')}]`);
+      }
+    }
   }
 
   return {
@@ -535,6 +575,7 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
     gaps,
     gapDetails,
     deferredItems,
+    affinityViolations,
   };
 }
 
@@ -673,65 +714,69 @@ export async function checkConsolidation(graphDir: string): Promise<CheckResult>
     }
   }
 
-  // 1. Unpromoted findings threshold (5)
+  // Ceremony thresholds from schema
+  const ct = CEREMONY_TRIGGERS.consolidation;
+  const findingsThreshold = ct.unpromoted_findings_threshold;
+  const episodesThreshold = ct.episodes_threshold;
+  const allQuestionsResolved = ct.all_questions_resolved;
+  const overloadThreshold = ct.experiment_overload_threshold;
+
+  // 1. Unpromoted findings threshold
   const unpromoted = findings.filter(id => !promotedIds.has(id));
-  if (unpromoted.length >= 5) {
+  if (unpromoted.length >= findingsThreshold) {
     triggers.push({
       type: 'findings',
-      message: `Findings pending consolidation: ${unpromoted.length} (threshold: 5)`,
+      message: t('check.findings_threshold', { count: String(unpromoted.length), threshold: String(findingsThreshold) }),
       count: unpromoted.length,
     });
   }
 
-  // 2. Episode accumulation threshold (3)
-  if (episodes.length >= 3) {
+  // 2. Episode accumulation threshold
+  if (episodes.length >= episodesThreshold) {
     triggers.push({
       type: 'episodes',
-      message: `Episodes since last consolidation: ${episodes.length} (threshold: 3)`,
+      message: t('check.episodes_threshold', { count: String(episodes.length), threshold: String(episodesThreshold) }),
       count: episodes.length,
     });
   }
 
-  // 3. All questions resolved
-  if (questionCount.total > 0 && openQuestions.length === 0) {
+  // 3. All questions resolved (boolean trigger: total > 0 && open === 0)
+  if (allQuestionsResolved && questionCount.total > 0 && openQuestions.length === 0) {
     triggers.push({
       type: 'questions',
-      message: 'All questions resolved — consider generating new ones',
+      message: t('check.all_questions_resolved'),
       count: 0,
     });
   }
 
-  // 4. Experiment overload (5+ findings attached)
+  // 4. Experiment overload (produces edge count)
   for (const expId of experiments) {
     const expNode = graph.nodes.get(expId);
     if (!expNode) continue;
     const producesCount = expNode.links.filter(l => l.relation === 'produces').length;
-    if (producesCount >= 5) {
+    if (producesCount >= overloadThreshold) {
       triggers.push({
         type: 'experiment_overload',
-        message: `Experiment ${expId} has ${producesCount} findings attached (threshold: 5) — consider splitting`,
+        message: t('check.experiment_overload', { id: expId, count: String(producesCount), threshold: String(overloadThreshold) }),
         count: producesCount,
       });
     }
   }
 
   // Promotion evaluation
-  const promotionCandidates = await getPromotionCandidates(graphDir);
+  const promotionCandidates = await getPromotionCandidates(graphDir, graph);
 
-  // Orphan findings: findings with no forward edges
-  const forwardRelations = new Set(['spawns', 'answers', 'extends']);
+  // Orphan findings: findings with forward edges <= configurable threshold
   const orphanFindings: string[] = [];
+  const config = loadConfig(graphDir);
   for (const [id, node] of graph.nodes) {
     if (node.type !== 'finding') continue;
-    const hasForward = node.links.some(l => forwardRelations.has(l.relation));
-    if (!hasForward) orphanFindings.push(id);
+    const forwardEdges = node.links.filter(l => FORWARD_RELATIONS.has(l.relation));
+    if (forwardEdges.length <= config.gaps.orphan_min_outgoing) orphanFindings.push(id);
   }
 
   // Deferred items
-  const deferredItems: string[] = [];
-  for (const [id, node] of graph.nodes) {
-    if (node.status === 'DEFERRED') deferredItems.push(id);
-  }
+  const deferredItems = collectDeferredIds(graph);
 
   return { triggers, promotionCandidates, orphanFindings, deferredItems };
 }
@@ -745,8 +790,8 @@ export async function checkConsolidation(graphDir: string): Promise<CheckResult>
  * 2. de facto in use (referenced as premise via DEPENDS_ON/EXTENDS)
  * Exclusion: CONTRADICTS edge exists → not eligible
  */
-export async function getPromotionCandidates(graphDir: string): Promise<PromoteCandidate[]> {
-  const graph = await loadGraph(graphDir);
+export async function getPromotionCandidates(graphDir: string, preloadedGraph?: Graph): Promise<PromoteCandidate[]> {
+  const graph = preloadedGraph ?? await loadGraph(graphDir);
   const candidates: PromoteCandidate[] = [];
 
   // Track already-promoted findings
@@ -781,13 +826,23 @@ export async function getPromotionCandidates(graphDir: string): Promise<PromoteC
     }
   }
 
+  // Count incoming supports (how many other nodes support each finding)
+  const incomingSupportCounts = new Map<string, number>();
+  for (const [, n] of graph.nodes) {
+    for (const link of n.links) {
+      if (link.relation === 'supports') {
+        incomingSupportCounts.set(link.target, (incomingSupportCounts.get(link.target) ?? 0) + 1);
+      }
+    }
+  }
+
   for (const [id, node] of graph.nodes) {
     if (node.type !== 'finding') continue;
     if (promotedIds.has(id)) continue;
     if (contradictedIds.has(id)) continue;
 
     const confidence = node.confidence ?? 0;
-    const supportsCount = node.links.filter(l => l.relation === 'supports').length;
+    const supportsCount = incomingSupportCounts.get(id) ?? 0;
     const isDeFacto = deFactoIds.has(id);
     const meetsConfidence = confidence >= THRESHOLDS.promotion_confidence && supportsCount >= THRESHOLDS.min_independent_supports;
 
@@ -827,6 +882,7 @@ export async function updateNode(
   graphDir: string,
   nodeId: string,
   updates: Record<string, string>,
+  options?: { transitionPolicy?: 'strict' | 'warn' | 'off' },
 ): Promise<UpdateNodeResult> {
   const graph = await loadGraph(graphDir);
   const node = graph.nodes.get(nodeId);
@@ -835,11 +891,17 @@ export async function updateNode(
     throw new Error(t('error.node_not_found', { id: nodeId }));
   }
 
+  const policy = options?.transitionPolicy ?? TRANSITION_POLICY_DEFAULT;
+  const warnings: string[] = [];
+
   const filePath = node.path;
   const raw = fs.readFileSync(filePath, 'utf-8');
   const parsed = matter(raw);
   const data: Record<string, unknown> = structuredClone(parsed.data);
 
+  // NOTE: Transition validation uses the pre-update `node` state.
+  // If a future transition rule uses `field_present` on a field being
+  // updated in the same call, it would evaluate against stale data.
   for (const [key, value] of Object.entries(updates)) {
     if (key === 'confidence') {
       const num = parseFloat(value);
@@ -852,6 +914,44 @@ export async function updateNode(
       if (!validStatuses.includes(value)) {
         throw new Error(t('error.invalid_status', { value, type: node.type, valid: validStatuses.join(', ') }));
       }
+
+      // Transition policy enforcement
+      if (value !== node.status && policy !== 'off' && node.status) {
+        const transitionRules = TRANSITION_TABLE[node.type];
+        if (transitionRules) {
+          const manualRules = MANUAL_TRANSITIONS[node.type];
+          const result = validateTransition(node, graph, transitionRules, value, manualRules);
+          if (!result.valid) {
+            // Determine violation type: no rule exists vs conditions unmet
+            const hasRule = transitionRules.some(r => r.from === node.status && r.to === value);
+            const validPaths = transitionRules
+              .filter(r => r.from === node.status)
+              .map(r => r.to);
+            const manualPaths = (manualRules ?? [])
+              .filter(r => r.from === 'ANY' || r.from === node.status)
+              .map(r => r.to);
+            const allPaths = [...new Set([...validPaths, ...manualPaths])];
+
+            let message: string;
+            if (hasRule) {
+              const failedRule = transitionRules.find(r => r.from === node.status && r.to === value)!;
+              const condDesc = failedRule.conditions.map(c => `${c.fn}(${JSON.stringify(c.args)})`).join(', ');
+              message = t('error.transition_conditions_unmet', { from: node.status, to: value, conditions: condDesc });
+            } else {
+              message = t('error.transition_no_rule', { from: node.status, to: value, validPaths: allPaths.join(', ') || 'none' });
+            }
+
+            if (policy === 'strict') {
+              throw new Error(message);
+            } else {
+              // warn mode
+              warnings.push(message);
+            }
+          }
+        }
+        // Node types without transition rules (decision, episode) → enum-only, no rejection
+      }
+
       data[key] = value;
     } else if (key === 'finding_type') {
       if (!(VALID_FINDING_TYPES as readonly string[]).includes(value)) {
@@ -890,7 +990,9 @@ export async function updateNode(
   const output = matter.stringify(parsed.content, data);
   fs.writeFileSync(filePath, output);
 
-  return { nodeId, updatedFields: Object.keys(updates), updatedDate };
+  const result: UpdateNodeResult = { nodeId, updatedFields: Object.keys(updates), updatedDate };
+  if (warnings.length > 0) result.warnings = warnings;
+  return result;
 }
 
 // ── deleteEdge ─────────────────────────────────────────────────────
@@ -1023,4 +1125,16 @@ export async function markDone(
   fs.writeFileSync(filePath, lines.join('\n'));
 
   return { episodeId, item, marker };
+}
+
+// ── writeIndex ─────────────────────────────────────────────────────
+
+/**
+ * Generate and write the _index.md file for the graph directory.
+ */
+export async function writeIndex(graphDir: string): Promise<{ nodeCount: number }> {
+  const graph = await loadGraph(graphDir);
+  const indexContent = _generateIndex(graph);
+  fs.writeFileSync(path.join(graphDir, '_index.md'), indexContent);
+  return { nodeCount: graph.nodes.size };
 }

@@ -6,29 +6,14 @@ export const messages: Record<string, string> = {
   'health.hypothesis_status': '가설 상태',
   'health.avg_confidence': '평균 신뢰도',
   'health.open_questions': '미해결 질문',
-  'health.orphan_findings': '고아 발견사항',
   'health.link_density': '링크 밀도',
-  'health.recent_activity': '최근 활동',
-  'health.gaps': '구조적 공백',
-
-  // CLI 설명
-  'cli.description': '진화하는 마인드맵 주도 개발을 위한 CLI',
-  'cli.init.desc': 'EMDD 프로젝트 초기화',
-  'cli.new.desc': '새 노드 생성',
-  'cli.health.desc': '건강 대시보드 표시',
-  'cli.check.desc': '통합 트리거 확인',
-  'cli.lint.desc': '그래프 스키마 및 링크 검증',
-  'cli.promote.desc': '승격 후보 식별',
-  'cli.index.desc': '_index.md 생성',
-  'cli.graph.desc': '_graph.mmd 생성',
-  'cli.update.desc': '노드 프론트매터 업데이트',
-  'cli.link.desc': '노드 간 링크 추가',
-  'cli.done.desc': '에피소드 항목 완료 표시',
-  'cli.backlog.desc': '백로그 항목 표시',
+  'health.gap_details': '갭 상세',
+  'health.nodes': '노드',
+  'health.affinity_violations': '어피니티 위반',
+  'health.deferred_items': '보류 항목',
 
   // 새 노드
   'new.created': '{type} 노드 생성됨: {id}',
-  'new.invalid_type': '잘못된 노드 타입: {type}. 유효한 타입: {valid}',
 
   // 초기화
   'init.success': '{path}에 EMDD 프로젝트가 초기화되었습니다',
@@ -37,9 +22,8 @@ export const messages: Record<string, string> = {
 
   // 린트
   'lint.clean': '모든 노드가 유효합니다. 오류가 없습니다.',
-  'lint.errors_found': '{count}개 오류 발견',
-  'lint.warnings_found': '{count}개 경고 발견',
   'lint.missing_field': '필수 필드 누락: {field}',
+  'lint.invalid_type': '잘못된 노드 타입: "{type}". 유효한 타입: {valid}',
   'lint.invalid_status': '타입 {type}에 대한 잘못된 상태 "{status}". 유효한 값: {valid}',
   'lint.confidence_range': '신뢰도는 0.0에서 1.0 사이여야 합니다. 입력값: {value}',
   'lint.invalid_relation': '잘못된 링크 관계: {relation}',
@@ -49,47 +33,57 @@ export const messages: Record<string, string> = {
   'check.title': '통합 트리거 확인',
   'check.findings_threshold': '통합 대기 중인 발견사항: {count}개 (임계값: {threshold})',
   'check.episodes_threshold': '마지막 통합 이후 에피소드: {count}개 (임계값: {threshold})',
-  'check.stale_hypothesis': '오래된 가설: {id} ({status} 상태로 {days}일)',
   'check.no_triggers': '활성화된 통합 트리거 없음',
 
   // 승격
   'promote.title': '승격 후보',
-  'promote.candidate': '{id}: 신뢰도={confidence}, 지지={supports}',
-  'promote.no_candidates': '승격 후보가 없습니다',
 
-  // 업데이트
-  'update.success': '{id} 업데이트됨: {field} = {value}',
-  'update.node_not_found': '노드를 찾을 수 없습니다: {id}',
+  // 포맷 라벨
+  'format.warning': '경고',
+  'format.type': '타입',
+  'format.status': '상태',
+  'format.confidence': '신뢰도',
+  'format.tags': '태그',
+  'format.links': '링크',
+  'format.supports': '지지',
+  'format.via': '경유',
 
-  // 링크
-  'link.success': '{source} → {target} 연결됨 ({relation})',
-  'link.invalid_relation': '잘못된 관계: {relation}. 유효한 값: {valid}',
-
-  // 완료
-  'done.success': '[{marker}]로 표시됨: {item}',
-  'done.item_not_found': '{id}에서 항목을 찾을 수 없습니다: {item}',
-  'done.invalid_marker': '잘못된 마커: {marker}. 유효한 마커: done, deferred, superseded',
-  'done.already_marked': '{id}에서 이미 표시된 항목입니다: {item}',
-
-  // 인덱스
-  'index.generated': '_index.md 생성됨 ({nodes}개 노드)',
-
-  // 그래프
-  'graph.generated': '_graph.mmd 생성됨 ({nodes}개 노드, {edges}개 엣지)',
-
-  // 백로그
-  'backlog.title': '백로그 항목',
-  'backlog.empty': '대기 중인 백로그 항목 없음',
+  // 포맷 출력
+  'format.link_created': '{source} → {target} 연결됨 [{relation}]',
+  'format.edge_deleted': '{source} → {target}에서 {count}개 링크 삭제됨',
+  'format.node_updated': '{nodeId} 업데이트됨: {fields}',
+  'format.item_marked': '{episodeId}에서 "{item}"을(를) {marker}로 표시',
+  'format.no_neighbors': '이웃 노드가 없습니다.',
+  'format.no_nodes': '노드가 없습니다.',
+  'format.no_gaps': '갭이 없습니다.',
+  'format.no_promote': '승격 후보가 없습니다.',
+  'format.no_confidence': '신뢰도 변경 없음.',
+  'format.index_generated': '{count}개 노드에 대한 인덱스 생성됨.',
+  'format.no_branches': '브랜치 그룹이 없습니다.',
+  'format.convergence': '수렴 준비 완료: {reason}',
+  'format.no_kill': '킬 기준 경고 없음.',
+  'format.no_transitions': '가능한 전이가 없습니다.',
+  'format.no_affected': '영향 받는 가설 없음.',
+  'format.affected_count': '영향 받는 가설 ({count}개):',
+  'format.pivot_triggered': '피벗 세레모니 트리거됨 ({count}개 철회: {ids})',
+  'format.no_backlog': '백로그 항목 없음.',
+  'format.lint_summary': '{errors}개 오류, {warnings}개 경고',
 
   // 오류
   'error.graph_not_found': 'graph/ 디렉토리를 찾을 수 없습니다',
   'error.node_not_found': '노드를 찾을 수 없습니다: {id}',
   'error.invalid_node_type': '잘못된 노드 타입: {type}. 유효한 타입: {valid}',
+  'error.transition_no_rule': '{from}→{to}에 대한 전이 규칙이 없습니다 (유효 경로: {validPaths})',
+  'error.transition_conditions_unmet': '전이 {from}→{to} 조건 미충족: {conditions}',
+  'error.invalid_range': '{attr}은(는) {min}에서 {max} 사이여야 합니다. 입력값: {value}',
   'error.invalid_strength': 'strength는 0.0에서 1.0 사이의 숫자여야 합니다. 입력값: {value}',
   'error.invalid_severity': '잘못된 severity "{value}". 유효한 값: {valid}',
   'error.invalid_completeness': 'completeness는 0.0에서 1.0 사이의 숫자여야 합니다. 입력값: {value}',
   'error.invalid_dependency_type': '잘못된 dependencyType "{value}". 유효한 값: {valid}',
   'error.invalid_impact': '잘못된 impact "{value}". 유효한 값: {valid}',
+  'error.invalid_enum_attr': '유효하지 않은 {attr} "{value}". 유효한 값: {valid}',
+  'error.edge_affinity_invalid_attr': '에지 어피니티 위반: "{relation}"은(는) [{allowed}]만 허용하지만, 허용되지 않는 속성이 있습니다: [{invalid}]',
+  'error.edge_affinity_no_attrs': '에지 어피니티 위반: "{relation}"은(는) 속성을 허용하지 않지만, 속성이 있습니다: [{invalid}]',
   'error.invalid_relation': '잘못된 관계: {relation}. 유효한 값: {valid}',
   'error.source_not_found': '소스 노드를 찾을 수 없습니다: {id}',
   'error.target_not_found': '대상 노드를 찾을 수 없습니다: {id}',
@@ -99,9 +93,29 @@ export const messages: Record<string, string> = {
   'error.invalid_urgency': '잘못된 urgency "{value}". 유효한 값: {valid}',
   'error.invalid_risk_level': '잘못된 risk_level "{value}". 유효한 값: {valid}',
   'error.invalid_reversibility': '잘못된 reversibility "{value}". 유효한 값: {valid}',
+  'error.cli_malformed_record': '경고: 잘못된 --{key} 항목 "{pair}" 무시됨 (key=value 형식 필요)',
+  'error.cli_validation_failed': '입력 검증 실패:',
   'error.no_matching_link': '{source}에서 {target}으로의 일치하는 링크가 없습니다{relation}',
   'error.invalid_marker': '잘못된 마커: {marker}. 유효한 마커: {valid}',
   'error.item_already_marked': '{id}에서 이미 표시된 항목입니다: {item}',
   'error.item_not_found': '{id}에서 항목을 찾을 수 없습니다: {item}',
   'error.multiple_matches': "'{item}'에 대한 복수 일치가 {id}에 있습니다",
+
+  // 갭 메시지 (getHealth)
+  'gap.no_experiments': '실험이 없습니다 — 가설에 테스트가 부족합니다',
+  'gap.no_knowledge': '지식 노드가 없습니다 — 발견사항이 통합되지 않았습니다',
+  'gap.no_findings': '발견사항이 없습니다 — 실험에 문서화된 결과가 없습니다',
+  'gap.no_edges': '에지가 없습니다 — 그래프가 연결되지 않았습니다',
+  'gap.untested_hypothesis': '{count}개 가설이 PROPOSED 상태로 {triggerInfo} 경과',
+  'gap.blocking_question': '{count}개 차단 질문이 {triggerInfo} 동안 미해결',
+  'gap.orphan_finding': '{count}개 발견사항에 outgoing spawns/answers/extends 에지 없음',
+  'gap.stale_knowledge': '{count}개 지식 노드가 {days}일 이상 오래됨',
+  'gap.disconnected_cluster': '{count}개 단절된 클러스터, inter-cluster 에지 {edges}개만 존재',
+  'gap.trigger_days': '{days}일 이상',
+  'gap.trigger_episodes': '{episodes}개 이상 에피소드',
+  'gap.trigger_both': '{days}일 이상 및/또는 {episodes}개 이상 에피소드',
+
+  // 통합 확인 메시지 (checkConsolidation)
+  'check.all_questions_resolved': '모든 질문이 해결됨 — 새로운 질문 생성을 고려하세요',
+  'check.experiment_overload': '실험 {id}에 {count}개 발견사항 연결됨 (임계값: {threshold}) — 분할을 고려하세요',
 };

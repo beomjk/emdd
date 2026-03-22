@@ -4,9 +4,10 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import matter from 'gray-matter';
 
-import { indexCommand } from '../../../src/commands/index.js';
-import { graphCommand } from '../../../src/commands/graph.js';
-import { backlogCommand } from '../../../src/commands/backlog.js';
+import { graphCommand } from '../../../src/cli/graph.js';
+import { generateIndex, getBacklog } from '../../../src/graph/operations.js';
+import { loadGraph } from '../../../src/graph/loader.js';
+import { writeFileSync as fsWriteFileSync } from 'node:fs';
 
 function setupProject(): string {
   const dir = mkdtempSync(join(tmpdir(), 'emdd-utils-'));
@@ -35,7 +36,9 @@ describe('indexCommand', () => {
       tags: [], links: [],
     });
 
-    await indexCommand(join(tmpDir, 'graph'));
+    const graph = await loadGraph(join(tmpDir, 'graph'));
+    const indexContent = generateIndex(graph);
+    fsWriteFileSync(join(tmpDir, 'graph', '_index.md'), indexContent);
 
     expect(existsSync(join(tmpDir, 'graph', '_index.md'))).toBe(true);
   });
@@ -48,7 +51,9 @@ describe('indexCommand', () => {
       tags: [], links: [],
     });
 
-    await indexCommand(join(tmpDir, 'graph'));
+    const graph = await loadGraph(join(tmpDir, 'graph'));
+    const indexContent = generateIndex(graph);
+    fsWriteFileSync(join(tmpDir, 'graph', '_index.md'), indexContent);
 
     const content = readFileSync(join(tmpDir, 'graph', '_index.md'), 'utf-8');
     expect(content).toContain('hyp-001');
@@ -63,8 +68,8 @@ describe('indexCommand', () => {
       tags: [], links: [],
     });
 
-    const result = await indexCommand(join(tmpDir, 'graph'));
-    expect(result.nodeCount).toBe(1);
+    const graph = await loadGraph(join(tmpDir, 'graph'));
+    expect(graph.nodes.size).toBe(1);
   });
 });
 
@@ -135,7 +140,7 @@ describe('graphCommand', () => {
   });
 });
 
-describe('backlogCommand', () => {
+describe('getBacklog', () => {
   let tmpDir: string;
   beforeEach(() => { tmpDir = setupProject(); });
   afterEach(() => { rmSync(tmpDir, { recursive: true, force: true }); });
@@ -148,7 +153,7 @@ describe('backlogCommand', () => {
       tags: [], links: [],
     }, '## Goals\n\n- [ ] task one\n- [x] task two\n- [ ] task three\n');
 
-    const result = await backlogCommand(join(tmpDir, 'graph'));
+    const result = await getBacklog(join(tmpDir, 'graph'));
     expect(result.items.length).toBe(2);
     expect(result.items.some(i => i.text === 'task one')).toBe(true);
     expect(result.items.some(i => i.text === 'task three')).toBe(true);
@@ -162,12 +167,12 @@ describe('backlogCommand', () => {
       tags: [], links: [],
     }, '## Goals\n\n- [x] all done\n');
 
-    const result = await backlogCommand(join(tmpDir, 'graph'));
+    const result = await getBacklog(join(tmpDir, 'graph'));
     expect(result.items.length).toBe(0);
   });
 
   it('returns empty array when no episodes exist', async () => {
-    const result = await backlogCommand(join(tmpDir, 'graph'));
+    const result = await getBacklog(join(tmpDir, 'graph'));
     expect(result.items).toEqual([]);
   });
 
@@ -179,7 +184,61 @@ describe('backlogCommand', () => {
       tags: [], links: [],
     }, '## Goals\n\n- [ ] my task\n');
 
-    const result = await backlogCommand(join(tmpDir, 'graph'));
+    const result = await getBacklog(join(tmpDir, 'graph'));
     expect(result.items[0].episodeId).toBe('epi-001');
+  });
+
+  describe('statusFilter with all marker types', () => {
+    beforeEach(() => {
+      writeNode(tmpDir, 'episodes', 'epi-001-markers.md', {
+        id: 'epi-001', type: 'episode', title: 'All Markers',
+        status: 'IN_PROGRESS',
+        created: '2026-01-01', updated: '2026-01-01',
+        tags: [], links: [],
+      }, '## Goals\n- [ ] pending task\n- [x] done via x\n- [X] done via X\n- [done] done via text\n- [deferred] deferred task\n- [superseded] superseded task\n');
+    });
+
+    it('statusFilter=all returns all 6 items', async () => {
+      const result = await getBacklog(join(tmpDir, 'graph'), 'all');
+      expect(result.items.length).toBe(6);
+    });
+
+    it('statusFilter=done returns 3 items (x, X, done)', async () => {
+      const result = await getBacklog(join(tmpDir, 'graph'), 'done');
+      expect(result.items.length).toBe(3);
+      expect(result.items.every(i => i.marker === 'done')).toBe(true);
+    });
+
+    it('statusFilter=deferred returns 1 item', async () => {
+      const result = await getBacklog(join(tmpDir, 'graph'), 'deferred');
+      expect(result.items.length).toBe(1);
+      expect(result.items[0].marker).toBe('deferred');
+      expect(result.items[0].text).toBe('deferred task');
+    });
+
+    it('statusFilter=superseded returns 1 item', async () => {
+      const result = await getBacklog(join(tmpDir, 'graph'), 'superseded');
+      expect(result.items.length).toBe(1);
+      expect(result.items[0].marker).toBe('superseded');
+      expect(result.items[0].text).toBe('superseded task');
+    });
+
+    it('default (no filter) returns only pending items', async () => {
+      const result = await getBacklog(join(tmpDir, 'graph'));
+      expect(result.items.length).toBe(1);
+      expect(result.items[0].marker).toBe('pending');
+      expect(result.items[0].text).toBe('pending task');
+    });
+
+    it('each item has correct marker field value', async () => {
+      const result = await getBacklog(join(tmpDir, 'graph'), 'all');
+      const byText = new Map(result.items.map(i => [i.text, i.marker]));
+      expect(byText.get('pending task')).toBe('pending');
+      expect(byText.get('done via x')).toBe('done');
+      expect(byText.get('done via X')).toBe('done');
+      expect(byText.get('done via text')).toBe('done');
+      expect(byText.get('deferred task')).toBe('deferred');
+      expect(byText.get('superseded task')).toBe('superseded');
+    });
   });
 });

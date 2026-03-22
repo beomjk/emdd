@@ -299,6 +299,62 @@ describe('createEdge', () => {
       createEdge(join(tmpDir, 'graph'), 'fnd-001', 'hyp-001', 'contradicts', { severity: 'INVALID' as any })
     ).rejects.toThrow(/severity/);
   });
+
+  // ── Affinity validation (T022) ──
+
+  it('allows valid affinity combo: supports + strength', async () => {
+    writeNode(tmpDir, 'experiments', 'exp-001-test.md', {
+      id: 'exp-001', type: 'experiment', title: 'Test Exp',
+      status: 'COMPLETED', created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'Test',
+      status: 'PROPOSED', confidence: 0.5,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+
+    const result = await createEdge(join(tmpDir, 'graph'), 'exp-001', 'hyp-001', 'supports', { strength: 0.8 });
+    expect(result.strength).toBe(0.8);
+  });
+
+  it('rejects invalid affinity combo: supports + severity', async () => {
+    writeNode(tmpDir, 'experiments', 'exp-001-test.md', {
+      id: 'exp-001', type: 'experiment', title: 'Test Exp',
+      status: 'COMPLETED', created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'Test',
+      status: 'PROPOSED', confidence: 0.5,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+
+    await expect(
+      createEdge(join(tmpDir, 'graph'), 'exp-001', 'hyp-001', 'supports', { severity: 'FATAL' })
+    ).rejects.toThrow(/affinity/i);
+  });
+
+  it('rejects attributes on edge type with no affinity entry (relates_to)', async () => {
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'Test',
+      status: 'PROPOSED', confidence: 0.5,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+    writeNode(tmpDir, 'hypotheses', 'hyp-002-test.md', {
+      id: 'hyp-002', type: 'hypothesis', title: 'Test2',
+      status: 'PROPOSED', confidence: 0.5,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+
+    await expect(
+      createEdge(join(tmpDir, 'graph'), 'hyp-001', 'hyp-002', 'relates_to', { strength: 0.5 })
+    ).rejects.toThrow(/affinity/i);
+  });
 });
 
 describe('getHealth', () => {
@@ -320,6 +376,23 @@ describe('getHealth', () => {
     const report = await getHealth(SAMPLE_GRAPH);
     // gaps is an array of string descriptions
     expect(Array.isArray(report.gaps)).toBe(true);
+  });
+
+  // ── Affinity scan (T022) ──
+
+  it('reports no affinity violations on valid sample-graph', async () => {
+    const report = await getHealth(SAMPLE_GRAPH);
+    expect(report.affinityViolations).toEqual([]);
+  });
+
+  it('reports affinity violations on fixture with invalid edges', async () => {
+    const AFFINITY_VIOLATIONS = path.join(FIXTURES, 'affinity-violations');
+    const report = await getHealth(AFFINITY_VIOLATIONS);
+    expect(report.affinityViolations.length).toBeGreaterThan(0);
+    // supports + severity is a violation
+    expect(report.affinityViolations.some((v: string) => v.includes('supports') && v.includes('severity'))).toBe(true);
+    // relates_to + strength is a violation (no affinity entry)
+    expect(report.affinityViolations.some((v: string) => v.includes('relates_to') && v.includes('strength'))).toBe(true);
   });
 });
 
@@ -732,6 +805,76 @@ describe('checkConsolidation', () => {
   });
 });
 
+// ── Ceremony Triggers from Schema (T062) ──
+
+describe('checkConsolidation — schema-declared thresholds', () => {
+  it('does not trigger below schema threshold', async () => {
+    const { CEREMONY_TRIGGERS } = await import('../../../src/graph/types.js');
+    const ct = CEREMONY_TRIGGERS.consolidation;
+    const threshold = ct.unpromoted_findings_threshold as number;
+    // Create fixture with threshold-1 findings => should NOT trigger
+    const tmpDir = setupProject();
+    try {
+      for (let i = 1; i < threshold; i++) {
+        writeNode(tmpDir, 'findings', `fnd-${String(i).padStart(3, '0')}-test.md`, {
+          id: `fnd-${String(i).padStart(3, '0')}`, type: 'finding', title: `F${i}`,
+          status: 'VALIDATED', confidence: 0.5,
+          created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+        });
+      }
+      const result = await checkConsolidation(join(tmpDir, 'graph'));
+      expect(result.triggers.some(t => t.type === 'findings')).toBe(false);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('triggers consolidation based on schema thresholds', async () => {
+    // sample-graph: 5 findings (== threshold 5), 3 episodes (== threshold 3)
+    const result = await checkConsolidation(SAMPLE_GRAPH);
+    expect(result.triggers.some(t => t.type === 'findings')).toBe(true);
+    expect(result.triggers.some(t => t.type === 'episodes')).toBe(true);
+  });
+});
+
+describe('promotion thresholds use schema constants', () => {
+  it('THRESHOLDS constants have valid ranges', async () => {
+    const { THRESHOLDS } = await import('../../../src/graph/types.js');
+    expect(typeof THRESHOLDS.promotion_confidence).toBe('number');
+    expect(typeof THRESHOLDS.min_independent_supports).toBe('number');
+    expect(THRESHOLDS.promotion_confidence).toBeGreaterThan(0);
+    expect(THRESHOLDS.promotion_confidence).toBeLessThanOrEqual(1);
+    expect(THRESHOLDS.min_independent_supports).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe('createEdge stores schema-declared attributes', () => {
+  it('persists all schema-declared edge attributes', async () => {
+    const tmpDir = setupProject();
+    try {
+      writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+        id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'PROPOSED',
+        confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+      });
+      writeNode(tmpDir, 'findings', 'fnd-001-test.md', {
+        id: 'fnd-001', type: 'finding', title: 'F1', status: 'VALIDATED',
+        confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+      });
+      const graphDir = join(tmpDir, 'graph');
+      const result = await createEdge(graphDir, 'hyp-001', 'fnd-001', 'supports', { strength: 0.8 });
+      expect(result.strength).toBe(0.8);
+      // Verify persisted by reading back
+      const detail = await readNode(graphDir, 'hyp-001');
+      expect(detail).not.toBeNull();
+      const link = detail!.links.find(l => l.target === 'fnd-001');
+      expect(link).toBeDefined();
+      expect(link!.strength).toBe(0.8);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+});
+
 describe('getPromotionCandidates', () => {
   it('returns empty when no candidates exist', async () => {
     const candidates = await getPromotionCandidates(EMPTY_GRAPH);
@@ -744,18 +887,18 @@ describe('getPromotionCandidates', () => {
       writeNode(tmpDir2, 'findings', 'fnd-001-test.md', {
         id: 'fnd-001', type: 'finding', title: 'F1', status: 'VALIDATED',
         confidence: 0.85, created: '2026-01-01', updated: '2026-01-01', tags: [],
-        links: [
-          { target: 'hyp-001', relation: 'supports' },
-          { target: 'hyp-002', relation: 'supports' },
-        ],
+        links: [],
       });
-      writeNode(tmpDir2, 'hypotheses', 'hyp-001-test.md', {
-        id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'TESTING',
-        confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+      // Two experiments with incoming supports pointing TO fnd-001
+      writeNode(tmpDir2, 'experiments', 'exp-001-test.md', {
+        id: 'exp-001', type: 'experiment', title: 'E1', status: 'COMPLETED',
+        created: '2026-01-01', updated: '2026-01-01', tags: [],
+        links: [{ target: 'fnd-001', relation: 'supports' }],
       });
-      writeNode(tmpDir2, 'hypotheses', 'hyp-002-test.md', {
-        id: 'hyp-002', type: 'hypothesis', title: 'H2', status: 'TESTING',
-        confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+      writeNode(tmpDir2, 'experiments', 'exp-002-test.md', {
+        id: 'exp-002', type: 'experiment', title: 'E2', status: 'COMPLETED',
+        created: '2026-01-01', updated: '2026-01-01', tags: [],
+        links: [{ target: 'fnd-001', relation: 'supports' }],
       });
 
       const candidates = await getPromotionCandidates(join(tmpDir2, 'graph'));
@@ -772,18 +915,18 @@ describe('getPromotionCandidates', () => {
       writeNode(tmpDir2, 'findings', 'fnd-001-test.md', {
         id: 'fnd-001', type: 'finding', title: 'F1', status: 'VALIDATED',
         confidence: 0.95, created: '2026-01-01', updated: '2026-01-01', tags: [],
-        links: [
-          { target: 'hyp-001', relation: 'supports' },
-          { target: 'hyp-002', relation: 'supports' },
-        ],
+        links: [],
       });
-      writeNode(tmpDir2, 'hypotheses', 'hyp-001-test.md', {
-        id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'TESTING',
-        confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+      // Two experiments with incoming supports pointing TO fnd-001
+      writeNode(tmpDir2, 'experiments', 'exp-001-test.md', {
+        id: 'exp-001', type: 'experiment', title: 'E1', status: 'COMPLETED',
+        created: '2026-01-01', updated: '2026-01-01', tags: [],
+        links: [{ target: 'fnd-001', relation: 'supports' }],
       });
-      writeNode(tmpDir2, 'hypotheses', 'hyp-002-test.md', {
-        id: 'hyp-002', type: 'hypothesis', title: 'H2', status: 'TESTING',
-        confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+      writeNode(tmpDir2, 'experiments', 'exp-002-test.md', {
+        id: 'exp-002', type: 'experiment', title: 'E2', status: 'COMPLETED',
+        created: '2026-01-01', updated: '2026-01-01', tags: [],
+        links: [{ target: 'fnd-001', relation: 'supports' }],
       });
       // Something contradicts fnd-001
       writeNode(tmpDir2, 'findings', 'fnd-002-test.md', {
@@ -807,19 +950,13 @@ describe('getPromotionCandidates', () => {
       writeNode(tmpDir2, 'findings', 'fnd-001-test.md', {
         id: 'fnd-001', type: 'finding', title: 'F1', status: 'VALIDATED',
         confidence: 0.85, created: '2026-01-01', updated: '2026-01-01', tags: [],
-        links: [
-          { target: 'hyp-001', relation: 'supports' },
-          { target: 'hyp-002', relation: 'supports' },
-        ],
+        links: [],
       });
+      // hyp-001 depends_on fnd-001, making it de facto in use
       writeNode(tmpDir2, 'hypotheses', 'hyp-001-test.md', {
         id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'TESTING',
         confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [],
         links: [{ target: 'fnd-001', relation: 'depends_on' }],
-      });
-      writeNode(tmpDir2, 'hypotheses', 'hyp-002-test.md', {
-        id: 'hyp-002', type: 'hypothesis', title: 'H2', status: 'TESTING',
-        confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
       });
 
       const candidates = await getPromotionCandidates(join(tmpDir2, 'graph'));
@@ -837,22 +974,58 @@ describe('getPromotionCandidates', () => {
       writeNode(tmpDir2, 'findings', 'fnd-001-test.md', {
         id: 'fnd-001', type: 'finding', title: 'F1', status: 'VALIDATED',
         confidence: 0.95, created: '2026-01-01', updated: '2026-01-01', tags: [],
-        links: [
-          { target: 'hyp-001', relation: 'supports' },
-          { target: 'hyp-002', relation: 'supports' },
-        ],
+        links: [],
       });
-      writeNode(tmpDir2, 'hypotheses', 'hyp-001-test.md', {
-        id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'TESTING',
-        confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+      // Two other nodes with supports edges pointing TO fnd-001 (incoming supports)
+      writeNode(tmpDir2, 'experiments', 'exp-001-test.md', {
+        id: 'exp-001', type: 'experiment', title: 'E1', status: 'COMPLETED',
+        created: '2026-01-01', updated: '2026-01-01', tags: [],
+        links: [{ target: 'fnd-001', relation: 'supports' }],
       });
-      writeNode(tmpDir2, 'hypotheses', 'hyp-002-test.md', {
-        id: 'hyp-002', type: 'hypothesis', title: 'H2', status: 'TESTING',
-        confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+      writeNode(tmpDir2, 'experiments', 'exp-002-test.md', {
+        id: 'exp-002', type: 'experiment', title: 'E2', status: 'COMPLETED',
+        created: '2026-01-01', updated: '2026-01-01', tags: [],
+        links: [{ target: 'fnd-001', relation: 'supports' }],
       });
 
       const candidates = await getPromotionCandidates(join(tmpDir2, 'graph'));
       expect(candidates.some(c => c.id === 'fnd-001')).toBe(true);
+    } finally {
+      rmSync(tmpDir2, { recursive: true, force: true });
+    }
+  });
+
+  it('counts incoming supports (other nodes targeting the finding)', async () => {
+    let tmpDir2 = setupProject();
+    try {
+      // Finding with high confidence but no outgoing supports edges
+      writeNode(tmpDir2, 'findings', 'fnd-001-test.md', {
+        id: 'fnd-001', type: 'finding', title: 'F1', status: 'VALIDATED',
+        confidence: 0.95, created: '2026-01-01', updated: '2026-01-01', tags: [],
+        links: [],
+      });
+      // Three experiments with supports edges pointing TO fnd-001
+      writeNode(tmpDir2, 'experiments', 'exp-001-test.md', {
+        id: 'exp-001', type: 'experiment', title: 'E1', status: 'COMPLETED',
+        created: '2026-01-01', updated: '2026-01-01', tags: [],
+        links: [{ target: 'fnd-001', relation: 'supports' }],
+      });
+      writeNode(tmpDir2, 'experiments', 'exp-002-test.md', {
+        id: 'exp-002', type: 'experiment', title: 'E2', status: 'COMPLETED',
+        created: '2026-01-01', updated: '2026-01-01', tags: [],
+        links: [{ target: 'fnd-001', relation: 'supports' }],
+      });
+      writeNode(tmpDir2, 'findings', 'fnd-002-test.md', {
+        id: 'fnd-002', type: 'finding', title: 'F2', status: 'VALIDATED',
+        confidence: 0.6, created: '2026-01-01', updated: '2026-01-01', tags: [],
+        links: [{ target: 'fnd-001', relation: 'supports' }],
+      });
+
+      const candidates = await getPromotionCandidates(join(tmpDir2, 'graph'));
+      const fnd1 = candidates.find(c => c.id === 'fnd-001');
+      expect(fnd1).toBeDefined();
+      expect(fnd1!.supports).toBe(3);
+      expect(fnd1!.reason).toBe('confidence');
     } finally {
       rmSync(tmpDir2, { recursive: true, force: true });
     }
@@ -1029,7 +1202,7 @@ describe('updateNode', () => {
       tags: [], links: [],
     });
 
-    const result = await updateNode(join(tmpDir, 'graph'), 'hyp-001', { status: 'TESTING' });
+    const result = await updateNode(join(tmpDir, 'graph'), 'hyp-001', { status: 'TESTING' }, { transitionPolicy: 'off' });
     expect(result.nodeId).toBe('hyp-001');
     expect(result.updatedFields).toEqual(['status']);
     expect(result.updatedDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
@@ -1093,7 +1266,7 @@ describe('updateNode', () => {
       tags: [], links: [],
     });
 
-    const result = await updateNode(join(tmpDir, 'graph'), 'hyp-002', { status: 'TESTING' });
+    const result = await updateNode(join(tmpDir, 'graph'), 'hyp-002', { status: 'TESTING' }, { transitionPolicy: 'off' });
     expect(result.updatedFields).toContain('status');
   });
 
@@ -1278,6 +1451,136 @@ describe('updateNode', () => {
     const parsed = matter(content);
     expect(parsed.data.meta.status).toBe('ANYTHING');
   });
+
+  it('preserves body content when updating frontmatter fields', async () => {
+    const body = '\nImportant findings here.\n\nMore details.\n';
+    writeNode(tmpDir, 'hypotheses', 'hyp-006-body.md', {
+      id: 'hyp-006', type: 'hypothesis', title: 'Body preservation',
+      status: 'PROPOSED', confidence: 0.5,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    }, body);
+
+    await updateNode(join(tmpDir, 'graph'), 'hyp-006', { status: 'TESTING' }, { transitionPolicy: 'off' });
+
+    const content = readFileSync(join(tmpDir, 'graph', 'hypotheses', 'hyp-006-body.md'), 'utf-8');
+    const parsed = matter(content);
+    expect(parsed.data.status).toBe('TESTING');
+    expect(parsed.content).toContain('Important findings here.');
+    expect(parsed.content).toContain('More details.');
+  });
+});
+
+// ── Transition Policy Enforcement (T029) ──
+
+describe('updateNode — transition policy', () => {
+  let tmpDir: string;
+  beforeEach(() => { tmpDir = setupProject(); });
+  afterEach(() => { rmSync(tmpDir, { recursive: true, force: true }); });
+
+  // Helper: hypothesis with PROPOSED status and a linked RUNNING experiment
+  function setupValidTransition() {
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'Test',
+      status: 'PROPOSED', confidence: 0.5,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [{ target: 'exp-001', relation: 'tests' }],
+    });
+    writeNode(tmpDir, 'experiments', 'exp-001-test.md', {
+      id: 'exp-001', type: 'experiment', title: 'Exp',
+      status: 'RUNNING',
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [{ target: 'hyp-001', relation: 'tests' }],
+    });
+  }
+
+  // Helper: hypothesis with no linked experiment (transition conditions unmet)
+  function setupInvalidTransition() {
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'Test',
+      status: 'PROPOSED', confidence: 0.5,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+  }
+
+  // ── strict mode ──
+
+  it('strict: allows valid transition (PROPOSED→TESTING with linked experiment)', async () => {
+    setupValidTransition();
+    const result = await updateNode(join(tmpDir, 'graph'), 'hyp-001', { status: 'TESTING' }, { transitionPolicy: 'strict' });
+    expect(result.updatedFields).toContain('status');
+    expect(result.warnings).toBeUndefined();
+  });
+
+  it('strict: rejects when no transition rule exists (PROPOSED→SUPPORTED)', async () => {
+    setupValidTransition();
+    await expect(
+      updateNode(join(tmpDir, 'graph'), 'hyp-001', { status: 'SUPPORTED' }, { transitionPolicy: 'strict' })
+    ).rejects.toThrow();
+  });
+
+  it('strict: rejects when conditions unmet (PROPOSED→TESTING without experiment)', async () => {
+    setupInvalidTransition();
+    await expect(
+      updateNode(join(tmpDir, 'graph'), 'hyp-001', { status: 'TESTING' }, { transitionPolicy: 'strict' })
+    ).rejects.toThrow();
+  });
+
+  // ── warn mode ──
+
+  it('warn: allows transition with warning when conditions unmet', async () => {
+    setupInvalidTransition();
+    const result = await updateNode(join(tmpDir, 'graph'), 'hyp-001', { status: 'TESTING' }, { transitionPolicy: 'warn' });
+    expect(result.updatedFields).toContain('status');
+    expect(result.warnings).toBeDefined();
+    expect(result.warnings!.length).toBeGreaterThan(0);
+  });
+
+  it('warn: allows valid transition without warnings', async () => {
+    setupValidTransition();
+    const result = await updateNode(join(tmpDir, 'graph'), 'hyp-001', { status: 'TESTING' }, { transitionPolicy: 'warn' });
+    expect(result.updatedFields).toContain('status');
+    expect(result.warnings).toBeUndefined();
+  });
+
+  // ── off mode ──
+
+  it('off: allows any valid-enum transition without checking rules', async () => {
+    setupInvalidTransition();
+    const result = await updateNode(join(tmpDir, 'graph'), 'hyp-001', { status: 'TESTING' }, { transitionPolicy: 'off' });
+    expect(result.updatedFields).toContain('status');
+    expect(result.warnings).toBeUndefined();
+  });
+
+  // ── manual transitions ──
+
+  it('strict: allows manual transition (ANY→DEFERRED) regardless of policy', async () => {
+    setupInvalidTransition();
+    const result = await updateNode(join(tmpDir, 'graph'), 'hyp-001', { status: 'DEFERRED' }, { transitionPolicy: 'strict' });
+    expect(result.updatedFields).toContain('status');
+  });
+
+  // ── node types without transition rules ──
+
+  it('strict: decision type uses enum-only validation (no transition rules)', async () => {
+    writeNode(tmpDir, 'decisions', 'dec-001-test.md', {
+      id: 'dec-001', type: 'decision', title: 'Test',
+      status: 'PROPOSED',
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+    const result = await updateNode(join(tmpDir, 'graph'), 'dec-001', { status: 'ACCEPTED' }, { transitionPolicy: 'strict' });
+    expect(result.updatedFields).toContain('status');
+  });
+
+  // ── non-status updates unaffected ──
+
+  it('non-status updates work regardless of policy', async () => {
+    setupInvalidTransition();
+    const result = await updateNode(join(tmpDir, 'graph'), 'hyp-001', { confidence: '0.8' }, { transitionPolicy: 'strict' });
+    expect(result.updatedFields).toContain('confidence');
+  });
 });
 
 describe('deleteEdge', () => {
@@ -1454,5 +1757,27 @@ describe('markDone', () => {
     await expect(
       markDone(join(tmpDir, 'graph'), 'epi-999', 'Some task')
     ).rejects.toThrow(/not found/);
+  });
+
+  it('throws on invalid marker string', async () => {
+    writeNode(tmpDir, 'episodes', 'epi-001-test.md', {
+      id: 'epi-001', type: 'episode', title: 'Test Episode',
+      created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+    }, '## Checklist\n- [ ] Some task\n');
+
+    await expect(
+      markDone(join(tmpDir, 'graph'), 'epi-001', 'Some task', 'invalid' as any)
+    ).rejects.toThrow(/invalid marker/i);
+  });
+
+  it('throws on multiple matching checklist items', async () => {
+    writeNode(tmpDir, 'episodes', 'epi-001-test.md', {
+      id: 'epi-001', type: 'episode', title: 'Test Episode',
+      created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+    }, '## Checklist\n- [ ] Duplicate task\n- [ ] Duplicate task\n');
+
+    await expect(
+      markDone(join(tmpDir, 'graph'), 'epi-001', 'Duplicate task')
+    ).rejects.toThrow(/multiple/i);
   });
 });

@@ -210,6 +210,170 @@ describe('generateTypesFile', () => {
     }
   });
 
+  // ── EdgeAttributes Interface ──
+
+  it('generates EdgeAttributes interface from edgeAttributes', () => {
+    const output = generateTypesFile(makeTestSchema({
+      edgeAttributes: {
+        strength: { type: 'number', min: 0, max: 1 },
+        severity: { type: 'enum', valuesRef: 'severities' },
+      },
+    }));
+    expect(output).toContain('export interface EdgeAttributes {');
+    expect(output).toContain('severity?: typeof VALID_SEVERITIES[number];');
+    expect(output).toContain('strength?: number;');
+    expect(output).toContain('}');
+  });
+
+  it('generates EDGE_ATTRIBUTE_NAMES from edgeAttributes', () => {
+    const output = generateTypesFile(makeTestSchema({
+      edgeAttributes: {
+        strength: { type: 'number', min: 0, max: 1 },
+        severity: { type: 'enum', valuesRef: 'severities' },
+      },
+    }));
+    expect(output).toContain("export const EDGE_ATTRIBUTE_NAMES = ['severity', 'strength'] as const;");
+  });
+
+  it('EdgeAttributes keys are sorted alphabetically', () => {
+    const output = generateTypesFile(makeTestSchema({
+      edgeAttributes: {
+        zeta: { type: 'number' },
+        alpha: { type: 'number' },
+      },
+    }));
+    const alphaIdx = output.indexOf('alpha?: number;');
+    const zetaIdx = output.indexOf('zeta?: number;');
+    expect(alphaIdx).toBeLessThan(zetaIdx);
+  });
+
+  it('emits empty EDGE_ATTRIBUTE_RANGES when no numeric attrs have min/max', () => {
+    const output = generateTypesFile(makeTestSchema({
+      edgeAttributes: {
+        severity: { type: 'enum', valuesRef: 'severities' },
+      },
+    }));
+    expect(output).toContain('export const EDGE_ATTRIBUTE_RANGES: Record<string, { min?: number; max?: number }> = {};');
+  });
+
+  it('emits default empty EdgeAttributes when edgeAttributes section is absent', () => {
+    const output = generateTypesFile(makeTestSchema());
+    expect(output).toContain('export interface EdgeAttributes {}');
+    expect(output).toContain('export const EDGE_ATTRIBUTE_NAMES = [] as const;');
+    expect(output).toContain('export const EDGE_ATTRIBUTE_RANGES: Record<string, { min?: number; max?: number }> = {};');
+    expect(output).toContain('export const EDGE_ATTRIBUTE_ENUM_VALUES: Record<string, readonly string[]> = {};');
+  });
+
+  // ── EDGE_ATTRIBUTE_ENUM_VALUES ──
+
+  it('generates EDGE_ATTRIBUTE_ENUM_VALUES mapping enum attrs to VALID_* constants', () => {
+    const output = generateTypesFile(makeTestSchema({
+      edgeAttributes: {
+        severity: { type: 'enum', valuesRef: 'severities' },
+        impact: { type: 'enum', valuesRef: 'impacts' },
+        strength: { type: 'number', min: 0, max: 1 },
+      },
+    }));
+    expect(output).toContain('export const EDGE_ATTRIBUTE_ENUM_VALUES: Record<string, readonly string[]> = {');
+    expect(output).toContain('  impact: VALID_IMPACTS,');
+    expect(output).toContain('  severity: VALID_SEVERITIES,');
+    // numeric attributes should NOT appear in enum values
+    expect(output).not.toMatch(/EDGE_ATTRIBUTE_ENUM_VALUES[\s\S]*?strength/);
+  });
+
+  it('emits empty EDGE_ATTRIBUTE_ENUM_VALUES when no enum attrs exist', () => {
+    const output = generateTypesFile(makeTestSchema({
+      edgeAttributes: {
+        strength: { type: 'number', min: 0, max: 1 },
+      },
+    }));
+    expect(output).toContain('export const EDGE_ATTRIBUTE_ENUM_VALUES: Record<string, readonly string[]> = {};');
+  });
+
+  // ── EDGE_ATTRIBUTE_AFFINITY ──
+
+  it('generates EDGE_ATTRIBUTE_AFFINITY from edgeAttributeAffinity', () => {
+    const affinityOutput = generateTypesFile(makeTestSchema({
+      edgeAttributeAffinity: {
+        supports: ['strength'],
+        contradicts: ['severity'],
+        confirms: ['strength'],
+      },
+    }));
+    expect(affinityOutput).toContain('export const EDGE_ATTRIBUTE_AFFINITY: Record<string, readonly string[]> = {');
+    expect(affinityOutput).toContain("  confirms: ['strength'],");
+    expect(affinityOutput).toContain("  contradicts: ['severity'],");
+    expect(affinityOutput).toContain("  supports: ['strength'],");
+  });
+
+  it('EDGE_ATTRIBUTE_AFFINITY keys are sorted alphabetically', () => {
+    const affinityOutput = generateTypesFile(makeTestSchema({
+      edgeAttributeAffinity: {
+        supports: ['strength'],
+        contradicts: ['severity'],
+        confirms: ['strength'],
+      },
+    }));
+    const confirmIdx = affinityOutput.indexOf("  confirms: ['strength'],");
+    const contradictIdx = affinityOutput.indexOf("  contradicts: ['severity'],");
+    const supportIdx = affinityOutput.indexOf("  supports: ['strength'],");
+    expect(confirmIdx).toBeLessThan(contradictIdx);
+    expect(contradictIdx).toBeLessThan(supportIdx);
+  });
+
+  it('emits empty EDGE_ATTRIBUTE_AFFINITY when schema section is absent', () => {
+    const noAffinityOutput = generateTypesFile(makeTestSchema());
+    expect(noAffinityOutput).toContain('export const EDGE_ATTRIBUTE_AFFINITY: Record<string, readonly string[]> = {};');
+  });
+
+  // ── TRANSITION_POLICY_DEFAULT ──
+
+  it('generates TRANSITION_POLICY_DEFAULT from transitionPolicy', () => {
+    const policyOutput = generateTypesFile(makeTestSchema({
+      transitionPolicy: { mode: 'strict' },
+    }));
+    expect(policyOutput).toContain("export const TRANSITION_POLICY_DEFAULT = 'strict' as const;");
+  });
+
+  it('generates TRANSITION_POLICY_DEFAULT with warn mode', () => {
+    const policyOutput = generateTypesFile(makeTestSchema({
+      transitionPolicy: { mode: 'warn' },
+    }));
+    expect(policyOutput).toContain("export const TRANSITION_POLICY_DEFAULT = 'warn' as const;");
+  });
+
+  it('emits default TRANSITION_POLICY_DEFAULT when schema section is absent', () => {
+    const noPolicyOutput = generateTypesFile(makeTestSchema());
+    expect(noPolicyOutput).toContain("export const TRANSITION_POLICY_DEFAULT = 'off' as const;");
+  });
+
+  // ── CEREMONY_TRIGGERS ──
+
+  it('generates CEREMONY_TRIGGERS from ceremonies section', () => {
+    const ceremonyOutput = generateTypesFile(makeTestSchema({
+      ceremonies: {
+        consolidation: {
+          triggers: {
+            unpromoted_findings_threshold: 5,
+            episodes_threshold: 3,
+            all_questions_resolved: true,
+            experiment_overload_threshold: 5,
+          },
+        },
+      },
+    }));
+    expect(ceremonyOutput).toContain('export const CEREMONY_TRIGGERS');
+    expect(ceremonyOutput).toContain('unpromoted_findings_threshold: 5,');
+    expect(ceremonyOutput).toContain('episodes_threshold: 3,');
+    expect(ceremonyOutput).toContain('all_questions_resolved: true,');
+    expect(ceremonyOutput).toContain('experiment_overload_threshold: 5,');
+  });
+
+  it('emits default empty CEREMONY_TRIGGERS when schema section is absent', () => {
+    const noCeremonyOutput = generateTypesFile(makeTestSchema());
+    expect(noCeremonyOutput).toContain('export const CEREMONY_TRIGGERS = {} as const satisfies Record<string, Record<string, number | boolean>>;');
+  });
+
   // ── Schema change detection ──
 
   it('modifying schema input changes generated output', () => {

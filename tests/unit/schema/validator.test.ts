@@ -294,4 +294,158 @@ describe('validateReferentialIntegrity', () => {
     expect(VALID_PRESET_FNS).toContain('all_linked_with');
     expect(VALID_PRESET_FNS).toHaveLength(4);
   });
+
+  it('detects edgeAttributeAffinity referencing non-existent edge type', () => {
+    const schema = makeMinimalSchema({
+      edgeAttributeAffinity: {
+        nonexistent_edge: ['strength'],
+      },
+    });
+    const errors = validateReferentialIntegrity(schema);
+    expect(errors.some(e => e.message.includes('nonexistent_edge'))).toBe(true);
+    expect(errors.some(e => e.path.includes('edgeAttributeAffinity'))).toBe(true);
+  });
+
+  it('accepts valid edgeAttributeAffinity with known edge types', () => {
+    const schema = makeMinimalSchema({
+      edgeAttributeAffinity: {
+        supports: ['strength'],
+      },
+    });
+    const errors = validateReferentialIntegrity(schema);
+    expect(errors.filter(e => e.path.includes('edgeAttributeAffinity'))).toEqual([]);
+  });
+
+  it('rejects enum attribute without valuesRef', () => {
+    const schema = makeMinimalSchema({
+      edgeAttributes: {
+        severity: { type: 'enum' } as unknown as GraphSchema['edgeAttributes'] extends Record<string, infer V> ? V : never,
+      },
+    } as Partial<GraphSchema>);
+    const errors = validateReferentialIntegrity(schema);
+    expect(errors.some(e => e.path.includes('edgeAttributes.severity') && e.message.includes('valuesRef'))).toBe(true);
+  });
+
+  it('rejects enum valuesRef pointing to non-existent validValues key', () => {
+    const schema = makeMinimalSchema({
+      edgeAttributes: {
+        severity: { type: 'enum', valuesRef: 'nonexistent_values' } as unknown as GraphSchema['edgeAttributes'] extends Record<string, infer V> ? V : never,
+      },
+    } as Partial<GraphSchema>);
+    const errors = validateReferentialIntegrity(schema);
+    expect(errors.some(e => e.path.includes('valuesRef') && e.message.includes('nonexistent_values'))).toBe(true);
+  });
+
+  it('warns on affinity referencing unknown edgeAttribute name', () => {
+    const schema = makeMinimalSchema({
+      edgeAttributes: {
+        strength: { type: 'number', min: 0, max: 1 },
+      },
+      edgeAttributeAffinity: {
+        supports: ['strength', 'unknown_attr'],
+      },
+    } as Partial<GraphSchema>);
+    const errors = validateReferentialIntegrity(schema);
+    expect(errors.some(e =>
+      e.path.includes('edgeAttributeAffinity') &&
+      e.message.includes('unknown_attr') &&
+      e.severity === 'WARNING'
+    )).toBe(true);
+  });
+});
+
+// ── New Schema Sections (Zod structural) ─────────────────────────────
+
+describe('New schema sections structural validation', () => {
+  it('rejects transitionPolicy with invalid mode', () => {
+    const raw = { ...makeMinimalSchema(), transitionPolicy: { mode: 'invalid' } };
+    const result = GraphSchemaZod.safeParse(raw);
+    expect(result.success).toBe(false);
+  });
+
+  it('accepts valid transitionPolicy modes', () => {
+    for (const mode of ['strict', 'warn', 'off']) {
+      const raw = { ...makeMinimalSchema(), transitionPolicy: { mode } };
+      const result = GraphSchemaZod.safeParse(raw);
+      expect(result.success).toBe(true);
+    }
+  });
+
+  it('accepts ceremonies with valid trigger values', () => {
+    const raw = {
+      ...makeMinimalSchema(),
+      ceremonies: {
+        consolidation: { triggers: { threshold: 5, flag: true } },
+      },
+    };
+    const result = GraphSchemaZod.safeParse(raw);
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects ceremonies with string trigger value', () => {
+    const raw = {
+      ...makeMinimalSchema(),
+      ceremonies: {
+        consolidation: { triggers: { threshold: 'not_a_number' } },
+      },
+    };
+    const result = GraphSchemaZod.safeParse(raw);
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects enum edge attribute with min/max (cross-field)', () => {
+    const raw = {
+      ...makeMinimalSchema(),
+      edgeAttributes: {
+        severity: { type: 'enum', valuesRef: 'severities', min: 0 },
+      },
+    };
+    const result = GraphSchemaZod.safeParse(raw);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const messages = result.error.issues.map(i => i.message);
+      expect(messages.some(m => m.includes('enum attributes must not have min/max'))).toBe(true);
+    }
+  });
+
+  it('rejects number edge attribute with valuesRef (cross-field)', () => {
+    const raw = {
+      ...makeMinimalSchema(),
+      edgeAttributes: {
+        strength: { type: 'number', min: 0, max: 1, valuesRef: 'severities' },
+      },
+    };
+    const result = GraphSchemaZod.safeParse(raw);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const messages = result.error.issues.map(i => i.message);
+      expect(messages.some(m => m.includes('number attributes must not have valuesRef'))).toBe(true);
+    }
+  });
+
+  it('rejects number edge attribute where min >= max', () => {
+    const raw = {
+      ...makeMinimalSchema(),
+      edgeAttributes: {
+        strength: { type: 'number', min: 1, max: 0 },
+      },
+    };
+    const result = GraphSchemaZod.safeParse(raw);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const messages = result.error.issues.map(i => i.message);
+      expect(messages.some(m => m.includes('min must be less than max'))).toBe(true);
+    }
+  });
+
+  it('accepts number edge attribute where min < max', () => {
+    const raw = {
+      ...makeMinimalSchema(),
+      edgeAttributes: {
+        strength: { type: 'number', min: 0, max: 1 },
+      },
+    };
+    const result = GraphSchemaZod.safeParse(raw);
+    expect(result.success).toBe(true);
+  });
 });

@@ -228,6 +228,21 @@ describe('loadSchema referential integrity', () => {
     await expect(loadSchema(p)).rejects.toThrow(/NONEXISTENT/);
   });
 
+  it('loads successfully when only WARNING-level issues exist', async () => {
+    const p = makeValidSchema({
+      edgeAttributes: {
+        strength: { type: 'number', min: 0, max: 1 },
+      },
+      edgeAttributeAffinity: {
+        supports: ['strength', 'nonexistent_attr'],
+      },
+    });
+
+    // Should not throw — 'nonexistent_attr' produces a WARNING, not an ERROR
+    const schema = await loadSchema(p);
+    expect(schema.version).toBe('1.0');
+  });
+
   it('accepts manualTransitions with ANY as from', async () => {
     const p = makeValidSchema({
       manualTransitions: {

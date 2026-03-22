@@ -3,13 +3,17 @@ import { execSync } from 'node:child_process';
 import { mkdtempSync, rmSync, existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 
-const CLI = './node_modules/.bin/tsx src/cli.ts';
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const PROJECT_ROOT = path.resolve(__dirname, '../..');
+const CLI = `${PROJECT_ROOT}/node_modules/.bin/tsx ${PROJECT_ROOT}/src/cli.ts`;
 
-function run(args: string): string {
+function run(args: string, cwd?: string): string {
   return execSync(`${CLI} ${args}`, {
     encoding: 'utf-8',
-    cwd: process.cwd(),
+    cwd: cwd ?? PROJECT_ROOT,
     env: { ...process.env, FORCE_COLOR: '0' },
   });
 }
@@ -34,26 +38,26 @@ describe('EMDD E2E workflow', () => {
   });
 
   it('Step 2: create hypotheses', () => {
-    run(`new hypothesis surface-defect-detection --path ${dir}`);
-    run(`new hypothesis edge-detection-approach --path ${dir}`);
+    run(`new --type hypothesis --slug surface-defect-detection`, dir);
+    run(`new --type hypothesis --slug edge-detection-approach`, dir);
     const files = readdirSync(join(dir, 'graph', 'hypotheses'));
     expect(files.length).toBe(2);
   });
 
   it('Step 3: create experiment', () => {
-    run(`new experiment cnn-baseline --path ${dir}`);
+    run(`new --type experiment --slug cnn-baseline`, dir);
     const files = readdirSync(join(dir, 'graph', 'experiments'));
     expect(files.length).toBe(1);
   });
 
   it('Step 4: link experiment to hypothesis', () => {
-    const result = run(`link exp-001 hyp-001 supports --path ${dir}`);
+    const result = run(`link --source exp-001 --target hyp-001 --relation supports`, dir);
     expect(result).toContain('Linked');
   });
 
   it('Step 5: create finding and set confidence', () => {
-    run(`new finding cnn-accuracy-92 --path ${dir}`);
-    run(`update fnd-001 --set confidence=0.85 --path ${dir}`);
+    run(`new --type finding --slug cnn-accuracy-92`, dir);
+    run(`update --nodeId fnd-001 --transitionPolicy off --set confidence=0.85`, dir);
     // Verify confidence was set
     const findingDir = join(dir, 'graph', 'findings');
     const files = readdirSync(findingDir);
@@ -62,17 +66,17 @@ describe('EMDD E2E workflow', () => {
   });
 
   it('Step 6: lint passes', () => {
-    const result = run(`lint ${dir}`);
+    const result = run(`lint`, dir);
     expect(result.toLowerCase()).not.toMatch(/\berror\b/);
   });
 
   it('Step 7: health dashboard', () => {
-    const result = run(`health ${dir}`);
+    const result = run(`health`, dir);
     expect(result.toLowerCase()).toContain('health');
   });
 
   it('Step 8: create episode and mark done', () => {
-    run(`new episode initial-exploration --path ${dir}`);
+    run(`new --type episode --slug initial-exploration`, dir);
     const episodeDir = join(dir, 'graph', 'episodes');
     const files = readdirSync(episodeDir);
     expect(files.length).toBe(1);
@@ -83,13 +87,13 @@ describe('EMDD E2E workflow', () => {
     content = content.replace('- [ ] ', '- [ ] Review initial results');
     writeFileSync(episodePath, content);
 
-    run(`done epi-001 "Review initial results" --path ${dir}`);
+    run(`done --episodeId epi-001 --item "Review initial results"`, dir);
     const updated = readFileSync(episodePath, 'utf-8');
     expect(updated).toContain('- [done] Review initial results');
   });
 
   it('Step 9: generate index', () => {
-    const result = run(`index ${dir}`);
+    const result = run(`index`, dir);
     expect(result).toContain('nodes');
     expect(existsSync(join(dir, 'graph', '_index.md'))).toBe(true);
     const content = readFileSync(join(dir, 'graph', '_index.md'), 'utf-8');
@@ -106,17 +110,17 @@ describe('EMDD E2E workflow', () => {
   });
 
   it('Step 11: check triggers', () => {
-    const result = run(`check ${dir}`);
+    const result = run(`check`, dir);
     expect(result).toBeDefined();
   });
 
   it('Step 12: promote candidates', () => {
-    const result = run(`promote ${dir}`);
+    const result = run(`promote`, dir);
     expect(result).toBeDefined();
   });
 
   it('Step 13: backlog', () => {
-    const result = run(`backlog ${dir}`);
+    const result = run(`backlog`, dir);
     expect(result).toBeDefined();
   });
 });

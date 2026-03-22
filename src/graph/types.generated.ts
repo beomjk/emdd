@@ -186,3 +186,60 @@ export const VALID_REVERSIBILITIES = ['high', 'medium', 'low'] as const;
 export const VALID_RISK_LEVELS = ['high', 'medium', 'low'] as const;
 export const VALID_SEVERITIES = ['FATAL', 'WEAKENING', 'TENSION'] as const;
 export const VALID_URGENCIES = ['BLOCKING', 'HIGH', 'MEDIUM', 'LOW'] as const;
+
+// ── Edge Attributes Interface ────────────────────────────────────────
+
+export interface EdgeAttributes {
+  completeness?: number;
+  dependencyType?: typeof VALID_DEPENDENCY_TYPES[number];
+  impact?: typeof VALID_IMPACTS[number];
+  severity?: typeof VALID_SEVERITIES[number];
+  strength?: number;
+}
+
+export const EDGE_ATTRIBUTE_NAMES = ['completeness', 'dependencyType', 'impact', 'severity', 'strength'] as const;
+
+export const EDGE_ATTRIBUTE_TYPES: Record<string, 'number' | 'enum'> = {
+  completeness: 'number',
+  dependencyType: 'enum',
+  impact: 'enum',
+  severity: 'enum',
+  strength: 'number',
+};
+
+export const EDGE_ATTRIBUTE_RANGES: Record<string, { min?: number; max?: number }> = {
+  completeness: { min: 0, max: 1 },
+  strength: { min: 0, max: 1 },
+};
+
+export const EDGE_ATTRIBUTE_ENUM_VALUES: Record<string, readonly string[]> = {
+  dependencyType: VALID_DEPENDENCY_TYPES,
+  impact: VALID_IMPACTS,
+  severity: VALID_SEVERITIES,
+};
+
+// ── Edge Attribute Affinity ──────────────────────────────────────────
+
+export const EDGE_ATTRIBUTE_AFFINITY: Record<string, readonly string[]> = {
+  answers: ['completeness'],
+  confirms: ['strength'],
+  contradicts: ['severity'],
+  depends_on: ['dependencyType'],
+  informs: ['impact'],
+  supports: ['strength'],
+};
+
+// ── Transition Policy ────────────────────────────────────────────────
+
+export const TRANSITION_POLICY_DEFAULT = 'strict' as const;
+
+// ── Ceremony Triggers ────────────────────────────────────────────────
+
+export const CEREMONY_TRIGGERS = {
+  consolidation: {
+    all_questions_resolved: true,
+    episodes_threshold: 3,
+    experiment_overload_threshold: 5,
+    unpromoted_findings_threshold: 5,
+  },
+} as const satisfies Record<string, Record<string, number | boolean>>;

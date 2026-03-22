@@ -6,29 +6,14 @@ export const messages: Record<string, string> = {
   'health.hypothesis_status': 'Hypothesis Status',
   'health.avg_confidence': 'Average Confidence',
   'health.open_questions': 'Open Questions',
-  'health.orphan_findings': 'Orphan Findings',
   'health.link_density': 'Link Density',
-  'health.recent_activity': 'Recent Activity',
-  'health.gaps': 'Structural Gaps',
-
-  // CLI descriptions
-  'cli.description': 'CLI for Evolving Mindmap-Driven Development',
-  'cli.init.desc': 'Initialize EMDD project',
-  'cli.new.desc': 'Create a new node',
-  'cli.health.desc': 'Show health dashboard',
-  'cli.check.desc': 'Check consolidation triggers',
-  'cli.lint.desc': 'Validate graph schema and links',
-  'cli.promote.desc': 'Identify promotion candidates',
-  'cli.index.desc': 'Generate _index.md',
-  'cli.graph.desc': 'Generate _graph.mmd',
-  'cli.update.desc': 'Update node frontmatter',
-  'cli.link.desc': 'Add a link between nodes',
-  'cli.done.desc': 'Mark episode item as done',
-  'cli.backlog.desc': 'Show backlog items',
+  'health.gap_details': 'Gap Details',
+  'health.nodes': 'Nodes',
+  'health.affinity_violations': 'Affinity Violations',
+  'health.deferred_items': 'Deferred Items',
 
   // New node
   'new.created': 'Created {type} node: {id}',
-  'new.invalid_type': 'Invalid node type: {type}. Valid types: {valid}',
 
   // Init
   'init.success': 'EMDD project initialized at {path}',
@@ -37,9 +22,8 @@ export const messages: Record<string, string> = {
 
   // Lint
   'lint.clean': 'All nodes valid. No errors found.',
-  'lint.errors_found': '{count} error(s) found',
-  'lint.warnings_found': '{count} warning(s) found',
   'lint.missing_field': 'Missing required field: {field}',
+  'lint.invalid_type': 'Invalid node type: "{type}". Valid: {valid}',
   'lint.invalid_status': 'Invalid status "{status}" for type {type}. Valid: {valid}',
   'lint.confidence_range': 'Confidence must be between 0.0 and 1.0, got {value}',
   'lint.invalid_relation': 'Invalid link relation: {relation}',
@@ -49,47 +33,57 @@ export const messages: Record<string, string> = {
   'check.title': 'Consolidation Trigger Check',
   'check.findings_threshold': 'Findings pending consolidation: {count} (threshold: {threshold})',
   'check.episodes_threshold': 'Episodes since last consolidation: {count} (threshold: {threshold})',
-  'check.stale_hypothesis': 'Stale hypothesis: {id} ({days} days in {status})',
   'check.no_triggers': 'No consolidation triggers active',
 
   // Promote
   'promote.title': 'Promotion Candidates',
-  'promote.candidate': '{id}: confidence={confidence}, supports={supports}',
-  'promote.no_candidates': 'No promotion candidates found',
 
-  // Update
-  'update.success': 'Updated {id}: {field} = {value}',
-  'update.node_not_found': 'Node not found: {id}',
+  // Format labels
+  'format.warning': 'Warning',
+  'format.type': 'type',
+  'format.status': 'status',
+  'format.confidence': 'confidence',
+  'format.tags': 'tags',
+  'format.links': 'links',
+  'format.supports': 'supports',
+  'format.via': 'via',
 
-  // Link
-  'link.success': 'Linked {source} → {target} ({relation})',
-  'link.invalid_relation': 'Invalid relation: {relation}. Valid: {valid}',
-
-  // Done
-  'done.success': 'Marked as [{marker}]: {item}',
-  'done.item_not_found': 'Item not found in {id}: {item}',
-  'done.invalid_marker': 'Invalid marker: {marker}. Valid markers: done, deferred, superseded',
-  'done.already_marked': 'Item already marked in {id}: {item}',
-
-  // Index
-  'index.generated': 'Generated _index.md ({nodes} nodes)',
-
-  // Graph
-  'graph.generated': 'Generated _graph.mmd ({nodes} nodes, {edges} edges)',
-
-  // Backlog
-  'backlog.title': 'Backlog Items',
-  'backlog.empty': 'No pending backlog items',
+  // Format output
+  'format.link_created': 'Linked {source} → {target} [{relation}]',
+  'format.edge_deleted': 'Deleted {count} link(s) from {source} → {target}',
+  'format.node_updated': 'Updated {nodeId}: {fields}',
+  'format.item_marked': 'Marked "{item}" as {marker} in {episodeId}',
+  'format.no_neighbors': 'No neighbors found.',
+  'format.no_nodes': 'No nodes found.',
+  'format.no_gaps': 'No gaps found.',
+  'format.no_promote': 'No promotion candidates.',
+  'format.no_confidence': 'No confidence changes.',
+  'format.index_generated': 'Generated index for {count} nodes.',
+  'format.no_branches': 'No branch groups found.',
+  'format.convergence': 'Convergence ready: {reason}',
+  'format.no_kill': 'No kill criteria alerts.',
+  'format.no_transitions': 'No available transitions.',
+  'format.no_affected': 'No affected hypotheses.',
+  'format.affected_count': 'Affected hypotheses ({count}):',
+  'format.pivot_triggered': 'Pivot ceremony triggered ({count} retracted: {ids})',
+  'format.no_backlog': 'No backlog items.',
+  'format.lint_summary': '{errors} error(s), {warnings} warning(s)',
 
   // Errors
   'error.graph_not_found': 'No graph/ directory found',
   'error.node_not_found': 'Node not found: {id}',
   'error.invalid_node_type': 'Invalid node type: {type}. Valid types: {valid}',
+  'error.transition_no_rule': 'No transition rule from {from}→{to} (valid paths: {validPaths})',
+  'error.transition_conditions_unmet': 'Transition {from}→{to} conditions not met: {conditions}',
+  'error.invalid_range': '{attr} must be between {min} and {max}, got {value}',
   'error.invalid_strength': 'strength must be a number between 0.0 and 1.0, got {value}',
   'error.invalid_severity': 'Invalid severity "{value}". Valid: {valid}',
   'error.invalid_completeness': 'completeness must be a number between 0.0 and 1.0, got {value}',
   'error.invalid_dependency_type': 'Invalid dependencyType "{value}". Valid: {valid}',
   'error.invalid_impact': 'Invalid impact "{value}". Valid: {valid}',
+  'error.invalid_enum_attr': 'Invalid {attr} "{value}". Valid values: {valid}',
+  'error.edge_affinity_invalid_attr': 'Edge affinity violation: "{relation}" allows [{allowed}], but got disallowed attribute(s): [{invalid}]',
+  'error.edge_affinity_no_attrs': 'Edge affinity violation: "{relation}" does not allow any attributes, but got: [{invalid}]',
   'error.invalid_relation': 'Invalid relation: {relation}. Valid: {valid}',
   'error.source_not_found': 'Source node not found: {id}',
   'error.target_not_found': 'Target node not found: {id}',
@@ -99,9 +93,29 @@ export const messages: Record<string, string> = {
   'error.invalid_urgency': 'Invalid urgency "{value}". Valid: {valid}',
   'error.invalid_risk_level': 'Invalid risk_level "{value}". Valid: {valid}',
   'error.invalid_reversibility': 'Invalid reversibility "{value}". Valid: {valid}',
+  'error.cli_malformed_record': 'Warning: ignored malformed --{key} entry "{pair}" (expected key=value)',
+  'error.cli_validation_failed': 'Input validation failed:',
   'error.no_matching_link': 'No matching link from {source} to {target}{relation}',
   'error.invalid_marker': 'Invalid marker: {marker}. Valid markers: {valid}',
   'error.item_already_marked': 'Item already marked in {id}: {item}',
   'error.item_not_found': 'Item not found in {id}: {item}',
   'error.multiple_matches': "Multiple matches for '{item}' in {id}",
+
+  // Gap messages (getHealth)
+  'gap.no_experiments': 'No experiments — hypotheses lack testing',
+  'gap.no_knowledge': 'No knowledge nodes — findings not consolidated',
+  'gap.no_findings': 'No findings — experiments lack documented results',
+  'gap.no_edges': 'No edges — graph is disconnected',
+  'gap.untested_hypothesis': '{count} hypothesis(es) in PROPOSED for {triggerInfo}',
+  'gap.blocking_question': '{count} blocking question(s) open for {triggerInfo}',
+  'gap.orphan_finding': '{count} finding(s) with no outgoing spawns/answers/extends edges',
+  'gap.stale_knowledge': '{count} knowledge node(s) stale for {days}+ days',
+  'gap.disconnected_cluster': '{count} disconnected clusters with only {edges} inter-cluster edge(s)',
+  'gap.trigger_days': '{days}+ days',
+  'gap.trigger_episodes': '{episodes}+ episodes',
+  'gap.trigger_both': '{days}+ days and/or {episodes}+ episodes',
+
+  // Check messages (checkConsolidation)
+  'check.all_questions_resolved': 'All questions resolved — consider generating new ones',
+  'check.experiment_overload': 'Experiment {id} has {count} findings attached (threshold: {threshold}) — consider splitting',
 };

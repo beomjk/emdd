@@ -267,6 +267,16 @@ describe('edge attribute validation', () => {
     const errors = lintNode(node);
     expect(errors.filter(e => e.severity === 'warning')).toEqual([]);
   });
+
+  it('warns on NaN strength value', () => {
+    const node = {
+      id: 'test-001', type: 'finding' as const, title: 'Test', path: '/fake.md',
+      status: 'DRAFT', confidence: 0.5, tags: [], meta: {},
+      links: [{ target: 'hyp-001', relation: 'supports', strength: NaN }],
+    };
+    const errors = lintNode(node);
+    expect(errors.some(e => e.field === 'links' && e.severity === 'warning' && e.message.includes('strength'))).toBe(true);
+  });
 });
 
 describe('type-specific meta validation', () => {
@@ -323,5 +333,53 @@ describe('lintGraph', () => {
     const graph = await loadGraph(path.join(FIXTURES, 'sample-graph'));
     const errors = lintGraph(graph);
     expect(errors).toEqual([]);
+  });
+});
+
+// ── Affinity validation in lintNode/lintGraph (T022) ──
+
+describe('lintNode — edge attribute affinity', () => {
+  it('returns no affinity errors for valid edge attributes', async () => {
+    const node = await loadNode(path.join(FIXTURES, 'sample-graph/findings/fnd-002-augmentation-helps.md'));
+    expect(node).not.toBeNull();
+    const errors = lintNode(node!);
+    // fnd-002 has supports + strength (valid affinity)
+    expect(errors.filter(e => e.message.includes('affinity'))).toEqual([]);
+  });
+
+  it('reports error for supports edge with disallowed attribute (severity)', async () => {
+    const node = await loadNode(path.join(FIXTURES, 'affinity-violations/findings/fnd-001-bad-supports.md'));
+    expect(node).not.toBeNull();
+    const errors = lintNode(node!);
+    expect(errors.some(e => e.severity === 'error' && e.message.includes('affinity'))).toBe(true);
+  });
+
+  it('reports error for relates_to edge with any attribute (no affinity entry)', async () => {
+    const node = await loadNode(path.join(FIXTURES, 'affinity-violations/findings/fnd-002-bad-relates.md'));
+    expect(node).not.toBeNull();
+    const errors = lintNode(node!);
+    expect(errors.some(e => e.severity === 'error' && e.message.includes('affinity'))).toBe(true);
+  });
+});
+
+describe('lintGraph — edge attribute affinity', () => {
+  it('detects affinity violations across graph', async () => {
+    const graph = await loadGraph(path.join(FIXTURES, 'affinity-violations'));
+    const errors = lintGraph(graph);
+    const affinityErrors = errors.filter(e => e.message.includes('affinity'));
+    expect(affinityErrors.length).toBeGreaterThan(0);
+  });
+});
+
+describe('lintNode — NaN guard for numeric edge attributes', () => {
+  it('rejects NaN values for numeric edge attributes', () => {
+    const node = {
+      id: 'hyp-001', type: 'hypothesis' as const, title: 'Test',
+      path: '/tmp/test.md', status: 'PROPOSED', confidence: 0.5,
+      tags: [], links: [{ target: 'fnd-001', relation: 'supports', strength: NaN }],
+      meta: {},
+    };
+    const errors = lintNode(node as Parameters<typeof lintNode>[0]);
+    expect(errors.some(e => e.field === 'links')).toBe(true);
   });
 });

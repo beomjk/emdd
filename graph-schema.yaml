@@ -189,3 +189,41 @@ validValues:
   riskLevels: [high, medium, low]
   severities: [FATAL, WEAKENING, TENSION]
   urgencies: [BLOCKING, HIGH, MEDIUM, LOW]
+
+transitionPolicy:
+  mode: strict
+
+ceremonies:
+  consolidation:
+    triggers:
+      unpromoted_findings_threshold: 5
+      episodes_threshold: 3
+      all_questions_resolved: true
+      experiment_overload_threshold: 5
+
+edgeAttributes:
+  strength:
+    type: number
+    min: 0
+    max: 1
+  severity:
+    type: enum
+    valuesRef: severities
+  completeness:
+    type: number
+    min: 0
+    max: 1
+  dependencyType:
+    type: enum
+    valuesRef: dependencyTypes
+  impact:
+    type: enum
+    valuesRef: impacts
+
+edgeAttributeAffinity:
+  supports: [strength]
+  contradicts: [severity]
+  confirms: [strength]
+  answers: [completeness]
+  depends_on: [dependencyType]
+  informs: [impact]

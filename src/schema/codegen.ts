@@ -18,6 +18,10 @@ export function generateTypesFile(schema: GraphSchema): string {
     generateThresholdsSection(schema),
     generateTransitionsSection(schema),
     generateValidValuesSection(schema),
+    generateEdgeAttributesInterfaceSection(schema),
+    generateEdgeAttributeAffinitySection(schema),
+    generateTransitionPolicySection(schema),
+    generateCeremonyTriggersSection(schema),
     '', // trailing newline
   ];
 
@@ -223,6 +227,164 @@ function generateValidValuesSection(schema: GraphSchema): string {
     const vals = values.map(v => `'${v}'`).join(', ');
     lines.push(`export const ${constName} = [${vals}] as const;`);
   }
+
+  return lines.join('\n');
+}
+
+function generateCeremonyTriggersSection(schema: GraphSchema): string {
+  if (!schema.ceremonies) {
+    const lines: string[] = [];
+    lines.push('');
+    lines.push(sectionComment('Ceremony Triggers'));
+    lines.push('');
+    lines.push('export const CEREMONY_TRIGGERS = {} as const satisfies Record<string, Record<string, number | boolean>>;');
+    return lines.join('\n');
+  }
+
+  const lines: string[] = [];
+  lines.push('');
+  lines.push(sectionComment('Ceremony Triggers'));
+  lines.push('');
+  lines.push('export const CEREMONY_TRIGGERS = {');
+
+  const ceremonyNames = Object.keys(schema.ceremonies).sort();
+  for (const name of ceremonyNames) {
+    const ceremony = schema.ceremonies[name];
+    const triggerEntries = Object.entries(ceremony.triggers).sort(([a], [b]) => a.localeCompare(b));
+    lines.push(`  ${name}: {`);
+    for (const [key, value] of triggerEntries) {
+      lines.push(`    ${key}: ${value},`);
+    }
+    lines.push('  },');
+  }
+
+  lines.push('} as const satisfies Record<string, Record<string, number | boolean>>;');
+  return lines.join('\n');
+}
+
+function generateTransitionPolicySection(schema: GraphSchema): string {
+  if (!schema.transitionPolicy) {
+    const lines: string[] = [];
+    lines.push('');
+    lines.push(sectionComment('Transition Policy'));
+    lines.push('');
+    lines.push("export const TRANSITION_POLICY_DEFAULT = 'off' as const;");
+    return lines.join('\n');
+  }
+
+  const lines: string[] = [];
+  lines.push('');
+  lines.push(sectionComment('Transition Policy'));
+  lines.push('');
+  lines.push(`export const TRANSITION_POLICY_DEFAULT = '${schema.transitionPolicy.mode}' as const;`);
+
+  return lines.join('\n');
+}
+
+function generateEdgeAttributesInterfaceSection(schema: GraphSchema): string {
+  if (!schema.edgeAttributes) {
+    const lines: string[] = [];
+    lines.push('');
+    lines.push(sectionComment('Edge Attributes Interface'));
+    lines.push('');
+    lines.push('export interface EdgeAttributes {}');
+    lines.push('');
+    lines.push('export const EDGE_ATTRIBUTE_NAMES = [] as const;');
+    lines.push('');
+    lines.push('export const EDGE_ATTRIBUTE_TYPES: Record<string, \'number\' | \'enum\'> = {};');
+    lines.push('');
+    lines.push('export const EDGE_ATTRIBUTE_RANGES: Record<string, { min?: number; max?: number }> = {};');
+    lines.push('');
+    lines.push('export const EDGE_ATTRIBUTE_ENUM_VALUES: Record<string, readonly string[]> = {};');
+    return lines.join('\n');
+  }
+
+  const entries = Object.entries(schema.edgeAttributes).sort(([a], [b]) => a.localeCompare(b));
+  const lines: string[] = [];
+
+  lines.push('');
+  lines.push(sectionComment('Edge Attributes Interface'));
+  lines.push('');
+  lines.push('export interface EdgeAttributes {');
+  for (const [name, def] of entries) {
+    if (def.type === 'number') {
+      lines.push(`  ${name}?: number;`);
+    } else if (def.type === 'enum' && def.valuesRef) {
+      const constName = `VALID_${camelToScreamingSnake(def.valuesRef)}`;
+      lines.push(`  ${name}?: typeof ${constName}[number];`);
+    }
+  }
+  lines.push('}');
+
+  // Also export the known attribute names for runtime use
+  lines.push('');
+  const attrNames = entries.map(([n]) => `'${n}'`).join(', ');
+  lines.push(`export const EDGE_ATTRIBUTE_NAMES = [${attrNames}] as const;`);
+
+  // Export attribute type map for runtime type detection (number vs enum)
+  lines.push('');
+  lines.push("export const EDGE_ATTRIBUTE_TYPES: Record<string, 'number' | 'enum'> = {");
+  for (const [name, def] of entries) {
+    lines.push(`  ${name}: '${def.type}',`);
+  }
+  lines.push('};');
+
+  // Export numeric range bounds from schema (single source of truth for min/max)
+  const numericEntries = entries.filter(([, def]) => def.type === 'number' && (def.min !== undefined || def.max !== undefined));
+  lines.push('');
+  if (numericEntries.length > 0) {
+    lines.push('export const EDGE_ATTRIBUTE_RANGES: Record<string, { min?: number; max?: number }> = {');
+    for (const [name, def] of numericEntries) {
+      const parts: string[] = [];
+      if (def.min !== undefined) parts.push(`min: ${def.min}`);
+      if (def.max !== undefined) parts.push(`max: ${def.max}`);
+      lines.push(`  ${name}: { ${parts.join(', ')} },`);
+    }
+    lines.push('};');
+  } else {
+    lines.push('export const EDGE_ATTRIBUTE_RANGES: Record<string, { min?: number; max?: number }> = {};');
+  }
+
+  // Export enum attribute → valid values mapping (single source of truth for enum validation)
+  const enumEntries = entries.filter(([, def]) => def.type === 'enum' && def.valuesRef);
+  if (enumEntries.length > 0) {
+    lines.push('');
+    lines.push('export const EDGE_ATTRIBUTE_ENUM_VALUES: Record<string, readonly string[]> = {');
+    for (const [name, def] of enumEntries) {
+      const constName = `VALID_${camelToScreamingSnake(def.valuesRef!)}`;
+      lines.push(`  ${name}: ${constName},`);
+    }
+    lines.push('};');
+  } else {
+    lines.push('');
+    lines.push('export const EDGE_ATTRIBUTE_ENUM_VALUES: Record<string, readonly string[]> = {};');
+  }
+
+  return lines.join('\n');
+}
+
+function generateEdgeAttributeAffinitySection(schema: GraphSchema): string {
+  if (!schema.edgeAttributeAffinity) {
+    const lines: string[] = [];
+    lines.push('');
+    lines.push(sectionComment('Edge Attribute Affinity'));
+    lines.push('');
+    lines.push('export const EDGE_ATTRIBUTE_AFFINITY: Record<string, readonly string[]> = {};');
+    return lines.join('\n');
+  }
+
+  const entries = Object.entries(schema.edgeAttributeAffinity).sort(([a], [b]) => a.localeCompare(b));
+  const lines: string[] = [];
+
+  lines.push('');
+  lines.push(sectionComment('Edge Attribute Affinity'));
+  lines.push('');
+  lines.push('export const EDGE_ATTRIBUTE_AFFINITY: Record<string, readonly string[]> = {');
+  for (const [edgeType, attrs] of entries) {
+    const vals = attrs.map(a => `'${a}'`).join(', ');
+    lines.push(`  ${edgeType}: [${vals}],`);
+  }
+  lines.push('};');
 
   return lines.join('\n');
 }

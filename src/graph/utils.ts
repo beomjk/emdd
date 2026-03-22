@@ -1,17 +1,36 @@
-import type { Graph } from './types.js';
+import type { Graph, EdgeAttributes } from './types.js';
+import { EDGE_ATTRIBUTE_NAMES } from './types.js';
 
-export interface IncomingEdge {
+/**
+ * Forward edge relations used for orphan-finding detection.
+ * Shared between getHealth() and checkConsolidation().
+ */
+export const FORWARD_RELATIONS = new Set(['spawns', 'answers', 'extends']);
+
+/**
+ * Collect IDs of all DEFERRED nodes in the graph.
+ * Shared between getHealth() and checkConsolidation().
+ */
+export function collectDeferredIds(graph: Graph): string[] {
+  const ids: string[] = [];
+  for (const [id, node] of graph.nodes) {
+    if (node.status === 'DEFERRED') ids.push(id);
+  }
+  return ids;
+}
+
+export interface IncomingEdge extends Partial<EdgeAttributes> {
   sourceId: string;
   sourceConfidence: number;
   relation: string;
-  strength?: number;
-  severity?: string;
-  completeness?: number;
-  dependencyType?: string;
-  impact?: string;
 }
 
+const reverseEdgeCache = new WeakMap<Graph, Map<string, IncomingEdge[]>>();
+
 export function buildReverseEdgeIndex(graph: Graph): Map<string, IncomingEdge[]> {
+  const cached = reverseEdgeCache.get(graph);
+  if (cached) return cached;
+
   const index = new Map<string, IncomingEdge[]>();
 
   for (const [sourceId, node] of graph.nodes) {
@@ -20,12 +39,11 @@ export function buildReverseEdgeIndex(graph: Graph): Map<string, IncomingEdge[]>
         sourceId,
         sourceConfidence: node.confidence ?? 0,
         relation: link.relation,
-        strength: link.strength,
-        severity: link.severity,
-        completeness: link.completeness,
-        dependencyType: link.dependencyType,
-        impact: link.impact,
       };
+      for (const attr of EDGE_ATTRIBUTE_NAMES) {
+        const val = (link as unknown as Record<string, unknown>)[attr];
+        if (val !== undefined) (edge as unknown as Record<string, unknown>)[attr] = val;
+      }
 
       const existing = index.get(link.target);
       if (existing) {
@@ -36,5 +54,6 @@ export function buildReverseEdgeIndex(graph: Graph): Map<string, IncomingEdge[]>
     }
   }
 
+  reverseEdgeCache.set(graph, index);
   return index;
 }
