@@ -21,7 +21,7 @@ export const createEdgeDef: CommandDef<typeof schema, CreateEdgeResult> = {
   description: 'Create an edge between two nodes',
   category: 'write',
   schema,
-  cli: { commandName: 'link' },
+  cli: { commandName: 'link', positional: ['source', 'target', 'relation'] },
 
   async execute(input) {
     const attrs: EdgeAttributes = {};

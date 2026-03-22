@@ -6,6 +6,8 @@ import { CliAdapter } from '../../../src/registry/cli-adapter.js';
 import type { CommandDef } from '../../../src/registry/types.js';
 import { createNodeDef } from '../../../src/registry/commands/create-node.js';
 import { readNodeDef } from '../../../src/registry/commands/read-node.js';
+import { createEdgeDef } from '../../../src/registry/commands/create-edge.js';
+import { deleteEdgeDef } from '../../../src/registry/commands/delete-edge.js';
 
 // Mock resolveGraphDir for action tests
 vi.mock('../../../src/graph/loader.js', () => ({
@@ -737,6 +739,59 @@ describe('CliAdapter', () => {
       expect(executeFn).toHaveBeenCalled();
       const input = executeFn.mock.calls[0][0];
       expect(input.nodeId).toBe('hyp-001');
+    });
+
+    it('T020: create-edge accepts positional [link, hyp-001, knw-001, depends_on]', async () => {
+      const executeFn = vi.fn().mockResolvedValue({ source: 'hyp-001', target: 'knw-001', relation: 'depends_on' });
+      registry.register({
+        ...createEdgeDef,
+        execute: executeFn,
+        format: () => 'ok',
+      } as any);
+      adapter.attachTo(program);
+
+      await program.parseAsync(['node', 'emdd', 'link', 'hyp-001', 'knw-001', 'depends_on']);
+
+      expect(executeFn).toHaveBeenCalled();
+      const input = executeFn.mock.calls[0][0];
+      expect(input.source).toBe('hyp-001');
+      expect(input.target).toBe('knw-001');
+      expect(input.relation).toBe('depends_on');
+    });
+
+    it('T021: create-edge positional + named optional --strength', async () => {
+      const executeFn = vi.fn().mockResolvedValue({ source: 'hyp-001', target: 'knw-001', relation: 'depends_on' });
+      registry.register({
+        ...createEdgeDef,
+        execute: executeFn,
+        format: () => 'ok',
+      } as any);
+      adapter.attachTo(program);
+
+      await program.parseAsync(['node', 'emdd', 'link', 'hyp-001', 'knw-001', 'depends_on', '--strength', '0.8']);
+
+      expect(executeFn).toHaveBeenCalled();
+      const input = executeFn.mock.calls[0][0];
+      expect(input.source).toBe('hyp-001');
+      expect(input.relation).toBe('depends_on');
+      expect(input.strength).toBe(0.8);
+    });
+
+    it('T022: delete-edge accepts positional [unlink, hyp-001, knw-001]', async () => {
+      const executeFn = vi.fn().mockResolvedValue({ deletedCount: 1, source: 'hyp-001', target: 'knw-001' });
+      registry.register({
+        ...deleteEdgeDef,
+        execute: executeFn,
+        format: () => 'ok',
+      } as any);
+      adapter.attachTo(program);
+
+      await program.parseAsync(['node', 'emdd', 'unlink', 'hyp-001', 'knw-001']);
+
+      expect(executeFn).toHaveBeenCalled();
+      const input = executeFn.mock.calls[0][0];
+      expect(input.source).toBe('hyp-001');
+      expect(input.target).toBe('knw-001');
     });
   });
 });
