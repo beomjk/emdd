@@ -1,9 +1,8 @@
 import type { Node, Graph, NodeType } from './types.js';
 import {
   VALID_STATUSES, REQUIRED_FIELDS, ALL_VALID_RELATIONS,
-  VALID_SEVERITIES, VALID_DEPENDENCY_TYPES, VALID_IMPACTS,
   VALID_FINDING_TYPES, VALID_URGENCIES, VALID_RISK_LEVELS, VALID_REVERSIBILITIES,
-  EDGE_ATTRIBUTE_RANGES,
+  EDGE_ATTRIBUTE_RANGES, EDGE_ATTRIBUTE_ENUM_VALUES,
 } from './types.js';
 import { checkEdgeAffinity, getPresentAttrKeys } from './edge-attrs.js';
 import { t } from '../i18n/index.js';
@@ -129,28 +128,16 @@ export function lintNode(node: Node): LintError[] {
       }
     }
 
-    if (link.severity !== undefined && !(VALID_SEVERITIES as readonly string[]).includes(link.severity)) {
-      errors.push({
-        nodeId: id, field: 'links',
-        message: `Invalid severity "${link.severity}". Valid: ${VALID_SEVERITIES.join(', ')}`,
-        severity: 'warning',
-      });
-    }
-
-    if (link.dependencyType !== undefined && !(VALID_DEPENDENCY_TYPES as readonly string[]).includes(link.dependencyType)) {
-      errors.push({
-        nodeId: id, field: 'links',
-        message: `Invalid dependencyType "${link.dependencyType}". Valid: ${VALID_DEPENDENCY_TYPES.join(', ')}`,
-        severity: 'warning',
-      });
-    }
-
-    if (link.impact !== undefined && !(VALID_IMPACTS as readonly string[]).includes(link.impact)) {
-      errors.push({
-        nodeId: id, field: 'links',
-        message: `Invalid impact "${link.impact}". Valid: ${VALID_IMPACTS.join(', ')}`,
-        severity: 'warning',
-      });
+    // Enum attribute checks (driven by schema-declared EDGE_ATTRIBUTE_ENUM_VALUES)
+    for (const [attrName, validValues] of Object.entries(EDGE_ATTRIBUTE_ENUM_VALUES)) {
+      const val = (link as unknown as Record<string, unknown>)[attrName];
+      if (val !== undefined && !(validValues as readonly string[]).includes(String(val))) {
+        errors.push({
+          nodeId: id, field: 'links',
+          message: `Invalid ${attrName} "${val}". Valid: ${validValues.join(', ')}`,
+          severity: 'warning',
+        });
+      }
     }
 
     // Edge attribute affinity validation

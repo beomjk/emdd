@@ -24,6 +24,14 @@ function getEnumValues(schema: z.ZodType): string[] {
   return (schema as z.ZodEnum).options.map(String);
 }
 
+/** Extract warnings array from command output, if present. */
+function extractWarnings(output: unknown): string[] {
+  if (output && typeof output === 'object' && 'warnings' in output && Array.isArray((output as Record<string, unknown>).warnings)) {
+    return ((output as Record<string, unknown>).warnings as unknown[]).map(String);
+  }
+  return [];
+}
+
 export class CliAdapter {
   constructor(private registry: CommandRegistry) {}
 
@@ -81,19 +89,30 @@ export class CliAdapter {
           }
         }
 
+        const parseResult = def.schema.safeParse(input);
+        if (!parseResult.success) {
+          const messages = parseResult.error.issues.map(
+            (issue) => `  - ${issue.path.join('.')}: ${issue.message}`,
+          );
+          const errorMsg = `Input validation failed:\n${messages.join('\n')}`;
+          if (json) {
+            console.log(JSON.stringify({ error: errorMsg }, null, 2));
+          } else {
+            console.error(errorMsg);
+          }
+          process.exit(1);
+          return;
+        }
+
         try {
           const graphDir = resolveGraphDir(options.graphDir as string | undefined);
-          const output = await def.execute({ ...input, graphDir } as z.infer<typeof def.schema> & { graphDir: string });
+          const output = await def.execute({ ...parseResult.data, graphDir } as z.infer<typeof def.schema> & { graphDir: string });
 
           if (json) {
             console.log(JSON.stringify(output, null, 2));
           } else {
-            // Generic warnings handling
-            const maybeWarnings = output as Record<string, unknown> | null;
-            if (maybeWarnings && Array.isArray(maybeWarnings.warnings)) {
-              for (const w of maybeWarnings.warnings) {
-                console.error(chalk.yellow(String(w)));
-              }
+            for (const w of extractWarnings(output)) {
+              console.error(chalk.yellow(w));
             }
             console.log(def.format(output));
           }

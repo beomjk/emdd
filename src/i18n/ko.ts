@@ -33,7 +33,6 @@ export const messages: Record<string, string> = {
   'check.title': '통합 트리거 확인',
   'check.findings_threshold': '통합 대기 중인 발견사항: {count}개 (임계값: {threshold})',
   'check.episodes_threshold': '마지막 통합 이후 에피소드: {count}개 (임계값: {threshold})',
-  'check.stale_hypothesis': '오래된 가설: {id} ({status} 상태로 {days}일)',
   'check.no_triggers': '활성화된 통합 트리거 없음',
 
   // 승격
@@ -80,6 +79,7 @@ export const messages: Record<string, string> = {
   'error.invalid_completeness': 'completeness는 0.0에서 1.0 사이의 숫자여야 합니다. 입력값: {value}',
   'error.invalid_dependency_type': '잘못된 dependencyType "{value}". 유효한 값: {valid}',
   'error.invalid_impact': '잘못된 impact "{value}". 유효한 값: {valid}',
+  'error.invalid_enum_attr': '유효하지 않은 {attr} "{value}". 유효한 값: {valid}',
   'error.edge_affinity_invalid_attr': '에지 어피니티 위반: "{relation}"은(는) [{allowed}]만 허용하지만, 허용되지 않는 속성이 있습니다: [{invalid}]',
   'error.edge_affinity_no_attrs': '에지 어피니티 위반: "{relation}"은(는) 속성을 허용하지 않지만, 속성이 있습니다: [{invalid}]',
   'error.invalid_relation': '잘못된 관계: {relation}. 유효한 값: {valid}',

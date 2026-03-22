@@ -1,6 +1,5 @@
 import { z } from 'zod';
-import { loadGraph } from '../../graph/loader.js';
-import { lintGraph } from '../../graph/operations.js';
+import { lintGraphFromDir } from '../../graph/operations.js';
 import { t } from '../../i18n/index.js';
 import type { CommandDef } from '../types.js';
 
@@ -21,8 +20,7 @@ export const lintDef: CommandDef<typeof schema, LintResult> = {
   shouldFail: (r) => r.errorCount > 0,
 
   async execute(input) {
-    const graph = await loadGraph(input.graphDir);
-    const errors = lintGraph(graph);
+    const errors = await lintGraphFromDir(input.graphDir);
     return {
       errors,
       errorCount: errors.filter(e => e.severity === 'error').length,

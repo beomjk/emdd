@@ -382,6 +382,89 @@ describe('CliAdapter', () => {
     });
   });
 
+  describe('Zod input validation', () => {
+    it('rejects input that violates z.string().min() constraint', async () => {
+      const executeFn = vi.fn().mockResolvedValue({ ok: true });
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+
+      registry.register(makeCommand({
+        name: 'test-cmd',
+        schema: z.object({
+          title: z.string().min(3).describe('Title'),
+        }),
+        execute: executeFn,
+        format: () => 'ok',
+      }));
+      adapter.attachTo(program);
+
+      await program.parseAsync(['node', 'emdd', 'test-cmd', '--title', 'ab']);
+
+      expect(executeFn).not.toHaveBeenCalled();
+      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Input validation failed'),
+      );
+
+      errorSpy.mockRestore();
+      exitSpy.mockRestore();
+    });
+
+    it('rejects input that violates z.number().min().max() constraint', async () => {
+      const executeFn = vi.fn().mockResolvedValue({ ok: true });
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+
+      registry.register(makeCommand({
+        name: 'test-cmd',
+        schema: z.object({
+          threshold: z.number().min(0).max(1).describe('Threshold'),
+        }),
+        execute: executeFn,
+        format: () => 'ok',
+      }));
+      adapter.attachTo(program);
+
+      await program.parseAsync(['node', 'emdd', 'test-cmd', '--threshold', '5']);
+
+      expect(executeFn).not.toHaveBeenCalled();
+      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Input validation failed'),
+      );
+
+      errorSpy.mockRestore();
+      exitSpy.mockRestore();
+    });
+
+    it('outputs JSON error when --json is set and validation fails', async () => {
+      const executeFn = vi.fn().mockResolvedValue({ ok: true });
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+
+      registry.register(makeCommand({
+        name: 'test-cmd',
+        schema: z.object({
+          title: z.string().min(3).describe('Title'),
+        }),
+        execute: executeFn,
+        format: () => 'ok',
+      }));
+      adapter.attachTo(program);
+
+      await program.parseAsync(['node', 'emdd', 'test-cmd', '--title', 'ab', '--json']);
+
+      expect(executeFn).not.toHaveBeenCalled();
+      expect(exitSpy).toHaveBeenCalledWith(1);
+      const jsonOutput = logSpy.mock.calls[0][0];
+      const parsed = JSON.parse(jsonOutput);
+      expect(parsed.error).toContain('Input validation failed');
+
+      logSpy.mockRestore();
+      exitSpy.mockRestore();
+    });
+  });
+
   describe('shouldFail handling', () => {
     it('calls process.exit(1) when shouldFail returns true', async () => {
       const executeFn = vi.fn().mockResolvedValue({ data: 'ok' });

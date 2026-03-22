@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { backlogCommand } from '../../graph/operations.js';
+import { getBacklog } from '../../graph/operations.js';
 import type { BacklogResult } from '../../graph/backlog.js';
 import { t } from '../../i18n/index.js';
 import type { CommandDef } from '../types.js';
@@ -16,7 +16,7 @@ export const backlogDef: CommandDef<typeof schema, BacklogResult> = {
   schema,
 
   async execute(input) {
-    return backlogCommand(input.graphDir, input.status);
+    return getBacklog(input.graphDir, input.status);
   },
 
   format(result) {

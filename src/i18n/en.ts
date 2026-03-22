@@ -33,7 +33,6 @@ export const messages: Record<string, string> = {
   'check.title': 'Consolidation Trigger Check',
   'check.findings_threshold': 'Findings pending consolidation: {count} (threshold: {threshold})',
   'check.episodes_threshold': 'Episodes since last consolidation: {count} (threshold: {threshold})',
-  'check.stale_hypothesis': 'Stale hypothesis: {id} ({days} days in {status})',
   'check.no_triggers': 'No consolidation triggers active',
 
   // Promote
@@ -80,6 +79,7 @@ export const messages: Record<string, string> = {
   'error.invalid_completeness': 'completeness must be a number between 0.0 and 1.0, got {value}',
   'error.invalid_dependency_type': 'Invalid dependencyType "{value}". Valid: {valid}',
   'error.invalid_impact': 'Invalid impact "{value}". Valid: {valid}',
+  'error.invalid_enum_attr': 'Invalid {attr} "{value}". Valid values: {valid}',
   'error.edge_affinity_invalid_attr': 'Edge affinity violation: "{relation}" allows [{allowed}], but got disallowed attribute(s): [{invalid}]',
   'error.edge_affinity_no_attrs': 'Edge affinity violation: "{relation}" does not allow any attributes, but got: [{invalid}]',
   'error.invalid_relation': 'Invalid relation: {relation}. Valid: {valid}',

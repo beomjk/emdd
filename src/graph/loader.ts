@@ -3,7 +3,7 @@ import path from 'node:path';
 import matter from 'gray-matter';
 import { glob } from 'glob';
 import type { Node, Graph, Link, NodeType } from './types.js';
-import { REVERSE_LABELS, NODE_TYPE_DIRS, PREFIX_TO_TYPE, EDGE_ATTRIBUTE_NAMES } from './types.js';
+import { REVERSE_LABELS, NODE_TYPE_DIRS, PREFIX_TO_TYPE, EDGE_ATTRIBUTE_NAMES, EDGE_ATTRIBUTE_RANGES } from './types.js';
 
 export interface LoadGraphOptions {
   permissive?: boolean;
@@ -59,7 +59,14 @@ function parseLinks(raw: unknown): Link[] {
       };
       for (const attr of EDGE_ATTRIBUTE_NAMES) {
         const v = item[attr];
-        if (v !== undefined) (link as unknown as Record<string, unknown>)[attr] = v;
+        if (v === undefined) continue;
+        if (attr in EDGE_ATTRIBUTE_RANGES) {
+          // Numeric attrs (strength, completeness) — must be number
+          if (typeof v === 'number') (link as unknown as Record<string, unknown>)[attr] = v;
+        } else {
+          // Enum attrs (severity, dependencyType, impact) — must be string
+          if (typeof v === 'string') (link as unknown as Record<string, unknown>)[attr] = v;
+        }
       }
       return link;
     });

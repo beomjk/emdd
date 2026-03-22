@@ -232,7 +232,14 @@ function generateValidValuesSection(schema: GraphSchema): string {
 }
 
 function generateCeremonyTriggersSection(schema: GraphSchema): string {
-  if (!schema.ceremonies) return '';
+  if (!schema.ceremonies) {
+    const lines: string[] = [];
+    lines.push('');
+    lines.push(sectionComment('Ceremony Triggers'));
+    lines.push('');
+    lines.push('export const CEREMONY_TRIGGERS = {} as const satisfies Record<string, Record<string, number | boolean>>;');
+    return lines.join('\n');
+  }
 
   const lines: string[] = [];
   lines.push('');
@@ -256,7 +263,14 @@ function generateCeremonyTriggersSection(schema: GraphSchema): string {
 }
 
 function generateTransitionPolicySection(schema: GraphSchema): string {
-  if (!schema.transitionPolicy) return '';
+  if (!schema.transitionPolicy) {
+    const lines: string[] = [];
+    lines.push('');
+    lines.push(sectionComment('Transition Policy'));
+    lines.push('');
+    lines.push("export const TRANSITION_POLICY_DEFAULT = 'off' as const;");
+    return lines.join('\n');
+  }
 
   const lines: string[] = [];
   lines.push('');
@@ -268,7 +282,20 @@ function generateTransitionPolicySection(schema: GraphSchema): string {
 }
 
 function generateEdgeAttributesInterfaceSection(schema: GraphSchema): string {
-  if (!schema.edgeAttributes) return '';
+  if (!schema.edgeAttributes) {
+    const lines: string[] = [];
+    lines.push('');
+    lines.push(sectionComment('Edge Attributes Interface'));
+    lines.push('');
+    lines.push('export interface EdgeAttributes {}');
+    lines.push('');
+    lines.push('export const EDGE_ATTRIBUTE_NAMES = [] as const;');
+    lines.push('');
+    lines.push('export const EDGE_ATTRIBUTE_RANGES: Record<string, { min?: number; max?: number }> = {};');
+    lines.push('');
+    lines.push('export const EDGE_ATTRIBUTE_ENUM_VALUES: Record<string, readonly string[]> = {};');
+    return lines.join('\n');
+  }
 
   const entries = Object.entries(schema.edgeAttributes).sort(([a], [b]) => a.localeCompare(b));
   const lines: string[] = [];
@@ -294,8 +321,8 @@ function generateEdgeAttributesInterfaceSection(schema: GraphSchema): string {
 
   // Export numeric range bounds from schema (single source of truth for min/max)
   const numericEntries = entries.filter(([, def]) => def.type === 'number' && (def.min !== undefined || def.max !== undefined));
+  lines.push('');
   if (numericEntries.length > 0) {
-    lines.push('');
     lines.push('export const EDGE_ATTRIBUTE_RANGES: Record<string, { min?: number; max?: number }> = {');
     for (const [name, def] of numericEntries) {
       const parts: string[] = [];
@@ -304,6 +331,23 @@ function generateEdgeAttributesInterfaceSection(schema: GraphSchema): string {
       lines.push(`  ${name}: { ${parts.join(', ')} },`);
     }
     lines.push('};');
+  } else {
+    lines.push('export const EDGE_ATTRIBUTE_RANGES: Record<string, { min?: number; max?: number }> = {};');
+  }
+
+  // Export enum attribute → valid values mapping (single source of truth for enum validation)
+  const enumEntries = entries.filter(([, def]) => def.type === 'enum' && def.valuesRef);
+  if (enumEntries.length > 0) {
+    lines.push('');
+    lines.push('export const EDGE_ATTRIBUTE_ENUM_VALUES: Record<string, readonly string[]> = {');
+    for (const [name, def] of enumEntries) {
+      const constName = `VALID_${camelToScreamingSnake(def.valuesRef!)}`;
+      lines.push(`  ${name}: ${constName},`);
+    }
+    lines.push('};');
+  } else {
+    lines.push('');
+    lines.push('export const EDGE_ATTRIBUTE_ENUM_VALUES: Record<string, readonly string[]> = {};');
   }
 
   return lines.join('\n');

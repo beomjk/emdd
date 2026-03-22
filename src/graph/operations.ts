@@ -3,7 +3,7 @@ import path from 'node:path';
 import matter from 'gray-matter';
 import { loadGraph } from './loader.js';
 import { nextId, renderTemplate, nodePath, sanitizeSlug } from './templates.js';
-import { NODE_TYPES, NODE_TYPE_DIRS, ALL_VALID_RELATIONS, REVERSE_LABELS, THRESHOLDS, VALID_SEVERITIES, VALID_DEPENDENCY_TYPES, VALID_IMPACTS, VALID_STATUSES, VALID_FINDING_TYPES, VALID_URGENCIES, VALID_RISK_LEVELS, VALID_REVERSIBILITIES, EDGE_ATTRIBUTE_NAMES, EDGE_ATTRIBUTE_RANGES, TRANSITION_POLICY_DEFAULT, TRANSITION_TABLE, MANUAL_TRANSITIONS, CEREMONY_TRIGGERS } from './types.js';
+import { NODE_TYPES, NODE_TYPE_DIRS, ALL_VALID_RELATIONS, REVERSE_LABELS, THRESHOLDS, VALID_STATUSES, VALID_FINDING_TYPES, VALID_URGENCIES, VALID_RISK_LEVELS, VALID_REVERSIBILITIES, EDGE_ATTRIBUTE_NAMES, EDGE_ATTRIBUTE_RANGES, EDGE_ATTRIBUTE_ENUM_VALUES, TRANSITION_POLICY_DEFAULT, TRANSITION_TABLE, MANUAL_TRANSITIONS, CEREMONY_TRIGGERS } from './types.js';
 import { checkEdgeAffinity, getPresentAttrKeys } from './edge-attrs.js';
 import { validateTransition } from './transition-engine.js';
 import type {
@@ -30,13 +30,22 @@ import type {
 import { loadConfig } from './config.js';
 export { detectClusters, identifyClusters } from './clusters.js';
 export { lintNode, lintGraph } from './validator.js';
+import { lintGraph as _lintGraph } from './validator.js';
+
+/**
+ * Convenience facade: load graph from directory and lint in one call.
+ */
+export async function lintGraphFromDir(graphDir: string) {
+  const graph = await loadGraph(graphDir);
+  return _lintGraph(graph);
+}
 export { analyzeRefutation } from './refutation.js';
 export { detectTransitions } from './transitions.js';
 export { propagateConfidence } from './confidence.js';
 export { checkKillCriteria } from './kill-criterion.js';
 export { listBranchGroups } from './branch-groups.js';
 export { generateIndex } from './index-generator.js';
-export { backlogCommand } from './backlog.js';
+export { getBacklog } from './backlog.js';
 import { generateIndex as _generateIndex } from './index-generator.js';
 import { t } from '../i18n/index.js';
 import type { Locale } from '../i18n/index.js';
@@ -171,15 +180,12 @@ function validateEdgeAttributes(attrs: EdgeAttributes): void {
       }
     }
   }
-  // Enum attribute checks
-  if (attrs.severity !== undefined && !(VALID_SEVERITIES as readonly string[]).includes(attrs.severity)) {
-    throw new Error(t('error.invalid_severity', { value: String(attrs.severity), valid: VALID_SEVERITIES.join(', ') }));
-  }
-  if (attrs.dependencyType !== undefined && !(VALID_DEPENDENCY_TYPES as readonly string[]).includes(attrs.dependencyType)) {
-    throw new Error(t('error.invalid_dependency_type', { value: String(attrs.dependencyType), valid: VALID_DEPENDENCY_TYPES.join(', ') }));
-  }
-  if (attrs.impact !== undefined && !(VALID_IMPACTS as readonly string[]).includes(attrs.impact)) {
-    throw new Error(t('error.invalid_impact', { value: String(attrs.impact), valid: VALID_IMPACTS.join(', ') }));
+  // Enum attribute checks (driven by schema-declared EDGE_ATTRIBUTE_ENUM_VALUES)
+  for (const [attrName, validValues] of Object.entries(EDGE_ATTRIBUTE_ENUM_VALUES)) {
+    const val = (attrs as Record<string, unknown>)[attrName];
+    if (val !== undefined && !(validValues as readonly string[]).includes(String(val))) {
+      throw new Error(t('error.invalid_enum_attr', { attr: attrName, value: String(val), valid: validValues.join(', ') }));
+    }
   }
 }
 
@@ -510,31 +516,14 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
     }
 
     if (components.length > 1) {
-      // Count inter-cluster edges
-      const nodeToCluster = new Map<string, number>();
-      components.forEach((comp, idx) => comp.forEach(id => nodeToCluster.set(id, idx)));
-
-      let interClusterEdges = 0;
-      for (const node of graph.nodes.values()) {
-        const myCluster = nodeToCluster.get(node.id)!;
-        for (const link of node.links) {
-          const targetCluster = nodeToCluster.get(link.target);
-          if (targetCluster !== undefined && targetCluster !== myCluster) {
-            interClusterEdges++;
-          }
-        }
-      }
-
-      if (interClusterEdges < config.gaps.min_cluster_edges) {
-        const clusterNodeIds = components
-          .filter(c => c.length > 0)
-          .map(c => c[0]); // representative node from each cluster
-        gapDetails.push({
-          type: 'disconnected_cluster',
-          nodeIds: clusterNodeIds,
-          message: `${components.length} disconnected clusters with only ${interClusterEdges} inter-cluster edge(s)`,
-        });
-      }
+      const clusterNodeIds = components
+        .filter(c => c.length > 0)
+        .map(c => c[0]);
+      gapDetails.push({
+        type: 'disconnected_cluster',
+        nodeIds: clusterNodeIds,
+        message: `${components.length} disconnected clusters found`,
+      });
     }
   }
 
@@ -720,7 +709,7 @@ export async function checkConsolidation(graphDir: string): Promise<CheckResult>
   if (unpromoted.length >= findingsThreshold) {
     triggers.push({
       type: 'findings',
-      message: `Findings pending consolidation: ${unpromoted.length} (threshold: ${findingsThreshold})`,
+      message: t('check.findings_threshold', { count: String(unpromoted.length), threshold: String(findingsThreshold) }),
       count: unpromoted.length,
     });
   }
@@ -729,7 +718,7 @@ export async function checkConsolidation(graphDir: string): Promise<CheckResult>
   if (episodes.length >= episodesThreshold) {
     triggers.push({
       type: 'episodes',
-      message: `Episodes since last consolidation: ${episodes.length} (threshold: ${episodesThreshold})`,
+      message: t('check.episodes_threshold', { count: String(episodes.length), threshold: String(episodesThreshold) }),
       count: episodes.length,
     });
   }
@@ -896,6 +885,9 @@ export async function updateNode(
   const parsed = matter(raw);
   const data: Record<string, unknown> = structuredClone(parsed.data);
 
+  // NOTE: Transition validation uses the pre-update `node` state.
+  // If a future transition rule uses `field_present` on a field being
+  // updated in the same call, it would evaluate against stale data.
   for (const [key, value] of Object.entries(updates)) {
     if (key === 'confidence') {
       const num = parseFloat(value);

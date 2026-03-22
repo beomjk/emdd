@@ -355,4 +355,34 @@ describe('New schema sections structural validation', () => {
     const result = GraphSchemaZod.safeParse(raw);
     expect(result.success).toBe(false);
   });
+
+  it('rejects enum edge attribute with min/max (cross-field)', () => {
+    const raw = {
+      ...makeMinimalSchema(),
+      edgeAttributes: {
+        severity: { type: 'enum', valuesRef: 'severities', min: 0 },
+      },
+    };
+    const result = GraphSchemaZod.safeParse(raw);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const messages = result.error.issues.map(i => i.message);
+      expect(messages.some(m => m.includes('enum attributes must not have min/max'))).toBe(true);
+    }
+  });
+
+  it('rejects number edge attribute with valuesRef (cross-field)', () => {
+    const raw = {
+      ...makeMinimalSchema(),
+      edgeAttributes: {
+        strength: { type: 'number', min: 0, max: 1, valuesRef: 'severities' },
+      },
+    };
+    const result = GraphSchemaZod.safeParse(raw);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const messages = result.error.issues.map(i => i.message);
+      expect(messages.some(m => m.includes('number attributes must not have valuesRef'))).toBe(true);
+    }
+  });
 });

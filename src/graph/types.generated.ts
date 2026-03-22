@@ -204,6 +204,12 @@ export const EDGE_ATTRIBUTE_RANGES: Record<string, { min?: number; max?: number 
   strength: { min: 0, max: 1 },
 };
 
+export const EDGE_ATTRIBUTE_ENUM_VALUES: Record<string, readonly string[]> = {
+  dependencyType: VALID_DEPENDENCY_TYPES,
+  impact: VALID_IMPACTS,
+  severity: VALID_SEVERITIES,
+};
+
 // ── Edge Attribute Affinity ──────────────────────────────────────────
 
 export const EDGE_ATTRIBUTE_AFFINITY: Record<string, readonly string[]> = {

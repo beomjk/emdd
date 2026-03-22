@@ -25,7 +25,7 @@ function parseMarker(raw: string): ItemMarker {
   return 'pending';
 }
 
-export async function backlogCommand(graphDir: string, statusFilter?: string): Promise<BacklogResult> {
+export async function getBacklog(graphDir: string, statusFilter?: string): Promise<BacklogResult> {
   const episodeDir = join(graphDir, 'episodes');
   const pattern = join(episodeDir, '*.md');
   const files = await glob(pattern, { nodir: true });

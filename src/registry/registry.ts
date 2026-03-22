@@ -19,8 +19,4 @@ export class CommandRegistry {
   getAll(): CommandDef[] {
     return [...this.commands.values()];
   }
-
-  getByCategory(category: 'read' | 'write' | 'analysis'): CommandDef[] {
-    return this.getAll().filter(cmd => cmd.category === category);
-  }
 }

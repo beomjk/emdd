@@ -11,7 +11,12 @@ export interface IncomingEdge {
   impact?: string;
 }
 
+const reverseEdgeCache = new WeakMap<Graph, Map<string, IncomingEdge[]>>();
+
 export function buildReverseEdgeIndex(graph: Graph): Map<string, IncomingEdge[]> {
+  const cached = reverseEdgeCache.get(graph);
+  if (cached) return cached;
+
   const index = new Map<string, IncomingEdge[]>();
 
   for (const [sourceId, node] of graph.nodes) {
@@ -36,5 +41,6 @@ export function buildReverseEdgeIndex(graph: Graph): Map<string, IncomingEdge[]>
     }
   }
 
+  reverseEdgeCache.set(graph, index);
   return index;
 }

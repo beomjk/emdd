@@ -175,6 +175,92 @@ describe('parseLinks with edge attributes', () => {
   });
 });
 
+describe('parseLinks type guards', () => {
+  let tmpDir: string;
+  let graphDir: string;
+
+  beforeEach(() => {
+    tmpDir = mkdtempSync(join(tmpdir(), 'emdd-loader-typeguard-'));
+    graphDir = join(tmpDir, 'graph');
+    mkdirSync(join(graphDir, 'findings'), { recursive: true });
+  });
+
+  afterEach(() => {
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  function writeFixture(filename: string, frontmatter: Record<string, unknown>) {
+    const content = matter.stringify('', frontmatter);
+    writeFileSync(join(graphDir, 'findings', filename), content);
+  }
+
+  it('drops strength when value is a string instead of number', async () => {
+    writeFixture('fnd-001-test.md', {
+      id: 'fnd-001', type: 'finding', title: 'Test', status: 'DRAFT',
+      confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [],
+      links: [{ target: 'hyp-001', relation: 'supports', strength: 'high' }],
+    });
+    const node = await loadNode(join(graphDir, 'findings/fnd-001-test.md'));
+    expect(node).not.toBeNull();
+    expect(node!.links[0].strength).toBeUndefined();
+  });
+
+  it('drops severity when value is a number instead of string', async () => {
+    writeFixture('fnd-001-test.md', {
+      id: 'fnd-001', type: 'finding', title: 'Test', status: 'DRAFT',
+      confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [],
+      links: [{ target: 'hyp-001', relation: 'contradicts', severity: 123 }],
+    });
+    const node = await loadNode(join(graphDir, 'findings/fnd-001-test.md'));
+    expect(node).not.toBeNull();
+    expect(node!.links[0].severity).toBeUndefined();
+  });
+
+  it('preserves strength when value is a valid number', async () => {
+    writeFixture('fnd-001-test.md', {
+      id: 'fnd-001', type: 'finding', title: 'Test', status: 'DRAFT',
+      confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [],
+      links: [{ target: 'hyp-001', relation: 'supports', strength: 0.8 }],
+    });
+    const node = await loadNode(join(graphDir, 'findings/fnd-001-test.md'));
+    expect(node).not.toBeNull();
+    expect(node!.links[0].strength).toBe(0.8);
+  });
+
+  it('preserves severity when value is a valid string', async () => {
+    writeFixture('fnd-001-test.md', {
+      id: 'fnd-001', type: 'finding', title: 'Test', status: 'DRAFT',
+      confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [],
+      links: [{ target: 'hyp-001', relation: 'contradicts', severity: 'FATAL' }],
+    });
+    const node = await loadNode(join(graphDir, 'findings/fnd-001-test.md'));
+    expect(node).not.toBeNull();
+    expect(node!.links[0].severity).toBe('FATAL');
+  });
+
+  it('drops completeness when value is a boolean instead of number', async () => {
+    writeFixture('fnd-001-test.md', {
+      id: 'fnd-001', type: 'finding', title: 'Test', status: 'DRAFT',
+      confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [],
+      links: [{ target: 'qst-001', relation: 'answers', completeness: true }],
+    });
+    const node = await loadNode(join(graphDir, 'findings/fnd-001-test.md'));
+    expect(node).not.toBeNull();
+    expect(node!.links[0].completeness).toBeUndefined();
+  });
+
+  it('drops dependencyType when value is a number instead of string', async () => {
+    writeFixture('fnd-001-test.md', {
+      id: 'fnd-001', type: 'finding', title: 'Test', status: 'DRAFT',
+      confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [],
+      links: [{ target: 'fnd-002', relation: 'depends_on', dependencyType: 42 }],
+    });
+    const node = await loadNode(join(graphDir, 'findings/fnd-001-test.md'));
+    expect(node).not.toBeNull();
+    expect(node!.links[0].dependencyType).toBeUndefined();
+  });
+});
+
 describe('loadGraph permissive mode', () => {
   const invalidFixture = path.join(FIXTURES, 'graph-with-invalid');
 

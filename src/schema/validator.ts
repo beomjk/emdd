@@ -48,7 +48,13 @@ const EdgeAttributeDefZod = z.object({
   min: z.number().optional(),
   max: z.number().optional(),
   valuesRef: z.string().optional(),
-});
+}).refine(
+  (d) => !(d.type === 'enum' && (d.min !== undefined || d.max !== undefined)),
+  { message: 'enum attributes must not have min/max' },
+).refine(
+  (d) => !(d.type === 'number' && d.valuesRef !== undefined),
+  { message: 'number attributes must not have valuesRef' },
+);
 
 // ── Main Schema ─────────────────────────────────────────────────────
 

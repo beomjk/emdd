@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import matter from 'gray-matter';
 
 import { graphCommand } from '../../../src/cli/graph.js';
-import { generateIndex, backlogCommand } from '../../../src/graph/operations.js';
+import { generateIndex, getBacklog } from '../../../src/graph/operations.js';
 import { loadGraph } from '../../../src/graph/loader.js';
 import { writeFileSync as fsWriteFileSync } from 'node:fs';
 
@@ -140,7 +140,7 @@ describe('graphCommand', () => {
   });
 });
 
-describe('backlogCommand', () => {
+describe('getBacklog', () => {
   let tmpDir: string;
   beforeEach(() => { tmpDir = setupProject(); });
   afterEach(() => { rmSync(tmpDir, { recursive: true, force: true }); });
@@ -153,7 +153,7 @@ describe('backlogCommand', () => {
       tags: [], links: [],
     }, '## Goals\n\n- [ ] task one\n- [x] task two\n- [ ] task three\n');
 
-    const result = await backlogCommand(join(tmpDir, 'graph'));
+    const result = await getBacklog(join(tmpDir, 'graph'));
     expect(result.items.length).toBe(2);
     expect(result.items.some(i => i.text === 'task one')).toBe(true);
     expect(result.items.some(i => i.text === 'task three')).toBe(true);
@@ -167,12 +167,12 @@ describe('backlogCommand', () => {
       tags: [], links: [],
     }, '## Goals\n\n- [x] all done\n');
 
-    const result = await backlogCommand(join(tmpDir, 'graph'));
+    const result = await getBacklog(join(tmpDir, 'graph'));
     expect(result.items.length).toBe(0);
   });
 
   it('returns empty array when no episodes exist', async () => {
-    const result = await backlogCommand(join(tmpDir, 'graph'));
+    const result = await getBacklog(join(tmpDir, 'graph'));
     expect(result.items).toEqual([]);
   });
 
@@ -184,7 +184,7 @@ describe('backlogCommand', () => {
       tags: [], links: [],
     }, '## Goals\n\n- [ ] my task\n');
 
-    const result = await backlogCommand(join(tmpDir, 'graph'));
+    const result = await getBacklog(join(tmpDir, 'graph'));
     expect(result.items[0].episodeId).toBe('epi-001');
   });
 
@@ -199,39 +199,39 @@ describe('backlogCommand', () => {
     });
 
     it('statusFilter=all returns all 6 items', async () => {
-      const result = await backlogCommand(join(tmpDir, 'graph'), 'all');
+      const result = await getBacklog(join(tmpDir, 'graph'), 'all');
       expect(result.items.length).toBe(6);
     });
 
     it('statusFilter=done returns 3 items (x, X, done)', async () => {
-      const result = await backlogCommand(join(tmpDir, 'graph'), 'done');
+      const result = await getBacklog(join(tmpDir, 'graph'), 'done');
       expect(result.items.length).toBe(3);
       expect(result.items.every(i => i.marker === 'done')).toBe(true);
     });
 
     it('statusFilter=deferred returns 1 item', async () => {
-      const result = await backlogCommand(join(tmpDir, 'graph'), 'deferred');
+      const result = await getBacklog(join(tmpDir, 'graph'), 'deferred');
       expect(result.items.length).toBe(1);
       expect(result.items[0].marker).toBe('deferred');
       expect(result.items[0].text).toBe('deferred task');
     });
 
     it('statusFilter=superseded returns 1 item', async () => {
-      const result = await backlogCommand(join(tmpDir, 'graph'), 'superseded');
+      const result = await getBacklog(join(tmpDir, 'graph'), 'superseded');
       expect(result.items.length).toBe(1);
       expect(result.items[0].marker).toBe('superseded');
       expect(result.items[0].text).toBe('superseded task');
     });
 
     it('default (no filter) returns only pending items', async () => {
-      const result = await backlogCommand(join(tmpDir, 'graph'));
+      const result = await getBacklog(join(tmpDir, 'graph'));
       expect(result.items.length).toBe(1);
       expect(result.items[0].marker).toBe('pending');
       expect(result.items[0].text).toBe('pending task');
     });
 
     it('each item has correct marker field value', async () => {
-      const result = await backlogCommand(join(tmpDir, 'graph'), 'all');
+      const result = await getBacklog(join(tmpDir, 'graph'), 'all');
       const byText = new Map(result.items.map(i => [i.text, i.marker]));
       expect(byText.get('pending task')).toBe('pending');
       expect(byText.get('done via x')).toBe('done');

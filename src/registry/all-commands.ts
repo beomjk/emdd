@@ -12,6 +12,7 @@ import { createEdgeDef } from './commands/create-edge.js';
 import { deleteEdgeDef } from './commands/delete-edge.js';
 import { updateNodeDef } from './commands/update-node.js';
 import { markDoneDef } from './commands/mark-done.js';
+import { indexGraphDef } from './commands/index-graph.js';
 
 // Analysis commands
 import { healthDef } from './commands/health.js';
@@ -23,7 +24,6 @@ import { killCheckDef } from './commands/kill-check.js';
 import { branchGroupsDef } from './commands/branch-groups.js';
 import { lintDef } from './commands/lint.js';
 import { backlogDef } from './commands/backlog.js';
-import { indexGraphDef } from './commands/index-graph.js';
 import { analyzeRefutationDef } from './commands/analyze-refutation.js';
 
 export function createDefaultRegistry(): CommandRegistry {
@@ -41,6 +41,7 @@ export function createDefaultRegistry(): CommandRegistry {
   registry.register(deleteEdgeDef);
   registry.register(updateNodeDef);
   registry.register(markDoneDef);
+  registry.register(indexGraphDef);
 
   // Analysis commands
   registry.register(healthDef);
@@ -52,7 +53,6 @@ export function createDefaultRegistry(): CommandRegistry {
   registry.register(branchGroupsDef);
   registry.register(lintDef);
   registry.register(backlogDef);
-  registry.register(indexGraphDef);
   registry.register(analyzeRefutationDef);
 
   return registry;
