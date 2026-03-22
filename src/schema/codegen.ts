@@ -291,6 +291,8 @@ function generateEdgeAttributesInterfaceSection(schema: GraphSchema): string {
     lines.push('');
     lines.push('export const EDGE_ATTRIBUTE_NAMES = [] as const;');
     lines.push('');
+    lines.push('export const EDGE_ATTRIBUTE_TYPES: Record<string, \'number\' | \'enum\'> = {};');
+    lines.push('');
     lines.push('export const EDGE_ATTRIBUTE_RANGES: Record<string, { min?: number; max?: number }> = {};');
     lines.push('');
     lines.push('export const EDGE_ATTRIBUTE_ENUM_VALUES: Record<string, readonly string[]> = {};');
@@ -318,6 +320,14 @@ function generateEdgeAttributesInterfaceSection(schema: GraphSchema): string {
   lines.push('');
   const attrNames = entries.map(([n]) => `'${n}'`).join(', ');
   lines.push(`export const EDGE_ATTRIBUTE_NAMES = [${attrNames}] as const;`);
+
+  // Export attribute type map for runtime type detection (number vs enum)
+  lines.push('');
+  lines.push("export const EDGE_ATTRIBUTE_TYPES: Record<string, 'number' | 'enum'> = {");
+  for (const [name, def] of entries) {
+    lines.push(`  ${name}: '${def.type}',`);
+  }
+  lines.push('};');
 
   // Export numeric range bounds from schema (single source of truth for min/max)
   const numericEntries = entries.filter(([, def]) => def.type === 'number' && (def.min !== undefined || def.max !== undefined));
@@ -354,7 +364,14 @@ function generateEdgeAttributesInterfaceSection(schema: GraphSchema): string {
 }
 
 function generateEdgeAttributeAffinitySection(schema: GraphSchema): string {
-  if (!schema.edgeAttributeAffinity) return '';
+  if (!schema.edgeAttributeAffinity) {
+    const lines: string[] = [];
+    lines.push('');
+    lines.push(sectionComment('Edge Attribute Affinity'));
+    lines.push('');
+    lines.push('export const EDGE_ATTRIBUTE_AFFINITY: Record<string, readonly string[]> = {};');
+    return lines.join('\n');
+  }
 
   const entries = Object.entries(schema.edgeAttributeAffinity).sort(([a], [b]) => a.localeCompare(b));
   const lines: string[] = [];

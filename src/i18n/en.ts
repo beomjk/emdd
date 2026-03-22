@@ -91,6 +91,8 @@ export const messages: Record<string, string> = {
   'error.invalid_urgency': 'Invalid urgency "{value}". Valid: {valid}',
   'error.invalid_risk_level': 'Invalid risk_level "{value}". Valid: {valid}',
   'error.invalid_reversibility': 'Invalid reversibility "{value}". Valid: {valid}',
+  'error.cli_malformed_record': 'Warning: ignored malformed --{key} entry "{pair}" (expected key=value)',
+  'error.cli_validation_failed': 'Input validation failed:',
   'error.no_matching_link': 'No matching link from {source} to {target}{relation}',
   'error.invalid_marker': 'Invalid marker: {marker}. Valid markers: {valid}',
   'error.item_already_marked': 'Item already marked in {id}: {item}',

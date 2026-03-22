@@ -1,4 +1,5 @@
-import type { Graph } from './types.js';
+import type { Graph, EdgeAttributes } from './types.js';
+import { EDGE_ATTRIBUTE_NAMES } from './types.js';
 
 /**
  * Forward edge relations used for orphan-finding detection.
@@ -18,15 +19,10 @@ export function collectDeferredIds(graph: Graph): string[] {
   return ids;
 }
 
-export interface IncomingEdge {
+export interface IncomingEdge extends Partial<EdgeAttributes> {
   sourceId: string;
   sourceConfidence: number;
   relation: string;
-  strength?: number;
-  severity?: string;
-  completeness?: number;
-  dependencyType?: string;
-  impact?: string;
 }
 
 const reverseEdgeCache = new WeakMap<Graph, Map<string, IncomingEdge[]>>();
@@ -43,12 +39,11 @@ export function buildReverseEdgeIndex(graph: Graph): Map<string, IncomingEdge[]>
         sourceId,
         sourceConfidence: node.confidence ?? 0,
         relation: link.relation,
-        strength: link.strength,
-        severity: link.severity,
-        completeness: link.completeness,
-        dependencyType: link.dependencyType,
-        impact: link.impact,
       };
+      for (const attr of EDGE_ATTRIBUTE_NAMES) {
+        const val = (link as unknown as Record<string, unknown>)[attr];
+        if (val !== undefined) (edge as unknown as Record<string, unknown>)[attr] = val;
+      }
 
       const existing = index.get(link.target);
       if (existing) {

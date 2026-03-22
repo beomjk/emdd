@@ -3,7 +3,7 @@ import type { z } from 'zod';
 import chalk from 'chalk';
 import type { CommandRegistry } from './registry.js';
 import { resolveGraphDir } from '../graph/loader.js';
-import { getLocale, setLocale } from '../i18n/index.js';
+import { getLocale, setLocale, t } from '../i18n/index.js';
 
 /** Get the Zod v4 schema type string via public API */
 function zodDefType(schema: z.ZodType): string {
@@ -82,7 +82,7 @@ export class CliAdapter {
               if (eqIdx > 0) {
                 record[pair.slice(0, eqIdx)] = pair.slice(eqIdx + 1);
               } else {
-                console.error(chalk.yellow(`Warning: ignored malformed --${key} entry "${pair}" (expected key=value)`));
+                console.error(chalk.yellow(t('error.cli_malformed_record', { key, pair })));
               }
             }
             input[key] = record;
@@ -94,7 +94,7 @@ export class CliAdapter {
           const messages = parseResult.error.issues.map(
             (issue) => `  - ${issue.path.join('.')}: ${issue.message}`,
           );
-          const errorMsg = `Input validation failed:\n${messages.join('\n')}`;
+          const errorMsg = `${t('error.cli_validation_failed')}\n${messages.join('\n')}`;
           if (json) {
             console.log(JSON.stringify({ error: errorMsg }, null, 2));
           } else {

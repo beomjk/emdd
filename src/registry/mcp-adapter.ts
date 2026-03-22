@@ -20,6 +20,7 @@ export class McpAdapter {
         graphDir: z.string().optional().describe('Path to the EMDD graph directory'),
         lang: z.string().optional().describe('Language locale (en or ko)'),
       });
+      const schemaKeys = new Set(Object.keys(def.schema.shape));
 
       server.tool(
         toolName,
@@ -30,7 +31,9 @@ export class McpAdapter {
           setLocale(locale);
           try {
             const graphDir = (input.graphDir as string) || resolveGraphDir();
-            const { graphDir: _g, lang: _l, ...rest } = input;
+            const rest: Record<string, unknown> = { ...input };
+            delete rest.graphDir;
+            if (!schemaKeys.has('lang')) delete rest.lang;
             const output = await def.execute({ ...rest, graphDir } as z.infer<typeof def.schema> & { graphDir: string });
             return {
               content: [{ type: 'text' as const, text: JSON.stringify(output, null, 2) }],

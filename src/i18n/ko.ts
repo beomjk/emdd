@@ -91,6 +91,8 @@ export const messages: Record<string, string> = {
   'error.invalid_urgency': '잘못된 urgency "{value}". 유효한 값: {valid}',
   'error.invalid_risk_level': '잘못된 risk_level "{value}". 유효한 값: {valid}',
   'error.invalid_reversibility': '잘못된 reversibility "{value}". 유효한 값: {valid}',
+  'error.cli_malformed_record': '경고: 잘못된 --{key} 항목 "{pair}" 무시됨 (key=value 형식 필요)',
+  'error.cli_validation_failed': '입력 검증 실패:',
   'error.no_matching_link': '{source}에서 {target}으로의 일치하는 링크가 없습니다{relation}',
   'error.invalid_marker': '잘못된 마커: {marker}. 유효한 마커: {valid}',
   'error.item_already_marked': '{id}에서 이미 표시된 항목입니다: {item}',

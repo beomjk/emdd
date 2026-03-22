@@ -321,9 +321,9 @@ describe('generateTypesFile', () => {
     expect(contradictIdx).toBeLessThan(supportIdx);
   });
 
-  it('omits EDGE_ATTRIBUTE_AFFINITY when schema section is absent', () => {
+  it('emits empty EDGE_ATTRIBUTE_AFFINITY when schema section is absent', () => {
     const noAffinityOutput = generateTypesFile(makeTestSchema());
-    expect(noAffinityOutput).not.toContain('EDGE_ATTRIBUTE_AFFINITY');
+    expect(noAffinityOutput).toContain('export const EDGE_ATTRIBUTE_AFFINITY: Record<string, readonly string[]> = {};');
   });
 
   // ── TRANSITION_POLICY_DEFAULT ──

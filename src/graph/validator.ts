@@ -122,7 +122,7 @@ export function lintNode(node: Node): LintError[] {
       if (val !== undefined && (typeof val !== 'number' || isNaN(val as number) || (min !== undefined && val < min) || (max !== undefined && val > max))) {
         errors.push({
           nodeId: id, field: 'links',
-          message: `Edge attribute ${attrName} must be between ${min ?? '-Infinity'} and ${max ?? 'Infinity'}, got ${val}`,
+          message: t('error.invalid_range', { attr: attrName, min: String(min ?? '-Infinity'), max: String(max ?? 'Infinity'), value: String(val) }),
           severity: 'warning',
         });
       }
@@ -134,7 +134,7 @@ export function lintNode(node: Node): LintError[] {
       if (val !== undefined && !(validValues as readonly string[]).includes(String(val))) {
         errors.push({
           nodeId: id, field: 'links',
-          message: `Invalid ${attrName} "${val}". Valid: ${validValues.join(', ')}`,
+          message: t('error.invalid_enum_attr', { attr: attrName, value: String(val), valid: validValues.join(', ') }),
           severity: 'warning',
         });
       }
@@ -146,13 +146,13 @@ export function lintNode(node: Node): LintError[] {
       if (violation.allowedAttrs === null) {
         errors.push({
           nodeId: id, field: 'links',
-          message: `Edge affinity violation: "${link.relation}" does not allow any attributes, but has [${violation.invalidAttrs.join(', ')}]`,
+          message: t('error.edge_affinity_no_attrs', { relation: link.relation, invalid: violation.invalidAttrs.join(', ') }),
           severity: 'error',
         });
       } else {
         errors.push({
           nodeId: id, field: 'links',
-          message: `Edge affinity violation: "${link.relation}" allows [${violation.allowedAttrs.join(', ')}], but has disallowed [${violation.invalidAttrs.join(', ')}]`,
+          message: t('error.edge_affinity_invalid_attr', { relation: link.relation, allowed: violation.allowedAttrs.join(', '), invalid: violation.invalidAttrs.join(', ') }),
           severity: 'error',
         });
       }
@@ -164,7 +164,7 @@ export function lintNode(node: Node): LintError[] {
     if (!(VALID_FINDING_TYPES as readonly string[]).includes(String(node.meta.finding_type))) {
       errors.push({
         nodeId: id, field: 'finding_type',
-        message: `Invalid finding_type "${node.meta.finding_type}". Valid: ${VALID_FINDING_TYPES.join(', ')}`,
+        message: t('error.invalid_finding_type', { value: String(node.meta.finding_type), valid: VALID_FINDING_TYPES.join(', ') }),
         severity: 'warning',
       });
     }
@@ -174,7 +174,7 @@ export function lintNode(node: Node): LintError[] {
     if (!(VALID_URGENCIES as readonly string[]).includes(String(node.meta.urgency))) {
       errors.push({
         nodeId: id, field: 'urgency',
-        message: `Invalid urgency "${node.meta.urgency}". Valid: ${VALID_URGENCIES.join(', ')}`,
+        message: t('error.invalid_urgency', { value: String(node.meta.urgency), valid: VALID_URGENCIES.join(', ') }),
         severity: 'warning',
       });
     }
@@ -184,7 +184,7 @@ export function lintNode(node: Node): LintError[] {
     if (!(VALID_RISK_LEVELS as readonly string[]).includes(String(node.meta.risk_level))) {
       errors.push({
         nodeId: id, field: 'risk_level',
-        message: `Invalid risk_level "${node.meta.risk_level}". Valid: ${VALID_RISK_LEVELS.join(', ')}`,
+        message: t('error.invalid_risk_level', { value: String(node.meta.risk_level), valid: VALID_RISK_LEVELS.join(', ') }),
         severity: 'warning',
       });
     }
@@ -194,7 +194,7 @@ export function lintNode(node: Node): LintError[] {
     if (!(VALID_REVERSIBILITIES as readonly string[]).includes(String(node.meta.reversibility))) {
       errors.push({
         nodeId: id, field: 'reversibility',
-        message: `Invalid reversibility "${node.meta.reversibility}". Valid: ${VALID_REVERSIBILITIES.join(', ')}`,
+        message: t('error.invalid_reversibility', { value: String(node.meta.reversibility), valid: VALID_REVERSIBILITIES.join(', ') }),
         severity: 'warning',
       });
     }

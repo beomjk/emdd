@@ -766,12 +766,13 @@ export async function checkConsolidation(graphDir: string): Promise<CheckResult>
   // Promotion evaluation
   const promotionCandidates = await getPromotionCandidates(graphDir, graph);
 
-  // Orphan findings: findings with no forward edges
+  // Orphan findings: findings with forward edges <= configurable threshold
   const orphanFindings: string[] = [];
+  const config = loadConfig(graphDir);
   for (const [id, node] of graph.nodes) {
     if (node.type !== 'finding') continue;
-    const hasForward = node.links.some(l => FORWARD_RELATIONS.has(l.relation));
-    if (!hasForward) orphanFindings.push(id);
+    const forwardEdges = node.links.filter(l => FORWARD_RELATIONS.has(l.relation));
+    if (forwardEdges.length <= config.gaps.orphan_min_outgoing) orphanFindings.push(id);
   }
 
   // Deferred items

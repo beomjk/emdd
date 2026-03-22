@@ -14,7 +14,7 @@ export const neighborsDef: CommandDef<typeof schema, NeighborNode[]> = {
   description: 'List neighbor nodes within BFS depth',
   category: 'read',
   schema,
-  mcp: { toolName: 'graph_neighbors' },
+  mcp: { toolName: 'graph-neighbors' },
 
   async execute(input) {
     return getNeighbors(input.graphDir, input.nodeId, input.depth);

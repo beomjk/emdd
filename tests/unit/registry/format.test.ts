@@ -42,7 +42,7 @@ describe('format() functions', () => {
     };
 
     it('formats basic health report', () => {
-      const out = healthDef.format(baseReport, 'en');
+      const out = healthDef.format(baseReport);
       expect(out).toContain('EMDD Health Dashboard');
       expect(out).toContain('Total Nodes: 10');
       expect(out).toContain('hypothesis: 3');
@@ -52,20 +52,20 @@ describe('format() functions', () => {
     it('shows gap details when present', () => {
       const detail: GapDetail = { type: 'orphan_finding', nodeIds: ['fnd-001'], message: 'Orphan finding' };
       const report = { ...baseReport, gapDetails: [detail] };
-      const out = healthDef.format(report, 'en');
+      const out = healthDef.format(report);
       expect(out).toContain('Gap Details');
       expect(out).toContain('fnd-001');
     });
 
     it('shows affinity violations when present', () => {
       const report = { ...baseReport, affinityViolations: ['violation1'] };
-      const out = healthDef.format(report, 'en');
+      const out = healthDef.format(report);
       expect(out).toContain('Affinity Violations');
       expect(out).toContain('violation1');
     });
 
     it('hides gap/affinity/deferred sections when empty', () => {
-      const out = healthDef.format(baseReport, 'en');
+      const out = healthDef.format(baseReport);
       expect(out).not.toContain('Gap Details');
       expect(out).not.toContain('Affinity Violations');
       expect(out).not.toContain('Deferred Items');
@@ -73,14 +73,14 @@ describe('format() functions', () => {
 
     it('handles null avgConfidence', () => {
       const report = { ...baseReport, avgConfidence: null };
-      const out = healthDef.format(report, 'en');
+      const out = healthDef.format(report);
       expect(out).toContain('N/A');
     });
   });
 
   describe('lint', () => {
     it('returns clean message for no errors', () => {
-      const out = lintDef.format({ errors: [], errorCount: 0, warningCount: 0 }, 'en');
+      const out = lintDef.format({ errors: [], errorCount: 0, warningCount: 0 });
       expect(out).toMatch(/no errors/i);
     });
 
@@ -89,7 +89,7 @@ describe('format() functions', () => {
         { nodeId: 'hyp-001', field: 'status', message: 'Invalid status', severity: 'error' },
         { nodeId: 'fnd-001', field: 'links', message: 'Broken link', severity: 'warning' },
       ];
-      const out = lintDef.format({ errors, errorCount: 1, warningCount: 1 }, 'en');
+      const out = lintDef.format({ errors, errorCount: 1, warningCount: 1 });
       expect(out).toContain('[ERROR] hyp-001.status');
       expect(out).toContain('[WARNING] fnd-001.links');
       expect(out).toContain('1 error(s), 1 warning(s)');
@@ -98,13 +98,13 @@ describe('format() functions', () => {
 
   describe('gaps', () => {
     it('returns empty message when no gaps', () => {
-      const out = gapsDef.format({ gaps: [], gapDetails: [] }, 'en');
+      const out = gapsDef.format({ gaps: [], gapDetails: [] });
       expect(out).toMatch(/no gaps/i);
     });
 
     it('formats gap details', () => {
       const detail: GapDetail = { type: 'stale_knowledge', nodeIds: ['kno-001'], message: 'Stale' };
-      const out = gapsDef.format({ gaps: ['gap1'], gapDetails: [detail] }, 'en');
+      const out = gapsDef.format({ gaps: ['gap1'], gapDetails: [detail] });
       expect(out).toContain('gap1');
       expect(out).toContain('stale_knowledge');
     });
@@ -112,7 +112,7 @@ describe('format() functions', () => {
 
   describe('list-nodes', () => {
     it('returns empty message when no nodes', () => {
-      const out = listNodesDef.format([], 'en');
+      const out = listNodesDef.format([]);
       expect(out).toMatch(/no nodes/i);
     });
 
@@ -122,7 +122,7 @@ describe('format() functions', () => {
         path: '/fake', status: 'PROPOSED', confidence: 0.8,
         tags: [], links: [], meta: {},
       }];
-      const out = listNodesDef.format(nodes, 'en');
+      const out = listNodesDef.format(nodes);
       expect(out).toContain('[hyp-001] Test');
       expect(out).toContain('hypothesis');
       expect(out).toContain('0.80');
@@ -131,7 +131,7 @@ describe('format() functions', () => {
 
   describe('neighbors', () => {
     it('returns empty message when no neighbors', () => {
-      const out = neighborsDef.format([], 'en');
+      const out = neighborsDef.format([]);
       expect(out).toMatch(/no neighbors/i);
     });
 
@@ -140,7 +140,7 @@ describe('format() functions', () => {
         id: 'fnd-001', type: 'finding' as const, title: 'Found',
         relation: 'supports', direction: 'outgoing' as const, depth: 1,
       }];
-      const out = neighborsDef.format(neighbors, 'en');
+      const out = neighborsDef.format(neighbors);
       expect(out).toContain('→');
       expect(out).toContain('fnd-001');
     });
@@ -148,7 +148,7 @@ describe('format() functions', () => {
 
   describe('create-edge', () => {
     it('formats link result', () => {
-      const out = createEdgeDef.format({ source: 'hyp-001', target: 'fnd-001', relation: 'supports' }, 'en');
+      const out = createEdgeDef.format({ source: 'hyp-001', target: 'fnd-001', relation: 'supports' });
       expect(out).toContain('hyp-001');
       expect(out).toContain('fnd-001');
       expect(out).toContain('supports');
@@ -157,7 +157,7 @@ describe('format() functions', () => {
 
   describe('delete-edge', () => {
     it('formats deletion result', () => {
-      const out = deleteEdgeDef.format({ source: 'a', target: 'b', deletedCount: 2, deletedRelations: ['supports'] }, 'en');
+      const out = deleteEdgeDef.format({ source: 'a', target: 'b', deletedCount: 2, deletedRelations: ['supports'] });
       expect(out).toContain('2');
       expect(out).toContain('a');
     });
@@ -165,7 +165,7 @@ describe('format() functions', () => {
 
   describe('update-node', () => {
     it('formats update result', () => {
-      const out = updateNodeDef.format({ nodeId: 'hyp-001', updatedFields: ['status', 'confidence'], updatedDate: '2025-01-01' }, 'en');
+      const out = updateNodeDef.format({ nodeId: 'hyp-001', updatedFields: ['status', 'confidence'], updatedDate: '2025-01-01' });
       expect(out).toContain('hyp-001');
       expect(out).toContain('status, confidence');
     });
@@ -173,7 +173,7 @@ describe('format() functions', () => {
 
   describe('mark-done', () => {
     it('formats done result', () => {
-      const out = markDoneDef.format({ episodeId: 'epi-001', item: 'Do thing', marker: 'done' }, 'en');
+      const out = markDoneDef.format({ episodeId: 'epi-001', item: 'Do thing', marker: 'done' });
       expect(out).toContain('Do thing');
       expect(out).toContain('done');
       expect(out).toContain('epi-001');
@@ -182,7 +182,7 @@ describe('format() functions', () => {
 
   describe('promote', () => {
     it('returns empty message when no candidates', () => {
-      const out = promoteDef.format([], 'en');
+      const out = promoteDef.format([]);
       expect(out).toMatch(/no promotion/i);
     });
 
@@ -190,7 +190,7 @@ describe('format() functions', () => {
       const candidates: PromoteCandidate[] = [
         { id: 'hyp-001', confidence: 0.9, supports: 3, reason: 'confidence' },
       ];
-      const out = promoteDef.format(candidates, 'en');
+      const out = promoteDef.format(candidates);
       expect(out).toContain('hyp-001');
       expect(out).toContain('0.9');
     });
@@ -200,7 +200,7 @@ describe('format() functions', () => {
     it('returns empty message when no affected', () => {
       const out = analyzeRefutationDef.format({
         affectedHypotheses: [], pivotCeremonyTriggered: false, retractedKnowledgeIds: [],
-      }, 'en');
+      });
       expect(out).toMatch(/no affected/i);
     });
 
@@ -212,7 +212,7 @@ describe('format() functions', () => {
         }],
         pivotCeremonyTriggered: true,
         retractedKnowledgeIds: ['kno-001'],
-      }, 'en');
+      });
       expect(out).toContain('hyp-001');
       expect(out).toContain('Pivot ceremony triggered');
     });
@@ -220,21 +220,21 @@ describe('format() functions', () => {
 
   describe('backlog', () => {
     it('returns empty message when no items', () => {
-      const out = backlogDef.format({ items: [] }, 'en');
+      const out = backlogDef.format({ items: [] });
       expect(out).toMatch(/no backlog/i);
     });
 
     it('formats items', () => {
       const out = backlogDef.format({
         items: [{ text: 'Task 1', episodeId: 'epi-001', marker: 'pending' }],
-      }, 'en');
+      });
       expect(out).toContain('[pending] Task 1');
     });
   });
 
   describe('index-graph', () => {
     it('formats node count', () => {
-      const out = indexGraphDef.format({ nodeCount: 14 }, 'en');
+      const out = indexGraphDef.format({ nodeCount: 14 });
       expect(out).toContain('14');
       expect(out).toMatch(/index/i);
     });
@@ -249,7 +249,7 @@ describe('format() functions', () => {
     };
 
     it('formats node detail with all fields', () => {
-      const out = readNodeDef.format(baseDetail, 'en');
+      const out = readNodeDef.format(baseDetail);
       expect(out).toContain('hyp-001');
       expect(out).toContain('hypothesis');
       expect(out).toContain('0.75');
@@ -261,7 +261,7 @@ describe('format() functions', () => {
 
     it('omits body section when body is empty', () => {
       const detail = { ...baseDetail, body: '' };
-      const out = readNodeDef.format(detail, 'en');
+      const out = readNodeDef.format(detail);
       expect(out).toContain('hyp-001');
       expect(out).not.toContain('Body text');
     });
@@ -270,7 +270,7 @@ describe('format() functions', () => {
   describe('create-node', () => {
     it('formats creation result', () => {
       const result: CreateNodeResult = { id: 'hyp-002', type: 'hypothesis', path: '/fake' };
-      const out = createNodeDef.format(result, 'en');
+      const out = createNodeDef.format(result);
       expect(out).toContain('hyp-002');
       expect(out).toContain('hypothesis');
     });
@@ -281,7 +281,7 @@ describe('format() functions', () => {
       const result: CheckResult = {
         triggers: [], promotionCandidates: [], orphanFindings: [], deferredItems: [],
       };
-      const out = checkDef.format(result, 'en');
+      const out = checkDef.format(result);
       expect(out).toMatch(/no consolidation triggers/i);
     });
 
@@ -292,7 +292,7 @@ describe('format() functions', () => {
         orphanFindings: [],
         deferredItems: [],
       };
-      const out = checkDef.format(result, 'en');
+      const out = checkDef.format(result);
       expect(out).toContain('stale');
       expect(out).toContain('Stale hyp');
       expect(out).toContain('hyp-001');
@@ -302,7 +302,7 @@ describe('format() functions', () => {
 
   describe('confidence-propagate', () => {
     it('returns empty message when no changes', () => {
-      const out = confidencePropagateDef.format([], 'en');
+      const out = confidencePropagateDef.format([]);
       expect(out).toMatch(/no confidence/i);
     });
 
@@ -310,7 +310,7 @@ describe('format() functions', () => {
       const results: ConfidenceResult[] = [
         { nodeId: 'hyp-001', oldConfidence: 0.5, newConfidence: 0.8 },
       ];
-      const out = confidencePropagateDef.format(results, 'en');
+      const out = confidencePropagateDef.format(results);
       expect(out).toContain('hyp-001');
       expect(out).toContain('0.50');
       expect(out).toContain('0.80');
@@ -319,7 +319,7 @@ describe('format() functions', () => {
 
   describe('transitions', () => {
     it('returns empty message when no transitions', () => {
-      const out = transitionsDef.format([], 'en');
+      const out = transitionsDef.format([]);
       expect(out).toMatch(/no available transitions/i);
     });
 
@@ -329,7 +329,7 @@ describe('format() functions', () => {
         recommendedStatus: 'TESTING', reason: 'Has experiments',
         evidenceIds: ['exp-001'],
       }];
-      const out = transitionsDef.format(results, 'en');
+      const out = transitionsDef.format(results);
       expect(out).toContain('hyp-001');
       expect(out).toContain('PROPOSED');
       expect(out).toContain('TESTING');
@@ -338,7 +338,7 @@ describe('format() functions', () => {
 
   describe('kill-check', () => {
     it('returns empty message when no alerts', () => {
-      const out = killCheckDef.format([], 'en');
+      const out = killCheckDef.format([]);
       expect(out).toMatch(/no kill/i);
     });
 
@@ -347,7 +347,7 @@ describe('format() functions', () => {
         hypothesisId: 'hyp-001', killCriterion: 'confidence < 0.2',
         trigger: 'low_confidence', message: 'Too low',
       }];
-      const out = killCheckDef.format(results, 'en');
+      const out = killCheckDef.format(results);
       expect(out).toContain('hyp-001');
       expect(out).toContain('Too low');
     });
@@ -355,7 +355,7 @@ describe('format() functions', () => {
 
   describe('branch-groups', () => {
     it('returns empty message when no groups', () => {
-      const out = branchGroupsDef.format([], 'en');
+      const out = branchGroupsDef.format([]);
       expect(out).toMatch(/no branch/i);
     });
 
@@ -368,7 +368,7 @@ describe('format() functions', () => {
         warnings: [],
         oldestCreated: '2025-01-01',
       }];
-      const out = branchGroupsDef.format(results, 'en');
+      const out = branchGroupsDef.format(results);
       expect(out).toContain('group-1');
       expect(out).toContain('hyp-001');
     });

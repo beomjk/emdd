@@ -16,7 +16,7 @@ export const gapsDef: CommandDef<typeof schema, GapsResult> = {
   description: 'Show structural gaps in the graph',
   category: 'analysis',
   schema,
-  mcp: { toolName: 'graph_gaps' },
+  mcp: { toolName: 'graph-gaps' },
 
   async execute(input) {
     const report = await getHealth(input.graphDir);
