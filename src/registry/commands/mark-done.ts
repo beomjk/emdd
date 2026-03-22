@@ -12,7 +12,7 @@ const schema = z.object({
 
 export const markDoneDef: CommandDef<typeof schema, MarkDoneResult> = {
   name: 'mark-done',
-  description: { en: 'Mark a checklist item as done in an episode', ko: '에피소드 체크리스트 항목 완료 처리' },
+  description: 'Mark a checklist item as done in an episode',
   category: 'write',
   schema,
   cli: { commandName: 'done' },
@@ -21,7 +21,7 @@ export const markDoneDef: CommandDef<typeof schema, MarkDoneResult> = {
     return markDone(input.graphDir, input.episodeId, input.item, input.marker ?? 'done');
   },
 
-  format(result, _locale) {
+  format(result) {
     return t('format.item_marked', { item: result.item, marker: result.marker, episodeId: result.episodeId });
   },
 };

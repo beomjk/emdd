@@ -21,7 +21,7 @@ export class McpAdapter {
 
       server.tool(
         toolName,
-        def.description.en,
+        def.description,
         augmentedSchema.shape,
         async (input: Record<string, unknown>) => {
           try {

@@ -12,7 +12,7 @@ const schema = z.object({
 
 export const listNodesDef: CommandDef<typeof schema, Node[]> = {
   name: 'list-nodes',
-  description: { en: 'List nodes, optionally filtered by type and/or status', ko: '노드 목록 조회 (타입/상태 필터 가능)' },
+  description: 'List nodes, optionally filtered by type and/or status',
   category: 'read',
   schema,
   cli: { commandName: 'list' },
@@ -24,7 +24,7 @@ export const listNodesDef: CommandDef<typeof schema, Node[]> = {
     return listNodes(input.graphDir, filter);
   },
 
-  format(nodes, _locale) {
+  format(nodes) {
     if (nodes.length === 0) return t('format.no_nodes');
     return nodes.map(n => {
       const status = n.status ?? '-';

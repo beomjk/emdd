@@ -12,7 +12,7 @@ const schema = z.object({
 
 export const deleteEdgeDef: CommandDef<typeof schema, DeleteEdgeResult> = {
   name: 'delete-edge',
-  description: { en: 'Remove a link between nodes', ko: '노드 간 링크 제거' },
+  description: 'Remove a link between nodes',
   category: 'write',
   schema,
   cli: { commandName: 'unlink' },
@@ -21,7 +21,7 @@ export const deleteEdgeDef: CommandDef<typeof schema, DeleteEdgeResult> = {
     return deleteEdge(input.graphDir, input.source, input.target, input.relation);
   },
 
-  format(result, _locale) {
+  format(result) {
     return t('format.edge_deleted', { count: String(result.deletedCount), source: result.source, target: result.target });
   },
 };

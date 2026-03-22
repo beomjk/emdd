@@ -14,7 +14,7 @@ interface LintResult {
 
 export const lintDef: CommandDef<typeof schema, LintResult> = {
   name: 'lint',
-  description: { en: 'Lint the graph for schema errors', ko: '그래프 스키마 오류 검사' },
+  description: 'Lint the graph for schema errors',
   category: 'analysis',
   schema,
 
@@ -30,7 +30,7 @@ export const lintDef: CommandDef<typeof schema, LintResult> = {
     };
   },
 
-  format(result, _locale) {
+  format(result) {
     if (result.errors.length === 0) return t('lint.clean');
     const lines = result.errors.map(e =>
       `[${e.severity.toUpperCase()}] ${e.nodeId}.${e.field}: ${e.message}`

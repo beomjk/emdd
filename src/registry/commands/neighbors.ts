@@ -11,7 +11,7 @@ const schema = z.object({
 
 export const neighborsDef: CommandDef<typeof schema, NeighborNode[]> = {
   name: 'neighbors',
-  description: { en: 'List neighbor nodes within BFS depth', ko: '이웃 노드 조회 (BFS 깊이)' },
+  description: 'List neighbor nodes within BFS depth',
   category: 'read',
   schema,
   mcp: { toolName: 'graph_neighbors' },
@@ -20,7 +20,7 @@ export const neighborsDef: CommandDef<typeof schema, NeighborNode[]> = {
     return getNeighbors(input.graphDir, input.nodeId, input.depth);
   },
 
-  format(neighbors, _locale) {
+  format(neighbors) {
     if (neighbors.length === 0) return t('format.no_neighbors');
     return neighbors.map(n => {
       const dir = n.direction === 'outgoing' ? '→' : '←';

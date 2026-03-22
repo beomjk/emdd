@@ -13,7 +13,7 @@ const schema = z.object({
 
 export const createNodeDef: CommandDef<typeof schema, CreateNodeResult> = {
   name: 'create-node',
-  description: { en: 'Create a new node', ko: '새 노드 생성' },
+  description: 'Create a new node',
   category: 'write',
   schema,
   cli: { commandName: 'new' },
@@ -22,7 +22,7 @@ export const createNodeDef: CommandDef<typeof schema, CreateNodeResult> = {
     return createNode(input.graphDir, input.type, input.slug, input.lang);
   },
 
-  format(result, _locale) {
+  format(result) {
     return t('new.created', { type: result.type, id: result.id });
   },
 };

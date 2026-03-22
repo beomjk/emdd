@@ -199,7 +199,7 @@ export interface EdgeAttributes {
 
 export const EDGE_ATTRIBUTE_NAMES = ['completeness', 'dependencyType', 'impact', 'severity', 'strength'] as const;
 
-export const EDGE_ATTRIBUTE_RANGES: Record<string, { min: number; max: number }> = {
+export const EDGE_ATTRIBUTE_RANGES: Record<string, { min?: number; max?: number }> = {
   completeness: { min: 0, max: 1 },
   strength: { min: 0, max: 1 },
 };

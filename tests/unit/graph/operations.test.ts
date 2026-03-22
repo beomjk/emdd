@@ -846,18 +846,18 @@ describe('getPromotionCandidates', () => {
       writeNode(tmpDir2, 'findings', 'fnd-001-test.md', {
         id: 'fnd-001', type: 'finding', title: 'F1', status: 'VALIDATED',
         confidence: 0.85, created: '2026-01-01', updated: '2026-01-01', tags: [],
-        links: [
-          { target: 'hyp-001', relation: 'supports' },
-          { target: 'hyp-002', relation: 'supports' },
-        ],
+        links: [],
       });
-      writeNode(tmpDir2, 'hypotheses', 'hyp-001-test.md', {
-        id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'TESTING',
-        confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+      // Two experiments with incoming supports pointing TO fnd-001
+      writeNode(tmpDir2, 'experiments', 'exp-001-test.md', {
+        id: 'exp-001', type: 'experiment', title: 'E1', status: 'COMPLETED',
+        created: '2026-01-01', updated: '2026-01-01', tags: [],
+        links: [{ target: 'fnd-001', relation: 'supports' }],
       });
-      writeNode(tmpDir2, 'hypotheses', 'hyp-002-test.md', {
-        id: 'hyp-002', type: 'hypothesis', title: 'H2', status: 'TESTING',
-        confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+      writeNode(tmpDir2, 'experiments', 'exp-002-test.md', {
+        id: 'exp-002', type: 'experiment', title: 'E2', status: 'COMPLETED',
+        created: '2026-01-01', updated: '2026-01-01', tags: [],
+        links: [{ target: 'fnd-001', relation: 'supports' }],
       });
 
       const candidates = await getPromotionCandidates(join(tmpDir2, 'graph'));
@@ -874,18 +874,18 @@ describe('getPromotionCandidates', () => {
       writeNode(tmpDir2, 'findings', 'fnd-001-test.md', {
         id: 'fnd-001', type: 'finding', title: 'F1', status: 'VALIDATED',
         confidence: 0.95, created: '2026-01-01', updated: '2026-01-01', tags: [],
-        links: [
-          { target: 'hyp-001', relation: 'supports' },
-          { target: 'hyp-002', relation: 'supports' },
-        ],
+        links: [],
       });
-      writeNode(tmpDir2, 'hypotheses', 'hyp-001-test.md', {
-        id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'TESTING',
-        confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+      // Two experiments with incoming supports pointing TO fnd-001
+      writeNode(tmpDir2, 'experiments', 'exp-001-test.md', {
+        id: 'exp-001', type: 'experiment', title: 'E1', status: 'COMPLETED',
+        created: '2026-01-01', updated: '2026-01-01', tags: [],
+        links: [{ target: 'fnd-001', relation: 'supports' }],
       });
-      writeNode(tmpDir2, 'hypotheses', 'hyp-002-test.md', {
-        id: 'hyp-002', type: 'hypothesis', title: 'H2', status: 'TESTING',
-        confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+      writeNode(tmpDir2, 'experiments', 'exp-002-test.md', {
+        id: 'exp-002', type: 'experiment', title: 'E2', status: 'COMPLETED',
+        created: '2026-01-01', updated: '2026-01-01', tags: [],
+        links: [{ target: 'fnd-001', relation: 'supports' }],
       });
       // Something contradicts fnd-001
       writeNode(tmpDir2, 'findings', 'fnd-002-test.md', {
@@ -909,19 +909,13 @@ describe('getPromotionCandidates', () => {
       writeNode(tmpDir2, 'findings', 'fnd-001-test.md', {
         id: 'fnd-001', type: 'finding', title: 'F1', status: 'VALIDATED',
         confidence: 0.85, created: '2026-01-01', updated: '2026-01-01', tags: [],
-        links: [
-          { target: 'hyp-001', relation: 'supports' },
-          { target: 'hyp-002', relation: 'supports' },
-        ],
+        links: [],
       });
+      // hyp-001 depends_on fnd-001, making it de facto in use
       writeNode(tmpDir2, 'hypotheses', 'hyp-001-test.md', {
         id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'TESTING',
         confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [],
         links: [{ target: 'fnd-001', relation: 'depends_on' }],
-      });
-      writeNode(tmpDir2, 'hypotheses', 'hyp-002-test.md', {
-        id: 'hyp-002', type: 'hypothesis', title: 'H2', status: 'TESTING',
-        confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
       });
 
       const candidates = await getPromotionCandidates(join(tmpDir2, 'graph'));
@@ -939,22 +933,58 @@ describe('getPromotionCandidates', () => {
       writeNode(tmpDir2, 'findings', 'fnd-001-test.md', {
         id: 'fnd-001', type: 'finding', title: 'F1', status: 'VALIDATED',
         confidence: 0.95, created: '2026-01-01', updated: '2026-01-01', tags: [],
-        links: [
-          { target: 'hyp-001', relation: 'supports' },
-          { target: 'hyp-002', relation: 'supports' },
-        ],
+        links: [],
       });
-      writeNode(tmpDir2, 'hypotheses', 'hyp-001-test.md', {
-        id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'TESTING',
-        confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+      // Two other nodes with supports edges pointing TO fnd-001 (incoming supports)
+      writeNode(tmpDir2, 'experiments', 'exp-001-test.md', {
+        id: 'exp-001', type: 'experiment', title: 'E1', status: 'COMPLETED',
+        created: '2026-01-01', updated: '2026-01-01', tags: [],
+        links: [{ target: 'fnd-001', relation: 'supports' }],
       });
-      writeNode(tmpDir2, 'hypotheses', 'hyp-002-test.md', {
-        id: 'hyp-002', type: 'hypothesis', title: 'H2', status: 'TESTING',
-        confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+      writeNode(tmpDir2, 'experiments', 'exp-002-test.md', {
+        id: 'exp-002', type: 'experiment', title: 'E2', status: 'COMPLETED',
+        created: '2026-01-01', updated: '2026-01-01', tags: [],
+        links: [{ target: 'fnd-001', relation: 'supports' }],
       });
 
       const candidates = await getPromotionCandidates(join(tmpDir2, 'graph'));
       expect(candidates.some(c => c.id === 'fnd-001')).toBe(true);
+    } finally {
+      rmSync(tmpDir2, { recursive: true, force: true });
+    }
+  });
+
+  it('counts incoming supports (other nodes targeting the finding)', async () => {
+    let tmpDir2 = setupProject();
+    try {
+      // Finding with high confidence but no outgoing supports edges
+      writeNode(tmpDir2, 'findings', 'fnd-001-test.md', {
+        id: 'fnd-001', type: 'finding', title: 'F1', status: 'VALIDATED',
+        confidence: 0.95, created: '2026-01-01', updated: '2026-01-01', tags: [],
+        links: [],
+      });
+      // Three experiments with supports edges pointing TO fnd-001
+      writeNode(tmpDir2, 'experiments', 'exp-001-test.md', {
+        id: 'exp-001', type: 'experiment', title: 'E1', status: 'COMPLETED',
+        created: '2026-01-01', updated: '2026-01-01', tags: [],
+        links: [{ target: 'fnd-001', relation: 'supports' }],
+      });
+      writeNode(tmpDir2, 'experiments', 'exp-002-test.md', {
+        id: 'exp-002', type: 'experiment', title: 'E2', status: 'COMPLETED',
+        created: '2026-01-01', updated: '2026-01-01', tags: [],
+        links: [{ target: 'fnd-001', relation: 'supports' }],
+      });
+      writeNode(tmpDir2, 'findings', 'fnd-002-test.md', {
+        id: 'fnd-002', type: 'finding', title: 'F2', status: 'VALIDATED',
+        confidence: 0.6, created: '2026-01-01', updated: '2026-01-01', tags: [],
+        links: [{ target: 'fnd-001', relation: 'supports' }],
+      });
+
+      const candidates = await getPromotionCandidates(join(tmpDir2, 'graph'));
+      const fnd1 = candidates.find(c => c.id === 'fnd-001');
+      expect(fnd1).toBeDefined();
+      expect(fnd1!.supports).toBe(3);
+      expect(fnd1!.reason).toBe('confidence');
     } finally {
       rmSync(tmpDir2, { recursive: true, force: true });
     }
@@ -1379,6 +1409,24 @@ describe('updateNode', () => {
     const content = readFileSync(join(tmpDir, 'graph', 'hypotheses', 'hyp-005-bypass.md'), 'utf-8');
     const parsed = matter(content);
     expect(parsed.data.meta.status).toBe('ANYTHING');
+  });
+
+  it('preserves body content when updating frontmatter fields', async () => {
+    const body = '\nImportant findings here.\n\nMore details.\n';
+    writeNode(tmpDir, 'hypotheses', 'hyp-006-body.md', {
+      id: 'hyp-006', type: 'hypothesis', title: 'Body preservation',
+      status: 'PROPOSED', confidence: 0.5,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    }, body);
+
+    await updateNode(join(tmpDir, 'graph'), 'hyp-006', { status: 'TESTING' }, { transitionPolicy: 'off' });
+
+    const content = readFileSync(join(tmpDir, 'graph', 'hypotheses', 'hyp-006-body.md'), 'utf-8');
+    const parsed = matter(content);
+    expect(parsed.data.status).toBe('TESTING');
+    expect(parsed.content).toContain('Important findings here.');
+    expect(parsed.content).toContain('More details.');
   });
 });
 

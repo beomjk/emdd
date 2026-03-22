@@ -8,7 +8,7 @@ const schema = z.object({});
 
 export const checkDef: CommandDef<typeof schema, CheckResult> = {
   name: 'check',
-  description: { en: 'Check consolidation readiness', ko: '통합 준비 상태 확인' },
+  description: 'Check consolidation readiness',
   category: 'analysis',
   schema,
 
@@ -16,7 +16,7 @@ export const checkDef: CommandDef<typeof schema, CheckResult> = {
     return checkConsolidation(input.graphDir);
   },
 
-  format(result, _locale) {
+  format(result) {
     const lines: string[] = [];
     if (result.triggers.length === 0) {
       lines.push(t('check.no_triggers'));

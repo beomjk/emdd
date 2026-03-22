@@ -187,4 +187,58 @@ describe('backlogCommand', () => {
     const result = await backlogCommand(join(tmpDir, 'graph'));
     expect(result.items[0].episodeId).toBe('epi-001');
   });
+
+  describe('statusFilter with all marker types', () => {
+    beforeEach(() => {
+      writeNode(tmpDir, 'episodes', 'epi-001-markers.md', {
+        id: 'epi-001', type: 'episode', title: 'All Markers',
+        status: 'IN_PROGRESS',
+        created: '2026-01-01', updated: '2026-01-01',
+        tags: [], links: [],
+      }, '## Goals\n- [ ] pending task\n- [x] done via x\n- [X] done via X\n- [done] done via text\n- [deferred] deferred task\n- [superseded] superseded task\n');
+    });
+
+    it('statusFilter=all returns all 6 items', async () => {
+      const result = await backlogCommand(join(tmpDir, 'graph'), 'all');
+      expect(result.items.length).toBe(6);
+    });
+
+    it('statusFilter=done returns 3 items (x, X, done)', async () => {
+      const result = await backlogCommand(join(tmpDir, 'graph'), 'done');
+      expect(result.items.length).toBe(3);
+      expect(result.items.every(i => i.marker === 'done')).toBe(true);
+    });
+
+    it('statusFilter=deferred returns 1 item', async () => {
+      const result = await backlogCommand(join(tmpDir, 'graph'), 'deferred');
+      expect(result.items.length).toBe(1);
+      expect(result.items[0].marker).toBe('deferred');
+      expect(result.items[0].text).toBe('deferred task');
+    });
+
+    it('statusFilter=superseded returns 1 item', async () => {
+      const result = await backlogCommand(join(tmpDir, 'graph'), 'superseded');
+      expect(result.items.length).toBe(1);
+      expect(result.items[0].marker).toBe('superseded');
+      expect(result.items[0].text).toBe('superseded task');
+    });
+
+    it('default (no filter) returns only pending items', async () => {
+      const result = await backlogCommand(join(tmpDir, 'graph'));
+      expect(result.items.length).toBe(1);
+      expect(result.items[0].marker).toBe('pending');
+      expect(result.items[0].text).toBe('pending task');
+    });
+
+    it('each item has correct marker field value', async () => {
+      const result = await backlogCommand(join(tmpDir, 'graph'), 'all');
+      const byText = new Map(result.items.map(i => [i.text, i.marker]));
+      expect(byText.get('pending task')).toBe('pending');
+      expect(byText.get('done via x')).toBe('done');
+      expect(byText.get('done via X')).toBe('done');
+      expect(byText.get('done via text')).toBe('done');
+      expect(byText.get('deferred task')).toBe('deferred');
+      expect(byText.get('superseded task')).toBe('superseded');
+    });
+  });
 });

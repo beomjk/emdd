@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { createEdge } from '../../graph/operations.js';
 import type { CreateEdgeResult, EdgeAttributes } from '../../graph/types.js';
-import { ALL_VALID_RELATIONS, VALID_SEVERITIES, VALID_DEPENDENCY_TYPES, VALID_IMPACTS } from '../../graph/types.js';
+import { ALL_VALID_RELATIONS, VALID_SEVERITIES, VALID_DEPENDENCY_TYPES, VALID_IMPACTS, EDGE_ATTRIBUTE_NAMES } from '../../graph/types.js';
 import { t } from '../../i18n/index.js';
 import type { CommandDef } from '../types.js';
 
@@ -18,23 +18,21 @@ const schema = z.object({
 
 export const createEdgeDef: CommandDef<typeof schema, CreateEdgeResult> = {
   name: 'create-edge',
-  description: { en: 'Create an edge between two nodes', ko: '두 노드 사이에 에지 생성' },
+  description: 'Create an edge between two nodes',
   category: 'write',
   schema,
   cli: { commandName: 'link' },
 
   async execute(input) {
     const attrs: EdgeAttributes = {};
-    if (input.strength !== undefined) attrs.strength = input.strength;
-    if (input.severity !== undefined) attrs.severity = input.severity;
-    if (input.completeness !== undefined) attrs.completeness = input.completeness;
-    if (input.dependencyType !== undefined) attrs.dependencyType = input.dependencyType;
-    if (input.impact !== undefined) attrs.impact = input.impact;
+    for (const attr of EDGE_ATTRIBUTE_NAMES) {
+      if (input[attr] !== undefined) (attrs as Record<string, unknown>)[attr] = input[attr];
+    }
     const hasAttrs = Object.keys(attrs).length > 0;
     return createEdge(input.graphDir, input.source, input.target, input.relation, hasAttrs ? attrs : undefined);
   },
 
-  format(result, _locale) {
+  format(result) {
     return t('format.link_created', { source: result.source, target: result.target, relation: result.relation });
   },
 };

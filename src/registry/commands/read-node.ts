@@ -10,7 +10,7 @@ const schema = z.object({
 
 export const readNodeDef: CommandDef<typeof schema, NodeDetail> = {
   name: 'read-node',
-  description: { en: 'Read a node detail', ko: '노드 상세 조회' },
+  description: 'Read a node detail',
   category: 'read',
   schema,
   cli: { commandName: 'read' },
@@ -21,15 +21,18 @@ export const readNodeDef: CommandDef<typeof schema, NodeDetail> = {
     return detail;
   },
 
-  format(detail, _locale) {
+  format(detail) {
     const lines: string[] = [];
     lines.push(`[${detail.id}] ${detail.title}`);
-    lines.push(`  type: ${detail.type}  status: ${detail.status ?? '-'}`);
-    if (detail.confidence != null) lines.push(`  confidence: ${detail.confidence}`);
-    if (detail.tags.length > 0) lines.push(`  tags: ${detail.tags.join(', ')}`);
+    lines.push(`  ${t('format.type')}: ${detail.type}  ${t('format.status')}: ${detail.status ?? '-'}`);
+    if (detail.confidence != null) lines.push(`  ${t('format.confidence')}: ${detail.confidence}`);
+    if (detail.tags.length > 0) lines.push(`  ${t('format.tags')}: ${detail.tags.join(', ')}`);
     if (detail.links.length > 0) {
-      lines.push('  links:');
+      lines.push(`  ${t('format.links')}:`);
       for (const l of detail.links) lines.push(`    → ${l.target} [${l.relation}]`);
+    }
+    for (const [key, val] of Object.entries(detail.meta)) {
+      lines.push(`  ${key}: ${String(val)}`);
     }
     if (detail.body) lines.push('', detail.body);
     return lines.join('\n');

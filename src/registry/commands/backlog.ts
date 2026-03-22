@@ -11,7 +11,7 @@ const schema = z.object({
 
 export const backlogDef: CommandDef<typeof schema, BacklogResult> = {
   name: 'backlog',
-  description: { en: 'Show project backlog (open items, deferred, checklists)', ko: '프로젝트 백로그 표시 (열린 항목, 보류, 체크리스트)' },
+  description: 'Show project backlog (open items, deferred, checklists)',
   category: 'analysis',
   schema,
 
@@ -19,7 +19,7 @@ export const backlogDef: CommandDef<typeof schema, BacklogResult> = {
     return backlogCommand(input.graphDir, input.status);
   },
 
-  format(result, _locale) {
+  format(result) {
     if (result.items.length === 0) return t('format.no_backlog');
     return result.items.map(item =>
       `[${item.marker}] ${item.text} (${item.episodeId})`

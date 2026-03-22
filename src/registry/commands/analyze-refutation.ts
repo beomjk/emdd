@@ -8,7 +8,7 @@ const schema = z.object({});
 
 export const analyzeRefutationDef: CommandDef<typeof schema, RefutationAnalysis> = {
   name: 'analyze-refutation',
-  description: { en: 'Analyze refutation patterns in the graph', ko: '그래프의 반증 패턴 분석' },
+  description: 'Analyze refutation patterns in the graph',
   category: 'analysis',
   schema,
 
@@ -16,7 +16,7 @@ export const analyzeRefutationDef: CommandDef<typeof schema, RefutationAnalysis>
     return analyzeRefutation(input.graphDir);
   },
 
-  format(result, _locale) {
+  format(result) {
     const lines: string[] = [];
 
     if (result.affectedHypotheses.length === 0) {

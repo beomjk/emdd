@@ -1,32 +1,27 @@
 import type { Command } from 'commander';
 import type { z } from 'zod';
-import type { $ZodEnumDef, $ZodOptionalDef } from 'zod/v4/core';
 import chalk from 'chalk';
 import type { CommandRegistry } from './registry.js';
 import { resolveGraphDir } from '../graph/loader.js';
 import { getLocale, setLocale } from '../i18n/index.js';
 
-/** Get the Zod v4 def.type string */
+/** Get the Zod v4 schema type string via public API */
 function zodDefType(schema: z.ZodType): string {
-  return schema._zod.def.type;
+  return schema.type;
 }
 
 /** Unwrap optional/default wrappers recursively to get the inner type */
 function unwrapZod(schema: z.ZodType): z.ZodType {
   let current = schema;
-  let t = zodDefType(current);
-  while (t === 'optional' || t === 'default') {
-    const def = current._zod.def as $ZodOptionalDef;
-    current = def.innerType as z.ZodType;
-    t = zodDefType(current);
+  while (current.type === 'optional' || current.type === 'default') {
+    current = (current as z.ZodOptional | z.ZodDefault).unwrap() as z.ZodType;
   }
   return current;
 }
 
-/** Get enum values from a ZodEnum via def.entries */
+/** Get enum values from a ZodEnum via public .options */
 function getEnumValues(schema: z.ZodType): string[] {
-  const def = schema._zod.def as $ZodEnumDef;
-  return Object.values(def.entries).map(String);
+  return (schema as z.ZodEnum).options.map(String);
 }
 
 export class CliAdapter {
@@ -41,7 +36,7 @@ export class CliAdapter {
         : def.name;
 
       const cmd = program.command(cmdName);
-      cmd.description(def.description.en);
+      cmd.description(def.description);
 
       // Map Zod schema to commander options
       this.addSchemaOptions(cmd, def.schema);
@@ -100,7 +95,7 @@ export class CliAdapter {
                 console.error(chalk.yellow(String(w)));
               }
             }
-            console.log(def.format(output, locale));
+            console.log(def.format(output));
           }
 
           if (def.shouldFail?.(output)) process.exit(1);

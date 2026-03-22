@@ -8,7 +8,7 @@ const schema = z.object({});
 
 export const transitionsDef: CommandDef<typeof schema, TransitionRecommendation[]> = {
   name: 'transitions',
-  description: { en: 'Detect available status transitions', ko: '가능한 상태 전이 감지' },
+  description: 'Detect available status transitions',
   category: 'analysis',
   schema,
   mcp: { toolName: 'status-transitions' },
@@ -17,7 +17,7 @@ export const transitionsDef: CommandDef<typeof schema, TransitionRecommendation[
     return detectTransitions(input.graphDir);
   },
 
-  format(results, _locale) {
+  format(results) {
     if (results.length === 0) return t('format.no_transitions');
     return results.map(r =>
       `${r.nodeId} (${r.currentStatus}) → ${r.recommendedStatus}: ${r.reason}`

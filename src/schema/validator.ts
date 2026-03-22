@@ -217,6 +217,13 @@ export function validateReferentialIntegrity(schema: GraphSchema): ValidationErr
   // ── Edge attribute definitions check ──
   if (schema.edgeAttributes) {
     for (const [attrName, attrDef] of Object.entries(schema.edgeAttributes)) {
+      if (attrDef.type === 'enum' && !attrDef.valuesRef) {
+        errors.push({
+          path: `edgeAttributes.${attrName}`,
+          message: `enum attribute "${attrName}" must have a valuesRef`,
+          severity: 'ERROR',
+        });
+      }
       if (attrDef.type === 'enum' && attrDef.valuesRef) {
         if (!schema.validValues[attrDef.valuesRef]) {
           errors.push({

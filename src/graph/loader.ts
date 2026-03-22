@@ -3,7 +3,7 @@ import path from 'node:path';
 import matter from 'gray-matter';
 import { glob } from 'glob';
 import type { Node, Graph, Link, NodeType } from './types.js';
-import { REVERSE_LABELS, NODE_TYPE_DIRS, PREFIX_TO_TYPE } from './types.js';
+import { REVERSE_LABELS, NODE_TYPE_DIRS, PREFIX_TO_TYPE, EDGE_ATTRIBUTE_NAMES } from './types.js';
 
 export interface LoadGraphOptions {
   permissive?: boolean;
@@ -57,11 +57,10 @@ function parseLinks(raw: unknown): Link[] {
         target: String(item.target ?? ''),
         relation: normalizeRelation(String(item.relation ?? 'relates_to')),
       };
-      if (typeof item.strength === 'number') link.strength = item.strength;
-      if (typeof item.severity === 'string') link.severity = item.severity as Link['severity'];
-      if (typeof item.completeness === 'number') link.completeness = item.completeness;
-      if (typeof item.dependencyType === 'string') link.dependencyType = item.dependencyType as Link['dependencyType'];
-      if (typeof item.impact === 'string') link.impact = item.impact as Link['impact'];
+      for (const attr of EDGE_ATTRIBUTE_NAMES) {
+        const v = item[attr];
+        if (v !== undefined) (link as unknown as Record<string, unknown>)[attr] = v;
+      }
       return link;
     });
 }

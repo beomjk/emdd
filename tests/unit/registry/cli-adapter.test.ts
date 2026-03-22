@@ -13,7 +13,7 @@ vi.mock('../../../src/graph/loader.js', () => ({
 
 function makeCommand(overrides: Partial<CommandDef> & { name: string }): CommandDef {
   return {
-    description: { en: 'Test command', ko: '테스트 커맨드' },
+    description: 'Test command',
     category: 'read',
     schema: z.object({}),
     execute: async () => ({ result: 'ok' }),
@@ -301,6 +301,84 @@ describe('CliAdapter', () => {
 
       errorSpy.mockRestore();
       logSpy.mockRestore();
+    });
+  });
+
+  describe('record (key=value) conversion', () => {
+    let logSpy: ReturnType<typeof vi.spyOn>;
+    let errorSpy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      logSpy.mockRestore();
+      errorSpy.mockRestore();
+    });
+
+    it('converts key=value string array to Record<string, string>', async () => {
+      const executeFn = vi.fn().mockResolvedValue({ ok: true });
+
+      registry.register(makeCommand({
+        name: 'test-cmd',
+        schema: z.object({
+          set: z.record(z.string(), z.string()).optional().describe('Key-value pairs'),
+        }),
+        execute: executeFn,
+        format: () => 'ok',
+      }));
+      adapter.attachTo(program);
+
+      await program.parseAsync(['node', 'emdd', 'test-cmd', '--set', 'foo=bar', '--set', 'baz=qux']);
+
+      expect(executeFn).toHaveBeenCalled();
+      const args = executeFn.mock.calls[0][0];
+      expect(args.set).toEqual({ foo: 'bar', baz: 'qux' });
+    });
+
+    it('warns and skips malformed entry without =', async () => {
+      const executeFn = vi.fn().mockResolvedValue({ ok: true });
+
+      registry.register(makeCommand({
+        name: 'test-cmd',
+        schema: z.object({
+          set: z.record(z.string(), z.string()).optional().describe('Key-value pairs'),
+        }),
+        execute: executeFn,
+        format: () => 'ok',
+      }));
+      adapter.attachTo(program);
+
+      await program.parseAsync(['node', 'emdd', 'test-cmd', '--set', 'valid=yes', '--set', 'malformed']);
+
+      expect(executeFn).toHaveBeenCalled();
+      const args = executeFn.mock.calls[0][0];
+      expect(args.set).toEqual({ valid: 'yes' });
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('malformed')
+      );
+    });
+
+    it('handles value containing = sign correctly', async () => {
+      const executeFn = vi.fn().mockResolvedValue({ ok: true });
+
+      registry.register(makeCommand({
+        name: 'test-cmd',
+        schema: z.object({
+          set: z.record(z.string(), z.string()).optional().describe('Key-value pairs'),
+        }),
+        execute: executeFn,
+        format: () => 'ok',
+      }));
+      adapter.attachTo(program);
+
+      await program.parseAsync(['node', 'emdd', 'test-cmd', '--set', 'key=val=ue']);
+
+      expect(executeFn).toHaveBeenCalled();
+      const args = executeFn.mock.calls[0][0];
+      expect(args.set).toEqual({ key: 'val=ue' });
     });
   });
 

@@ -8,7 +8,7 @@ const schema = z.object({});
 
 export const confidencePropagateDef: CommandDef<typeof schema, ConfidenceResult[]> = {
   name: 'confidence-propagate',
-  description: { en: 'Propagate confidence scores through the graph', ko: '그래프를 통한 신뢰도 전파' },
+  description: 'Propagate confidence scores through the graph',
   category: 'analysis',
   schema,
   cli: { commandName: 'confidence' },
@@ -17,7 +17,7 @@ export const confidencePropagateDef: CommandDef<typeof schema, ConfidenceResult[
     return propagateConfidence(input.graphDir);
   },
 
-  format(results, _locale) {
+  format(results) {
     if (results.length === 0) return t('format.no_confidence');
     return results.map(r =>
       `${r.nodeId}: ${r.oldConfidence.toFixed(2)} → ${r.newConfidence.toFixed(2)}`

@@ -9,14 +9,14 @@ const schema = z.object({});
 
 export const healthDef: CommandDef<typeof schema, HealthReport> = {
   name: 'health',
-  description: { en: 'Show health dashboard', ko: '건강 대시보드 표시' },
+  description: 'Show health dashboard',
   category: 'analysis',
   schema,
   async execute(input) {
     return getHealth(input.graphDir);
   },
 
-  format(report, _locale) {
+  format(report) {
     const lines: string[] = [];
     const avgConf = report.avgConfidence !== null ? report.avgConfidence.toFixed(2) : 'N/A';
 

@@ -19,8 +19,8 @@ export interface CommandDef<
   /** Unique command name in kebab-case */
   name: string;
 
-  /** Bilingual description */
-  description: { en: string; ko: string };
+  /** Human-readable description */
+  description: string;
 
   /** Command classification */
   category: 'read' | 'write' | 'analysis';
@@ -32,7 +32,7 @@ export interface CommandDef<
   execute: (input: z.infer<TInput> & { graphDir: string }) => Promise<TOutput>;
 
   /** CLI format function — produces chalk-formatted string for terminal output. */
-  format: (output: TOutput, locale: string) => string;
+  format: (output: TOutput) => string;
 
   /** Predicate that returns true when the result indicates logical failure (e.g. lint errors found).
    *  CLI adapter calls process.exit(1) after printing output. MCP adapter ignores this. */

@@ -37,6 +37,7 @@ export { checkKillCriteria } from './kill-criterion.js';
 export { listBranchGroups } from './branch-groups.js';
 export { generateIndex } from './index-generator.js';
 export { backlogCommand } from './backlog.js';
+import { generateIndex as _generateIndex } from './index-generator.js';
 import { t } from '../i18n/index.js';
 import type { Locale } from '../i18n/index.js';
 
@@ -165,8 +166,8 @@ function validateEdgeAttributes(attrs: EdgeAttributes): void {
   for (const [attrName, { min, max }] of Object.entries(EDGE_ATTRIBUTE_RANGES)) {
     const val = (attrs as Record<string, unknown>)[attrName];
     if (val !== undefined) {
-      if (typeof val !== 'number' || isNaN(val) || val < min || val > max) {
-        throw new Error(t(`error.invalid_${attrName}`, { value: String(val) }));
+      if (typeof val !== 'number' || isNaN(val) || (min !== undefined && val < min) || (max !== undefined && val > max)) {
+        throw new Error(t('error.invalid_range', { attr: attrName, value: String(val), min: String(min ?? '-Infinity'), max: String(max ?? 'Infinity') }));
       }
     }
   }
@@ -229,11 +230,9 @@ export async function planCreateEdge(
   if (attrs) {
     validateEdgeAffinity(canonical, attrs);
     validateEdgeAttributes(attrs);
-    if (attrs.strength !== undefined) link.strength = attrs.strength;
-    if (attrs.severity !== undefined) link.severity = attrs.severity;
-    if (attrs.completeness !== undefined) link.completeness = attrs.completeness;
-    if (attrs.dependencyType !== undefined) link.dependencyType = attrs.dependencyType;
-    if (attrs.impact !== undefined) link.impact = attrs.impact;
+    for (const attr of EDGE_ATTRIBUTE_NAMES) {
+      if (attrs[attr] !== undefined) link[attr] = attrs[attr];
+    }
   }
   (data.links as unknown[]).push(link);
 
@@ -824,13 +823,23 @@ export async function getPromotionCandidates(graphDir: string): Promise<PromoteC
     }
   }
 
+  // Count incoming supports (how many other nodes support each finding)
+  const incomingSupportCounts = new Map<string, number>();
+  for (const [, n] of graph.nodes) {
+    for (const link of n.links) {
+      if (link.relation === 'supports') {
+        incomingSupportCounts.set(link.target, (incomingSupportCounts.get(link.target) ?? 0) + 1);
+      }
+    }
+  }
+
   for (const [id, node] of graph.nodes) {
     if (node.type !== 'finding') continue;
     if (promotedIds.has(id)) continue;
     if (contradictedIds.has(id)) continue;
 
     const confidence = node.confidence ?? 0;
-    const supportsCount = node.links.filter(l => l.relation === 'supports').length;
+    const supportsCount = incomingSupportCounts.get(id) ?? 0;
     const isDeFacto = deFactoIds.has(id);
     const meetsConfidence = confidence >= THRESHOLDS.promotion_confidence && supportsCount >= THRESHOLDS.min_independent_supports;
 
@@ -1110,4 +1119,16 @@ export async function markDone(
   fs.writeFileSync(filePath, lines.join('\n'));
 
   return { episodeId, item, marker };
+}
+
+// ── writeIndex ─────────────────────────────────────────────────────
+
+/**
+ * Generate and write the _index.md file for the graph directory.
+ */
+export async function writeIndex(graphDir: string): Promise<{ nodeCount: number }> {
+  const graph = await loadGraph(graphDir);
+  const indexContent = _generateIndex(graph);
+  fs.writeFileSync(path.join(graphDir, '_index.md'), indexContent);
+  return { nodeCount: graph.nodes.size };
 }

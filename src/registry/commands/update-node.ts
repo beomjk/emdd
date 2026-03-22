@@ -12,7 +12,7 @@ const schema = z.object({
 
 export const updateNodeDef: CommandDef<typeof schema, UpdateNodeResult> = {
   name: 'update-node',
-  description: { en: 'Update frontmatter fields on a node', ko: '노드 프론트매터 필드 업데이트' },
+  description: 'Update frontmatter fields on a node',
   category: 'write',
   schema,
   cli: { commandName: 'update' },
@@ -22,7 +22,7 @@ export const updateNodeDef: CommandDef<typeof schema, UpdateNodeResult> = {
     return updateNode(input.graphDir, input.nodeId, input.set, options);
   },
 
-  format(result, _locale) {
+  format(result) {
     return t('format.node_updated', { nodeId: result.nodeId, fields: result.updatedFields.join(', ') });
   },
 };

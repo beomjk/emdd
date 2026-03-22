@@ -13,7 +13,7 @@ interface GapsResult {
 
 export const gapsDef: CommandDef<typeof schema, GapsResult> = {
   name: 'gaps',
-  description: { en: 'Show structural gaps in the graph', ko: '그래프 구조적 갭 표시' },
+  description: 'Show structural gaps in the graph',
   category: 'analysis',
   schema,
   mcp: { toolName: 'graph_gaps' },
@@ -23,13 +23,13 @@ export const gapsDef: CommandDef<typeof schema, GapsResult> = {
     return { gaps: report.gaps, gapDetails: report.gapDetails };
   },
 
-  format(result, _locale) {
+  format(result) {
     if (result.gapDetails.length === 0 && result.gaps.length === 0) return t('format.no_gaps');
     const lines: string[] = [];
     for (const gap of result.gaps) lines.push(`- ${gap}`);
     for (const detail of result.gapDetails) {
       lines.push(`[${detail.type}] ${detail.message}`);
-      lines.push(`  Nodes: ${detail.nodeIds.join(', ')}`);
+      lines.push(`  ${t('health.nodes')}: ${detail.nodeIds.join(', ')}`);
     }
     return lines.join('\n');
   },

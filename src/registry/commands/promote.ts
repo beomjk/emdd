@@ -8,7 +8,7 @@ const schema = z.object({});
 
 export const promoteDef: CommandDef<typeof schema, PromoteCandidate[]> = {
   name: 'promote',
-  description: { en: 'Show promotion candidates', ko: '승격 후보 표시' },
+  description: 'Show promotion candidates',
   category: 'analysis',
   schema,
 
@@ -16,7 +16,7 @@ export const promoteDef: CommandDef<typeof schema, PromoteCandidate[]> = {
     return getPromotionCandidates(input.graphDir);
   },
 
-  format(candidates, _locale) {
+  format(candidates) {
     if (candidates.length === 0) return t('format.no_promote');
     return candidates.map(c =>
       `${c.id}: confidence=${c.confidence}, supports=${c.supports} (${c.reason})`

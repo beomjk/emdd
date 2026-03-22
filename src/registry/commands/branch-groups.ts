@@ -8,7 +8,7 @@ const schema = z.object({});
 
 export const branchGroupsDef: CommandDef<typeof schema, BranchGroup[]> = {
   name: 'branch-groups',
-  description: { en: 'List hypothesis branch groups', ko: '가설 브랜치 그룹 목록' },
+  description: 'List hypothesis branch groups',
   category: 'analysis',
   schema,
   cli: { commandName: 'branches' },
@@ -17,7 +17,7 @@ export const branchGroupsDef: CommandDef<typeof schema, BranchGroup[]> = {
     return listBranchGroups(input.graphDir);
   },
 
-  format(results, _locale) {
+  format(results) {
     if (results.length === 0) return t('format.no_branches');
     return results.map(g => {
       const memberIds = g.candidates.map(c => c.id).join(', ');
@@ -26,7 +26,7 @@ export const branchGroupsDef: CommandDef<typeof schema, BranchGroup[]> = {
         lines.push(`  ${t('format.convergence', { reason: g.convergenceReason })}`);
       }
       if (g.warnings.length > 0) {
-        lines.push(...g.warnings.map(w => `  Warning: ${w}`));
+        lines.push(...g.warnings.map(w => `  ${t('format.warning')}: ${w}`));
       }
       return lines.join('\n');
     }).join('\n');

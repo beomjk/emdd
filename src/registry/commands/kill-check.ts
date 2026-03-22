@@ -8,7 +8,7 @@ const schema = z.object({});
 
 export const killCheckDef: CommandDef<typeof schema, KillCriterionAlert[]> = {
   name: 'kill-check',
-  description: { en: 'Check kill criteria alerts', ko: '킬 크라이테리아 경고 확인' },
+  description: 'Check kill criteria alerts',
   category: 'analysis',
   schema,
 
@@ -16,7 +16,7 @@ export const killCheckDef: CommandDef<typeof schema, KillCriterionAlert[]> = {
     return checkKillCriteria(input.graphDir);
   },
 
-  format(results, _locale) {
+  format(results) {
     if (results.length === 0) return t('format.no_kill');
     return results.map(r => `[${r.hypothesisId}] ${r.killCriterion}: ${r.message}`).join('\n');
   },
