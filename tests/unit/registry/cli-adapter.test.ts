@@ -4,6 +4,8 @@ import { z } from 'zod';
 import { CommandRegistry } from '../../../src/registry/registry.js';
 import { CliAdapter } from '../../../src/registry/cli-adapter.js';
 import type { CommandDef } from '../../../src/registry/types.js';
+import { createNodeDef } from '../../../src/registry/commands/create-node.js';
+import { readNodeDef } from '../../../src/registry/commands/read-node.js';
 
 // Mock resolveGraphDir for action tests
 vi.mock('../../../src/graph/loader.js', () => ({
@@ -702,6 +704,39 @@ describe('CliAdapter', () => {
       expect(cmd).toBeDefined();
       const helpText = cmd!.helpInformation();
       expect(helpText).toContain('[arg1]');
+    });
+
+    it('T015: create-node accepts positional [new, hypothesis, my-slug]', async () => {
+      const executeFn = vi.fn().mockResolvedValue({ type: 'hypothesis', id: 'hyp-001' });
+      registry.register({
+        ...createNodeDef,
+        execute: executeFn,
+        format: () => 'ok',
+      } as any);
+      adapter.attachTo(program);
+
+      await program.parseAsync(['node', 'emdd', 'new', 'hypothesis', 'my-slug']);
+
+      expect(executeFn).toHaveBeenCalled();
+      const input = executeFn.mock.calls[0][0];
+      expect(input.type).toBe('hypothesis');
+      expect(input.slug).toBe('my-slug');
+    });
+
+    it('T016: read-node accepts positional [read, hyp-001]', async () => {
+      const executeFn = vi.fn().mockResolvedValue({ id: 'hyp-001', title: 'Test' });
+      registry.register({
+        ...readNodeDef,
+        execute: executeFn,
+        format: () => 'ok',
+      } as any);
+      adapter.attachTo(program);
+
+      await program.parseAsync(['node', 'emdd', 'read', 'hyp-001']);
+
+      expect(executeFn).toHaveBeenCalled();
+      const input = executeFn.mock.calls[0][0];
+      expect(input.nodeId).toBe('hyp-001');
     });
   });
 });

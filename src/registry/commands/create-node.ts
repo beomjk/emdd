@@ -16,7 +16,7 @@ export const createNodeDef: CommandDef<typeof schema, CreateNodeResult> = {
   description: 'Create a new node',
   category: 'write',
   schema,
-  cli: { commandName: 'new' },
+  cli: { commandName: 'new', positional: ['type', 'slug'] },
 
   async execute(input) {
     return createNode(input.graphDir, input.type, input.slug, input.lang);

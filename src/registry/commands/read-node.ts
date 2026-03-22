@@ -13,7 +13,7 @@ export const readNodeDef: CommandDef<typeof schema, NodeDetail> = {
   description: 'Read a node detail',
   category: 'read',
   schema,
-  cli: { commandName: 'read' },
+  cli: { commandName: 'read', positional: ['nodeId'] },
 
   async execute(input) {
     const detail = await readNode(input.graphDir, input.nodeId);
