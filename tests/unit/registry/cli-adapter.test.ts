@@ -846,5 +846,25 @@ describe('CliAdapter', () => {
       const input = executeFn.mock.calls[0][0];
       expect(input.nodeId).toBe('hyp-001');
     });
+
+    it.each([
+      { def: createNodeDef, cmd: 'new', args: ['type', 'slug'] },
+      { def: readNodeDef, cmd: 'read', args: ['nodeId'] },
+      { def: createEdgeDef, cmd: 'link', args: ['source', 'target', 'relation'] },
+      { def: deleteEdgeDef, cmd: 'unlink', args: ['source', 'target'] },
+      { def: markDoneDef, cmd: 'done', args: ['episodeId', 'item'] },
+      { def: updateNodeDef, cmd: 'update', args: ['nodeId'] },
+      { def: neighborsDef, cmd: 'neighbors', args: ['nodeId'] },
+    ])('T033: $cmd --help includes positional arg names', ({ def, cmd, args }) => {
+      registry.register({ ...def, execute: vi.fn(), format: () => '' } as any);
+      adapter.attachTo(program);
+
+      const command = program.commands.find(c => c.name() === cmd);
+      expect(command).toBeDefined();
+      const helpText = command!.helpInformation();
+      for (const arg of args) {
+        expect(helpText).toContain(`[${arg}]`);
+      }
+    });
   });
 });
