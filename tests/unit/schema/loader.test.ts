@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
@@ -55,10 +55,31 @@ describe('loadSchema', () => {
     await expect(loadSchema('/nonexistent/graph-schema.yaml')).rejects.toThrow();
   });
 
-  it('finds schema by walking up from subdirectory', async () => {
-    // loadSchema() without args walks up from cwd — test with explicit path instead
-    const schema = await loadSchema(SCHEMA_PATH);
-    expect(schema.version).toBe('1.0');
+  describe('findSchemaFile (walk-up via cwd)', () => {
+    let cwdSpy: ReturnType<typeof vi.spyOn>;
+
+    afterEach(() => {
+      cwdSpy?.mockRestore();
+    });
+
+    it('loadSchema() finds schema by walking up from cwd subdirectory', async () => {
+      // Point cwd to a subdirectory of the project root (which has graph-schema.yaml)
+      const PROJECT_ROOT = path.resolve(__dirname, '../../..');
+      cwdSpy = vi.spyOn(process, 'cwd').mockReturnValue(path.join(PROJECT_ROOT, 'src'));
+
+      const schema = await loadSchema();
+      expect(schema.version).toBe('1.0');
+      expect(schema.nodeTypes.length).toBeGreaterThan(0);
+    });
+
+    it('loadSchema() throws when no graph-schema.yaml in any ancestor', async () => {
+      const emptyDir = mkdtempSync(path.join(tmpdir(), 'schema-walk-'));
+      cwdSpy = vi.spyOn(process, 'cwd').mockReturnValue(emptyDir);
+
+      await expect(loadSchema()).rejects.toThrow('Could not find graph-schema.yaml');
+
+      rmSync(emptyDir, { recursive: true });
+    });
   });
 });
 
@@ -255,5 +276,3 @@ describe('loadSchema referential integrity', () => {
   });
 });
 
-// import beforeEach/afterEach for the second describe block
-import { beforeEach, afterEach } from 'vitest';

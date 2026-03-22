@@ -24,6 +24,7 @@ import { confidencePropagateDef } from '../../../src/registry/commands/confidenc
 import { transitionsDef } from '../../../src/registry/commands/transitions.js';
 import { killCheckDef } from '../../../src/registry/commands/kill-check.js';
 import { branchGroupsDef } from '../../../src/registry/commands/branch-groups.js';
+import { markConsolidatedDef } from '../../../src/registry/commands/mark-consolidated.js';
 
 describe('format() functions', () => {
   describe('health', () => {
@@ -372,6 +373,13 @@ describe('format() functions', () => {
       const out = branchGroupsDef.format(results);
       expect(out).toContain('group-1');
       expect(out).toContain('hyp-001');
+    });
+  });
+
+  describe('mark-consolidated', () => {
+    it('formats consolidation date', () => {
+      const out = markConsolidatedDef.format({ date: '2026-03-22' });
+      expect(out).toContain('2026-03-22');
     });
   });
 });

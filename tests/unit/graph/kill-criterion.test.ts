@@ -88,4 +88,91 @@ describe('checkKillCriteria', () => {
     expect(alert.trigger).toBe('low_confidence');
     expect(alert.message).toBeTruthy();
   });
+
+  it('confidence=0.3 exactly → NOT triggered (boundary)', async () => {
+    writeNode('hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'TESTING',
+      confidence: 0.3, kill_criterion: 'mAP < 0.60',
+      created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+    });
+
+    const alerts = await checkKillCriteria(graphDir);
+    expect(alerts.some(a => a.trigger === 'low_confidence')).toBe(false);
+  });
+
+  it('13 days elapsed → stale NOT triggered (boundary)', async () => {
+    const date13 = new Date(Date.now() - 13 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    writeNode('hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'TESTING',
+      confidence: 0.9, kill_criterion: 'mAP < 0.60',
+      created: date13, updated: date13, tags: [], links: [],
+    });
+
+    const alerts = await checkKillCriteria(graphDir);
+    expect(alerts.some(a => a.trigger === 'stale')).toBe(false);
+  });
+
+  it('14 days exactly → stale triggered (boundary)', async () => {
+    const date14 = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    writeNode('hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'TESTING',
+      confidence: 0.9, kill_criterion: 'mAP < 0.60',
+      created: date14, updated: date14, tags: [], links: [],
+    });
+
+    const alerts = await checkKillCriteria(graphDir);
+    expect(alerts.some(a => a.trigger === 'stale')).toBe(true);
+  });
+
+  it('confidence undefined + kill_criterion → low_confidence triggered', async () => {
+    writeNode('hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'PROPOSED',
+      kill_criterion: 'mAP < 0.60',
+      created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+    });
+
+    const alerts = await checkKillCriteria(graphDir);
+    expect(alerts.some(a => a.hypothesisId === 'hyp-001' && a.trigger === 'low_confidence')).toBe(true);
+  });
+
+  it('TESTING without updated field → stale check skipped', async () => {
+    writeNode('hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'TESTING',
+      confidence: 0.9, kill_criterion: 'mAP < 0.60',
+      tags: [], links: [],
+    });
+
+    const alerts = await checkKillCriteria(graphDir);
+    expect(alerts).toEqual([]);
+  });
+
+  it('SUPPORTED/REVISED statuses → skipped', async () => {
+    writeNode('hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'SUPPORTED',
+      confidence: 0.1, kill_criterion: 'mAP < 0.60',
+      created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+    });
+    writeNode('hypotheses', 'hyp-002-test.md', {
+      id: 'hyp-002', type: 'hypothesis', title: 'H2', status: 'REVISED',
+      confidence: 0.1, kill_criterion: 'mAP < 0.60',
+      created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+    });
+
+    const alerts = await checkKillCriteria(graphDir);
+    expect(alerts).toEqual([]);
+  });
+
+  it('both low_confidence AND stale simultaneously', async () => {
+    const oldDate = new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    writeNode('hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'TESTING',
+      confidence: 0.1, kill_criterion: 'mAP < 0.60',
+      created: oldDate, updated: oldDate, tags: [], links: [],
+    });
+
+    const alerts = await checkKillCriteria(graphDir);
+    expect(alerts.length).toBe(2);
+    expect(alerts.some(a => a.trigger === 'low_confidence')).toBe(true);
+    expect(alerts.some(a => a.trigger === 'stale')).toBe(true);
+  });
 });

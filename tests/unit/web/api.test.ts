@@ -120,6 +120,30 @@ describe('GET /api/neighbors/:id', () => {
     expect(status).toBe(404);
     expect(body.error).toBe('Node not found');
   });
+
+  it('depth=abc → defaults to 2', async () => {
+    const { app } = createApp(SAMPLE_GRAPH);
+    const { status, body } = await fetchJson(app, '/api/neighbors/hyp-001?depth=abc');
+
+    expect(status).toBe(200);
+    expect(body.depth).toBe(2);
+  });
+
+  it('depth=0 → falls back to 2 (0 is falsy)', async () => {
+    const { app } = createApp(SAMPLE_GRAPH);
+    const { status, body } = await fetchJson(app, '/api/neighbors/hyp-001?depth=0');
+
+    expect(status).toBe(200);
+    expect(body.depth).toBe(2);
+  });
+
+  it('depth=-1 → clamps to min 1', async () => {
+    const { app } = createApp(SAMPLE_GRAPH);
+    const { status, body } = await fetchJson(app, '/api/neighbors/hyp-001?depth=-1');
+
+    expect(status).toBe(200);
+    expect(body.depth).toBe(1);
+  });
 });
 
 describe('GET /api/health', () => {
@@ -205,6 +229,24 @@ describe('GET /api/export', () => {
     const html = await res.text();
     expect(html).toContain('<!DOCTYPE html>');
     expect(html).toContain('EMDD Graph Export');
+  });
+
+  it('exports with types and statuses query params', async () => {
+    const { app } = createApp(SAMPLE_GRAPH);
+    const res = await app.request('/api/export?types=hypothesis,finding&statuses=PROPOSED,TESTING');
+
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain('<!DOCTYPE html>');
+  });
+
+  it('exports with layout=hierarchical', async () => {
+    const { app } = createApp(SAMPLE_GRAPH);
+    const res = await app.request('/api/export?layout=hierarchical');
+
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain('<!DOCTYPE html>');
   });
 });
 
