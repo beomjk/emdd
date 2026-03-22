@@ -8,6 +8,9 @@ import { createNodeDef } from '../../../src/registry/commands/create-node.js';
 import { readNodeDef } from '../../../src/registry/commands/read-node.js';
 import { createEdgeDef } from '../../../src/registry/commands/create-edge.js';
 import { deleteEdgeDef } from '../../../src/registry/commands/delete-edge.js';
+import { markDoneDef } from '../../../src/registry/commands/mark-done.js';
+import { updateNodeDef } from '../../../src/registry/commands/update-node.js';
+import { neighborsDef } from '../../../src/registry/commands/neighbors.js';
 
 // Mock resolveGraphDir for action tests
 vi.mock('../../../src/graph/loader.js', () => ({
@@ -792,6 +795,56 @@ describe('CliAdapter', () => {
       const input = executeFn.mock.calls[0][0];
       expect(input.source).toBe('hyp-001');
       expect(input.target).toBe('knw-001');
+    });
+
+    it('T026: mark-done accepts positional [done, epi-001, Ran baseline]', async () => {
+      const executeFn = vi.fn().mockResolvedValue({ episodeId: 'epi-001', item: 'Ran baseline', marker: 'done' });
+      registry.register({
+        ...markDoneDef,
+        execute: executeFn,
+        format: () => 'ok',
+      } as any);
+      adapter.attachTo(program);
+
+      await program.parseAsync(['node', 'emdd', 'done', 'epi-001', 'Ran baseline']);
+
+      expect(executeFn).toHaveBeenCalled();
+      const input = executeFn.mock.calls[0][0];
+      expect(input.episodeId).toBe('epi-001');
+      expect(input.item).toBe('Ran baseline');
+    });
+
+    it('T027: update-node accepts positional nodeId [update, hyp-001, --set, confidence=0.8]', async () => {
+      const executeFn = vi.fn().mockResolvedValue({ nodeId: 'hyp-001', updatedFields: ['confidence'] });
+      registry.register({
+        ...updateNodeDef,
+        execute: executeFn,
+        format: () => 'ok',
+      } as any);
+      adapter.attachTo(program);
+
+      await program.parseAsync(['node', 'emdd', 'update', 'hyp-001', '--set', 'confidence=0.8']);
+
+      expect(executeFn).toHaveBeenCalled();
+      const input = executeFn.mock.calls[0][0];
+      expect(input.nodeId).toBe('hyp-001');
+      expect(input.set).toEqual({ confidence: '0.8' });
+    });
+
+    it('T028: neighbors accepts positional [neighbors, hyp-001]', async () => {
+      const executeFn = vi.fn().mockResolvedValue([]);
+      registry.register({
+        ...neighborsDef,
+        execute: executeFn,
+        format: () => 'ok',
+      } as any);
+      adapter.attachTo(program);
+
+      await program.parseAsync(['node', 'emdd', 'neighbors', 'hyp-001']);
+
+      expect(executeFn).toHaveBeenCalled();
+      const input = executeFn.mock.calls[0][0];
+      expect(input.nodeId).toBe('hyp-001');
     });
   });
 });
