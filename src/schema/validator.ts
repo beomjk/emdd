@@ -54,6 +54,9 @@ const EdgeAttributeDefZod = z.object({
 ).refine(
   (d) => !(d.type === 'number' && d.valuesRef !== undefined),
   { message: 'number attributes must not have valuesRef' },
+).refine(
+  (d) => !(d.type === 'number' && d.min !== undefined && d.max !== undefined && d.min >= d.max),
+  { message: 'number attribute min must be less than max' },
 );
 
 // ── Main Schema ─────────────────────────────────────────────────────

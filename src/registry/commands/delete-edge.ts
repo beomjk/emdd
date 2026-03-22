@@ -1,13 +1,14 @@
 import { z } from 'zod';
 import { deleteEdge } from '../../graph/operations.js';
 import type { DeleteEdgeResult } from '../../graph/types.js';
+import { ALL_VALID_RELATIONS } from '../../graph/types.js';
 import { t } from '../../i18n/index.js';
 import type { CommandDef } from '../types.js';
 
 const schema = z.object({
   source: z.string().describe('Source node ID'),
   target: z.string().describe('Target node ID'),
-  relation: z.string().optional().describe('Relation to delete (omit to delete all links to target)'),
+  relation: z.enum([...ALL_VALID_RELATIONS] as [string, ...string[]]).optional().describe('Relation to delete (omit to delete all links to target)'),
 });
 
 export const deleteEdgeDef: CommandDef<typeof schema, DeleteEdgeResult> = {

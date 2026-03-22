@@ -6,11 +6,13 @@ import { nextId, renderTemplate, nodePath, sanitizeSlug } from './templates.js';
 import { NODE_TYPES, NODE_TYPE_DIRS, ALL_VALID_RELATIONS, REVERSE_LABELS, THRESHOLDS, VALID_STATUSES, VALID_FINDING_TYPES, VALID_URGENCIES, VALID_RISK_LEVELS, VALID_REVERSIBILITIES, EDGE_ATTRIBUTE_NAMES, EDGE_ATTRIBUTE_RANGES, EDGE_ATTRIBUTE_ENUM_VALUES, TRANSITION_POLICY_DEFAULT, TRANSITION_TABLE, MANUAL_TRANSITIONS, CEREMONY_TRIGGERS } from './types.js';
 import { checkEdgeAffinity, getPresentAttrKeys } from './edge-attrs.js';
 import { validateTransition } from './transition-engine.js';
+import { FORWARD_RELATIONS, collectDeferredIds } from './utils.js';
 import type {
   Node,
   NodeType,
   NodeFilter,
   NodeDetail,
+  Graph,
   CreateNodeResult,
   CreateEdgeResult,
   CreateNodePlan,
@@ -330,22 +332,32 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
   // Structural gaps (basic)
   const gaps: string[] = [];
   if (byType['hypothesis'] > 0 && byType['experiment'] === 0) {
-    gaps.push('No experiments — hypotheses lack testing');
+    gaps.push(t('gap.no_experiments'));
   }
   if (byType['finding'] > 0 && byType['knowledge'] === 0) {
-    gaps.push('No knowledge nodes — findings not consolidated');
+    gaps.push(t('gap.no_knowledge'));
   }
   if (byType['experiment'] > 0 && byType['finding'] === 0) {
-    gaps.push('No findings — experiments lack documented results');
+    gaps.push(t('gap.no_findings'));
   }
   if (totalNodes > 0 && totalEdges === 0) {
-    gaps.push('No edges — graph is disconnected');
+    gaps.push(t('gap.no_edges'));
   }
 
   // Advanced gap detection (§6.8)
   const config = loadConfig(graphDir);
   const gapDetails: GapDetail[] = [];
   const now = new Date();
+
+  function formatTriggerInfo(
+    triggerType: 'days' | 'episodes' | 'both',
+    daysVal: number,
+    episodesVal: number,
+  ): string {
+    if (triggerType === 'days') return t('gap.trigger_days', { days: String(daysVal) });
+    if (triggerType === 'episodes') return t('gap.trigger_episodes', { episodes: String(episodesVal) });
+    return t('gap.trigger_both', { days: String(daysVal), episodes: String(episodesVal) });
+  }
 
   // Helper: count episodes created after a given date
   function countEpisodesSince(sinceDate: Date): number {
@@ -383,15 +395,11 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
     const triggerType: 'days' | 'episodes' | 'both' =
       untestedAnyDays && untestedAnyEpisodes ? 'both'
         : untestedAnyDays ? 'days' : 'episodes';
-    const triggerInfo = triggerType === 'days'
-      ? `${config.gaps.untested_days}+ days`
-      : triggerType === 'episodes'
-        ? `${config.gaps.untested_episodes}+ episodes`
-        : `${config.gaps.untested_days}+ days and/or ${config.gaps.untested_episodes}+ episodes`;
+    const triggerInfo = formatTriggerInfo(triggerType, config.gaps.untested_days, config.gaps.untested_episodes);
     gapDetails.push({
       type: 'untested_hypothesis',
       nodeIds: untestedIds,
-      message: `${untestedIds.length} hypothesis(es) in PROPOSED for ${triggerInfo}`,
+      message: t('gap.untested_hypothesis', { count: String(untestedIds.length), triggerInfo }),
       triggerType,
     });
   }
@@ -420,25 +428,20 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
     const triggerType: 'days' | 'episodes' | 'both' =
       blockingAnyDays && blockingAnyEpisodes ? 'both'
         : blockingAnyDays ? 'days' : 'episodes';
-    const triggerInfo = triggerType === 'days'
-      ? `${config.gaps.blocking_days}+ days`
-      : triggerType === 'episodes'
-        ? `${config.gaps.blocking_episodes}+ episodes`
-        : `${config.gaps.blocking_days}+ days and/or ${config.gaps.blocking_episodes}+ episodes`;
+    const triggerInfo = formatTriggerInfo(triggerType, config.gaps.blocking_days, config.gaps.blocking_episodes);
     gapDetails.push({
       type: 'blocking_question',
       nodeIds: blockingIds,
-      message: `${blockingIds.length} blocking question(s) open for ${triggerInfo}`,
+      message: t('gap.blocking_question', { count: String(blockingIds.length), triggerInfo }),
       triggerType,
     });
   }
 
   // 3. Orphan findings: no outgoing SPAWNS, ANSWERS, or EXTENDS edges
   const orphanIds: string[] = [];
-  const forwardRelations = new Set(['spawns', 'answers', 'extends']);
   for (const node of graph.nodes.values()) {
     if (node.type === 'finding') {
-      const forwardEdges = node.links.filter(l => forwardRelations.has(l.relation));
+      const forwardEdges = node.links.filter(l => FORWARD_RELATIONS.has(l.relation));
       if (forwardEdges.length <= config.gaps.orphan_min_outgoing) {
         orphanIds.push(node.id);
       }
@@ -448,7 +451,7 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
     gapDetails.push({
       type: 'orphan_finding',
       nodeIds: orphanIds,
-      message: `${orphanIds.length} finding(s) with no outgoing spawns/answers/extends edges`,
+      message: t('gap.orphan_finding', { count: String(orphanIds.length) }),
     });
   }
 
@@ -477,7 +480,7 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
     gapDetails.push({
       type: 'stale_knowledge',
       nodeIds: staleIds,
-      message: `${staleIds.length} knowledge node(s) stale for ${config.gaps.stale_days}+ days`,
+      message: t('gap.stale_knowledge', { count: String(staleIds.length), days: String(config.gaps.stale_days) }),
     });
   }
 
@@ -516,22 +519,36 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
     }
 
     if (components.length > 1) {
-      const clusterNodeIds = components
-        .filter(c => c.length > 0)
-        .map(c => c[0]);
-      gapDetails.push({
-        type: 'disconnected_cluster',
-        nodeIds: clusterNodeIds,
-        message: `${components.length} disconnected clusters found`,
-      });
+      // Count inter-cluster edges
+      const nodeToCluster = new Map<string, number>();
+      components.forEach((comp, idx) => comp.forEach(id => nodeToCluster.set(id, idx)));
+
+      let interClusterEdges = 0;
+      for (const node of graph.nodes.values()) {
+        const myCluster = nodeToCluster.get(node.id)!;
+        for (const link of node.links) {
+          const targetCluster = nodeToCluster.get(link.target);
+          if (targetCluster !== undefined && targetCluster !== myCluster) {
+            interClusterEdges++;
+          }
+        }
+      }
+
+      if (interClusterEdges < config.gaps.min_cluster_edges) {
+        const clusterNodeIds = components
+          .filter(c => c.length > 0)
+          .map(c => c[0]);
+        gapDetails.push({
+          type: 'disconnected_cluster',
+          nodeIds: clusterNodeIds,
+          message: t('gap.disconnected_cluster', { count: String(components.length), edges: String(interClusterEdges) }),
+        });
+      }
     }
   }
 
   // Deferred items (OPERATIONS.md §7.4: display not-pursued items in health report)
-  const deferredItems: string[] = [];
-  for (const [id, node] of graph.nodes) {
-    if (node.status === 'DEFERRED') deferredItems.push(id);
-  }
+  const deferredItems = collectDeferredIds(graph);
 
   // Edge attribute affinity violations
   const affinityViolations: string[] = [];
@@ -727,7 +744,7 @@ export async function checkConsolidation(graphDir: string): Promise<CheckResult>
   if (allQuestionsResolved && questionCount.total > 0 && openQuestions.length === 0) {
     triggers.push({
       type: 'questions',
-      message: 'All questions resolved — consider generating new ones',
+      message: t('check.all_questions_resolved'),
       count: 0,
     });
   }
@@ -740,29 +757,25 @@ export async function checkConsolidation(graphDir: string): Promise<CheckResult>
     if (producesCount >= overloadThreshold) {
       triggers.push({
         type: 'experiment_overload',
-        message: `Experiment ${expId} has ${producesCount} findings attached (threshold: ${overloadThreshold}) — consider splitting`,
+        message: t('check.experiment_overload', { id: expId, count: String(producesCount), threshold: String(overloadThreshold) }),
         count: producesCount,
       });
     }
   }
 
   // Promotion evaluation
-  const promotionCandidates = await getPromotionCandidates(graphDir);
+  const promotionCandidates = await getPromotionCandidates(graphDir, graph);
 
   // Orphan findings: findings with no forward edges
-  const forwardRelations = new Set(['spawns', 'answers', 'extends']);
   const orphanFindings: string[] = [];
   for (const [id, node] of graph.nodes) {
     if (node.type !== 'finding') continue;
-    const hasForward = node.links.some(l => forwardRelations.has(l.relation));
+    const hasForward = node.links.some(l => FORWARD_RELATIONS.has(l.relation));
     if (!hasForward) orphanFindings.push(id);
   }
 
   // Deferred items
-  const deferredItems: string[] = [];
-  for (const [id, node] of graph.nodes) {
-    if (node.status === 'DEFERRED') deferredItems.push(id);
-  }
+  const deferredItems = collectDeferredIds(graph);
 
   return { triggers, promotionCandidates, orphanFindings, deferredItems };
 }
@@ -776,8 +789,8 @@ export async function checkConsolidation(graphDir: string): Promise<CheckResult>
  * 2. de facto in use (referenced as premise via DEPENDS_ON/EXTENDS)
  * Exclusion: CONTRADICTS edge exists → not eligible
  */
-export async function getPromotionCandidates(graphDir: string): Promise<PromoteCandidate[]> {
-  const graph = await loadGraph(graphDir);
+export async function getPromotionCandidates(graphDir: string, preloadedGraph?: Graph): Promise<PromoteCandidate[]> {
+  const graph = preloadedGraph ?? await loadGraph(graphDir);
   const candidates: PromoteCandidate[] = [];
 
   // Track already-promoted findings

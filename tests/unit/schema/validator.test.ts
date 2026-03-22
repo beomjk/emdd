@@ -315,6 +315,43 @@ describe('validateReferentialIntegrity', () => {
     const errors = validateReferentialIntegrity(schema);
     expect(errors.filter(e => e.path.includes('edgeAttributeAffinity'))).toEqual([]);
   });
+
+  it('rejects enum attribute without valuesRef', () => {
+    const schema = makeMinimalSchema({
+      edgeAttributes: {
+        severity: { type: 'enum' } as unknown as GraphSchema['edgeAttributes'] extends Record<string, infer V> ? V : never,
+      },
+    } as Partial<GraphSchema>);
+    const errors = validateReferentialIntegrity(schema);
+    expect(errors.some(e => e.path.includes('edgeAttributes.severity') && e.message.includes('valuesRef'))).toBe(true);
+  });
+
+  it('rejects enum valuesRef pointing to non-existent validValues key', () => {
+    const schema = makeMinimalSchema({
+      edgeAttributes: {
+        severity: { type: 'enum', valuesRef: 'nonexistent_values' } as unknown as GraphSchema['edgeAttributes'] extends Record<string, infer V> ? V : never,
+      },
+    } as Partial<GraphSchema>);
+    const errors = validateReferentialIntegrity(schema);
+    expect(errors.some(e => e.path.includes('valuesRef') && e.message.includes('nonexistent_values'))).toBe(true);
+  });
+
+  it('warns on affinity referencing unknown edgeAttribute name', () => {
+    const schema = makeMinimalSchema({
+      edgeAttributes: {
+        strength: { type: 'number', min: 0, max: 1 },
+      },
+      edgeAttributeAffinity: {
+        supports: ['strength', 'unknown_attr'],
+      },
+    } as Partial<GraphSchema>);
+    const errors = validateReferentialIntegrity(schema);
+    expect(errors.some(e =>
+      e.path.includes('edgeAttributeAffinity') &&
+      e.message.includes('unknown_attr') &&
+      e.severity === 'WARNING'
+    )).toBe(true);
+  });
 });
 
 // ── New Schema Sections (Zod structural) ─────────────────────────────
@@ -384,5 +421,31 @@ describe('New schema sections structural validation', () => {
       const messages = result.error.issues.map(i => i.message);
       expect(messages.some(m => m.includes('number attributes must not have valuesRef'))).toBe(true);
     }
+  });
+
+  it('rejects number edge attribute where min >= max', () => {
+    const raw = {
+      ...makeMinimalSchema(),
+      edgeAttributes: {
+        strength: { type: 'number', min: 1, max: 0 },
+      },
+    };
+    const result = GraphSchemaZod.safeParse(raw);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const messages = result.error.issues.map(i => i.message);
+      expect(messages.some(m => m.includes('min must be less than max'))).toBe(true);
+    }
+  });
+
+  it('accepts number edge attribute where min < max', () => {
+    const raw = {
+      ...makeMinimalSchema(),
+      edgeAttributes: {
+        strength: { type: 'number', min: 0, max: 1 },
+      },
+    };
+    const result = GraphSchemaZod.safeParse(raw);
+    expect(result.success).toBe(true);
   });
 });

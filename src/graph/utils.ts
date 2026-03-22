@@ -1,5 +1,23 @@
 import type { Graph } from './types.js';
 
+/**
+ * Forward edge relations used for orphan-finding detection.
+ * Shared between getHealth() and checkConsolidation().
+ */
+export const FORWARD_RELATIONS = new Set(['spawns', 'answers', 'extends']);
+
+/**
+ * Collect IDs of all DEFERRED nodes in the graph.
+ * Shared between getHealth() and checkConsolidation().
+ */
+export function collectDeferredIds(graph: Graph): string[] {
+  const ids: string[] = [];
+  for (const [id, node] of graph.nodes) {
+    if (node.status === 'DEFERRED') ids.push(id);
+  }
+  return ids;
+}
+
 export interface IncomingEdge {
   sourceId: string;
   sourceConfidence: number;

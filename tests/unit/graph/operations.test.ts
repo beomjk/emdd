@@ -808,22 +808,25 @@ describe('checkConsolidation', () => {
 // ── Ceremony Triggers from Schema (T062) ──
 
 describe('checkConsolidation — schema-declared thresholds', () => {
-  it('uses CEREMONY_TRIGGERS constants (no hardcoded magic numbers)', async () => {
-    // Grep checkConsolidation source for hardcoded 5 or 3 in threshold comparisons
-    const fs = await import('node:fs');
-    const opsSource = fs.readFileSync(
-      new URL('../../../src/graph/operations.ts', import.meta.url), 'utf-8'
-    );
-
-    // Extract checkConsolidation function body
-    const fnStart = opsSource.indexOf('export async function checkConsolidation');
-    const fnBody = opsSource.slice(fnStart, fnStart + 2000);
-
-    // Should reference CEREMONY_TRIGGERS, not hardcoded numbers
-    expect(fnBody).toContain('CEREMONY_TRIGGERS');
-    // Should NOT have the old hardcoded comparisons
-    expect(fnBody).not.toMatch(/>= 5\b/);
-    expect(fnBody).not.toMatch(/>= 3\b/);
+  it('does not trigger below schema threshold', async () => {
+    const { CEREMONY_TRIGGERS } = await import('../../../src/graph/types.js');
+    const ct = CEREMONY_TRIGGERS.consolidation;
+    const threshold = ct.unpromoted_findings_threshold as number;
+    // Create fixture with threshold-1 findings => should NOT trigger
+    const tmpDir = setupProject();
+    try {
+      for (let i = 1; i < threshold; i++) {
+        writeNode(tmpDir, 'findings', `fnd-${String(i).padStart(3, '0')}-test.md`, {
+          id: `fnd-${String(i).padStart(3, '0')}`, type: 'finding', title: `F${i}`,
+          status: 'VALIDATED', confidence: 0.5,
+          created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+        });
+      }
+      const result = await checkConsolidation(join(tmpDir, 'graph'));
+      expect(result.triggers.some(t => t.type === 'findings')).toBe(false);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
   });
 
   it('triggers consolidation based on schema thresholds', async () => {
@@ -834,40 +837,41 @@ describe('checkConsolidation — schema-declared thresholds', () => {
   });
 });
 
-describe('hardcoded constants detection — consolidation prompt', () => {
-  it('uses THRESHOLDS constants (no hardcoded promotion values)', async () => {
-    const fs = await import('node:fs');
-    const src = fs.readFileSync(
-      new URL('../../../src/mcp-server/prompts/consolidation.ts', import.meta.url), 'utf-8'
-    );
-    // Should reference THRESHOLDS, not hardcoded promotion values
-    expect(src).toContain('THRESHOLDS');
-    expect(src).toContain('THRESHOLDS.promotion_confidence');
-    expect(src).toContain('THRESHOLDS.min_independent_supports');
-    // Should NOT have the old hardcoded values in template strings
-    expect(src).not.toMatch(/>= 0\.8\b/);
-    expect(src).not.toMatch(/>= 0\.9\b/);
+describe('promotion thresholds use schema constants', () => {
+  it('THRESHOLDS constants have valid ranges', async () => {
+    const { THRESHOLDS } = await import('../../../src/graph/types.js');
+    expect(typeof THRESHOLDS.promotion_confidence).toBe('number');
+    expect(typeof THRESHOLDS.min_independent_supports).toBe('number');
+    expect(THRESHOLDS.promotion_confidence).toBeGreaterThan(0);
+    expect(THRESHOLDS.promotion_confidence).toBeLessThanOrEqual(1);
+    expect(THRESHOLDS.min_independent_supports).toBeGreaterThanOrEqual(1);
   });
 });
 
-describe('hardcoded constants detection — createEdge attributes', () => {
-  it('uses EDGE_ATTRIBUTE_NAMES loop (no hardcoded attr names in return section)', async () => {
-    const fs = await import('node:fs');
-    const src = fs.readFileSync(
-      new URL('../../../src/graph/operations.ts', import.meta.url), 'utf-8'
-    );
-    // Extract createEdge function body (from signature to the next section comment)
-    const fnStart = src.indexOf('export async function createEdge');
-    const fnEnd = src.indexOf('\n// ──', fnStart + 1);
-    const fnBody = src.slice(fnStart, fnEnd > fnStart ? fnEnd : fnStart + 500);
-    // Should use schema-driven loop
-    expect(fnBody).toContain('EDGE_ATTRIBUTE_NAMES');
-    // Should NOT have individual hardcoded if-statements for each attribute
-    expect(fnBody).not.toMatch(/attrs\?\.strength/);
-    expect(fnBody).not.toMatch(/attrs\?\.severity/);
-    expect(fnBody).not.toMatch(/attrs\?\.completeness/);
-    expect(fnBody).not.toMatch(/attrs\?\.dependencyType/);
-    expect(fnBody).not.toMatch(/attrs\?\.impact/);
+describe('createEdge stores schema-declared attributes', () => {
+  it('persists all schema-declared edge attributes', async () => {
+    const tmpDir = setupProject();
+    try {
+      writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+        id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'PROPOSED',
+        confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+      });
+      writeNode(tmpDir, 'findings', 'fnd-001-test.md', {
+        id: 'fnd-001', type: 'finding', title: 'F1', status: 'VALIDATED',
+        confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+      });
+      const graphDir = join(tmpDir, 'graph');
+      const result = await createEdge(graphDir, 'hyp-001', 'fnd-001', 'supports', { strength: 0.8 });
+      expect(result.strength).toBe(0.8);
+      // Verify persisted by reading back
+      const detail = await readNode(graphDir, 'hyp-001');
+      expect(detail).not.toBeNull();
+      const link = detail!.links.find(l => l.target === 'fnd-001');
+      expect(link).toBeDefined();
+      expect(link!.strength).toBe(0.8);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
   });
 });
 

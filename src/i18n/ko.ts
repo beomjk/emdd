@@ -96,4 +96,22 @@ export const messages: Record<string, string> = {
   'error.item_already_marked': '{id}에서 이미 표시된 항목입니다: {item}',
   'error.item_not_found': '{id}에서 항목을 찾을 수 없습니다: {item}',
   'error.multiple_matches': "'{item}'에 대한 복수 일치가 {id}에 있습니다",
+
+  // 갭 메시지 (getHealth)
+  'gap.no_experiments': '실험이 없습니다 — 가설에 테스트가 부족합니다',
+  'gap.no_knowledge': '지식 노드가 없습니다 — 발견사항이 통합되지 않았습니다',
+  'gap.no_findings': '발견사항이 없습니다 — 실험에 문서화된 결과가 없습니다',
+  'gap.no_edges': '에지가 없습니다 — 그래프가 연결되지 않았습니다',
+  'gap.untested_hypothesis': '{count}개 가설이 PROPOSED 상태로 {triggerInfo} 경과',
+  'gap.blocking_question': '{count}개 차단 질문이 {triggerInfo} 동안 미해결',
+  'gap.orphan_finding': '{count}개 발견사항에 outgoing spawns/answers/extends 에지 없음',
+  'gap.stale_knowledge': '{count}개 지식 노드가 {days}일 이상 오래됨',
+  'gap.disconnected_cluster': '{count}개 단절된 클러스터, inter-cluster 에지 {edges}개만 존재',
+  'gap.trigger_days': '{days}일 이상',
+  'gap.trigger_episodes': '{episodes}개 이상 에피소드',
+  'gap.trigger_both': '{days}일 이상 및/또는 {episodes}개 이상 에피소드',
+
+  // 통합 확인 메시지 (checkConsolidation)
+  'check.all_questions_resolved': '모든 질문이 해결됨 — 새로운 질문 생성을 고려하세요',
+  'check.experiment_overload': '실험 {id}에 {count}개 발견사항 연결됨 (임계값: {threshold}) — 분할을 고려하세요',
 };

@@ -371,17 +371,15 @@ describe('lintGraph — edge attribute affinity', () => {
   });
 });
 
-describe('hardcoded constants detection — lintNode NaN guard', () => {
-  it('includes isNaN check in numeric range validation', async () => {
-    const fs = await import('node:fs');
-    const src = fs.readFileSync(
-      new URL('../../../src/graph/validator.ts', import.meta.url), 'utf-8'
-    );
-    // Extract the numeric range check section (skip import, find usage site)
-    const importEnd = src.indexOf('EDGE_ATTRIBUTE_RANGES') + 'EDGE_ATTRIBUTE_RANGES'.length;
-    const rangeStart = src.indexOf('EDGE_ATTRIBUTE_RANGES', importEnd);
-    const rangeBlock = src.slice(rangeStart, rangeStart + 300);
-    // Must include isNaN guard (matching operations.ts pattern)
-    expect(rangeBlock).toMatch(/isNaN/);
+describe('lintNode — NaN guard for numeric edge attributes', () => {
+  it('rejects NaN values for numeric edge attributes', () => {
+    const node = {
+      id: 'hyp-001', type: 'hypothesis' as const, title: 'Test',
+      path: '/tmp/test.md', status: 'PROPOSED', confidence: 0.5,
+      tags: [], links: [{ target: 'fnd-001', relation: 'supports', strength: NaN }],
+      meta: {},
+    };
+    const errors = lintNode(node as Parameters<typeof lintNode>[0]);
+    expect(errors.some(e => e.field === 'links')).toBe(true);
   });
 });

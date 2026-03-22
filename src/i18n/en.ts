@@ -96,4 +96,22 @@ export const messages: Record<string, string> = {
   'error.item_already_marked': 'Item already marked in {id}: {item}',
   'error.item_not_found': 'Item not found in {id}: {item}',
   'error.multiple_matches': "Multiple matches for '{item}' in {id}",
+
+  // Gap messages (getHealth)
+  'gap.no_experiments': 'No experiments — hypotheses lack testing',
+  'gap.no_knowledge': 'No knowledge nodes — findings not consolidated',
+  'gap.no_findings': 'No findings — experiments lack documented results',
+  'gap.no_edges': 'No edges — graph is disconnected',
+  'gap.untested_hypothesis': '{count} hypothesis(es) in PROPOSED for {triggerInfo}',
+  'gap.blocking_question': '{count} blocking question(s) open for {triggerInfo}',
+  'gap.orphan_finding': '{count} finding(s) with no outgoing spawns/answers/extends edges',
+  'gap.stale_knowledge': '{count} knowledge node(s) stale for {days}+ days',
+  'gap.disconnected_cluster': '{count} disconnected clusters with only {edges} inter-cluster edge(s)',
+  'gap.trigger_days': '{days}+ days',
+  'gap.trigger_episodes': '{episodes}+ episodes',
+  'gap.trigger_both': '{days}+ days and/or {episodes}+ episodes',
+
+  // Check messages (checkConsolidation)
+  'check.all_questions_resolved': 'All questions resolved — consider generating new ones',
+  'check.experiment_overload': 'Experiment {id} has {count} findings attached (threshold: {threshold}) — consider splitting',
 };
