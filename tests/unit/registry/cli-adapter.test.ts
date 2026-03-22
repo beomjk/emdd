@@ -257,6 +257,26 @@ describe('CliAdapter', () => {
       logSpy.mockRestore();
       exitSpy.mockRestore();
     });
+
+    it('outputs error to stderr when --json is not set', async () => {
+      const executeFn = vi.fn().mockRejectedValue(new Error('boom'));
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+
+      registry.register(makeCommand({
+        name: 'test-cmd',
+        execute: executeFn,
+      }));
+      adapter.attachTo(program);
+
+      await program.parseAsync(['node', 'emdd', 'test-cmd']);
+
+      expect(errorSpy).toHaveBeenCalledWith('Error: boom');
+      expect(exitSpy).toHaveBeenCalledWith(1);
+
+      errorSpy.mockRestore();
+      exitSpy.mockRestore();
+    });
   });
 
   describe('warnings handling', () => {
@@ -281,6 +301,54 @@ describe('CliAdapter', () => {
 
       errorSpy.mockRestore();
       logSpy.mockRestore();
+    });
+  });
+
+  describe('shouldFail handling', () => {
+    it('calls process.exit(1) when shouldFail returns true', async () => {
+      const executeFn = vi.fn().mockResolvedValue({ data: 'ok' });
+      const formatFn = vi.fn().mockReturnValue('formatted');
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+
+      registry.register(makeCommand({
+        name: 'test-cmd',
+        execute: executeFn,
+        format: formatFn,
+        shouldFail: () => true,
+      }));
+      adapter.attachTo(program);
+
+      await program.parseAsync(['node', 'emdd', 'test-cmd']);
+
+      expect(formatFn).toHaveBeenCalled();
+      expect(exitSpy).toHaveBeenCalledWith(1);
+
+      logSpy.mockRestore();
+      exitSpy.mockRestore();
+    });
+
+    it('does not exit when shouldFail returns false', async () => {
+      const executeFn = vi.fn().mockResolvedValue({ data: 'ok' });
+      const formatFn = vi.fn().mockReturnValue('formatted');
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+
+      registry.register(makeCommand({
+        name: 'test-cmd',
+        execute: executeFn,
+        format: formatFn,
+        shouldFail: () => false,
+      }));
+      adapter.attachTo(program);
+
+      await program.parseAsync(['node', 'emdd', 'test-cmd']);
+
+      expect(formatFn).toHaveBeenCalled();
+      expect(exitSpy).not.toHaveBeenCalled();
+
+      logSpy.mockRestore();
+      exitSpy.mockRestore();
     });
   });
 });

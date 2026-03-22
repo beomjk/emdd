@@ -18,6 +18,8 @@ export const lintDef: CommandDef<typeof schema, LintResult> = {
   category: 'analysis',
   schema,
 
+  shouldFail: (r) => r.errorCount > 0,
+
   async execute(input) {
     const graph = await loadGraph(input.graphDir);
     const errors = lintGraph(graph);

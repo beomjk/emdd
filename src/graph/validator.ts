@@ -3,8 +3,9 @@ import {
   VALID_STATUSES, REQUIRED_FIELDS, ALL_VALID_RELATIONS,
   VALID_SEVERITIES, VALID_DEPENDENCY_TYPES, VALID_IMPACTS,
   VALID_FINDING_TYPES, VALID_URGENCIES, VALID_RISK_LEVELS, VALID_REVERSIBILITIES,
-  EDGE_ATTRIBUTE_AFFINITY, EDGE_ATTRIBUTE_NAMES,
+  EDGE_ATTRIBUTE_RANGES,
 } from './types.js';
+import { checkEdgeAffinity, getPresentAttrKeys } from './edge-attrs.js';
 import { t } from '../i18n/index.js';
 
 export interface LintError {
@@ -105,9 +106,6 @@ export function lintNode(node: Node): LintError[] {
     });
   }
 
-  // Known attribute keys from schema-generated EDGE_ATTRIBUTE_NAMES
-  const knownAttrKeys: readonly string[] = EDGE_ATTRIBUTE_NAMES;
-
   // Check link relations and edge attributes
   for (const link of node.links) {
     if (!ALL_VALID_RELATIONS.has(link.relation)) {
@@ -119,26 +117,22 @@ export function lintNode(node: Node): LintError[] {
       });
     }
 
-    if (link.strength !== undefined && (link.strength < 0.0 || link.strength > 1.0)) {
-      errors.push({
-        nodeId: id, field: 'links',
-        message: `Edge attribute strength must be between 0.0 and 1.0, got ${link.strength}`,
-        severity: 'warning',
-      });
+    // Numeric range checks driven by schema-declared EDGE_ATTRIBUTE_RANGES
+    for (const [attrName, { min, max }] of Object.entries(EDGE_ATTRIBUTE_RANGES)) {
+      const val = (link as unknown as Record<string, unknown>)[attrName];
+      if (val !== undefined && (typeof val !== 'number' || val < min || val > max)) {
+        errors.push({
+          nodeId: id, field: 'links',
+          message: `Edge attribute ${attrName} must be between ${min} and ${max}, got ${val}`,
+          severity: 'warning',
+        });
+      }
     }
 
     if (link.severity !== undefined && !(VALID_SEVERITIES as readonly string[]).includes(link.severity)) {
       errors.push({
         nodeId: id, field: 'links',
         message: `Invalid severity "${link.severity}". Valid: ${VALID_SEVERITIES.join(', ')}`,
-        severity: 'warning',
-      });
-    }
-
-    if (link.completeness !== undefined && (link.completeness < 0.0 || link.completeness > 1.0)) {
-      errors.push({
-        nodeId: id, field: 'links',
-        message: `Edge attribute completeness must be between 0.0 and 1.0, got ${link.completeness}`,
         severity: 'warning',
       });
     }
@@ -160,25 +154,20 @@ export function lintNode(node: Node): LintError[] {
     }
 
     // Edge attribute affinity validation
-    const attrKeys = knownAttrKeys
-      .filter(k => (link as unknown as Record<string, unknown>)[k] !== undefined);
-    if (attrKeys.length > 0) {
-      const allowed = EDGE_ATTRIBUTE_AFFINITY[link.relation];
-      if (!allowed) {
+    const violation = checkEdgeAffinity(link.relation, getPresentAttrKeys(link as unknown as Record<string, unknown>));
+    if (violation) {
+      if (violation.allowedAttrs === null) {
         errors.push({
           nodeId: id, field: 'links',
-          message: `Edge affinity violation: "${link.relation}" does not allow any attributes, but has [${attrKeys.join(', ')}]`,
+          message: `Edge affinity violation: "${link.relation}" does not allow any attributes, but has [${violation.invalidAttrs.join(', ')}]`,
           severity: 'error',
         });
       } else {
-        const invalid = attrKeys.filter(k => !allowed.includes(k));
-        if (invalid.length > 0) {
-          errors.push({
-            nodeId: id, field: 'links',
-            message: `Edge affinity violation: "${link.relation}" allows [${allowed.join(', ')}], but has disallowed [${invalid.join(', ')}]`,
-            severity: 'error',
-          });
-        }
+        errors.push({
+          nodeId: id, field: 'links',
+          message: `Edge affinity violation: "${link.relation}" allows [${violation.allowedAttrs.join(', ')}], but has disallowed [${violation.invalidAttrs.join(', ')}]`,
+          severity: 'error',
+        });
       }
     }
   }

@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import type { HealthReport, GapDetail, PromoteCandidate, Node } from '../../../src/graph/types.js';
+import type { HealthReport, GapDetail, PromoteCandidate, Node, NodeDetail, CreateNodeResult, CheckResult } from '../../../src/graph/types.js';
+import type { ConfidenceResult } from '../../../src/graph/confidence.js';
+import type { TransitionRecommendation } from '../../../src/graph/transitions.js';
+import type { KillCriterionAlert } from '../../../src/graph/kill-criterion.js';
+import type { BranchGroup } from '../../../src/graph/branch-groups.js';
 import { healthDef } from '../../../src/registry/commands/health.js';
 import { lintDef } from '../../../src/registry/commands/lint.js';
 import { gapsDef } from '../../../src/registry/commands/gaps.js';
@@ -13,6 +17,13 @@ import { promoteDef } from '../../../src/registry/commands/promote.js';
 import { analyzeRefutationDef } from '../../../src/registry/commands/analyze-refutation.js';
 import { backlogDef } from '../../../src/registry/commands/backlog.js';
 import { indexGraphDef } from '../../../src/registry/commands/index-graph.js';
+import { readNodeDef } from '../../../src/registry/commands/read-node.js';
+import { createNodeDef } from '../../../src/registry/commands/create-node.js';
+import { checkDef } from '../../../src/registry/commands/check.js';
+import { confidencePropagateDef } from '../../../src/registry/commands/confidence-propagate.js';
+import { transitionsDef } from '../../../src/registry/commands/transitions.js';
+import { killCheckDef } from '../../../src/registry/commands/kill-check.js';
+import { branchGroupsDef } from '../../../src/registry/commands/branch-groups.js';
 
 describe('format() functions', () => {
   describe('health', () => {
@@ -226,6 +237,140 @@ describe('format() functions', () => {
       const out = indexGraphDef.format({ nodeCount: 14 }, 'en');
       expect(out).toContain('14');
       expect(out).toMatch(/index/i);
+    });
+  });
+
+  describe('read-node', () => {
+    const baseDetail: NodeDetail = {
+      id: 'hyp-001', type: 'hypothesis', title: 'Test',
+      path: '/fake', status: 'PROPOSED', confidence: 0.75,
+      tags: ['tag1'], links: [{ target: 'fnd-001', relation: 'supports' }],
+      meta: {}, body: 'Body text',
+    };
+
+    it('formats node detail with all fields', () => {
+      const out = readNodeDef.format(baseDetail, 'en');
+      expect(out).toContain('hyp-001');
+      expect(out).toContain('hypothesis');
+      expect(out).toContain('0.75');
+      expect(out).toContain('tag1');
+      expect(out).toContain('fnd-001');
+      expect(out).toContain('supports');
+      expect(out).toContain('Body text');
+    });
+
+    it('omits body section when body is empty', () => {
+      const detail = { ...baseDetail, body: '' };
+      const out = readNodeDef.format(detail, 'en');
+      expect(out).toContain('hyp-001');
+      expect(out).not.toContain('Body text');
+    });
+  });
+
+  describe('create-node', () => {
+    it('formats creation result', () => {
+      const result: CreateNodeResult = { id: 'hyp-002', type: 'hypothesis', path: '/fake' };
+      const out = createNodeDef.format(result, 'en');
+      expect(out).toContain('hyp-002');
+      expect(out).toContain('hypothesis');
+    });
+  });
+
+  describe('check', () => {
+    it('returns no triggers message when empty', () => {
+      const result: CheckResult = {
+        triggers: [], promotionCandidates: [], orphanFindings: [], deferredItems: [],
+      };
+      const out = checkDef.format(result, 'en');
+      expect(out).toMatch(/no consolidation triggers/i);
+    });
+
+    it('formats triggers and promotion candidates', () => {
+      const result: CheckResult = {
+        triggers: [{ type: 'stale', message: 'Stale hyp' }],
+        promotionCandidates: [{ id: 'hyp-001', confidence: 0.9, supports: 3, reason: 'confidence' }],
+        orphanFindings: [],
+        deferredItems: [],
+      };
+      const out = checkDef.format(result, 'en');
+      expect(out).toContain('stale');
+      expect(out).toContain('Stale hyp');
+      expect(out).toContain('hyp-001');
+      expect(out).toContain('0.9');
+    });
+  });
+
+  describe('confidence-propagate', () => {
+    it('returns empty message when no changes', () => {
+      const out = confidencePropagateDef.format([], 'en');
+      expect(out).toMatch(/no confidence/i);
+    });
+
+    it('formats confidence changes', () => {
+      const results: ConfidenceResult[] = [
+        { nodeId: 'hyp-001', oldConfidence: 0.5, newConfidence: 0.8 },
+      ];
+      const out = confidencePropagateDef.format(results, 'en');
+      expect(out).toContain('hyp-001');
+      expect(out).toContain('0.50');
+      expect(out).toContain('0.80');
+    });
+  });
+
+  describe('transitions', () => {
+    it('returns empty message when no transitions', () => {
+      const out = transitionsDef.format([], 'en');
+      expect(out).toMatch(/no available transitions/i);
+    });
+
+    it('formats transition recommendations', () => {
+      const results: TransitionRecommendation[] = [{
+        nodeId: 'hyp-001', currentStatus: 'PROPOSED',
+        recommendedStatus: 'TESTING', reason: 'Has experiments',
+        evidenceIds: ['exp-001'],
+      }];
+      const out = transitionsDef.format(results, 'en');
+      expect(out).toContain('hyp-001');
+      expect(out).toContain('PROPOSED');
+      expect(out).toContain('TESTING');
+    });
+  });
+
+  describe('kill-check', () => {
+    it('returns empty message when no alerts', () => {
+      const out = killCheckDef.format([], 'en');
+      expect(out).toMatch(/no kill/i);
+    });
+
+    it('formats kill criterion alerts', () => {
+      const results: KillCriterionAlert[] = [{
+        hypothesisId: 'hyp-001', killCriterion: 'confidence < 0.2',
+        trigger: 'low_confidence', message: 'Too low',
+      }];
+      const out = killCheckDef.format(results, 'en');
+      expect(out).toContain('hyp-001');
+      expect(out).toContain('Too low');
+    });
+  });
+
+  describe('branch-groups', () => {
+    it('returns empty message when no groups', () => {
+      const out = branchGroupsDef.format([], 'en');
+      expect(out).toMatch(/no branch/i);
+    });
+
+    it('formats branch groups with candidates', () => {
+      const results: BranchGroup[] = [{
+        groupId: 'group-1',
+        candidates: [{ id: 'hyp-001', confidence: 0.8, status: 'TESTING', role: 'primary' }],
+        convergenceReady: true,
+        convergenceReason: 'All tested',
+        warnings: [],
+        oldestCreated: '2025-01-01',
+      }];
+      const out = branchGroupsDef.format(results, 'en');
+      expect(out).toContain('group-1');
+      expect(out).toContain('hyp-001');
     });
   });
 });

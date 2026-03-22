@@ -34,6 +34,10 @@ export interface CommandDef<
   /** CLI format function — produces chalk-formatted string for terminal output. */
   format: (output: TOutput, locale: string) => string;
 
+  /** Predicate that returns true when the result indicates logical failure (e.g. lint errors found).
+   *  CLI adapter calls process.exit(1) after printing output. MCP adapter ignores this. */
+  shouldFail?: (output: TOutput) => boolean;
+
   /** MCP-specific options. Set to false to exclude from MCP. */
   mcp?: McpOptions | false;
 

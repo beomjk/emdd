@@ -102,6 +102,8 @@ export class CliAdapter {
             }
             console.log(def.format(output, locale));
           }
+
+          if (def.shouldFail?.(output)) process.exit(1);
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
           if (json) {

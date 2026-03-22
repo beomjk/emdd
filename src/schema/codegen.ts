@@ -292,6 +292,17 @@ function generateEdgeAttributesInterfaceSection(schema: GraphSchema): string {
   const attrNames = entries.map(([n]) => `'${n}'`).join(', ');
   lines.push(`export const EDGE_ATTRIBUTE_NAMES = [${attrNames}] as const;`);
 
+  // Export numeric range bounds from schema (single source of truth for min/max)
+  const numericEntries = entries.filter(([, def]) => def.type === 'number' && def.min !== undefined && def.max !== undefined);
+  if (numericEntries.length > 0) {
+    lines.push('');
+    lines.push('export const EDGE_ATTRIBUTE_RANGES: Record<string, { min: number; max: number }> = {');
+    for (const [name, def] of numericEntries) {
+      lines.push(`  ${name}: { min: ${def.min}, max: ${def.max} },`);
+    }
+    lines.push('};');
+  }
+
   return lines.join('\n');
 }
 
