@@ -16,7 +16,7 @@ export const deleteEdgeDef: CommandDef<typeof schema, DeleteEdgeResult> = {
   description: 'Remove a link between nodes',
   category: 'write',
   schema,
-  cli: { commandName: 'unlink' },
+  cli: { commandName: 'unlink', positional: ['source', 'target'] },
 
   async execute(input) {
     return deleteEdge(input.graphDir, input.source, input.target, input.relation);

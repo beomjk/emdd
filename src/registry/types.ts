@@ -10,6 +10,8 @@ export interface CliOptions {
   commandName?: string;
   /** CLI command aliases */
   aliases?: string[];
+  /** Ordered list of schema keys to expose as positional CLI arguments */
+  positional?: string[];
 }
 
 export interface CommandDef<

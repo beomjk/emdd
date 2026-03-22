@@ -15,7 +15,7 @@ export const markDoneDef: CommandDef<typeof schema, MarkDoneResult> = {
   description: 'Mark a checklist item as done in an episode',
   category: 'write',
   schema,
-  cli: { commandName: 'done' },
+  cli: { commandName: 'done', positional: ['episodeId', 'item'] },
 
   async execute(input) {
     return markDone(input.graphDir, input.episodeId, input.item, input.marker ?? 'done');

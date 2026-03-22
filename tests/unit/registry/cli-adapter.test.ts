@@ -4,6 +4,13 @@ import { z } from 'zod';
 import { CommandRegistry } from '../../../src/registry/registry.js';
 import { CliAdapter } from '../../../src/registry/cli-adapter.js';
 import type { CommandDef } from '../../../src/registry/types.js';
+import { createNodeDef } from '../../../src/registry/commands/create-node.js';
+import { readNodeDef } from '../../../src/registry/commands/read-node.js';
+import { createEdgeDef } from '../../../src/registry/commands/create-edge.js';
+import { deleteEdgeDef } from '../../../src/registry/commands/delete-edge.js';
+import { markDoneDef } from '../../../src/registry/commands/mark-done.js';
+import { updateNodeDef } from '../../../src/registry/commands/update-node.js';
+import { neighborsDef } from '../../../src/registry/commands/neighbors.js';
 
 // Mock resolveGraphDir for action tests
 vi.mock('../../../src/graph/loader.js', () => ({
@@ -510,6 +517,447 @@ describe('CliAdapter', () => {
 
       logSpy.mockRestore();
       exitSpy.mockRestore();
+    });
+  });
+
+  describe('positional arguments', () => {
+    let logSpy: ReturnType<typeof vi.spyOn>;
+    let errorSpy: ReturnType<typeof vi.spyOn>;
+    let exitSpy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+    });
+
+    afterEach(() => {
+      logSpy.mockRestore();
+      errorSpy.mockRestore();
+      exitSpy.mockRestore();
+    });
+
+    it('T001: command with cli.positional registers Commander .argument()', () => {
+      registry.register(makeCommand({
+        name: 'test-cmd',
+        schema: z.object({
+          arg1: z.string().describe('First arg'),
+        }),
+        cli: { positional: ['arg1'] },
+      }));
+      adapter.attachTo(program);
+
+      const cmd = program.commands.find(c => c.name() === 'test-cmd');
+      expect(cmd).toBeDefined();
+      expect(cmd!.registeredArguments).toHaveLength(1);
+      expect(cmd!.registeredArguments[0].name()).toBe('arg1');
+    });
+
+    it('T002: positional arg value is received and passed to execute()', async () => {
+      const executeFn = vi.fn().mockResolvedValue({ ok: true });
+      registry.register(makeCommand({
+        name: 'test-cmd',
+        schema: z.object({
+          arg1: z.string().describe('First arg'),
+        }),
+        cli: { positional: ['arg1'] },
+        execute: executeFn,
+        format: () => 'ok',
+      }));
+      adapter.attachTo(program);
+
+      await program.parseAsync(['node', 'emdd', 'test-cmd', 'myval']);
+
+      expect(executeFn).toHaveBeenCalled();
+      const input = executeFn.mock.calls[0][0];
+      expect(input.arg1).toBe('myval');
+    });
+
+    it('T003: named --arg1 still works for positional field (backward compat)', async () => {
+      const executeFn = vi.fn().mockResolvedValue({ ok: true });
+      registry.register(makeCommand({
+        name: 'test-cmd',
+        schema: z.object({
+          arg1: z.string().describe('First arg'),
+        }),
+        cli: { positional: ['arg1'] },
+        execute: executeFn,
+        format: () => 'ok',
+      }));
+      adapter.attachTo(program);
+
+      await program.parseAsync(['node', 'emdd', 'test-cmd', '--arg1', 'myval']);
+
+      expect(executeFn).toHaveBeenCalled();
+      const input = executeFn.mock.calls[0][0];
+      expect(input.arg1).toBe('myval');
+    });
+
+    it('T004: positional takes precedence over named when both provided', async () => {
+      const executeFn = vi.fn().mockResolvedValue({ ok: true });
+      registry.register(makeCommand({
+        name: 'test-cmd',
+        schema: z.object({
+          arg1: z.string().describe('First arg'),
+        }),
+        cli: { positional: ['arg1'] },
+        execute: executeFn,
+        format: () => 'ok',
+      }));
+      adapter.attachTo(program);
+
+      await program.parseAsync(['node', 'emdd', 'test-cmd', 'pos-val', '--arg1', 'named-val']);
+
+      expect(executeFn).toHaveBeenCalled();
+      const input = executeFn.mock.calls[0][0];
+      expect(input.arg1).toBe('pos-val');
+    });
+
+    it('T005: missing required positional triggers Zod validation error', async () => {
+      const executeFn = vi.fn().mockResolvedValue({ ok: true });
+      registry.register(makeCommand({
+        name: 'test-cmd',
+        schema: z.object({
+          arg1: z.string().describe('First arg'),
+        }),
+        cli: { positional: ['arg1'] },
+        execute: executeFn,
+        format: () => 'ok',
+      }));
+      adapter.attachTo(program);
+
+      await program.parseAsync(['node', 'emdd', 'test-cmd']);
+
+      expect(executeFn).not.toHaveBeenCalled();
+      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Input validation failed'),
+      );
+    });
+
+    it('T006: command WITHOUT cli.positional has no registeredArguments', () => {
+      registry.register(makeCommand({
+        name: 'test-cmd',
+        schema: z.object({
+          filter: z.string().describe('A filter'),
+        }),
+      }));
+      adapter.attachTo(program);
+
+      const cmd = program.commands.find(c => c.name() === 'test-cmd');
+      expect(cmd).toBeDefined();
+      expect(cmd!.registeredArguments).toHaveLength(0);
+    });
+
+    it('T007: multi-positional command receives args in order', async () => {
+      const executeFn = vi.fn().mockResolvedValue({ ok: true });
+      registry.register(makeCommand({
+        name: 'test-cmd',
+        schema: z.object({
+          a: z.string().describe('A'),
+          b: z.string().describe('B'),
+          c: z.string().describe('C'),
+        }),
+        cli: { positional: ['a', 'b', 'c'] },
+        execute: executeFn,
+        format: () => 'ok',
+      }));
+      adapter.attachTo(program);
+
+      await program.parseAsync(['node', 'emdd', 'test-cmd', 'v1', 'v2', 'v3']);
+
+      expect(executeFn).toHaveBeenCalled();
+      const input = executeFn.mock.calls[0][0];
+      expect(input.a).toBe('v1');
+      expect(input.b).toBe('v2');
+      expect(input.c).toBe('v3');
+    });
+
+    it('T008: positional + named optional flags mix', async () => {
+      const executeFn = vi.fn().mockResolvedValue({ ok: true });
+      registry.register(makeCommand({
+        name: 'test-cmd',
+        schema: z.object({
+          id: z.string().describe('Node ID'),
+          depth: z.number().optional().default(1).describe('Depth'),
+        }),
+        cli: { positional: ['id'] },
+        execute: executeFn,
+        format: () => 'ok',
+      }));
+      adapter.attachTo(program);
+
+      await program.parseAsync(['node', 'emdd', 'test-cmd', 'node-001', '--depth', '3']);
+
+      expect(executeFn).toHaveBeenCalled();
+      const input = executeFn.mock.calls[0][0];
+      expect(input.id).toBe('node-001');
+      expect(input.depth).toBe(3);
+    });
+
+    it('T009: --help output includes positional arg names in usage line', () => {
+      registry.register(makeCommand({
+        name: 'test-cmd',
+        schema: z.object({
+          arg1: z.string().describe('First arg'),
+        }),
+        cli: { positional: ['arg1'] },
+      }));
+      adapter.attachTo(program);
+
+      const cmd = program.commands.find(c => c.name() === 'test-cmd');
+      expect(cmd).toBeDefined();
+      const helpText = cmd!.helpInformation();
+      expect(helpText).toContain('[arg1]');
+    });
+
+    it('T015: create-node accepts positional [new, hypothesis, my-slug]', async () => {
+      const executeFn = vi.fn().mockResolvedValue({ type: 'hypothesis', id: 'hyp-001' });
+      registry.register({
+        ...createNodeDef,
+        execute: executeFn,
+        format: () => 'ok',
+      } as any);
+      adapter.attachTo(program);
+
+      await program.parseAsync(['node', 'emdd', 'new', 'hypothesis', 'my-slug']);
+
+      expect(executeFn).toHaveBeenCalled();
+      const input = executeFn.mock.calls[0][0];
+      expect(input.type).toBe('hypothesis');
+      expect(input.slug).toBe('my-slug');
+    });
+
+    it('T016: read-node accepts positional [read, hyp-001]', async () => {
+      const executeFn = vi.fn().mockResolvedValue({ id: 'hyp-001', title: 'Test' });
+      registry.register({
+        ...readNodeDef,
+        execute: executeFn,
+        format: () => 'ok',
+      } as any);
+      adapter.attachTo(program);
+
+      await program.parseAsync(['node', 'emdd', 'read', 'hyp-001']);
+
+      expect(executeFn).toHaveBeenCalled();
+      const input = executeFn.mock.calls[0][0];
+      expect(input.nodeId).toBe('hyp-001');
+    });
+
+    it('T020: create-edge accepts positional [link, hyp-001, knw-001, depends_on]', async () => {
+      const executeFn = vi.fn().mockResolvedValue({ source: 'hyp-001', target: 'knw-001', relation: 'depends_on' });
+      registry.register({
+        ...createEdgeDef,
+        execute: executeFn,
+        format: () => 'ok',
+      } as any);
+      adapter.attachTo(program);
+
+      await program.parseAsync(['node', 'emdd', 'link', 'hyp-001', 'knw-001', 'depends_on']);
+
+      expect(executeFn).toHaveBeenCalled();
+      const input = executeFn.mock.calls[0][0];
+      expect(input.source).toBe('hyp-001');
+      expect(input.target).toBe('knw-001');
+      expect(input.relation).toBe('depends_on');
+    });
+
+    it('T021: create-edge positional + named optional --strength', async () => {
+      const executeFn = vi.fn().mockResolvedValue({ source: 'hyp-001', target: 'knw-001', relation: 'depends_on' });
+      registry.register({
+        ...createEdgeDef,
+        execute: executeFn,
+        format: () => 'ok',
+      } as any);
+      adapter.attachTo(program);
+
+      await program.parseAsync(['node', 'emdd', 'link', 'hyp-001', 'knw-001', 'depends_on', '--strength', '0.8']);
+
+      expect(executeFn).toHaveBeenCalled();
+      const input = executeFn.mock.calls[0][0];
+      expect(input.source).toBe('hyp-001');
+      expect(input.relation).toBe('depends_on');
+      expect(input.strength).toBe(0.8);
+    });
+
+    it('T022: delete-edge accepts positional [unlink, hyp-001, knw-001]', async () => {
+      const executeFn = vi.fn().mockResolvedValue({ deletedCount: 1, source: 'hyp-001', target: 'knw-001' });
+      registry.register({
+        ...deleteEdgeDef,
+        execute: executeFn,
+        format: () => 'ok',
+      } as any);
+      adapter.attachTo(program);
+
+      await program.parseAsync(['node', 'emdd', 'unlink', 'hyp-001', 'knw-001']);
+
+      expect(executeFn).toHaveBeenCalled();
+      const input = executeFn.mock.calls[0][0];
+      expect(input.source).toBe('hyp-001');
+      expect(input.target).toBe('knw-001');
+    });
+
+    it('T026: mark-done accepts positional [done, epi-001, Ran baseline]', async () => {
+      const executeFn = vi.fn().mockResolvedValue({ episodeId: 'epi-001', item: 'Ran baseline', marker: 'done' });
+      registry.register({
+        ...markDoneDef,
+        execute: executeFn,
+        format: () => 'ok',
+      } as any);
+      adapter.attachTo(program);
+
+      await program.parseAsync(['node', 'emdd', 'done', 'epi-001', 'Ran baseline']);
+
+      expect(executeFn).toHaveBeenCalled();
+      const input = executeFn.mock.calls[0][0];
+      expect(input.episodeId).toBe('epi-001');
+      expect(input.item).toBe('Ran baseline');
+    });
+
+    it('T027: update-node accepts positional nodeId [update, hyp-001, --set, confidence=0.8]', async () => {
+      const executeFn = vi.fn().mockResolvedValue({ nodeId: 'hyp-001', updatedFields: ['confidence'] });
+      registry.register({
+        ...updateNodeDef,
+        execute: executeFn,
+        format: () => 'ok',
+      } as any);
+      adapter.attachTo(program);
+
+      await program.parseAsync(['node', 'emdd', 'update', 'hyp-001', '--set', 'confidence=0.8']);
+
+      expect(executeFn).toHaveBeenCalled();
+      const input = executeFn.mock.calls[0][0];
+      expect(input.nodeId).toBe('hyp-001');
+      expect(input.set).toEqual({ confidence: '0.8' });
+    });
+
+    it('T028: neighbors accepts positional [neighbors, hyp-001]', async () => {
+      const executeFn = vi.fn().mockResolvedValue([]);
+      registry.register({
+        ...neighborsDef,
+        execute: executeFn,
+        format: () => 'ok',
+      } as any);
+      adapter.attachTo(program);
+
+      await program.parseAsync(['node', 'emdd', 'neighbors', 'hyp-001']);
+
+      expect(executeFn).toHaveBeenCalled();
+      const input = executeFn.mock.calls[0][0];
+      expect(input.nodeId).toBe('hyp-001');
+    });
+
+    it.each([
+      { def: createNodeDef, cmd: 'new', args: ['type', 'slug'] },
+      { def: readNodeDef, cmd: 'read', args: ['nodeId'] },
+      { def: createEdgeDef, cmd: 'link', args: ['source', 'target', 'relation'] },
+      { def: deleteEdgeDef, cmd: 'unlink', args: ['source', 'target'] },
+      { def: markDoneDef, cmd: 'done', args: ['episodeId', 'item'] },
+      { def: updateNodeDef, cmd: 'update', args: ['nodeId'] },
+      { def: neighborsDef, cmd: 'neighbors', args: ['nodeId'] },
+    ])('T033: $cmd --help includes positional arg names', ({ def, cmd, args }) => {
+      registry.register({ ...def, execute: vi.fn(), format: () => '' } as any);
+      adapter.attachTo(program);
+
+      const command = program.commands.find(c => c.name() === cmd);
+      expect(command).toBeDefined();
+      const helpText = command!.helpInformation();
+      for (const arg of args) {
+        expect(helpText).toContain(`[${arg}]`);
+      }
+    });
+
+    it('T034: all positional args use [brackets] (optional in Commander for backward compat)', () => {
+      registry.register(makeCommand({
+        name: 'test-cmd',
+        schema: z.object({
+          id: z.string().describe('Required ID'),
+          filter: z.string().optional().describe('Optional filter'),
+        }),
+        cli: { positional: ['id', 'filter'] },
+      }));
+      adapter.attachTo(program);
+
+      const cmd = program.commands.find(c => c.name() === 'test-cmd');
+      const helpText = cmd!.helpInformation();
+      expect(helpText).toContain('[id]');
+      expect(helpText).toContain('[filter]');
+    });
+
+    it('T035: throws when positional key is not in schema', () => {
+      registry.register(makeCommand({
+        name: 'test-cmd',
+        schema: z.object({
+          id: z.string().describe('ID'),
+        }),
+        cli: { positional: ['id', 'nonexistent'] },
+      }));
+      expect(() => adapter.attachTo(program)).toThrow(/positional key.*nonexistent.*not found/i);
+    });
+
+    it('T036: enum choices shown in positional arg description', () => {
+      registry.register(makeCommand({
+        name: 'test-cmd',
+        schema: z.object({
+          mode: z.enum(['alpha', 'beta', 'gamma']).describe('Mode'),
+        }),
+        cli: { positional: ['mode'] },
+      }));
+      adapter.attachTo(program);
+
+      const cmd = program.commands.find(c => c.name() === 'test-cmd');
+      const arg = cmd!.registeredArguments[0];
+      expect(arg.description).toContain('alpha|beta|gamma');
+    });
+
+    it('T037: delete-edge positional + optional --relation flag', async () => {
+      const executeFn = vi.fn().mockResolvedValue({ deletedCount: 1, source: 'hyp-001', target: 'knw-001' });
+      registry.register({ ...deleteEdgeDef, execute: executeFn, format: () => 'ok' } as any);
+      adapter.attachTo(program);
+
+      await program.parseAsync(['node', 'emdd', 'unlink', 'hyp-001', 'knw-001', '--relation', 'supports']);
+
+      const input = executeFn.mock.calls[0][0];
+      expect(input.source).toBe('hyp-001');
+      expect(input.target).toBe('knw-001');
+      expect(input.relation).toBe('supports');
+    });
+
+    it('T038: mark-done positional + optional --marker flag', async () => {
+      const executeFn = vi.fn().mockResolvedValue({ episodeId: 'epi-001', item: 'Task A', marker: 'deferred' });
+      registry.register({ ...markDoneDef, execute: executeFn, format: () => 'ok' } as any);
+      adapter.attachTo(program);
+
+      await program.parseAsync(['node', 'emdd', 'done', 'epi-001', 'Task A', '--marker', 'deferred']);
+
+      const input = executeFn.mock.calls[0][0];
+      expect(input.episodeId).toBe('epi-001');
+      expect(input.item).toBe('Task A');
+      expect(input.marker).toBe('deferred');
+    });
+
+    it('T039: neighbors positional + optional --depth flag', async () => {
+      const executeFn = vi.fn().mockResolvedValue([]);
+      registry.register({ ...neighborsDef, execute: executeFn, format: () => 'ok' } as any);
+      adapter.attachTo(program);
+
+      await program.parseAsync(['node', 'emdd', 'neighbors', 'hyp-001', '--depth', '3']);
+
+      const input = executeFn.mock.calls[0][0];
+      expect(input.nodeId).toBe('hyp-001');
+      expect(input.depth).toBe(3);
+    });
+
+    it('T040: rejects invalid enum value via positional input', async () => {
+      const executeFn = vi.fn().mockResolvedValue({ type: 'hypothesis', id: 'hyp-001' });
+      registry.register({ ...createNodeDef, execute: executeFn, format: () => 'ok' } as any);
+      adapter.attachTo(program);
+
+      await program.parseAsync(['node', 'emdd', 'new', 'invalid-type', 'my-slug']);
+
+      expect(executeFn).not.toHaveBeenCalled();
+      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('Input validation failed'));
     });
   });
 });

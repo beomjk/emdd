@@ -15,7 +15,7 @@ export const updateNodeDef: CommandDef<typeof schema, UpdateNodeResult> = {
   description: 'Update frontmatter fields on a node',
   category: 'write',
   schema,
-  cli: { commandName: 'update' },
+  cli: { commandName: 'update', positional: ['nodeId'] },
 
   async execute(input) {
     const options = input.transitionPolicy ? { transitionPolicy: input.transitionPolicy } : undefined;
