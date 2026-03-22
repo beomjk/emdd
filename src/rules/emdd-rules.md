@@ -40,7 +40,7 @@ links:
 Body content...
 ```
 
-Required fields vary by type. All nodes need: `id`, `type`, `status`, `created`, `updated`. Hypotheses and findings also need `confidence` (0.0-1.0).
+Required fields vary by type. All nodes need: `id`, `type`, `title`, `status`, `created`, `updated`. Hypotheses, findings, and knowledge also need `confidence` (0.0-1.0).
 
 ## Node ID Convention
 

@@ -98,27 +98,33 @@ See the [Quick Start Guide](docs/QUICK_START.md) for a full walkthrough.
 
 ## CLI Commands
 
+All registry-based commands accept `--graphDir <path>` (graph directory), `--lang <en|ko>` (locale), and `--json` (JSON output).
+
 | Command | Description |
 |---------|-------------|
 | `emdd init [path]` | Initialize a new EMDD project (`--tool claude\|cursor\|windsurf\|cline\|copilot\|all`, `--lang en\|ko`) |
-| `emdd list [path]` | List nodes (`--type`, `--status` filters) |
-| `emdd new <type> <slug>` | Create a node (hypothesis, experiment, finding, ...) |
-| `emdd link <source> <target> <relation>` | Add a link between nodes (`--strength`, `--severity`, `--completeness`, `--dependency-type`, `--impact`) |
-| `emdd unlink <source> <target> [relation]` | Remove a link between nodes |
-| `emdd read <node-id>` | Read a node by ID, showing frontmatter and body |
-| `emdd update <node-id> --set key=value` | Update node frontmatter (supports JSON arrays/objects) |
-| `emdd done <episode-id> "<item>"` | Mark an episode item with a status marker (`--marker <done\|deferred\|superseded>`) |
-| `emdd lint [path]` | Validate schema and link integrity |
-| `emdd health [path]` | Show graph health dashboard (`--all`) |
-| `emdd check [path]` | Check consolidation triggers |
-| `emdd promote [path]` | Identify promotion candidates |
-| `emdd backlog [path]` | List incomplete items across all episodes (`--status <pending\|done\|deferred\|superseded\|all>`) |
-| `emdd index [path]` | Generate `_index.md` |
+| `emdd list` | List nodes (`--type`, `--status` filters) |
+| `emdd new --type <type> --slug <slug>` | Create a node (hypothesis, experiment, finding, ...) |
+| `emdd link --source <src> --target <tgt> --relation <rel>` | Add a link between nodes (`--strength`, `--severity`, `--completeness`, `--dependencyType`, `--impact`) |
+| `emdd unlink --source <src> --target <tgt>` | Remove a link between nodes (`--relation` optional) |
+| `emdd read --nodeId <id>` | Read a node by ID, showing frontmatter and body |
+| `emdd update --nodeId <id> --set key=value` | Update node frontmatter (supports JSON arrays/objects, `--transitionPolicy strict\|warn\|off`) |
+| `emdd done --episodeId <id> --item "<item>"` | Mark an episode item with a status marker (`--marker <done\|deferred\|superseded>`) |
+| `emdd neighbors --nodeId <id>` | Get a node's neighbors and connections (`--depth`, default 1) |
+| `emdd gaps` | Detect structural gaps (orphans, stale, disconnected) |
+| `emdd lint` | Validate schema and link integrity |
+| `emdd health` | Show graph health dashboard |
+| `emdd check` | Check consolidation triggers |
+| `emdd promote` | Identify promotion candidates |
+| `emdd backlog` | List incomplete items across all episodes (`--status <pending\|done\|deferred\|superseded\|all>`) |
+| `emdd index` | Generate `_index.md` |
 | `emdd graph [path]` | Generate `_graph.mmd` (Mermaid) |
-| `emdd confidence [path]` | Propagate confidence across the graph |
-| `emdd transitions [path]` | Detect recommended status transitions |
-| `emdd kill-check [path]` | Check kill criteria status for hypotheses |
-| `emdd branches [path]` | List and analyze branch groups |
+| `emdd confidence` | Propagate confidence across the graph |
+| `emdd transitions` | Detect recommended status transitions |
+| `emdd kill-check` | Check kill criteria status for hypotheses |
+| `emdd branches` | List and analyze branch groups |
+| `emdd analyze-refutation` | Analyze refutation impact on hypotheses |
+| `emdd mark-consolidated` | Record consolidation date (`--date`, default today) |
 | `emdd serve [path]` | Start web dashboard server (`-p, --port`, `--no-open`) |
 | `emdd export-html [output]` | Export graph as standalone HTML file (`--layout force\|hierarchical`, `--types`, `--statuses`) |
 | `emdd mcp` | Start MCP server (stdio transport) |

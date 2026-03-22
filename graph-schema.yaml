@@ -180,6 +180,9 @@ manualTransitions:
   hypothesis:
     - from: ANY
       to: DEFERRED
+  knowledge:
+    - from: DISPUTED
+      to: RETRACTED
 
 validValues:
   dependencyTypes: [LOGICAL, PRACTICAL, TEMPORAL]

@@ -72,7 +72,8 @@ describe('analyzeRefutation', () => {
   it('pivot ceremony trigger: 2+ RETRACTED in same cluster', async () => {
     writeNode('knowledge', 'knw-001-test.md', {
       id: 'knw-001', type: 'knowledge', title: 'K1', status: 'RETRACTED',
-      confidence: 0.1, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+      confidence: 0.1, created: '2026-01-01', updated: '2026-01-01', tags: [],
+      links: [{ target: 'knw-002', relation: 'relates_to' }],
     });
     writeNode('knowledge', 'knw-002-test.md', {
       id: 'knw-002', type: 'knowledge', title: 'K2', status: 'RETRACTED',

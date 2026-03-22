@@ -1,5 +1,5 @@
 import { loadGraph } from './loader.js';
-import { buildReverseEdgeIndex } from './utils.js';
+import { buildReverseEdgeIndex, buildNodeToComponent } from './utils.js';
 
 const SEVERITY_PENALTIES: Record<string, number> = {
   FATAL: 0.5,
@@ -65,7 +65,7 @@ export async function analyzeRefutation(graphDir: string): Promise<RefutationAna
     }
   }
 
-  // Pivot ceremony: 2+ RETRACTED knowledge nodes
+  // Pivot ceremony: 2+ RETRACTED knowledge nodes in the same cluster (spec §6.6, §7.4)
   const retractedKnowledgeIds: string[] = [];
   for (const [id, node] of graph.nodes) {
     if (node.type === 'knowledge' && node.status === 'RETRACTED') {
@@ -73,9 +73,27 @@ export async function analyzeRefutation(graphDir: string): Promise<RefutationAna
     }
   }
 
+  let pivotCeremonyTriggered = false;
+  if (retractedKnowledgeIds.length >= 2) {
+    const nodeToComponent = buildNodeToComponent(graph);
+    const byCluster = new Map<number, string[]>();
+    for (const id of retractedKnowledgeIds) {
+      const comp = nodeToComponent.get(id) ?? -1;
+      const list = byCluster.get(comp) ?? [];
+      list.push(id);
+      byCluster.set(comp, list);
+    }
+    for (const ids of byCluster.values()) {
+      if (ids.length >= 2) {
+        pivotCeremonyTriggered = true;
+        break;
+      }
+    }
+  }
+
   return {
     affectedHypotheses,
-    pivotCeremonyTriggered: retractedKnowledgeIds.length >= 2,
+    pivotCeremonyTriggered,
     retractedKnowledgeIds,
   };
 }

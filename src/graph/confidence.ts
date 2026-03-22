@@ -47,6 +47,7 @@ export async function propagateConfidence(graphDir: string): Promise<ConfidenceR
 
   for (const [nodeId, node] of graph.nodes) {
     if (node.type !== 'hypothesis') continue;
+    if (node.status === 'CONTESTED') continue; // freeze cascade per spec §6.5
 
     const incoming = reverseIndex.get(nodeId) ?? [];
     const evidentialEdges: EvidenceEdge[] = incoming

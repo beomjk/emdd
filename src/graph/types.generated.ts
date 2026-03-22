@@ -175,6 +175,9 @@ export const MANUAL_TRANSITIONS: Record<string, { from: string; to: string }[]> 
   hypothesis: [
     { from: 'ANY', to: 'DEFERRED' },
   ],
+  knowledge: [
+    { from: 'DISPUTED', to: 'RETRACTED' },
+  ],
 };
 
 // ── Valid Values ─────────────────────────────────────────────────────

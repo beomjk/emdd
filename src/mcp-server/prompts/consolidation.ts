@@ -37,7 +37,9 @@ ${triggersSection}
 ## Step-by-Step Consolidation Procedure
 
 ### Step 1: Promotion
-Review all Finding nodes. For each Finding with high confidence (>= ${THRESHOLDS.promotion_confidence}) and strong evidence (${THRESHOLDS.min_independent_supports}+ supporting links):
+Review all Finding nodes. Findings with an \`extends: know-NNN\` hint are reviewed first.
+For each Finding with high confidence (>= ${THRESHOLDS.promotion_confidence}) and strong evidence (${THRESHOLDS.min_independent_supports}+ supporting links, or de facto in use as a premise by other work):
+- Do NOT promote if an active CONTRADICTS edge exists on the Finding (this would create DISPUTED Knowledge).
 - Promote it to a Knowledge node using the \`create-node\` tool (type: knowledge).
 - Add a \`promotes\` edge from the new Knowledge node to the original Finding.
 - Use the \`promote\` tool to identify candidates automatically.

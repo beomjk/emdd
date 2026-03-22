@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { getHealth } from '../../graph/operations.js';
+import { getHealth, checkConsolidation } from '../../graph/operations.js';
 import { listNodes } from '../../graph/operations.js';
 
 export function registerContextLoading(server: McpServer): void {
@@ -11,6 +11,7 @@ export function registerContextLoading(server: McpServer): void {
     async ({ path: graphDir }) => {
       const health = await getHealth(graphDir);
       const nodes = await listNodes(graphDir);
+      const consolidation = await checkConsolidation(graphDir);
 
       const typeBreakdown = Object.entries(health.byType)
         .filter(([, count]) => count > 0)
@@ -48,12 +49,18 @@ ${gapsSection}
 ## Recent Nodes (up to 10)
 ${recentNodes}
 
+## Consolidation Status
+${consolidation.triggers.length > 0
+  ? '**[Consolidation recommended]** Triggers met:\n' + consolidation.triggers.map(t => `  - ${t.message}`).join('\n')
+  : 'No consolidation triggers active.'}
+
 ## Session Start Instructions
 1. Review the graph overview above to understand the current state.
 2. Check structural gaps — these indicate missing connections in the research loop.
 3. Read the latest Episode node's "What's Next" section for planned work.
 4. Load prerequisite reading nodes listed in that Episode before starting.
-5. Decide today's direction based on graph state and open questions.
+5. Check consolidation status above — if triggered, run consolidation before new exploration.
+6. Decide today's direction based on graph state and open questions.
 
 Use the \`list-nodes\` and \`read-node\` tools to explore specific nodes in detail.`;
 

@@ -6,7 +6,7 @@ import { nextId, renderTemplate, nodePath, sanitizeSlug } from './templates.js';
 import { NODE_TYPES, NODE_TYPE_DIRS, ALL_VALID_RELATIONS, REVERSE_LABELS, THRESHOLDS, VALID_STATUSES, VALID_FINDING_TYPES, VALID_URGENCIES, VALID_RISK_LEVELS, VALID_REVERSIBILITIES, EDGE_ATTRIBUTE_NAMES, EDGE_ATTRIBUTE_RANGES, EDGE_ATTRIBUTE_ENUM_VALUES, TRANSITION_POLICY_DEFAULT, TRANSITION_TABLE, MANUAL_TRANSITIONS, CEREMONY_TRIGGERS } from './types.js';
 import { checkEdgeAffinity, getPresentAttrKeys } from './edge-attrs.js';
 import { validateTransition } from './transition-engine.js';
-import { FORWARD_RELATIONS, collectDeferredIds } from './utils.js';
+import { FORWARD_RELATIONS, collectDeferredIds, buildNodeToComponent } from './utils.js';
 import type {
   Node,
   NodeType,
@@ -484,8 +484,9 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
     });
   }
 
-  // 4. Stale knowledge: source date > N days + newer knowledge exists
+  // 4. Stale knowledge: source date > N days + newer knowledge exists in same cluster (spec §6.8)
   const knowledgeNodes = [...graph.nodes.values()].filter(n => n.type === 'knowledge');
+  const nodeToComponent = buildNodeToComponent(graph);
   const staleIds: string[] = [];
   for (const node of knowledgeNodes) {
     if (node.status !== 'ACTIVE') continue;
@@ -493,9 +494,11 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
     if (updated) {
       const daysElapsed = Math.floor((now.getTime() - updated.getTime()) / (1000 * 60 * 60 * 24));
       if (daysElapsed >= config.gaps.stale_days) {
-        // Check if newer knowledge exists
+        // Check if newer knowledge exists in same cluster
+        const myComp = nodeToComponent.get(node.id);
         const hasNewer = knowledgeNodes.some(other => {
           if (other.id === node.id) return false;
+          if (nodeToComponent.get(other.id) !== myComp) return false;
           const otherUpdated = other.meta.updated ? new Date(String(other.meta.updated)) : null;
           return otherUpdated && otherUpdated > updated;
         });
@@ -753,8 +756,17 @@ export async function checkConsolidation(graphDir: string): Promise<CheckResult>
   // Load config early — needed for episode anchor and orphan thresholds
   const config = loadConfig(graphDir);
 
-  // 1. Unpromoted findings threshold
-  const unpromoted = findings.filter(id => !promotedIds.has(id));
+  // Resolve consolidation anchor for time-scoped counting
+  const anchorDate = resolveConsolidationAnchor(config, graph);
+
+  // 1. Unpromoted findings threshold (since last consolidation, per spec §7.4)
+  const unpromoted = findings.filter(id => {
+    if (promotedIds.has(id)) return false;
+    if (!anchorDate) return true;
+    const node = graph.nodes.get(id);
+    const created = node?.meta.created ? new Date(String(node.meta.created)) : null;
+    return !created || created > anchorDate;
+  });
   if (unpromoted.length >= findingsThreshold) {
     triggers.push({
       type: 'findings',
@@ -764,7 +776,6 @@ export async function checkConsolidation(graphDir: string): Promise<CheckResult>
   }
 
   // 2. Episode accumulation threshold (since last consolidation)
-  const anchorDate = resolveConsolidationAnchor(config, graph);
   const episodeCount = anchorDate
     ? countEpisodesSince(graph, anchorDate)
     : episodes.length;

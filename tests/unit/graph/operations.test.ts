@@ -436,12 +436,13 @@ describe('getHealth — structural gaps §6.8', () => {
     expect(report.gapDetails.some(g => g.type === 'orphan_finding')).toBe(true);
   });
 
-  it('detects stale knowledge (source date > N days + newer knowledge exists)', async () => {
+  it('detects stale knowledge (source date > N days + newer knowledge exists in same cluster)', async () => {
     const oldDate = new Date(Date.now() - 100 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
     const recentDate = new Date().toISOString().slice(0, 10);
     writeNode(tmpDir, 'knowledge', 'knw-001-old.md', {
       id: 'knw-001', type: 'knowledge', title: 'Old', status: 'ACTIVE',
-      confidence: 0.9, created: oldDate, updated: oldDate, tags: [], links: [],
+      confidence: 0.9, created: oldDate, updated: oldDate, tags: [],
+      links: [{ target: 'knw-002', relation: 'relates_to' }],
     });
     writeNode(tmpDir, 'knowledge', 'knw-002-new.md', {
       id: 'knw-002', type: 'knowledge', title: 'New', status: 'ACTIVE',
@@ -632,7 +633,8 @@ describe('getHealth — structural gaps §6.8', () => {
     const recentDate = new Date().toISOString().slice(0, 10);
     writeNode(tmpDir, 'knowledge', 'knw-001-old.md', {
       id: 'knw-001', type: 'knowledge', title: 'Old', status: 'ACTIVE',
-      confidence: 0.9, created: oldDate, updated: oldDate, tags: [], links: [],
+      confidence: 0.9, created: oldDate, updated: oldDate, tags: [],
+      links: [{ target: 'knw-002', relation: 'relates_to' }],
     });
     writeNode(tmpDir, 'knowledge', 'knw-002-new.md', {
       id: 'knw-002', type: 'knowledge', title: 'New', status: 'ACTIVE',

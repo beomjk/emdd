@@ -340,7 +340,7 @@ During Consolidation, if 3 or more `[deferred]` items have accumulated, conduct 
 **Frontmatter notation convention:** The `relation:` field in YAML frontmatter uses lowercase present tense (e.g., `relation: produces`). This maps to the canonical type `PRODUCES`. The uppercase names in the table below are canonical types; frontmatter uses lowercase snake_case.
 
 <!-- ASSERT §6.5.2: reverse labels map confirmed_by→confirms, supported_by→supports, answered_by→answers, spawned_from→spawns, produced_by→produces, tested_by→tests, resolved_by→resolves -->
-**Reverse labels allowed:** When recording a link from node A to target B, there are cases where you need to express the relationship in the B-to-A direction. In these cases, use reverse labels with `_by` or `_from` suffixes: `confirmed_by`, `supported_by`, `answered_by`, `spawned_from`, `produced_by`, `tested_by`. These are the reverses of `CONFIRMS`, `SUPPORTS`, `ANSWERS`, `SPAWNS`, `PRODUCES`, and `TESTS` respectively. Do not duplicate the canonical-direction link in the other file.
+**Reverse labels allowed:** When recording a link from node A to target B, there are cases where you need to express the relationship in the B-to-A direction. In these cases, use reverse labels with `_by` or `_from` suffixes: `confirmed_by`, `supported_by`, `answered_by`, `spawned_from`, `produced_by`, `tested_by`, `resolved_by`. These are the reverses of `CONFIRMS`, `SUPPORTS`, `ANSWERS`, `SPAWNS`, `PRODUCES`, `TESTS`, and `RESOLVES` respectively. Do not duplicate the canonical-direction link in the other file.
 
 **Evidential edges:**
 - `SUPPORTS` — A supports B (strength: 0.0--1.0)
@@ -1443,7 +1443,7 @@ mkdir -p scratchpad
 
 ## 11. Phased Adoption Guide
 
-EMDD's full specification includes 7 node types, 14 edge types, and 5 ceremonies. Adopting everything at once is overwhelming and violates Principle 2 (Minimum Viable Structure). Instead, adopt EMDD in three phases:
+EMDD's full specification includes 7 node types, 16 edge types, and 5 ceremonies. Adopting everything at once is overwhelming and violates Principle 2 (Minimum Viable Structure). Instead, adopt EMDD in three phases:
 
 ### 11.1 Lite — The Hypothesis Loop (Week 1-2)
 
