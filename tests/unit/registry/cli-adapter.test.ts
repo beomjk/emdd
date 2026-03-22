@@ -512,4 +512,196 @@ describe('CliAdapter', () => {
       exitSpy.mockRestore();
     });
   });
+
+  describe('positional arguments', () => {
+    let logSpy: ReturnType<typeof vi.spyOn>;
+    let errorSpy: ReturnType<typeof vi.spyOn>;
+    let exitSpy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+    });
+
+    afterEach(() => {
+      logSpy.mockRestore();
+      errorSpy.mockRestore();
+      exitSpy.mockRestore();
+    });
+
+    it('T001: command with cli.positional registers Commander .argument()', () => {
+      registry.register(makeCommand({
+        name: 'test-cmd',
+        schema: z.object({
+          arg1: z.string().describe('First arg'),
+        }),
+        cli: { positional: ['arg1'] },
+      }));
+      adapter.attachTo(program);
+
+      const cmd = program.commands.find(c => c.name() === 'test-cmd');
+      expect(cmd).toBeDefined();
+      expect(cmd!.registeredArguments).toHaveLength(1);
+      expect(cmd!.registeredArguments[0].name()).toBe('arg1');
+    });
+
+    it('T002: positional arg value is received and passed to execute()', async () => {
+      const executeFn = vi.fn().mockResolvedValue({ ok: true });
+      registry.register(makeCommand({
+        name: 'test-cmd',
+        schema: z.object({
+          arg1: z.string().describe('First arg'),
+        }),
+        cli: { positional: ['arg1'] },
+        execute: executeFn,
+        format: () => 'ok',
+      }));
+      adapter.attachTo(program);
+
+      await program.parseAsync(['node', 'emdd', 'test-cmd', 'myval']);
+
+      expect(executeFn).toHaveBeenCalled();
+      const input = executeFn.mock.calls[0][0];
+      expect(input.arg1).toBe('myval');
+    });
+
+    it('T003: named --arg1 still works for positional field (backward compat)', async () => {
+      const executeFn = vi.fn().mockResolvedValue({ ok: true });
+      registry.register(makeCommand({
+        name: 'test-cmd',
+        schema: z.object({
+          arg1: z.string().describe('First arg'),
+        }),
+        cli: { positional: ['arg1'] },
+        execute: executeFn,
+        format: () => 'ok',
+      }));
+      adapter.attachTo(program);
+
+      await program.parseAsync(['node', 'emdd', 'test-cmd', '--arg1', 'myval']);
+
+      expect(executeFn).toHaveBeenCalled();
+      const input = executeFn.mock.calls[0][0];
+      expect(input.arg1).toBe('myval');
+    });
+
+    it('T004: positional takes precedence over named when both provided', async () => {
+      const executeFn = vi.fn().mockResolvedValue({ ok: true });
+      registry.register(makeCommand({
+        name: 'test-cmd',
+        schema: z.object({
+          arg1: z.string().describe('First arg'),
+        }),
+        cli: { positional: ['arg1'] },
+        execute: executeFn,
+        format: () => 'ok',
+      }));
+      adapter.attachTo(program);
+
+      await program.parseAsync(['node', 'emdd', 'test-cmd', 'pos-val', '--arg1', 'named-val']);
+
+      expect(executeFn).toHaveBeenCalled();
+      const input = executeFn.mock.calls[0][0];
+      expect(input.arg1).toBe('pos-val');
+    });
+
+    it('T005: missing required positional triggers Zod validation error', async () => {
+      const executeFn = vi.fn().mockResolvedValue({ ok: true });
+      registry.register(makeCommand({
+        name: 'test-cmd',
+        schema: z.object({
+          arg1: z.string().describe('First arg'),
+        }),
+        cli: { positional: ['arg1'] },
+        execute: executeFn,
+        format: () => 'ok',
+      }));
+      adapter.attachTo(program);
+
+      await program.parseAsync(['node', 'emdd', 'test-cmd']);
+
+      expect(executeFn).not.toHaveBeenCalled();
+      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Input validation failed'),
+      );
+    });
+
+    it('T006: command WITHOUT cli.positional has no registeredArguments', () => {
+      registry.register(makeCommand({
+        name: 'test-cmd',
+        schema: z.object({
+          filter: z.string().describe('A filter'),
+        }),
+      }));
+      adapter.attachTo(program);
+
+      const cmd = program.commands.find(c => c.name() === 'test-cmd');
+      expect(cmd).toBeDefined();
+      expect(cmd!.registeredArguments).toHaveLength(0);
+    });
+
+    it('T007: multi-positional command receives args in order', async () => {
+      const executeFn = vi.fn().mockResolvedValue({ ok: true });
+      registry.register(makeCommand({
+        name: 'test-cmd',
+        schema: z.object({
+          a: z.string().describe('A'),
+          b: z.string().describe('B'),
+          c: z.string().describe('C'),
+        }),
+        cli: { positional: ['a', 'b', 'c'] },
+        execute: executeFn,
+        format: () => 'ok',
+      }));
+      adapter.attachTo(program);
+
+      await program.parseAsync(['node', 'emdd', 'test-cmd', 'v1', 'v2', 'v3']);
+
+      expect(executeFn).toHaveBeenCalled();
+      const input = executeFn.mock.calls[0][0];
+      expect(input.a).toBe('v1');
+      expect(input.b).toBe('v2');
+      expect(input.c).toBe('v3');
+    });
+
+    it('T008: positional + named optional flags mix', async () => {
+      const executeFn = vi.fn().mockResolvedValue({ ok: true });
+      registry.register(makeCommand({
+        name: 'test-cmd',
+        schema: z.object({
+          id: z.string().describe('Node ID'),
+          depth: z.number().optional().default(1).describe('Depth'),
+        }),
+        cli: { positional: ['id'] },
+        execute: executeFn,
+        format: () => 'ok',
+      }));
+      adapter.attachTo(program);
+
+      await program.parseAsync(['node', 'emdd', 'test-cmd', 'node-001', '--depth', '3']);
+
+      expect(executeFn).toHaveBeenCalled();
+      const input = executeFn.mock.calls[0][0];
+      expect(input.id).toBe('node-001');
+      expect(input.depth).toBe(3);
+    });
+
+    it('T009: --help output includes positional arg names in usage line', () => {
+      registry.register(makeCommand({
+        name: 'test-cmd',
+        schema: z.object({
+          arg1: z.string().describe('First arg'),
+        }),
+        cli: { positional: ['arg1'] },
+      }));
+      adapter.attachTo(program);
+
+      const cmd = program.commands.find(c => c.name() === 'test-cmd');
+      expect(cmd).toBeDefined();
+      const helpText = cmd!.helpInformation();
+      expect(helpText).toContain('[arg1]');
+    });
+  });
 });

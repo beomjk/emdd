@@ -46,8 +46,16 @@ export class CliAdapter {
       const cmd = program.command(cmdName);
       cmd.description(def.description);
 
+      // Register positional arguments before schema options
+      const positionalKeys = (def.cli && typeof def.cli === 'object' && def.cli.positional) || [];
+      for (const key of positionalKeys) {
+        const zodField = def.schema.shape[key] as z.ZodType | undefined;
+        const desc = zodField?.description || key;
+        cmd.argument(`[${key}]`, desc);
+      }
+
       // Map Zod schema to commander options
-      this.addSchemaOptions(cmd, def.schema);
+      this.addSchemaOptions(cmd, def.schema, positionalKeys);
 
       // Add --json, --lang, --graphDir per-command flags (skip if schema already defines them)
       const schemaKeys = new Set(Object.keys(def.schema.shape));
@@ -61,7 +69,14 @@ export class CliAdapter {
       }
 
       // Action handler
-      cmd.action(async (options: Record<string, unknown>) => {
+      cmd.action(async (...args: any[]) => {
+        const options = args[positionalKeys.length] as Record<string, unknown>;
+
+        // Merge positional values into options (positional takes precedence)
+        for (let i = 0; i < positionalKeys.length; i++) {
+          options[positionalKeys[i]] = args[i] ?? options[positionalKeys[i]];
+        }
+
         const json = Boolean(options.json);
         const locale = getLocale(options.lang as string | undefined);
         setLocale(locale);
@@ -131,14 +146,15 @@ export class CliAdapter {
     }
   }
 
-  private addSchemaOptions(cmd: Command, schema: z.ZodObject<z.ZodRawShape>): void {
+  private addSchemaOptions(cmd: Command, schema: z.ZodObject<z.ZodRawShape>, positionalKeys: string[] = []): void {
     const shape = schema.shape;
+    const positionalSet = new Set(positionalKeys);
 
     for (const [key, val] of Object.entries(shape)) {
       const zodType = val as z.ZodType;
       const desc = zodType.description || key;
       const inner = unwrapZod(zodType);
-      const isOpt = zodType.isOptional();
+      const isOpt = zodType.isOptional() || positionalSet.has(key);
       const innerType = zodDefType(inner);
 
       if (innerType === 'boolean') {
