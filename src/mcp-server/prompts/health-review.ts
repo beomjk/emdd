@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { getHealth } from '../../graph/operations.js';
+import { CEREMONY_TRIGGERS } from '../../graph/types.js';
 
 export function registerHealthReview(server: McpServer): void {
   server.prompt(
@@ -54,7 +55,7 @@ export function registerHealthReview(server: McpServer): void {
         );
       }
 
-      if ((health.byType['finding'] ?? 0) >= 5 && (health.byType['knowledge'] ?? 0) === 0) {
+      if ((health.byType['finding'] ?? 0) >= CEREMONY_TRIGGERS.consolidation.unpromoted_findings_threshold && (health.byType['knowledge'] ?? 0) === 0) {
         recommendations.push(
           '[ACTION] Multiple findings but no knowledge nodes. Run a consolidation to promote validated findings.'
         );

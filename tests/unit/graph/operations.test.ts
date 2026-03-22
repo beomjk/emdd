@@ -29,6 +29,7 @@ import {
   deleteEdge,
   markDone,
   markConsolidated,
+  lintGraphFromDir,
 } from '../../../src/graph/operations.js';
 import { loadConfig, saveConfig } from '../../../src/graph/config.js';
 
@@ -1992,5 +1993,25 @@ describe('markDone', () => {
     await expect(
       markDone(join(tmpDir, 'graph'), 'epi-001', 'Duplicate task')
     ).rejects.toThrow(/multiple/i);
+  });
+});
+
+describe('lintGraphFromDir', () => {
+  it('returns empty array for clean sample graph', async () => {
+    const errors = await lintGraphFromDir(SAMPLE_GRAPH);
+    expect(errors).toEqual([]);
+  });
+
+  it('returns errors for graph with broken links', async () => {
+    const brokenGraph = join(FIXTURES, 'graph-with-broken-link');
+    const errors = await lintGraphFromDir(brokenGraph);
+    expect(errors.length).toBeGreaterThan(0);
+    expect(errors.some(e => e.severity === 'error')).toBe(true);
+  });
+
+  it('returns errors for graph with invalid nodes', async () => {
+    const invalidGraph = join(FIXTURES, 'invalid-nodes');
+    const errors = await lintGraphFromDir(invalidGraph);
+    expect(errors.length).toBeGreaterThan(0);
   });
 });

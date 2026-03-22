@@ -9,6 +9,7 @@ import { listNodesDef } from '../../../src/registry/commands/list-nodes.js';
 import { readNodeDef } from '../../../src/registry/commands/read-node.js';
 import { healthDef } from '../../../src/registry/commands/health.js';
 import { checkDef } from '../../../src/registry/commands/check.js';
+import { lintDef } from '../../../src/registry/commands/lint.js';
 
 describe('command execute() wiring', () => {
   it('list-nodes returns all nodes from sample graph', async () => {
@@ -48,5 +49,11 @@ describe('command execute() wiring', () => {
     expect(Array.isArray(result.triggers)).toBe(true);
     expect(Array.isArray(result.promotionCandidates)).toBe(true);
     expect(Array.isArray(result.orphanFindings)).toBe(true);
+  });
+
+  it('lint returns clean result for sample graph', async () => {
+    const result = await lintDef.execute({ graphDir: SAMPLE_GRAPH });
+    expect(result.errorCount).toBe(0);
+    expect(result.errors).toEqual([]);
   });
 });
