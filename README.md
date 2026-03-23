@@ -71,13 +71,20 @@ EMDD has three roles. The **Researcher** exercises taste and judgment -- decidin
 
 ### The Lifecycle
 
-```
-Question ──> Hypothesis ──> Experiment ──> Finding
-                                             │
-                              ┌───────────────┤
-                              v               v
-                          Knowledge      New Question
-                        (promoted)      (the cycle continues)
+```mermaid
+graph LR
+    Q[Question] --> H[Hypothesis]
+    H --> E[Experiment]
+    E --> F[Finding]
+    F --> K[Knowledge<br/><i>promoted</i>]
+    F --> Q2[New Question<br/><i>the cycle continues</i>]
+
+    style Q fill:#6c5ce7,color:#fff,stroke:none
+    style H fill:#e17055,color:#fff,stroke:none
+    style E fill:#00b894,color:#fff,stroke:none
+    style F fill:#0984e3,color:#fff,stroke:none
+    style K fill:#fdcb6e,color:#2d3436,stroke:none
+    style Q2 fill:#6c5ce7,color:#fff,stroke:none
 ```
 
 Hypotheses move through `PROPOSED -> TESTING -> SUPPORTED / REFUTED / REVISED`. Findings accumulate evidence. When a Finding has sufficient independent support, it is promoted to Knowledge. Refuted hypotheses are preserved -- the knowledge of *why* something failed is itself knowledge.
