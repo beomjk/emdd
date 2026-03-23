@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   NODE_TYPES,
+  NODE_DISPLAY_ORDER,
   NODE_TYPE_DIRS,
   ID_PREFIXES,
   EDGE_TYPES,
@@ -41,12 +42,12 @@ function titleCase(s: string): string {
 }
 
 function makeCompactRules(): string {
-  const nodeLines = NODE_TYPES.map((t) => {
+  const nodeLines = NODE_DISPLAY_ORDER.map((t) => {
     const desc = NODE_DESCRIPTIONS[t] ?? t;
     return `- **${titleCase(t)}** (\`graph/${NODE_TYPE_DIRS[t]}/\`) — ${desc}`;
   }).join('\n');
 
-  const idExamples = NODE_TYPES.map((t) => `\`${ID_PREFIXES[t]}-001\``).join(', ');
+  const idExamples = NODE_DISPLAY_ORDER.map((t) => `\`${ID_PREFIXES[t]}-001\``).join(', ');
 
   const triggers = CEREMONY_TRIGGERS.consolidation;
 
@@ -74,13 +75,13 @@ ${idExamples}
 
 function makeFullRules(): string {
   // Node type table
-  const nodeTableRows = NODE_TYPES.map((t) => {
+  const nodeTableRows = NODE_DISPLAY_ORDER.map((t) => {
     const desc = NODE_DESCRIPTIONS[t] ?? t;
     return `| ${titleCase(t)} | \`graph/${NODE_TYPE_DIRS[t]}/\` | ${titleCase(desc)} |`;
   }).join('\n');
 
   // ID convention examples
-  const idExamples = NODE_TYPES.map((t) => `\`${ID_PREFIXES[t]}-001\``).join(', ');
+  const idExamples = NODE_DISPLAY_ORDER.map((t) => `\`${ID_PREFIXES[t]}-001\``).join(', ');
 
   // Edge list
   const edgeList = [...EDGE_TYPES].sort().join(', ');
@@ -108,8 +109,8 @@ Every node is a Markdown file with YAML frontmatter:
 
 \`\`\`yaml
 ---
-id: ${ID_PREFIXES[NODE_TYPES[0]]}-001
-type: ${NODE_TYPES[0]}
+id: ${ID_PREFIXES[NODE_DISPLAY_ORDER[0]]}-001
+type: ${NODE_DISPLAY_ORDER[0]}
 status: PROPOSED
 confidence: 0.4
 created: 2026-03-15

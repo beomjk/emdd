@@ -3,11 +3,10 @@ import path from 'node:path';
 import matter from 'gray-matter';
 import { loadGraph } from './loader.js';
 import { nextId, renderTemplate, nodePath, sanitizeSlug } from './templates.js';
-import { NODE_TYPES, NODE_TYPE_DIRS, ALL_VALID_RELATIONS, REVERSE_LABELS, THRESHOLDS, VALID_STATUSES, VALID_FINDING_TYPES, VALID_URGENCIES, VALID_RISK_LEVELS, VALID_REVERSIBILITIES, EDGE_ATTRIBUTE_NAMES, EDGE_ATTRIBUTE_RANGES, EDGE_ATTRIBUTE_ENUM_VALUES, TRANSITION_POLICY_DEFAULT, TRANSITION_TABLE, MANUAL_TRANSITIONS, CEREMONY_TRIGGERS, URGENCY } from './types.js';
+import { NODE_TYPES, NODE_TYPE_DIRS, ALL_VALID_RELATIONS, REVERSE_LABELS, THRESHOLDS, VALID_STATUSES, VALID_FINDING_TYPES, VALID_URGENCIES, VALID_RISK_LEVELS, VALID_REVERSIBILITIES, EDGE_ATTRIBUTE_NAMES, EDGE_ATTRIBUTE_RANGES, EDGE_ATTRIBUTE_ENUM_VALUES, TRANSITION_POLICY_DEFAULT, TRANSITION_TABLE, MANUAL_TRANSITIONS, CEREMONY_TRIGGERS, URGENCY, VALUE_PRODUCING_EDGES, EDGE, STATUS } from './types.js';
 import { checkEdgeAffinity, getPresentAttrKeys } from './edge-attrs.js';
 import { validateTransition } from './transition-engine.js';
-import { VALUE_PRODUCING_EDGES, collectDeferredIds, buildNodeToComponent } from './utils.js';
-import { EDGE, STATUS } from './types.js';
+import { collectDeferredIds, buildNodeToComponent } from './utils.js';
 import type {
   Node,
   NodeType,
@@ -328,7 +327,7 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
   const graph = await loadGraph(graphDir);
 
   // Count nodes by type
-  const byType: Record<string, number> = {};
+  const byType = {} as Record<NodeType, number>;
   for (const nodeType of NODE_TYPES) {
     byType[nodeType] = 0;
   }
@@ -339,13 +338,11 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
   const totalNodes = graph.nodes.size;
 
   // Status distribution per type
-  const statusDistribution: Record<string, Record<string, number>> = {};
+  const statusDistribution = {} as Record<NodeType, Record<string, number>>;
   for (const node of graph.nodes.values()) {
-    if (!statusDistribution[node.type]) {
-      statusDistribution[node.type] = {};
-    }
+    const dist = (statusDistribution[node.type] ??= {});
     const s = node.status ?? 'unknown';
-    statusDistribution[node.type][s] = (statusDistribution[node.type][s] ?? 0) + 1;
+    dist[s] = (dist[s] ?? 0) + 1;
   }
 
   // Average confidence

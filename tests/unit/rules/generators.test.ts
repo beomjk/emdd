@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { getRulesContent, generateRulesFile } from '../../../src/rules/generators.js';
-import { NODE_TYPES, NODE_TYPE_DIRS, ID_PREFIXES } from '../../../src/graph/types.js';
+import { NODE_TYPES, NODE_TYPE_DIRS, ID_PREFIXES, EDGE_TYPES, CEREMONY_TRIGGERS } from '../../../src/graph/types.js';
 
 // Rough token estimator: ~4 chars per token
 function estimateTokens(text: string): number {
@@ -115,6 +115,19 @@ describe('getRulesContent', () => {
         expect(compactContent).toContain(prefix);
       }
     });
+
+    it('full rules content includes all forward edge types', () => {
+      for (const edgeType of EDGE_TYPES) {
+        expect(fullContent).toContain(edgeType);
+      }
+    });
+
+    it('full rules content includes CEREMONY_TRIGGERS threshold values', () => {
+      const triggers = CEREMONY_TRIGGERS.consolidation;
+      expect(fullContent).toContain(String(triggers.unpromoted_findings_threshold));
+      expect(fullContent).toContain(String(triggers.episodes_threshold));
+      expect(fullContent).toContain(String(triggers.experiment_overload_threshold));
+    });
   });
 });
 
@@ -142,6 +155,20 @@ describe('generateRulesFile', () => {
     expect(existsSync(filePath)).toBe(true);
     const content = readFileSync(filePath, 'utf-8');
     expect(content).toMatch(/^---\n.*description:/s);
+  });
+
+  it('skips existing file when force is false', () => {
+    generateRulesFile('claude', tmpDir);
+    const result = generateRulesFile('claude', tmpDir);
+    expect(result.skipped).toContain('.claude/CLAUDE.md');
+    expect(result.created).toEqual([]);
+  });
+
+  it('overwrites existing file when force is true', () => {
+    generateRulesFile('claude', tmpDir);
+    const result = generateRulesFile('claude', tmpDir, { force: true });
+    expect(result.created).toContain('.claude/CLAUDE.md');
+    expect(result.skipped).toEqual([]);
   });
 
   it('writes all tool files when tool=all', () => {

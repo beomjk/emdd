@@ -77,4 +77,24 @@ describe('generateIndex', () => {
     expect(output).toContain('# ');
     expect(output).not.toContain('hyp-');
   });
+
+  it('section titles match title-cased NODE_TYPE_DIRS values', () => {
+    const graph = makeGraph([
+      makeNode({ id: 'hyp-001', type: 'hypothesis', title: 'H1' }),
+      makeNode({ id: 'exp-001', type: 'experiment', title: 'E1' }),
+      makeNode({ id: 'fnd-001', type: 'finding', title: 'F1' }),
+      makeNode({ id: 'knw-001', type: 'knowledge', title: 'K1' }),
+      makeNode({ id: 'qst-001', type: 'question', title: 'Q1' }),
+      makeNode({ id: 'dec-001', type: 'decision', title: 'D1' }),
+      makeNode({ id: 'epi-001', type: 'episode', title: 'Ep1' }),
+    ]);
+    const output = generateIndex(graph);
+    expect(output).toContain('## Hypotheses');
+    expect(output).toContain('## Experiments');
+    expect(output).toContain('## Findings');
+    expect(output).toContain('## Knowledge');
+    expect(output).toContain('## Questions');
+    expect(output).toContain('## Decisions');
+    expect(output).toContain('## Episodes');
+  });
 });

@@ -1,9 +1,8 @@
 import { loadGraph } from './loader.js';
 import { buildReverseEdgeIndex } from './utils.js';
-import { EDGE, STATUS, EVIDENCE_EDGES, VALID_SEVERITIES } from './types.js';
-import type { EvidenceEdgeType } from './types.js';
+import { EDGE, STATUS, SEVERITY, EVIDENCE_EDGES, VALID_SEVERITIES, type EvidenceEdgeType, type Severity } from './types.js';
 
-const SEVERITY_WEIGHTS: { [K in (typeof VALID_SEVERITIES)[number]]: number } = {
+const SEVERITY_WEIGHTS: Record<Severity, number> = {
   FATAL: 0.9,
   WEAKENING: 0.6,
   TENSION: 0.3,
@@ -25,7 +24,7 @@ export function computeConfidence(initial: number, edges: EvidenceEdge[]): numbe
       const impact = edge.sourceConfidence * strength;
       prior = prior + (1 - prior) * impact * 0.3;
     } else if (edge.type === EDGE.contradicts) {
-      const severityWeight = SEVERITY_WEIGHTS[edge.severity as (typeof VALID_SEVERITIES)[number] ?? VALID_SEVERITIES[VALID_SEVERITIES.length - 1]] ?? 0.3;
+      const severityWeight = SEVERITY_WEIGHTS[edge.severity as Severity ?? SEVERITY.TENSION] ?? 0.3;
       const impact = edge.sourceConfidence * severityWeight;
       prior = prior * (1 - impact * 0.5);
     }

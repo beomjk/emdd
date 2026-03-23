@@ -1,7 +1,5 @@
 import type { Graph, EdgeAttributes, Node } from './types.js';
-import { EDGE_ATTRIBUTE_NAMES, VALUE_PRODUCING_EDGES, STATUS } from './types.js';
-
-export { VALUE_PRODUCING_EDGES } from './types.js';
+import { EDGE_ATTRIBUTE_NAMES, STATUS } from './types.js';
 
 /**
  * Collect IDs of all DEFERRED nodes in the graph.

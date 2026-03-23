@@ -22,6 +22,16 @@ export const NODE_TYPES: NodeType[] = [
   'question',
 ];
 
+export const NODE_DISPLAY_ORDER: NodeType[] = [
+  'hypothesis',
+  'experiment',
+  'finding',
+  'knowledge',
+  'question',
+  'decision',
+  'episode',
+];
+
 // ── Node Type → Directory Mapping ────────────────────────────────────
 
 export const NODE_TYPE_DIRS: Record<NodeType, string> = {
@@ -237,7 +247,7 @@ export const THRESHOLDS = {
 
 // ── Transition Table ─────────────────────────────────────────────────
 
-export const TRANSITION_TABLE: Record<string, { from: string; to: string; conditions: { fn: string; args: Record<string, unknown> }[] }[]> = {
+export const TRANSITION_TABLE: Partial<Record<NodeType, { from: string; to: string; conditions: { fn: string; args: Record<string, unknown> }[] }[]>> = {
   hypothesis: [
     { from: 'PROPOSED', to: 'TESTING', conditions: [{ fn: 'has_linked', args: { direction: "any", status: "RUNNING", type: "experiment" } }] },
     { from: 'TESTING', to: 'CONTESTED', conditions: [{ fn: 'has_linked', args: { direction: "incoming", status: "CONTESTED", type: "decision" } }] },
@@ -256,7 +266,7 @@ export const TRANSITION_TABLE: Record<string, { from: string; to: string; condit
   ],
 };
 
-export const MANUAL_TRANSITIONS: Record<string, { from: string; to: string }[]> = {
+export const MANUAL_TRANSITIONS: Partial<Record<NodeType, { from: string; to: string }[]>> = {
   hypothesis: [
     { from: 'ANY', to: 'DEFERRED' },
   ],
@@ -314,6 +324,14 @@ export const URGENCY = {
   LOW: 'LOW',
 } as const;
 
+export type DependencyType = (typeof VALID_DEPENDENCY_TYPES)[number];
+export type FindingType = (typeof VALID_FINDING_TYPES)[number];
+export type Impact = (typeof VALID_IMPACTS)[number];
+export type Reversibility = (typeof VALID_REVERSIBILITIES)[number];
+export type RiskLevel = (typeof VALID_RISK_LEVELS)[number];
+export type Severity = (typeof VALID_SEVERITIES)[number];
+export type Urgency = (typeof VALID_URGENCIES)[number];
+
 // ── Edge Attributes Interface ────────────────────────────────────────
 
 export interface EdgeAttributes {
@@ -347,7 +365,7 @@ export const EDGE_ATTRIBUTE_ENUM_VALUES: Record<string, readonly string[]> = {
 
 // ── Edge Attribute Affinity ──────────────────────────────────────────
 
-export const EDGE_ATTRIBUTE_AFFINITY: Record<string, readonly string[]> = {
+export const EDGE_ATTRIBUTE_AFFINITY: Partial<Record<EdgeType, readonly string[]>> = {
   answers: ['completeness'],
   confirms: ['strength'],
   contradicts: ['severity'],

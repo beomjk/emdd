@@ -492,6 +492,21 @@ describe('getHealth — structural gaps §6.8', () => {
     expect(report.gapDetails.some(g => g.type === 'orphan_finding')).toBe(true);
   });
 
+  it('finding with only depends_on edge is still orphan (non-value-producing)', async () => {
+    writeNode(tmpDir, 'findings', 'fnd-001-test.md', {
+      id: 'fnd-001', type: 'finding', title: 'Dependent', status: 'DRAFT',
+      confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [],
+      links: [{ target: 'hyp-001', relation: 'depends_on' }],
+    });
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'H', status: 'PROPOSED',
+      confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+    });
+
+    const report = await getHealth(join(tmpDir, 'graph'));
+    expect(report.gapDetails.some(g => g.type === 'orphan_finding' && g.nodeIds.includes('fnd-001'))).toBe(true);
+  });
+
   it('finding with informs edge is NOT orphan', async () => {
     writeNode(tmpDir, 'findings', 'fnd-001-test.md', {
       id: 'fnd-001', type: 'finding', title: 'Informing', status: 'DRAFT',

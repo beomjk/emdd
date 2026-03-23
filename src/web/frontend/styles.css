@@ -13,7 +13,7 @@
   --border-negative: #E74C3C;
   --border-in-progress: #3498DB;
   --border-initial: #95A5A6;
-  --border-deferred: #95A5A6;
+  --border-terminal: #95A5A6;
   --border-invalid: #FF9800;
 
   /* Layout */

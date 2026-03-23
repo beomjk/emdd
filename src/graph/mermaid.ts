@@ -1,5 +1,4 @@
-import type { Graph, Node } from './types.js';
-import { STATUS } from './types.js';
+import { STATUS, type Graph, type Node } from './types.js';
 
 const TITLE_MAX_LEN = 40;
 

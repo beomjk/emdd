@@ -55,6 +55,19 @@ function generateNodeTypesSection(schema: GraphSchema): string {
     lines.push(`  '${nt.name}',`);
   }
   lines.push('];');
+
+  // ── NODE_DISPLAY_ORDER (domain-meaningful order for display)
+  const DOMAIN_ORDER: string[] = ['hypothesis', 'experiment', 'finding', 'knowledge', 'question', 'decision', 'episode'];
+  const displayOrder = [
+    ...DOMAIN_ORDER.filter(n => sorted.some(nt => nt.name === n)),
+    ...sorted.map(nt => nt.name).filter(n => !DOMAIN_ORDER.includes(n)),
+  ];
+  lines.push('');
+  lines.push('export const NODE_DISPLAY_ORDER: NodeType[] = [');
+  for (const name of displayOrder) {
+    lines.push(`  '${name}',`);
+  }
+  lines.push('];');
   lines.push('');
 
   // ── NODE_TYPE_DIRS
@@ -177,7 +190,7 @@ function generateTransitionsSection(schema: GraphSchema): string {
   lines.push('');
   lines.push(sectionComment('Transition Table'));
   lines.push('');
-  lines.push('export const TRANSITION_TABLE: Record<string, { from: string; to: string; conditions: { fn: string; args: Record<string, unknown> }[] }[]> = {');
+  lines.push('export const TRANSITION_TABLE: Partial<Record<NodeType, { from: string; to: string; conditions: { fn: string; args: Record<string, unknown> }[] }[]>> = {');
 
   const typeNames = Object.keys(schema.transitions).sort();
   for (const typeName of typeNames) {
@@ -200,7 +213,7 @@ function generateTransitionsSection(schema: GraphSchema): string {
   // ── MANUAL_TRANSITIONS
   if (schema.manualTransitions && Object.keys(schema.manualTransitions).length > 0) {
     lines.push('');
-    lines.push('export const MANUAL_TRANSITIONS: Record<string, { from: string; to: string }[]> = {');
+    lines.push('export const MANUAL_TRANSITIONS: Partial<Record<NodeType, { from: string; to: string }[]>> = {');
     const mtTypeNames = Object.keys(schema.manualTransitions).sort();
     for (const typeName of mtTypeNames) {
       const rules = schema.manualTransitions[typeName];
@@ -213,7 +226,7 @@ function generateTransitionsSection(schema: GraphSchema): string {
     lines.push('};');
   } else {
     lines.push('');
-    lines.push('export const MANUAL_TRANSITIONS: Record<string, { from: string; to: string }[]> = {};');
+    lines.push('export const MANUAL_TRANSITIONS: Partial<Record<NodeType, { from: string; to: string }[]>> = {};');
   }
 
   return lines.join('\n');
@@ -258,6 +271,14 @@ function generateValidValueEnumsSection(schema: GraphSchema): string {
       lines.push(`  ${v}: '${v}',`);
     }
     lines.push('} as const;');
+  }
+
+  lines.push('');
+  for (const [key] of entries) {
+    const singular = singularize(key);
+    const pascalName = singular.charAt(0).toUpperCase() + singular.slice(1);
+    const validArrayName = `VALID_${camelToScreamingSnake(key)}`;
+    lines.push(`export type ${pascalName} = (typeof ${validArrayName})[number];`);
   }
 
   return lines.join('\n');
@@ -401,7 +422,7 @@ function generateEdgeAttributeAffinitySection(schema: GraphSchema): string {
     lines.push('');
     lines.push(sectionComment('Edge Attribute Affinity'));
     lines.push('');
-    lines.push('export const EDGE_ATTRIBUTE_AFFINITY: Record<string, readonly string[]> = {};');
+    lines.push('export const EDGE_ATTRIBUTE_AFFINITY: Partial<Record<EdgeType, readonly string[]>> = {};');
     return lines.join('\n');
   }
 
@@ -411,7 +432,7 @@ function generateEdgeAttributeAffinitySection(schema: GraphSchema): string {
   lines.push('');
   lines.push(sectionComment('Edge Attribute Affinity'));
   lines.push('');
-  lines.push('export const EDGE_ATTRIBUTE_AFFINITY: Record<string, readonly string[]> = {');
+  lines.push('export const EDGE_ATTRIBUTE_AFFINITY: Partial<Record<EdgeType, readonly string[]>> = {');
   for (const [edgeType, attrs] of entries) {
     const vals = attrs.map(a => `'${a}'`).join(', ');
     lines.push(`  ${edgeType}: [${vals}],`);

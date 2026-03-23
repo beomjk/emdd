@@ -1,9 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import matter from 'gray-matter';
-import { readFileSync } from 'node:fs';
 import { identifyClusters, detectClusters, loadContextForTopic } from '../../../src/graph/clusters.js';
 import { loadGraph } from '../../../src/graph/loader.js';
 import { EDGE_TYPES } from '../../../src/graph/types.js';
@@ -325,9 +324,13 @@ describe('EDGE_WEIGHTS consistency with EDGE_TYPES', () => {
   it('all EDGE_WEIGHTS keys are valid EDGE_TYPES members', () => {
     // Extract EDGE_WEIGHTS keys by parsing the source file (private const)
     const source = readFileSync(join(__dirname, '../../../src/graph/clusters.ts'), 'utf-8');
-    const match = source.match(/const EDGE_WEIGHTS:\s*Record<string,\s*number>\s*=\s*\{([^}]+)\}/);
+    const match = source.match(/const EDGE_WEIGHTS[^=]*=\s*\{([^}]+)\}/);
     expect(match).not.toBeNull();
-    const keys = match![1].match(/(\w+)\s*:/g)!.map(k => k.replace(':', '').trim());
+    // Match both raw keys (supports:) and computed keys ([EDGE.supports]:)
+    const keys = match![1].match(/(?:\[EDGE\.(\w+)\]|(\w+))\s*:/g)!.map(k => {
+      const m = k.match(/(?:\[EDGE\.(\w+)\]|(\w+))\s*:/);
+      return m![1] ?? m![2];
+    });
     for (const key of keys) {
       expect(EDGE_TYPES.has(key)).toBe(true);
     }
@@ -336,8 +339,12 @@ describe('EDGE_WEIGHTS consistency with EDGE_TYPES', () => {
   it('edge types not in EDGE_WEIGHTS use DEFAULT_EDGE_WEIGHT fallback', () => {
     // Extract EDGE_WEIGHTS keys
     const source = readFileSync(join(__dirname, '../../../src/graph/clusters.ts'), 'utf-8');
-    const match = source.match(/const EDGE_WEIGHTS:\s*Record<string,\s*number>\s*=\s*\{([^}]+)\}/);
-    const weightKeys = new Set(match![1].match(/(\w+)\s*:/g)!.map(k => k.replace(':', '').trim()));
+    const match = source.match(/const EDGE_WEIGHTS[^=]*=\s*\{([^}]+)\}/);
+    const rawKeys = match![1].match(/(?:\[EDGE\.(\w+)\]|(\w+))\s*:/g)!.map(k => {
+      const m = k.match(/(?:\[EDGE\.(\w+)\]|(\w+))\s*:/);
+      return m![1] ?? m![2];
+    });
+    const weightKeys = new Set(rawKeys);
     // DEFAULT_EDGE_WEIGHT
     const defaultMatch = source.match(/const DEFAULT_EDGE_WEIGHT\s*=\s*([\d.]+)/);
     expect(defaultMatch).not.toBeNull();

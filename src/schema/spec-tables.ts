@@ -23,7 +23,12 @@ const GENERATORS: Record<string, (schema: GraphSchema) => string> = {
 };
 
 function generateNodeTypesTable(schema: GraphSchema): string {
-  const sorted = [...schema.nodeTypes].sort((a, b) => a.name.localeCompare(b.name));
+  const domainOrder = ['hypothesis', 'experiment', 'finding', 'knowledge', 'question', 'decision', 'episode'];
+  const sorted = [...schema.nodeTypes].sort((a, b) => {
+    const ai = domainOrder.indexOf(a.name);
+    const bi = domainOrder.indexOf(b.name);
+    return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+  });
   const lines = [
     '<!-- Generated from graph-schema.yaml — DO NOT EDIT -->',
     '| Type | Prefix | Directory | Status Count |',
@@ -36,7 +41,12 @@ function generateNodeTypesTable(schema: GraphSchema): string {
 }
 
 function generateStatusesTable(schema: GraphSchema): string {
-  const sorted = [...schema.nodeTypes].sort((a, b) => a.name.localeCompare(b.name));
+  const domainOrder = ['hypothesis', 'experiment', 'finding', 'knowledge', 'question', 'decision', 'episode'];
+  const sorted = [...schema.nodeTypes].sort((a, b) => {
+    const ai = domainOrder.indexOf(a.name);
+    const bi = domainOrder.indexOf(b.name);
+    return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+  });
   const lines = [
     '<!-- Generated from graph-schema.yaml — DO NOT EDIT -->',
     '| Type | Statuses |',

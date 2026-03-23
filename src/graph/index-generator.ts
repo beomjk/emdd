@@ -1,8 +1,8 @@
 import type { Graph, Node, NodeType } from './types.js';
-import { NODE_TYPES, NODE_TYPE_DIRS } from './types.js';
+import { NODE_DISPLAY_ORDER, NODE_TYPE_DIRS } from './types.js';
 
 // Derive section order from NODE_TYPES (schema-defined order)
-const SECTION_ORDER: NodeType[] = NODE_TYPES;
+const SECTION_ORDER: NodeType[] = NODE_DISPLAY_ORDER;
 
 // Derive section titles from NODE_TYPE_DIRS (title-cased directory names)
 function titleCaseDir(dir: string): string {
@@ -10,7 +10,7 @@ function titleCaseDir(dir: string): string {
 }
 
 const SECTION_TITLES: Record<NodeType, string> = Object.fromEntries(
-  NODE_TYPES.map((t) => [t, titleCaseDir(NODE_TYPE_DIRS[t])]),
+  NODE_DISPLAY_ORDER.map((t) => [t, titleCaseDir(NODE_TYPE_DIRS[t])]),
 ) as Record<NodeType, string>;
 
 export function generateIndex(graph: Graph): string {

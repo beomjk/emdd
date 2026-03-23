@@ -2,6 +2,7 @@ import cytoscape from 'cytoscape';
 import fcose from 'cytoscape-fcose';
 import dagre from 'cytoscape-dagre';
 import type { SerializedGraph } from '../types.js';
+import type { NodeType } from '../../graph/types.js';
 import { getClusterStyles } from './clusters.js';
 import { getNodeColor, getStatusBorder } from './constants.js';
 
@@ -183,7 +184,7 @@ export function renderGraph(
 
 // Hierarchical tier order: question → hypothesis → experiment → finding → knowledge
 // Lower tier = higher rank (top of screen)
-const TYPE_TIER: Record<string, number> = {
+const TYPE_TIER: Record<NodeType, number> = {
   question: 0,
   hypothesis: 1,
   experiment: 2,
@@ -224,8 +225,8 @@ export function switchLayout(mode: LayoutMode): void {
         nodeDimensionsIncludeLabels: true,
         // Assign tier-based rank to enforce research flow direction
         sort: (a: any, b: any) => {
-          const tierA = TYPE_TIER[a.data('type')] ?? 2;
-          const tierB = TYPE_TIER[b.data('type')] ?? 2;
+          const tierA = TYPE_TIER[a.data('type') as NodeType] ?? 2;
+          const tierB = TYPE_TIER[b.data('type') as NodeType] ?? 2;
           return tierA - tierB;
         },
       }

@@ -1,8 +1,8 @@
 import { loadGraph } from './loader.js';
 import { buildReverseEdgeIndex, buildNodeToComponent } from './utils.js';
-import { EDGE, STATUS, VALID_SEVERITIES } from './types.js';
+import { EDGE, STATUS, SEVERITY, VALID_SEVERITIES, type Severity } from './types.js';
 
-const SEVERITY_PENALTIES: { [K in (typeof VALID_SEVERITIES)[number]]: number } = {
+const SEVERITY_PENALTIES: Record<Severity, number> = {
   FATAL: 0.5,
   WEAKENING: 0.7,
   TENSION: 0.9,
@@ -37,15 +37,15 @@ export async function analyzeRefutation(graphDir: string): Promise<RefutationAna
     if (contradicts.length === 0) continue;
 
     // Use the worst (lowest penalty = highest impact) severity
-    let worstSeverity: string = VALID_SEVERITIES[VALID_SEVERITIES.length - 1];
+    let worstSeverity: string = SEVERITY.TENSION;
     for (const edge of contradicts) {
-      const sev = edge.severity ?? VALID_SEVERITIES[VALID_SEVERITIES.length - 1];
-      if ((SEVERITY_PENALTIES[sev as (typeof VALID_SEVERITIES)[number]] ?? 0.9) < (SEVERITY_PENALTIES[worstSeverity as (typeof VALID_SEVERITIES)[number]] ?? 0.9)) {
+      const sev = edge.severity ?? SEVERITY.TENSION;
+      if ((SEVERITY_PENALTIES[sev as Severity] ?? 0.9) < (SEVERITY_PENALTIES[worstSeverity as Severity] ?? 0.9)) {
         worstSeverity = sev;
       }
     }
 
-    const penalty = SEVERITY_PENALTIES[worstSeverity as (typeof VALID_SEVERITIES)[number]] ?? 0.9;
+    const penalty = SEVERITY_PENALTIES[worstSeverity as Severity] ?? 0.9;
 
     // Find hypotheses that depend on this knowledge (via supports or depends_on edges FROM hypothesis TO knowledge)
     for (const [hypId, hypNode] of graph.nodes) {

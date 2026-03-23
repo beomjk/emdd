@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { Graph, Node } from '../../../src/graph/types.js';
-import { buildReverseEdgeIndex } from '../../../src/graph/utils.js';
+import { buildReverseEdgeIndex, collectDeferredIds } from '../../../src/graph/utils.js';
 
 function makeGraph(nodes: Node[]): Graph {
   const map = new Map<string, Node>();
@@ -53,5 +53,21 @@ describe('buildReverseEdgeIndex', () => {
     const graph = makeGraph([]);
     const index = buildReverseEdgeIndex(graph);
     expect(index.size).toBe(0);
+  });
+});
+
+describe('collectDeferredIds', () => {
+  it('returns IDs of nodes with DEFERRED status only', () => {
+    const graph = makeGraph([
+      makeNode('hyp-001', { type: 'hypothesis', status: 'DEFERRED' }),
+      makeNode('hyp-002', { type: 'hypothesis', status: 'ACTIVE' }),
+      makeNode('fnd-001', { status: 'DEFERRED' }),
+    ]);
+
+    const result = collectDeferredIds(graph);
+    expect(result).toHaveLength(2);
+    expect(result).toContain('hyp-001');
+    expect(result).toContain('fnd-001');
+    expect(result).not.toContain('hyp-002');
   });
 });

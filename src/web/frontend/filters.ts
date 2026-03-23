@@ -99,7 +99,7 @@ export function renderFilters(
   typeSection.className = 'filter-section';
   typeSection.innerHTML = '<span class="filter-label">Types</span>';
   for (const type of types) {
-    const btn = createToggleButton(type, true, NODE_COLORS[type] ?? null, (active) => {
+    const btn = createToggleButton(type, true, NODE_COLORS[type as import('../../graph/types.js').NodeType] ?? null, (active) => {
       if (active) filterState.visibleTypes.add(type);
       else filterState.visibleTypes.delete(type);
       applyFilters();

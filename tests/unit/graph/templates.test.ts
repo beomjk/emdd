@@ -80,6 +80,24 @@ describe('type-specific template fields', () => {
     expect(parsed.data.priority).toBeDefined();
   });
 
+  it('hypothesis template risk_level defaults to high', () => {
+    const output = renderTemplate('hypothesis', 'test', { locale: 'en' });
+    const parsed = matter(output);
+    expect(parsed.data.risk_level).toBe('high');
+  });
+
+  it('finding template finding_type defaults to observation', () => {
+    const output = renderTemplate('finding', 'test', { locale: 'en' });
+    const parsed = matter(output);
+    expect(parsed.data.finding_type).toBe('observation');
+  });
+
+  it('question template urgency defaults to MEDIUM', () => {
+    const output = renderTemplate('question', 'test', { locale: 'en' });
+    const parsed = matter(output);
+    expect(parsed.data.urgency).toBe('MEDIUM');
+  });
+
   it('finding template includes finding_type: observation', () => {
     const output = renderTemplate('finding', 'test', { locale: 'en' });
     const parsed = matter(output);

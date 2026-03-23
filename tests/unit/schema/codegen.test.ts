@@ -249,6 +249,33 @@ describe('generateTypesFile', () => {
     expect(alphaIdx).toBeLessThan(zetaIdx);
   });
 
+  it('generates EDGE_ATTRIBUTE_TYPES with number and enum type values', () => {
+    const output = generateTypesFile(makeTestSchema({
+      edgeAttributes: {
+        strength: { type: 'number', min: 0, max: 1 },
+        severity: { type: 'enum', valuesRef: 'severities' },
+      },
+    }));
+    expect(output).toContain("export const EDGE_ATTRIBUTE_TYPES: Record<string, 'number' | 'enum'> = {");
+    expect(output).toContain("  severity: 'enum',");
+    expect(output).toContain("  strength: 'number',");
+  });
+
+  it('generates EDGE_ATTRIBUTE_RANGES with min/max for numeric attributes', () => {
+    const output = generateTypesFile(makeTestSchema({
+      edgeAttributes: {
+        strength: { type: 'number', min: 0, max: 1 },
+        severity: { type: 'enum', valuesRef: 'severities' },
+      },
+    }));
+    expect(output).toContain('export const EDGE_ATTRIBUTE_RANGES: Record<string, { min?: number; max?: number }> = {');
+    expect(output).toContain('  strength: { min: 0, max: 1 },');
+    // enum attributes should NOT appear in ranges
+    const rangesBlock = output.match(/EDGE_ATTRIBUTE_RANGES[\s\S]*?\};/);
+    expect(rangesBlock).not.toBeNull();
+    expect(rangesBlock![0]).not.toContain('severity');
+  });
+
   it('emits empty EDGE_ATTRIBUTE_RANGES when no numeric attrs have min/max', () => {
     const output = generateTypesFile(makeTestSchema({
       edgeAttributes: {
@@ -302,7 +329,7 @@ describe('generateTypesFile', () => {
         confirms: ['strength'],
       },
     }));
-    expect(affinityOutput).toContain('export const EDGE_ATTRIBUTE_AFFINITY: Record<string, readonly string[]> = {');
+    expect(affinityOutput).toContain('export const EDGE_ATTRIBUTE_AFFINITY: Partial<Record<EdgeType, readonly string[]>> = {');
     expect(affinityOutput).toContain("  confirms: ['strength'],");
     expect(affinityOutput).toContain("  contradicts: ['severity'],");
     expect(affinityOutput).toContain("  supports: ['strength'],");
@@ -325,7 +352,7 @@ describe('generateTypesFile', () => {
 
   it('emits empty EDGE_ATTRIBUTE_AFFINITY when schema section is absent', () => {
     const noAffinityOutput = generateTypesFile(makeTestSchema());
-    expect(noAffinityOutput).toContain('export const EDGE_ATTRIBUTE_AFFINITY: Record<string, readonly string[]> = {};');
+    expect(noAffinityOutput).toContain('export const EDGE_ATTRIBUTE_AFFINITY: Partial<Record<EdgeType, readonly string[]>> = {};');
   });
 
   // ── TRANSITION_POLICY_DEFAULT ──
@@ -540,6 +567,28 @@ describe('generateTypesFile', () => {
     });
     const output = generateTypesFile(schema);
     expect(output).toContain("  MINOR_ISSUE: 'MINOR_ISSUE',");
+  });
+
+  // ── Singularize edge cases ──
+
+  it('generates correct const names for -ies plurals (urgencies → URGENCY)', () => {
+    const output = generateTypesFile(makeTestSchema({
+      validValues: {
+        ...makeTestSchema().validValues,
+        urgencies: ['BLOCKING', 'HIGH'],
+      },
+    }));
+    expect(output).toContain('export const URGENCY = {');
+  });
+
+  it('generates correct const names for camelCase plurals (dependencyTypes → DEPENDENCY_TYPE)', () => {
+    const output = generateTypesFile(makeTestSchema({
+      validValues: {
+        ...makeTestSchema().validValues,
+        dependencyTypes: ['LOGICAL', 'PRACTICAL'],
+      },
+    }));
+    expect(output).toContain('export const DEPENDENCY_TYPE = {');
   });
 
   // ── Schema change detection ──

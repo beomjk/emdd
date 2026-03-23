@@ -57,6 +57,46 @@ describe('getStatusBorder', () => {
     const result = getStatusBorder({ status: 'PROPOSED' });
     expect(result).toEqual({ width: 1, style: 'solid', color: '#95A5A6' });
   });
+
+  it.each(['SUPPORTED', 'VALIDATED', 'ACCEPTED', 'ACTIVE', 'ANSWERED', 'COMPLETED', 'PROMOTED'])(
+    'returns solid green (width 3) for positive status %s',
+    (status) => {
+      const result = getStatusBorder({ status });
+      expect(result).toEqual({ width: 3, style: 'solid', color: '#2ECC71' });
+    },
+  );
+
+  it.each(['ABANDONED', 'FAILED', 'REFUTED', 'RETRACTED', 'REVERTED'])(
+    'returns dashed red (width 2) for negative status %s',
+    (status) => {
+      const result = getStatusBorder({ status });
+      expect(result).toEqual({ width: 2, style: 'dashed', color: '#E74C3C' });
+    },
+  );
+
+  it.each(['CONTESTED', 'DISPUTED', 'RUNNING', 'TESTING'])(
+    'returns solid blue (width 2) for in-progress status %s',
+    (status) => {
+      const result = getStatusBorder({ status });
+      expect(result).toEqual({ width: 2, style: 'solid', color: '#3498DB' });
+    },
+  );
+
+  it.each(['DEFERRED', 'RESOLVED', 'REVISED', 'SUPERSEDED'])(
+    'returns dashed gray (width 2) for terminal status %s',
+    (status) => {
+      const result = getStatusBorder({ status });
+      expect(result).toEqual({ width: 2, style: 'dashed', color: '#95A5A6' });
+    },
+  );
+
+  it.each(['DRAFT', 'OPEN', 'PLANNED', 'PROPOSED'])(
+    'returns solid gray (width 1) for initial status %s',
+    (status) => {
+      const result = getStatusBorder({ status });
+      expect(result).toEqual({ width: 1, style: 'solid', color: '#95A5A6' });
+    },
+  );
 });
 
 describe('STATUS_BORDER_LEGEND', () => {

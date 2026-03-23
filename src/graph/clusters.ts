@@ -3,8 +3,7 @@ import path from 'node:path';
 import matter from 'gray-matter';
 import GraphologyDefault from 'graphology';
 import louvainDefault from 'graphology-communities-louvain';
-import type { Graph as EmddGraph, Node } from './types.js';
-import { STATUS } from './types.js';
+import { STATUS, EDGE, type Graph as EmddGraph, type Node, type EdgeType } from './types.js';
 
 // ESM interop — graphology/louvain export shapes vary by bundler
 const GraphologyGraph = (GraphologyDefault as any).default ?? GraphologyDefault;
@@ -13,15 +12,15 @@ import type { VisualCluster } from '../web/types.js';
 
 // ── Edge weight configuration for Louvain clustering ────────────────
 
-const EDGE_WEIGHTS: Record<string, number> = {
-  supports: 1.0,
-  contradicts: 1.0,
-  tests: 0.8,
-  produces: 0.8,
-  answers: 0.8,
-  informs: 0.6,
-  depends_on: 0.6,
-  relates_to: 0.3,
+const EDGE_WEIGHTS: Partial<Record<EdgeType, number>> = {
+  [EDGE.supports]: 1.0,
+  [EDGE.contradicts]: 1.0,
+  [EDGE.tests]: 0.8,
+  [EDGE.produces]: 0.8,
+  [EDGE.answers]: 0.8,
+  [EDGE.informs]: 0.6,
+  [EDGE.depends_on]: 0.6,
+  [EDGE.relates_to]: 0.3,
 };
 
 const DEFAULT_EDGE_WEIGHT = 0.3;
@@ -100,12 +99,12 @@ export async function detectClusters(
       if (edgesSeen.has(edgeKey)) {
         // Accumulate weight on existing edge
         const existing = g.getEdgeAttribute(g.edge(node.id, link.target)!, 'weight') ?? 0;
-        const addWeight = EDGE_WEIGHTS[link.relation] ?? DEFAULT_EDGE_WEIGHT;
+        const addWeight = EDGE_WEIGHTS[link.relation as EdgeType] ?? DEFAULT_EDGE_WEIGHT;
         g.setEdgeAttribute(g.edge(node.id, link.target)!, 'weight', existing + addWeight);
         continue;
       }
 
-      const baseWeight = EDGE_WEIGHTS[link.relation] ?? DEFAULT_EDGE_WEIGHT;
+      const baseWeight = EDGE_WEIGHTS[link.relation as EdgeType] ?? DEFAULT_EDGE_WEIGHT;
 
       // Tag overlap bonus
       const sourceTags = nodeTagsMap.get(node.id) ?? [];

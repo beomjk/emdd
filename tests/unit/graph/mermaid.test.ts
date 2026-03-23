@@ -94,4 +94,13 @@ describe('generateMermaid', () => {
     const output = generateMermaid(graph);
     expect(output).toMatch(/style.*hyp-001/);
   });
+
+  it('applies fill style to SUPERSEDED status nodes', () => {
+    const graph = makeGraph([
+      makeNode({ id: 'knw-001', type: 'knowledge', title: 'Superseded', status: 'SUPERSEDED' }),
+    ]);
+    const output = generateMermaid(graph);
+    expect(output).toContain('fill:#D3D3D3');
+    expect(output).toMatch(/style\s+knw-001\s+fill:#D3D3D3/);
+  });
 });

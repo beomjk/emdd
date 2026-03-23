@@ -5,13 +5,11 @@ import {
   TERMINAL_STATUSES,
   INITIAL_STATUSES,
 } from '../../graph/types.js';
-
-// Re-export status category sets for consumers
-export { POSITIVE_STATUSES, NEGATIVE_STATUSES, IN_PROGRESS_STATUSES, TERMINAL_STATUSES, INITIAL_STATUSES };
+import type { NodeType } from '../../graph/types.js';
 
 // ── Node type colors (single source of truth) ───────────────────────
 
-export const NODE_COLORS: Record<string, string> = {
+export const NODE_COLORS: Record<NodeType, string> = {
   hypothesis: '#4A90D9',
   experiment: '#7B68EE',
   finding: '#50C878',
@@ -22,7 +20,7 @@ export const NODE_COLORS: Record<string, string> = {
 };
 
 export function getNodeColor(type: string): string {
-  return NODE_COLORS[type] ?? '#999';
+  return NODE_COLORS[type as NodeType] ?? '#999';
 }
 
 // ── Status border encoding ──────────────────────────────────────────
@@ -48,6 +46,6 @@ export const STATUS_BORDER_LEGEND: Array<[label: string, borderStyle: string, bo
   ['Negative', 'dashed', '#E74C3C', 2],
   ['In Progress', 'solid', '#3498DB', 2],
   ['Initial', 'solid', '#95A5A6', 1],
-  ['Deferred', 'dashed', '#95A5A6', 2],
+  ['Terminal', 'dashed', '#95A5A6', 2],
   ['Invalid', 'dashed', '#FF9800', 2],
 ];

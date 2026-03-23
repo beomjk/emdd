@@ -3,16 +3,12 @@ import { generateTypesFile } from '../../../src/schema/codegen.js';
 import { loadSchema } from '../../../src/schema/loader.js';
 import path from 'node:path';
 
-describe('E2E schema propagation (T050)', () => {
-  // Use the real schema as base
-  let realSchema: Awaited<ReturnType<typeof loadSchema>>;
-
-  // Load actual schema once
+describe('Schema-codegen integration (T050)', () => {
   it('loads real schema', async () => {
     const schemaPath = path.resolve('graph-schema.yaml');
-    realSchema = await loadSchema(schemaPath);
-    expect(realSchema).toBeDefined();
-    expect(realSchema.nodeTypes.length).toBeGreaterThan(0);
+    const schema = await loadSchema(schemaPath);
+    expect(schema).toBeDefined();
+    expect(schema.nodeTypes.length).toBeGreaterThan(0);
   });
 
   it('(SC-002) adding edge to forward + category propagates to EDGE_TYPES, category Set, and EDGE const', async () => {
