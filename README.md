@@ -29,7 +29,7 @@
 
 ### Web Dashboard
 
-<img src="docs/assets/dashboard.png" alt="EMDD Web Dashboard" width="720">
+<img src="docs/assets/dashboard-v2.png" alt="EMDD Web Dashboard" width="720">
 
 ## What is EMDD?
 
