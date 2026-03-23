@@ -79,9 +79,9 @@ describe('generateMermaid', () => {
     expect(output.trim()).toBe('graph TD');
   });
 
-  it('applies style to CONFIRMED status nodes', () => {
+  it('applies style to SUPPORTED status nodes', () => {
     const graph = makeGraph([
-      makeNode({ id: 'hyp-001', type: 'hypothesis', title: 'Confirmed', status: 'CONFIRMED' }),
+      makeNode({ id: 'hyp-001', type: 'hypothesis', title: 'Supported', status: 'SUPPORTED' }),
     ]);
     const output = generateMermaid(graph);
     expect(output).toMatch(/style.*hyp-001/);

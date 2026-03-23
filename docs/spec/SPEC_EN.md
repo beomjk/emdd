@@ -586,7 +586,7 @@ Final confidence: 0.42 (rounded)
 | **Untested Hypotheses** | PROPOSED status + (N days elapsed **OR** M episodes since updated) | Suggest experiment design |
 | **Blocking Questions** | OPEN + urgency=BLOCKING + (N days **OR** M episodes since updated) | Urge immediate resolution |
 | **Stale Knowledge** | Source is N months old + newer Knowledge added to same cluster (day-only) | Warn that update is needed |
-| **Orphan Findings** | Finding node has no outgoing SPAWNS, ANSWERS, or EXTENDS edges | Suggest new Question/Hypothesis connections |
+| **Orphan Findings** | Finding node has no outgoing `edgeCategories.value_producing` edges (12 types) | Suggest new Question/Hypothesis connections |
 
 **Default Thresholds and Configuration:**
 
@@ -595,7 +595,7 @@ Final confidence: 0.42 (rounded)
 | Untested Hypotheses | 5 days in `PROPOSED` | `gaps.untested_days` | A week without testing suggests the hypothesis is either too risky to test first (good — but surface it) or forgotten |
 | Untested Hypotheses | 3 episodes since `updated` | `gaps.untested_episodes` | Matches consolidation cadence; 3 sessions without testing signals neglect regardless of calendar time |
 | Stale Knowledge | 90 days since source date | `gaps.stale_days` | Quarterly review cadence; source material may have updates |
-| Orphan Findings | 0 outgoing edges of type SPAWNS, ANSWERS, or EXTENDS | `gaps.orphan_min_outgoing` | A Finding that doesn't connect forward is value unrealized |
+| Orphan Findings | 0 outgoing edges of type `edgeCategories.value_producing` (12 types) | `gaps.orphan_min_outgoing` | A Finding that doesn't connect forward is value unrealized |
 | Blocking Questions | 7 days at `urgency=BLOCKING` | `gaps.blocking_days` | One week is long enough to confirm the block is real, short enough to prevent stalls |
 | Blocking Questions | 3 episodes since `updated` | `gaps.blocking_episodes` | Same episode-based cadence as untested hypotheses |
 | Disconnected Clusters | < 2 inter-cluster edges | `gaps.min_cluster_edges` | Below 2 edges, clusters are effectively independent research threads |

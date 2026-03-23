@@ -3,7 +3,7 @@ import path from 'node:path';
 import matter from 'gray-matter';
 import { glob } from 'glob';
 import type { Node, Graph, Link, NodeType } from './types.js';
-import { REVERSE_LABELS, NODE_TYPE_DIRS, PREFIX_TO_TYPE, EDGE_ATTRIBUTE_NAMES, EDGE_ATTRIBUTE_TYPES } from './types.js';
+import { REVERSE_LABELS, NODE_TYPE_DIRS, PREFIX_TO_TYPE, EDGE_ATTRIBUTE_NAMES, EDGE_ATTRIBUTE_TYPES, EDGE } from './types.js';
 import { t } from '../i18n/index.js';
 
 export interface LoadGraphOptions {
@@ -56,7 +56,7 @@ function parseLinks(raw: unknown): Link[] {
     .map((item) => {
       const link: Link = {
         target: String(item.target ?? ''),
-        relation: normalizeRelation(String(item.relation ?? 'relates_to')),
+        relation: normalizeRelation(String(item.relation ?? EDGE.relates_to)),
       };
       for (const attr of EDGE_ATTRIBUTE_NAMES) {
         const v = item[attr];

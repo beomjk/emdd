@@ -272,6 +272,30 @@ describe('analyzeRefutation', () => {
     expect(result.retractedKnowledgeIds).toHaveLength(2);
   });
 
+  it('edge with severity undefined falls back to VALID_SEVERITIES last element', async () => {
+    writeNode('knowledge', 'knw-001-test.md', {
+      id: 'knw-001', type: 'knowledge', title: 'K1', status: 'DISPUTED',
+      confidence: 0.9, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+    });
+    writeNode('findings', 'fnd-001-test.md', {
+      id: 'fnd-001', type: 'finding', title: 'F1', status: 'VALIDATED',
+      confidence: 0.8, created: '2026-01-01', updated: '2026-01-01', tags: [],
+      links: [{ target: 'knw-001', relation: 'contradicts' }], // no severity → fallback
+    });
+    writeNode('hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'TESTING',
+      confidence: 0.8, created: '2026-01-01', updated: '2026-01-01', tags: [],
+      links: [{ target: 'knw-001', relation: 'supports' }],
+    });
+
+    const result = await analyzeRefutation(graphDir);
+    const affected = result.affectedHypotheses.find(h => h.hypothesisId === 'hyp-001');
+    expect(affected).toBeDefined();
+    // Fallback severity is TENSION (last in VALID_SEVERITIES), penalty = 0.9
+    expect(affected!.severity).toBe('TENSION');
+    expect(affected!.newConfidence).toBeCloseTo(0.8 * 0.9, 2);
+  });
+
   it('no DISPUTED knowledge → empty result', async () => {
     writeNode('hypotheses', 'hyp-001-test.md', {
       id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'TESTING',

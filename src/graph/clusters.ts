@@ -4,6 +4,7 @@ import matter from 'gray-matter';
 import GraphologyDefault from 'graphology';
 import louvainDefault from 'graphology-communities-louvain';
 import type { Graph as EmddGraph, Node } from './types.js';
+import { STATUS } from './types.js';
 
 // ESM interop — graphology/louvain export shapes vary by bundler
 const GraphologyGraph = (GraphologyDefault as any).default ?? GraphologyDefault;
@@ -210,13 +211,13 @@ export async function loadContextForTopic(graphDir: string, topic: string): Prom
     if (!tags.includes(topicLower) && !titleLower.includes(topicLower)) continue;
 
     if (
-      (node.type === 'knowledge' && node.status === 'ACTIVE') ||
-      (node.type === 'finding' && node.status === 'VALIDATED')
+      (node.type === 'knowledge' && node.status === STATUS.ACTIVE) ||
+      (node.type === 'finding' && node.status === STATUS.VALIDATED)
     ) {
       entryPoints.push({ id: node.id, title: node.title, type: node.type });
     }
 
-    if (node.type === 'question' && node.status === 'OPEN') {
+    if (node.type === 'question' && node.status === STATUS.OPEN) {
       openQuestions.push({ id: node.id, title: node.title });
     }
 

@@ -1,11 +1,7 @@
 import type { Graph, EdgeAttributes, Node } from './types.js';
-import { EDGE_ATTRIBUTE_NAMES } from './types.js';
+import { EDGE_ATTRIBUTE_NAMES, VALUE_PRODUCING_EDGES, STATUS } from './types.js';
 
-/**
- * Forward edge relations used for orphan-finding detection.
- * Shared between getHealth() and checkConsolidation().
- */
-export const FORWARD_RELATIONS = new Set(['spawns', 'answers', 'extends']);
+export { VALUE_PRODUCING_EDGES } from './types.js';
 
 /**
  * Collect IDs of all DEFERRED nodes in the graph.
@@ -14,7 +10,7 @@ export const FORWARD_RELATIONS = new Set(['spawns', 'answers', 'extends']);
 export function collectDeferredIds(graph: Graph): string[] {
   const ids: string[] = [];
   for (const [id, node] of graph.nodes) {
-    if (node.status === 'DEFERRED') ids.push(id);
+    if (node.status === STATUS.DEFERRED) ids.push(id);
   }
   return ids;
 }

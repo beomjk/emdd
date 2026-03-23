@@ -565,7 +565,7 @@ Step 2: CONTRADICTS 에지 도착
 | **Untested Hypotheses** | PROPOSED 상태 + (N일 경과 **또는** updated 이후 M개 에피소드) | 실험 설계 제안 |
 | **Blocking Questions** | OPEN + urgency=BLOCKING + (N일 경과 **또는** updated 이후 M개 에피소드) | 즉시 해소 촉구 |
 | **Stale Knowledge** | N개월 된 source + 같은 클러스터에 새 Knowledge 추가 (일수 기반만) | 업데이트 필요 경고 |
-| **Orphan Findings** | Finding 노드에 outgoing SPAWNS 없음 | 새 질문/가설 연결 제안 |
+| **Orphan Findings** | Finding 노드에 outgoing `edgeCategories.value_producing` 에지 없음 (12종) | 새 질문/가설 연결 제안 |
 
 **Dual-Trigger 탐지 (일수 + 에피소드):**
 

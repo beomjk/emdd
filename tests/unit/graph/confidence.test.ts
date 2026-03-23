@@ -70,6 +70,16 @@ describe('computeConfidence — pure formula', () => {
     expect(fatal).toBeLessThan(weakening);
     expect(weakening).toBeLessThan(tension);
   });
+
+  it('severity undefined falls back to VALID_SEVERITIES last element (TENSION)', () => {
+    const withUndefined = computeConfidence(0.5, [
+      { type: 'contradicts', sourceConfidence: 1.0, severity: undefined },
+    ]);
+    const withTension = computeConfidence(0.5, [
+      { type: 'contradicts', sourceConfidence: 1.0, severity: 'TENSION' },
+    ]);
+    expect(withUndefined).toBe(withTension);
+  });
 });
 
 describe('propagateConfidence — graph-wide', () => {
