@@ -1,5 +1,13 @@
 import type { Graph, EdgeAttributes, Node } from './types.js';
 import { EDGE_ATTRIBUTE_NAMES, STATUS } from './types.js';
+import { toGraphologyGraph } from './graphology-bridge.js';
+import graphologyComponentsDefault from 'graphology-components';
+
+// ESM interop — graphology-components export shape varies by bundler
+const graphologyComponents =
+  (graphologyComponentsDefault as any).default ?? graphologyComponentsDefault;
+const _connectedComponents: (graph: any) => string[][] =
+  graphologyComponents.connectedComponents;
 
 /**
  * Collect IDs of all DEFERRED nodes in the graph.
@@ -18,36 +26,8 @@ export function collectDeferredIds(graph: Graph): string[] {
  * Used for cluster-scoped checks (pivot ceremony, stale knowledge).
  */
 export function getConnectedComponents(graph: Graph): string[][] {
-  const adj = new Map<string, Set<string>>();
-  for (const node of graph.nodes.values()) {
-    if (!adj.has(node.id)) adj.set(node.id, new Set());
-    for (const link of node.links) {
-      if (graph.nodes.has(link.target)) {
-        adj.get(node.id)!.add(link.target);
-        if (!adj.has(link.target)) adj.set(link.target, new Set());
-        adj.get(link.target)!.add(node.id);
-      }
-    }
-  }
-
-  const visited = new Set<string>();
-  const components: string[][] = [];
-  for (const nodeId of graph.nodes.keys()) {
-    if (visited.has(nodeId)) continue;
-    const component: string[] = [];
-    const queue = [nodeId];
-    while (queue.length > 0) {
-      const current = queue.pop()!;
-      if (visited.has(current)) continue;
-      visited.add(current);
-      component.push(current);
-      for (const neighbor of (adj.get(current) ?? new Set())) {
-        if (!visited.has(neighbor)) queue.push(neighbor);
-      }
-    }
-    components.push(component);
-  }
-  return components;
+  const g = toGraphologyGraph(graph);
+  return _connectedComponents(g);
 }
 
 /**

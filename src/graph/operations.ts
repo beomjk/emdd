@@ -6,7 +6,8 @@ import { nextId, renderTemplate, nodePath, sanitizeSlug } from './templates.js';
 import { NODE_TYPES, NODE_TYPE_DIRS, ALL_VALID_RELATIONS, REVERSE_LABELS, THRESHOLDS, VALID_STATUSES, VALID_FINDING_TYPES, VALID_URGENCIES, VALID_RISK_LEVELS, VALID_REVERSIBILITIES, EDGE_ATTRIBUTE_NAMES, EDGE_ATTRIBUTE_RANGES, EDGE_ATTRIBUTE_ENUM_VALUES, TRANSITION_POLICY_DEFAULT, TRANSITION_TABLE, MANUAL_TRANSITIONS, CEREMONY_TRIGGERS, URGENCY, VALUE_PRODUCING_EDGES, EDGE, STATUS } from './types.js';
 import { checkEdgeAffinity, getPresentAttrKeys } from './edge-attrs.js';
 import { validateTransition } from './transition-engine.js';
-import { collectDeferredIds, buildNodeToComponent } from './utils.js';
+import { collectDeferredIds, buildNodeToComponent, getConnectedComponents } from './utils.js';
+import { toGraphologyGraph } from './graphology-bridge.js';
 import type {
   Node,
   NodeType,
@@ -529,39 +530,9 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
     });
   }
 
-  // 5. Disconnected clusters: BFS connected components
+  // 5. Disconnected clusters: connected components
   if (totalNodes > 1) {
-    // Build undirected adjacency
-    const adj = new Map<string, Set<string>>();
-    for (const node of graph.nodes.values()) {
-      if (!adj.has(node.id)) adj.set(node.id, new Set());
-      for (const link of node.links) {
-        if (graph.nodes.has(link.target)) {
-          adj.get(node.id)!.add(link.target);
-          if (!adj.has(link.target)) adj.set(link.target, new Set());
-          adj.get(link.target)!.add(node.id);
-        }
-      }
-    }
-
-    const visited = new Set<string>();
-    const components: string[][] = [];
-    for (const nodeId of graph.nodes.keys()) {
-      if (visited.has(nodeId)) continue;
-      const component: string[] = [];
-      const queue = [nodeId];
-      while (queue.length > 0) {
-        const current = queue.pop()!;
-        if (visited.has(current)) continue;
-        visited.add(current);
-        component.push(current);
-        const neighbors = adj.get(current) ?? new Set();
-        for (const neighbor of neighbors) {
-          if (!visited.has(neighbor)) queue.push(neighbor);
-        }
-      }
-      components.push(component);
-    }
+    const components = getConnectedComponents(graph);
 
     if (components.length > 1) {
       // Count inter-cluster edges
@@ -650,62 +621,49 @@ export async function getNeighbors(
     throw new Error(t('error.node_not_found', { id: nodeId }));
   }
 
-  // Build reverse index for incoming edges
-  const reverseAdj = new Map<string, Array<{ sourceId: string; relation: string }>>();
-  for (const [id, node] of graph.nodes) {
-    for (const link of node.links) {
-      if (!reverseAdj.has(link.target)) reverseAdj.set(link.target, []);
-      reverseAdj.get(link.target)!.push({ sourceId: id, relation: link.relation });
-    }
-  }
-
+  const g = toGraphologyGraph(graph);
   const visited = new Set<string>([nodeId]);
   const result: NeighborNode[] = [];
-  let frontier: Array<{ id: string; depth: number }> = [{ id: nodeId, depth: 0 }];
+  let frontier: string[] = [nodeId];
 
-  while (frontier.length > 0) {
-    const nextFrontier: Array<{ id: string; depth: number }> = [];
+  for (let d = 0; d < depth; d++) {
+    const nextFrontier: string[] = [];
 
-    for (const { id, depth: currentDepth } of frontier) {
-      if (currentDepth >= depth) continue;
-      const node = graph.nodes.get(id);
-      if (!node) continue;
-
+    for (const id of frontier) {
       // Outgoing edges
-      for (const link of node.links) {
-        if (!visited.has(link.target) && graph.nodes.has(link.target)) {
-          visited.add(link.target);
-          const target = graph.nodes.get(link.target)!;
-          result.push({
-            id: target.id,
-            type: target.type,
-            title: target.title,
-            status: target.status,
-            relation: link.relation,
-            direction: 'outgoing',
-            depth: currentDepth + 1,
-          });
-          nextFrontier.push({ id: target.id, depth: currentDepth + 1 });
-        }
+      for (const edge of g.outEdges(id)) {
+        const target = g.target(edge);
+        if (visited.has(target)) continue;
+        visited.add(target);
+        const node = graph.nodes.get(target)!;
+        result.push({
+          id: node.id,
+          type: node.type,
+          title: node.title,
+          status: node.status,
+          relation: g.getEdgeAttribute(edge, 'relation'),
+          direction: 'outgoing',
+          depth: d + 1,
+        });
+        nextFrontier.push(target);
       }
 
       // Incoming edges
-      const incoming = reverseAdj.get(id) ?? [];
-      for (const edge of incoming) {
-        if (!visited.has(edge.sourceId)) {
-          visited.add(edge.sourceId);
-          const source = graph.nodes.get(edge.sourceId)!;
-          result.push({
-            id: source.id,
-            type: source.type,
-            title: source.title,
-            status: source.status,
-            relation: edge.relation,
-            direction: 'incoming',
-            depth: currentDepth + 1,
-          });
-          nextFrontier.push({ id: source.id, depth: currentDepth + 1 });
-        }
+      for (const edge of g.inEdges(id)) {
+        const source = g.source(edge);
+        if (visited.has(source)) continue;
+        visited.add(source);
+        const node = graph.nodes.get(source)!;
+        result.push({
+          id: node.id,
+          type: node.type,
+          title: node.title,
+          status: node.status,
+          relation: g.getEdgeAttribute(edge, 'relation'),
+          direction: 'incoming',
+          depth: d + 1,
+        });
+        nextFrontier.push(source);
       }
     }
 
