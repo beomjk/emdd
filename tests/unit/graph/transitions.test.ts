@@ -89,6 +89,58 @@ describe('detectTransitions', () => {
       expect(results.some(r => r.nodeId === 'hyp-001' && r.recommendedStatus === 'REVISED')).toBe(true);
     });
 
+    it('PROPOSED→SUPPORTED: incoming supports with strength≥0.7 (no experiment)', async () => {
+      writeNode('hypotheses', 'hyp-001-test.md', {
+        id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'PROPOSED',
+        confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+      });
+      writeNode('findings', 'fnd-001-test.md', {
+        id: 'fnd-001', type: 'finding', title: 'F1', status: 'VALIDATED',
+        confidence: 0.9, created: '2026-01-01', updated: '2026-01-01', tags: [],
+        links: [{ target: 'hyp-001', relation: 'supports', strength: 0.8 }],
+      });
+
+      const results = await detectTransitions(graphDir);
+      expect(results.some(r => r.nodeId === 'hyp-001' && r.recommendedStatus === 'SUPPORTED')).toBe(true);
+    });
+
+    it('PROPOSED→TESTING takes priority over PROPOSED→SUPPORTED when both conditions met', async () => {
+      writeNode('hypotheses', 'hyp-001-test.md', {
+        id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'PROPOSED',
+        confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [],
+        links: [{ target: 'exp-001', relation: 'tests' }],
+      });
+      writeNode('experiments', 'exp-001-test.md', {
+        id: 'exp-001', type: 'experiment', title: 'E1', status: 'RUNNING',
+        created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+      });
+      writeNode('findings', 'fnd-001-test.md', {
+        id: 'fnd-001', type: 'finding', title: 'F1', status: 'VALIDATED',
+        confidence: 0.9, created: '2026-01-01', updated: '2026-01-01', tags: [],
+        links: [{ target: 'hyp-001', relation: 'supports', strength: 0.8 }],
+      });
+
+      const results = await detectTransitions(graphDir);
+      const hyp = results.find(r => r.nodeId === 'hyp-001');
+      expect(hyp).toBeDefined();
+      expect(hyp!.recommendedStatus).toBe('TESTING');
+    });
+
+    it('PROPOSED does not transition to SUPPORTED when strength<0.7', async () => {
+      writeNode('hypotheses', 'hyp-001-test.md', {
+        id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'PROPOSED',
+        confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+      });
+      writeNode('findings', 'fnd-001-test.md', {
+        id: 'fnd-001', type: 'finding', title: 'F1', status: 'VALIDATED',
+        confidence: 0.9, created: '2026-01-01', updated: '2026-01-01', tags: [],
+        links: [{ target: 'hyp-001', relation: 'supports', strength: 0.5 }],
+      });
+
+      const results = await detectTransitions(graphDir);
+      expect(results.filter(r => r.nodeId === 'hyp-001')).toEqual([]);
+    });
+
     it('no transition when conditions not met', async () => {
       writeNode('hypotheses', 'hyp-001-test.md', {
         id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'PROPOSED',

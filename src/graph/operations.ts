@@ -123,6 +123,7 @@ export function planCreateNode(
   type: string,
   slug: string,
   lang?: string,
+  title?: string,
 ): CreateNodePlan {
   if (!NODE_TYPES.includes(type as NodeType)) {
     throw new Error(t('error.invalid_node_type', { type, valid: NODE_TYPES.join(', ') }));
@@ -134,6 +135,7 @@ export function planCreateNode(
   const content = renderTemplate(nodeType, sanitized, {
     id,
     locale: (lang as Locale) ?? 'en',
+    title,
   });
   const filePath = nodePath(graphDir, nodeType, id, sanitized);
   const dir = path.dirname(filePath);
@@ -155,8 +157,9 @@ export async function createNode(
   type: string,
   slug: string,
   lang?: string,
+  title?: string,
 ): Promise<CreateNodeResult> {
-  const plan = planCreateNode(graphDir, type, slug, lang);
+  const plan = planCreateNode(graphDir, type, slug, lang, title);
   await executeOps(plan.ops);
   return { id: plan.id, type: plan.type, path: plan.path };
 }
@@ -201,6 +204,7 @@ export async function planCreateEdge(
   target: string,
   relation: string,
   attrs?: EdgeAttributes,
+  options?: { force?: boolean },
 ): Promise<CreateEdgePlan> {
   // Validate relation
   if (!ALL_VALID_RELATIONS.has(relation)) {
@@ -232,6 +236,16 @@ export async function planCreateEdge(
   // Ensure links array exists
   if (!Array.isArray(data.links)) {
     data.links = [];
+  }
+
+  // Check for duplicate edge (same target + relation)
+  if (!options?.force) {
+    const duplicate = (data.links as { target: string; relation: string }[]).some(
+      (l) => l.target === target && (REVERSE_LABELS[l.relation] ?? l.relation) === canonical,
+    );
+    if (duplicate) {
+      throw new Error(t('error.duplicate_edge', { source, target, relation: canonical }));
+    }
   }
 
   // Add link with optional attributes
@@ -266,8 +280,9 @@ export async function createEdge(
   target: string,
   relation: string,
   attrs?: EdgeAttributes,
+  options?: { force?: boolean },
 ): Promise<CreateEdgeResult> {
-  const plan = await planCreateEdge(graphDir, source, target, relation, attrs);
+  const plan = await planCreateEdge(graphDir, source, target, relation, attrs, options);
   await executeOps(plan.ops);
   const result: CreateEdgeResult = { source: plan.source, target: plan.target, relation: plan.relation };
   if (attrs) {

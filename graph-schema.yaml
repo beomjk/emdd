@@ -168,7 +168,7 @@ thresholds:
   branch_convergence_weeks: 2
 
 transitions:
-  # ─── hypothesis 전이 규칙 (8개) ───
+  # ─── hypothesis 전이 규칙 (9개) ───
   # 평가 우선순위: YAML 선언 순서 = 우선순위
   hypothesis:
     - from: PROPOSED
@@ -176,6 +176,12 @@ transitions:
       conditions:
         - fn: has_linked
           args: { type: experiment, status: RUNNING, direction: any }
+
+    - from: PROPOSED
+      to: SUPPORTED
+      conditions:
+        - fn: has_linked
+          args: { relation: supports, min_strength: 0.7, direction: incoming }
 
     - from: TESTING
       to: CONTESTED

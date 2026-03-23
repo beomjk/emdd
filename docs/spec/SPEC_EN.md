@@ -124,26 +124,26 @@ The AI agent is a **gardener** of the graph, not an architect:
 <!-- Generated from graph-schema.yaml — DO NOT EDIT -->
 | Type | Prefix | Directory | Status Count |
 |------|--------|-----------|-------------|
-| decision | dec | decisions | 5 |
-| episode | epi | episodes | 2 |
+| hypothesis | hyp | hypotheses | 7 |
 | experiment | exp | experiments | 5 |
 | finding | fnd | findings | 4 |
-| hypothesis | hyp | hypotheses | 7 |
 | knowledge | knw | knowledge | 4 |
 | question | qst | questions | 4 |
+| decision | dec | decisions | 5 |
+| episode | epi | episodes | 2 |
 <!-- /AUTO:node-types -->
 
 <!-- AUTO:statuses -->
 <!-- Generated from graph-schema.yaml — DO NOT EDIT -->
 | Type | Statuses |
 |------|----------|
-| decision | PROPOSED, ACCEPTED, SUPERSEDED, REVERTED, CONTESTED |
-| episode | ACTIVE, COMPLETED |
+| hypothesis | PROPOSED, TESTING, SUPPORTED, REFUTED, REVISED, DEFERRED, CONTESTED |
 | experiment | PLANNED, RUNNING, COMPLETED, FAILED, ABANDONED |
 | finding | DRAFT, VALIDATED, PROMOTED, RETRACTED |
-| hypothesis | PROPOSED, TESTING, SUPPORTED, REFUTED, REVISED, DEFERRED, CONTESTED |
 | knowledge | ACTIVE, DISPUTED, SUPERSEDED, RETRACTED |
 | question | OPEN, RESOLVED, ANSWERED, DEFERRED |
+| decision | PROPOSED, ACCEPTED, SUPERSEDED, REVERTED, CONTESTED |
+| episode | ACTIVE, COMPLETED |
 <!-- /AUTO:statuses -->
 
 | Type | Color | Meaning | Key Attributes |
@@ -389,6 +389,7 @@ During Consolidation, if 3 or more `[deferred]` items have accumulated, conduct 
 | From | To | Conditions |
 |------|----|------------|
 | PROPOSED | TESTING | has_linked(type=experiment, status=RUNNING, direction=any) |
+| PROPOSED | SUPPORTED | has_linked(relation=supports, min_strength=0.7, direction=incoming) |
 | TESTING | CONTESTED | has_linked(type=decision, status=CONTESTED, direction=incoming) |
 | TESTING | REVISED | has_linked(relation=revises, direction=incoming) |
 | TESTING | SUPPORTED | has_linked(relation=supports, min_strength=0.7, direction=incoming) |
@@ -409,6 +410,7 @@ During Consolidation, if 3 or more `[deferred]` items have accumulated, conduct 
 
 ```
 PROPOSED -> TESTING       : connected Experiment is RUNNING
+PROPOSED -> SUPPORTED     : SUPPORTS edge (strength >= 0.7), no experiment needed
 TESTING  -> SUPPORTED     : SUPPORTS edge (strength >= 0.7)
 TESTING  -> REFUTED       : CONTRADICTS edge exists
 TESTING  -> REVISED       : partial support/refutation -> revised hypothesis (REVISES edge)
@@ -517,6 +519,13 @@ ACTIVE      -> SUPERSEDED  : direct replacement without dispute phase
 <!-- Generated from graph-schema.yaml — DO NOT EDIT -->
 | Threshold | Value |
 |-----------|-------|
+| branch_convergence_gap | 0.3 |
+| branch_convergence_weeks | 2 |
+| branch_max_active | 3 |
+| branch_max_candidates | 4 |
+| branch_max_open_weeks | 4 |
+| kill_confidence | 0.3 |
+| kill_stale_days | 14 |
 | min_independent_supports | 2 |
 | promotion_confidence | 0.9 |
 | support_strength_min | 0.7 |

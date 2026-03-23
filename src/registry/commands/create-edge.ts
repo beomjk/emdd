@@ -14,6 +14,7 @@ const schema = z.object({
   completeness: z.number().min(0).max(1).optional().describe('Completeness 0.0-1.0'),
   dependencyType: z.enum(VALID_DEPENDENCY_TYPES).optional().describe('Dependency type'),
   impact: z.enum(VALID_IMPACTS).optional().describe('Impact'),
+  force: z.boolean().optional().describe('Allow duplicate edges (default: false)'),
 });
 
 export const createEdgeDef: CommandDef<typeof schema, CreateEdgeResult> = {
@@ -29,7 +30,8 @@ export const createEdgeDef: CommandDef<typeof schema, CreateEdgeResult> = {
       if (input[attr] !== undefined) (attrs as Record<string, unknown>)[attr] = input[attr];
     }
     const hasAttrs = Object.keys(attrs).length > 0;
-    return createEdge(input.graphDir, input.source, input.target, input.relation, hasAttrs ? attrs : undefined);
+    const options = input.force ? { force: true } : undefined;
+    return createEdge(input.graphDir, input.source, input.target, input.relation, hasAttrs ? attrs : undefined, options);
   },
 
   format(result) {

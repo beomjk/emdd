@@ -266,12 +266,13 @@ describe('MCP Server — tools', () => {
     });
 
     it('deletes a link with relation', async () => {
-      // First add a link, then delete it
+      // First add a link (force to bypass duplicate check), then delete it
       await callTool(client, 'create-edge', {
         graphDir: tmpDir,
         source: 'fnd-002',
         target: 'hyp-001',
         relation: 'supports',
+        force: true,
       });
       const result = await callTool(client, 'delete-edge', {
         graphDir: tmpDir,

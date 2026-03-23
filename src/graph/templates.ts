@@ -51,7 +51,7 @@ const CONFIDENCE_TYPES: Partial<Record<NodeType, number>> = {
 export function renderTemplate(
   type: NodeType,
   slug: string,
-  options?: { locale?: Locale; user?: string; id?: string },
+  options?: { locale?: Locale; user?: string; id?: string; title?: string },
 ): string {
   const locale = options?.locale ?? 'en';
   const today = new Date().toISOString().slice(0, 10);
@@ -60,7 +60,7 @@ export function renderTemplate(
   // Build frontmatter data
   const data: Record<string, unknown> = {
     type,
-    title: slug,
+    title: options?.title ?? slug,
     status: defaultStatus,
     created: today,
     updated: today,

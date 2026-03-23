@@ -250,6 +250,7 @@ export const THRESHOLDS = {
 export const TRANSITION_TABLE: Partial<Record<NodeType, { from: string; to: string; conditions: { fn: string; args: Record<string, unknown> }[] }[]>> = {
   hypothesis: [
     { from: 'PROPOSED', to: 'TESTING', conditions: [{ fn: 'has_linked', args: { direction: "any", status: "RUNNING", type: "experiment" } }] },
+    { from: 'PROPOSED', to: 'SUPPORTED', conditions: [{ fn: 'has_linked', args: { direction: "incoming", min_strength: 0.7, relation: "supports" } }] },
     { from: 'TESTING', to: 'CONTESTED', conditions: [{ fn: 'has_linked', args: { direction: "incoming", status: "CONTESTED", type: "decision" } }] },
     { from: 'TESTING', to: 'REVISED', conditions: [{ fn: 'has_linked', args: { direction: "incoming", relation: "revises" } }] },
     { from: 'TESTING', to: 'SUPPORTED', conditions: [{ fn: 'has_linked', args: { direction: "incoming", min_strength: 0.7, relation: "supports" } }] },

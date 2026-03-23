@@ -96,6 +96,7 @@ export const messages: Record<string, string> = {
   'error.invalid_reversibility': 'Invalid reversibility "{value}". Valid: {valid}',
   'error.cli_malformed_record': 'Warning: ignored malformed --{key} entry "{pair}" (expected key=value)',
   'error.cli_validation_failed': 'Input validation failed:',
+  'error.duplicate_edge': 'Duplicate edge: {source} → {target} [{relation}] already exists. Use force: true to allow duplicates.',
   'error.no_matching_link': 'No matching link from {source} to {target}{relation}',
   'error.invalid_marker': 'Invalid marker: {marker}. Valid markers: {valid}',
   'error.item_already_marked': 'Item already marked in {id}: {item}',

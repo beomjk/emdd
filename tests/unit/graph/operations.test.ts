@@ -124,6 +124,13 @@ describe('createNode', () => {
     expect(content).toContain('가설');
   });
 
+  it('creates node with custom title', async () => {
+    const result = await createNode(join(tmpDir, 'graph'), 'hypothesis', 'test-slug', 'en', '수면이 기억에 미치는 영향');
+    const content = readFileSync(result.path, 'utf-8');
+    const parsed = matter(content);
+    expect(parsed.data.title).toBe('수면이 기억에 미치는 영향');
+  });
+
   it('throws on invalid node type', async () => {
     await expect(
       createNode(join(tmpDir, 'graph'), 'invalid_type' as any, 'test')
@@ -357,6 +364,86 @@ describe('createEdge', () => {
     await expect(
       createEdge(join(tmpDir, 'graph'), 'hyp-001', 'hyp-002', 'relates_to', { strength: 0.5 })
     ).rejects.toThrow(/affinity/i);
+  });
+
+  // ── Duplicate edge detection ──
+
+  it('throws on duplicate edge (same source+target+relation)', async () => {
+    writeNode(tmpDir, 'experiments', 'exp-001-test.md', {
+      id: 'exp-001', type: 'experiment', title: 'Test Exp',
+      status: 'COMPLETED', created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'Test',
+      status: 'PROPOSED', confidence: 0.5,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+
+    await createEdge(join(tmpDir, 'graph'), 'exp-001', 'hyp-001', 'supports');
+    await expect(
+      createEdge(join(tmpDir, 'graph'), 'exp-001', 'hyp-001', 'supports')
+    ).rejects.toThrow(/duplicate/i);
+  });
+
+  it('allows duplicate edge with force: true', async () => {
+    writeNode(tmpDir, 'experiments', 'exp-001-test.md', {
+      id: 'exp-001', type: 'experiment', title: 'Test Exp',
+      status: 'COMPLETED', created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'Test',
+      status: 'PROPOSED', confidence: 0.5,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+
+    await createEdge(join(tmpDir, 'graph'), 'exp-001', 'hyp-001', 'supports', { strength: 0.5 });
+    const result = await createEdge(join(tmpDir, 'graph'), 'exp-001', 'hyp-001', 'supports', { strength: 0.9 }, { force: true });
+    expect(result.relation).toBe('supports');
+
+    const content = readFileSync(join(tmpDir, 'graph', 'experiments', 'exp-001-test.md'), 'utf-8');
+    const parsed = matter(content);
+    expect(parsed.data.links).toHaveLength(2);
+  });
+
+  it('allows same target with different relation (not a duplicate)', async () => {
+    writeNode(tmpDir, 'experiments', 'exp-001-test.md', {
+      id: 'exp-001', type: 'experiment', title: 'Test Exp',
+      status: 'COMPLETED', created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'Test',
+      status: 'PROPOSED', confidence: 0.5,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+
+    await createEdge(join(tmpDir, 'graph'), 'exp-001', 'hyp-001', 'supports');
+    const result = await createEdge(join(tmpDir, 'graph'), 'exp-001', 'hyp-001', 'relates_to');
+    expect(result.relation).toBe('relates_to');
+  });
+
+  it('detects duplicate when using reverse label', async () => {
+    writeNode(tmpDir, 'experiments', 'exp-001-test.md', {
+      id: 'exp-001', type: 'experiment', title: 'Test Exp',
+      status: 'COMPLETED', created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'Test',
+      status: 'PROPOSED', confidence: 0.5,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+
+    await createEdge(join(tmpDir, 'graph'), 'exp-001', 'hyp-001', 'supports');
+    await expect(
+      createEdge(join(tmpDir, 'graph'), 'exp-001', 'hyp-001', 'supported_by')
+    ).rejects.toThrow(/duplicate/i);
   });
 });
 

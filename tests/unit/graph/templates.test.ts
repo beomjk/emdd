@@ -53,6 +53,24 @@ describe('renderTemplate', () => {
     expect(parsed.data.title).toContain('my-test-slug');
   });
 
+  it('uses custom title when provided', () => {
+    const output = renderTemplate('hypothesis', 'my-slug', { locale: 'en', title: '수면이 기억에 미치는 영향' });
+    const parsed = matter(output);
+    expect(parsed.data.title).toBe('수면이 기억에 미치는 영향');
+  });
+
+  it('falls back to slug when title is not provided', () => {
+    const output = renderTemplate('hypothesis', 'my-slug', { locale: 'en' });
+    const parsed = matter(output);
+    expect(parsed.data.title).toBe('my-slug');
+  });
+
+  it('handles title with double quotes', () => {
+    const output = renderTemplate('hypothesis', 'test', { locale: 'en', title: 'My "quoted" title' });
+    const parsed = matter(output);
+    expect(parsed.data.title).toBe('My "quoted" title');
+  });
+
   it('initializes links as empty array', () => {
     const output = renderTemplate('hypothesis', 'test', { locale: 'en' });
     const parsed = matter(output);

@@ -17,7 +17,7 @@ describe('loadSchema', () => {
     expect(schema.edgeTypes.forward).toHaveLength(16);
     expect(Object.keys(schema.edgeTypes.reverse)).toHaveLength(7);
     expect(Object.keys(schema.thresholds)).toHaveLength(10);
-    expect(Object.values(schema.transitions).flat()).toHaveLength(12);
+    expect(Object.values(schema.transitions).flat()).toHaveLength(13);
   });
 
   it('returns typed GraphSchema object with correct structure', async () => {
