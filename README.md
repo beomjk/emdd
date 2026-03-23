@@ -27,6 +27,10 @@
 
 <img src="docs/assets/demo.svg" alt="EMDD Demo" width="720">
 
+### Web Dashboard
+
+<img src="docs/assets/dashboard.png" alt="EMDD Web Dashboard" width="720">
+
 ## What is EMDD?
 
 Too much structure suffocates research. Too little structure evaporates it. Existing approaches each solve one piece -- Zettelkasten gives bottom-up emergence, HDD gives hypothesis testing, DDP gives risk prioritization -- but none of them track the *relationships* between what you know, what you don't know, and what to explore next. EMDD fills that gap: it is a lightweight, AI-maintained knowledge graph that structures your exploration as it happens, surfaces blind spots, and remembers every dead end so you never walk it twice.
