@@ -115,8 +115,10 @@ describe('generateTypesFile', () => {
     expect(output).toContain("  'confirms',");
     expect(output).toContain("  'contradicts',");
     expect(output).toContain("  'supports',");
-    // Should NOT contain reverse keys
-    expect(output).not.toMatch(/EDGE_TYPES[\s\S]*?'supported_by'[\s\S]*?\]/);
+    // Should NOT contain reverse keys in EDGE_TYPES Set
+    const edgeTypesMatch = output.match(/export const EDGE_TYPES = new Set<string>\(\[([\s\S]*?)\]\);/);
+    expect(edgeTypesMatch).not.toBeNull();
+    expect(edgeTypesMatch![1]).not.toContain('supported_by');
   });
 
   // ── REVERSE_LABELS ──
@@ -372,6 +374,138 @@ describe('generateTypesFile', () => {
   it('emits default empty CEREMONY_TRIGGERS when schema section is absent', () => {
     const noCeremonyOutput = generateTypesFile(makeTestSchema());
     expect(noCeremonyOutput).toContain('export const CEREMONY_TRIGGERS = {} as const satisfies Record<string, Record<string, number | boolean>>;');
+  });
+
+  // ── Edge Categories ──
+
+  it('generates edge category Set constants', () => {
+    const output = generateTypesFile(makeTestSchema({
+      edgeCategories: {
+        evidence: ['supports', 'contradicts'],
+        value_producing: ['supports', 'contradicts', 'confirms'],
+      },
+    }));
+    expect(output).toContain("export const EVIDENCE_EDGES = new Set<string>(['contradicts', 'supports']);");
+    expect(output).toContain("export const VALUE_PRODUCING_EDGES = new Set<string>(['confirms', 'contradicts', 'supports']);");
+  });
+
+  it('generates empty Set for empty edge category', () => {
+    const output = generateTypesFile(makeTestSchema({
+      edgeCategories: {
+        empty_cat: [],
+      },
+    }));
+    expect(output).toContain("export const EMPTY_CAT_EDGES = new Set<string>([]);");
+  });
+
+  it('generates union type per edge category', () => {
+    const output = generateTypesFile(makeTestSchema({
+      edgeCategories: {
+        evidence: ['supports', 'contradicts', 'confirms'],
+      },
+    }));
+    expect(output).toContain("export type EvidenceEdgeType = 'confirms' | 'contradicts' | 'supports';");
+  });
+
+  // ── Status Categories ──
+
+  it('generates status category Set constants', () => {
+    const output = generateTypesFile(makeTestSchema({
+      statusCategories: {
+        positive: ['SUPPORTED', 'COMPLETED'],
+        initial: ['PROPOSED', 'PLANNED'],
+      },
+    }));
+    expect(output).toContain("export const POSITIVE_STATUSES = new Set<string>(['COMPLETED', 'SUPPORTED']);");
+    expect(output).toContain("export const INITIAL_STATUSES = new Set<string>(['PLANNED', 'PROPOSED']);");
+  });
+
+  it('generates empty Set for empty status category', () => {
+    const output = generateTypesFile(makeTestSchema({
+      statusCategories: {
+        empty_cat: [],
+        positive: ['SUPPORTED'],
+      },
+    }));
+    expect(output).toContain("export const EMPTY_CAT_STATUSES = new Set<string>([]);");
+  });
+
+  // ── EDGE Enum ──
+
+  it('generates EDGE const object with all forward + reverse edge names', () => {
+    const output = generateTypesFile(makeTestSchema());
+    expect(output).toContain('export const EDGE = {');
+    expect(output).toContain("  supports: 'supports',");
+    expect(output).toContain("  contradicts: 'contradicts',");
+    expect(output).toContain("  confirms: 'confirms',");
+    // reverse edges
+    expect(output).toContain("  supported_by: 'supported_by',");
+    expect(output).toContain("  confirmed_by: 'confirmed_by',");
+    expect(output).toContain('} as const satisfies Record<EdgeType, EdgeType>;');
+  });
+
+  it('EDGE const contains all edges from schema', () => {
+    const schema = makeTestSchema();
+    const output = generateTypesFile(schema);
+    const allEdges = [...schema.edgeTypes.forward, ...Object.keys(schema.edgeTypes.reverse)];
+    for (const edge of allEdges) {
+      expect(output).toContain(`  ${edge}: '${edge}',`);
+    }
+  });
+
+  // ── STATUS Enum ──
+
+  it('generates STATUS const object with all unique statuses', () => {
+    const output = generateTypesFile(makeTestSchema());
+    expect(output).toContain('export const STATUS = {');
+    expect(output).toContain("  PROPOSED: 'PROPOSED',");
+    expect(output).toContain("  TESTING: 'TESTING',");
+    expect(output).toContain("  SUPPORTED: 'SUPPORTED',");
+    expect(output).toContain("  PLANNED: 'PLANNED',");
+    expect(output).toContain("  RUNNING: 'RUNNING',");
+    expect(output).toContain("  COMPLETED: 'COMPLETED',");
+    expect(output).toContain('} as const;');
+  });
+
+  it('STATUS const contains all unique statuses across node types', () => {
+    const schema = makeTestSchema();
+    const output = generateTypesFile(schema);
+    const allStatuses = new Set<string>();
+    for (const nt of schema.nodeTypes) {
+      for (const s of nt.statuses) allStatuses.add(s);
+    }
+    for (const status of allStatuses) {
+      expect(output).toContain(`  ${status}: '${status}',`);
+    }
+  });
+
+  it('adding new edge/status to schema produces entries in EDGE/STATUS', () => {
+    const schema = makeTestSchema({
+      nodeTypes: [
+        ...makeTestSchema().nodeTypes,
+        { name: 'question', prefix: 'qst', directory: 'questions', statuses: ['OPEN', 'RESOLVED'], requiredFields: ['id', 'type'] },
+      ],
+      edgeTypes: {
+        forward: ['supports', 'contradicts', 'confirms', 'new_edge'],
+        reverse: { supported_by: 'supports', confirmed_by: 'confirms' },
+      },
+    });
+    const output = generateTypesFile(schema);
+    expect(output).toContain("  new_edge: 'new_edge',");
+    expect(output).toContain("  OPEN: 'OPEN',");
+    expect(output).toContain("  RESOLVED: 'RESOLVED',");
+  });
+
+  // ── No categories fallback ──
+
+  it('generates fallback comment when edgeCategories is absent', () => {
+    const output = generateTypesFile(makeTestSchema());
+    expect(output).toContain('// No edge categories defined');
+  });
+
+  it('generates fallback comment when statusCategories is absent', () => {
+    const output = generateTypesFile(makeTestSchema());
+    expect(output).toContain('// No status categories defined');
   });
 
   // ── Schema change detection ──

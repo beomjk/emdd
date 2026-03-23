@@ -354,6 +354,101 @@ describe('validateReferentialIntegrity', () => {
   });
 });
 
+// ── Edge Categories Referential Integrity ─────────────────────────────
+
+describe('edgeCategories referential integrity', () => {
+  it('rejects edge not in edgeTypes.forward', () => {
+    const schema = makeMinimalSchema({
+      edgeCategories: {
+        evidence: ['supports', 'nonexistent_edge'],
+      },
+    });
+    const errors = validateReferentialIntegrity(schema);
+    expect(errors.some(e =>
+      e.path.includes('edgeCategories.evidence') &&
+      e.message.includes('nonexistent_edge')
+    )).toBe(true);
+  });
+
+  it('accepts valid edge categories', () => {
+    const schema = makeMinimalSchema({
+      edgeCategories: {
+        evidence: ['supports', 'contradicts'],
+      },
+    });
+    const errors = validateReferentialIntegrity(schema);
+    expect(errors.filter(e => e.path.includes('edgeCategories'))).toEqual([]);
+  });
+
+  it('allows same edge in multiple categories', () => {
+    const schema = makeMinimalSchema({
+      edgeCategories: {
+        evidence: ['supports'],
+        value_producing: ['supports', 'contradicts'],
+      },
+    });
+    const errors = validateReferentialIntegrity(schema);
+    expect(errors.filter(e => e.path.includes('edgeCategories'))).toEqual([]);
+  });
+});
+
+// ── Status Categories Referential Integrity ─────────────────────────────
+
+describe('statusCategories referential integrity', () => {
+  it('rejects duplicate status across categories', () => {
+    const schema = makeMinimalSchema({
+      statusCategories: {
+        positive: ['SUPPORTED'],
+        negative: ['SUPPORTED'],
+      },
+    });
+    const errors = validateReferentialIntegrity(schema);
+    expect(errors.some(e =>
+      e.message.includes('SUPPORTED') &&
+      e.message.includes('mutual exclusivity')
+    )).toBe(true);
+  });
+
+  it('rejects status not in any nodeType\'s statuses', () => {
+    const schema = makeMinimalSchema({
+      statusCategories: {
+        positive: ['NONEXISTENT_STATUS'],
+      },
+    });
+    const errors = validateReferentialIntegrity(schema);
+    expect(errors.some(e =>
+      e.message.includes('NONEXISTENT_STATUS') &&
+      e.message.includes('not defined in any nodeType')
+    )).toBe(true);
+  });
+
+  it('warns when a status is missing from all categories', () => {
+    const schema = makeMinimalSchema({
+      statusCategories: {
+        positive: ['SUPPORTED'],
+        // PROPOSED, TESTING, PLANNED, RUNNING, COMPLETED are missing
+      },
+    });
+    const errors = validateReferentialIntegrity(schema);
+    expect(errors.some(e =>
+      e.severity === 'WARNING' &&
+      e.message.includes('not assigned to any category')
+    )).toBe(true);
+  });
+
+  it('accepts valid status categories with full coverage', () => {
+    const schema = makeMinimalSchema({
+      statusCategories: {
+        positive: ['SUPPORTED', 'COMPLETED'],
+        in_progress: ['TESTING', 'RUNNING'],
+        initial: ['PROPOSED', 'PLANNED'],
+      },
+    });
+    const errors = validateReferentialIntegrity(schema);
+    expect(errors.filter(e => e.path.includes('statusCategories'))).toEqual([]);
+  });
+});
+
 // ── New Schema Sections (Zod structural) ─────────────────────────────
 
 describe('New schema sections structural validation', () => {

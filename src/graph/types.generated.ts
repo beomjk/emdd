@@ -142,9 +142,94 @@ export const ALL_VALID_RELATIONS = new Set<string>([
   ...Object.keys(REVERSE_LABELS),
 ]);
 
+// ── Edge Categories ──────────────────────────────────────────────────
+
+export const COMPOSITION_EDGES = new Set<string>(['context_for', 'part_of', 'resolves', 'tests']);
+export type CompositionEdgeType = 'context_for' | 'part_of' | 'resolves' | 'tests';
+export const EVIDENCE_EDGES = new Set<string>(['confirms', 'contradicts', 'supports']);
+export type EvidenceEdgeType = 'confirms' | 'contradicts' | 'supports';
+export const GENERATION_EDGES = new Set<string>(['answers', 'produces', 'promotes', 'revises', 'spawns']);
+export type GenerationEdgeType = 'answers' | 'produces' | 'promotes' | 'revises' | 'spawns';
+export const STRUCTURE_EDGES = new Set<string>(['depends_on', 'extends', 'informs', 'relates_to']);
+export type StructureEdgeType = 'depends_on' | 'extends' | 'informs' | 'relates_to';
+export const VALUE_PRODUCING_EDGES = new Set<string>(['answers', 'confirms', 'contradicts', 'extends', 'informs', 'produces', 'promotes', 'resolves', 'revises', 'spawns', 'supports', 'tests']);
+export type ValueProducingEdgeType = 'answers' | 'confirms' | 'contradicts' | 'extends' | 'informs' | 'produces' | 'promotes' | 'resolves' | 'revises' | 'spawns' | 'supports' | 'tests';
+
+// ── Status Categories ────────────────────────────────────────────────
+
+export const IN_PROGRESS_STATUSES = new Set<string>(['CONTESTED', 'DISPUTED', 'RUNNING', 'TESTING']);
+export const INITIAL_STATUSES = new Set<string>(['DRAFT', 'OPEN', 'PLANNED', 'PROPOSED']);
+export const NEGATIVE_STATUSES = new Set<string>(['ABANDONED', 'FAILED', 'REFUTED', 'RETRACTED', 'REVERTED']);
+export const POSITIVE_STATUSES = new Set<string>(['ACCEPTED', 'ACTIVE', 'ANSWERED', 'COMPLETED', 'PROMOTED', 'SUPPORTED', 'VALIDATED']);
+export const TERMINAL_STATUSES = new Set<string>(['DEFERRED', 'RESOLVED', 'REVISED', 'SUPERSEDED']);
+
+// ── Edge Enum ────────────────────────────────────────────────────────
+
+export const EDGE = {
+  answered_by: 'answered_by',
+  answers: 'answers',
+  confirmed_by: 'confirmed_by',
+  confirms: 'confirms',
+  context_for: 'context_for',
+  contradicts: 'contradicts',
+  depends_on: 'depends_on',
+  extends: 'extends',
+  informs: 'informs',
+  part_of: 'part_of',
+  produced_by: 'produced_by',
+  produces: 'produces',
+  promotes: 'promotes',
+  relates_to: 'relates_to',
+  resolved_by: 'resolved_by',
+  resolves: 'resolves',
+  revises: 'revises',
+  spawned_from: 'spawned_from',
+  spawns: 'spawns',
+  supported_by: 'supported_by',
+  supports: 'supports',
+  tested_by: 'tested_by',
+  tests: 'tests',
+} as const satisfies Record<EdgeType, EdgeType>;
+
+// ── Status Enum ──────────────────────────────────────────────────────
+
+export const STATUS = {
+  ABANDONED: 'ABANDONED',
+  ACCEPTED: 'ACCEPTED',
+  ACTIVE: 'ACTIVE',
+  ANSWERED: 'ANSWERED',
+  COMPLETED: 'COMPLETED',
+  CONTESTED: 'CONTESTED',
+  DEFERRED: 'DEFERRED',
+  DISPUTED: 'DISPUTED',
+  DRAFT: 'DRAFT',
+  FAILED: 'FAILED',
+  OPEN: 'OPEN',
+  PLANNED: 'PLANNED',
+  PROMOTED: 'PROMOTED',
+  PROPOSED: 'PROPOSED',
+  REFUTED: 'REFUTED',
+  RESOLVED: 'RESOLVED',
+  RETRACTED: 'RETRACTED',
+  REVERTED: 'REVERTED',
+  REVISED: 'REVISED',
+  RUNNING: 'RUNNING',
+  SUPERSEDED: 'SUPERSEDED',
+  SUPPORTED: 'SUPPORTED',
+  TESTING: 'TESTING',
+  VALIDATED: 'VALIDATED',
+} as const;
+
 // ── Thresholds ───────────────────────────────────────────────────────
 
 export const THRESHOLDS = {
+  branch_convergence_gap: 0.3,
+  branch_convergence_weeks: 2,
+  branch_max_active: 3,
+  branch_max_candidates: 4,
+  branch_max_open_weeks: 4,
+  kill_confidence: 0.3,
+  kill_stale_days: 14,
   min_independent_supports: 2,
   promotion_confidence: 0.9,
   support_strength_min: 0.7,

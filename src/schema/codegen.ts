@@ -15,6 +15,10 @@ export function generateTypesFile(schema: GraphSchema): string {
     '',
     generateNodeTypesSection(schema),
     generateEdgeTypesSection(schema),
+    generateEdgeCategoriesSection(schema),
+    generateStatusCategoriesSection(schema),
+    generateEdgeEnumSection(schema),
+    generateStatusEnumSection(schema),
     generateThresholdsSection(schema),
     generateTransitionsSection(schema),
     generateValidValuesSection(schema),
@@ -385,6 +389,106 @@ function generateEdgeAttributeAffinitySection(schema: GraphSchema): string {
     lines.push(`  ${edgeType}: [${vals}],`);
   }
   lines.push('};');
+
+  return lines.join('\n');
+}
+
+function generateEdgeCategoriesSection(schema: GraphSchema): string {
+  if (!schema.edgeCategories) {
+    const lines: string[] = [];
+    lines.push('');
+    lines.push(sectionComment('Edge Categories'));
+    lines.push('');
+    lines.push('// No edge categories defined');
+    return lines.join('\n');
+  }
+
+  const lines: string[] = [];
+  lines.push('');
+  lines.push(sectionComment('Edge Categories'));
+  lines.push('');
+
+  const categories = Object.entries(schema.edgeCategories).sort(([a], [b]) => a.localeCompare(b));
+  for (const [category, edges] of categories) {
+    const constName = `${camelToScreamingSnake(category)}_EDGES`;
+    const sorted = [...edges].sort();
+    const vals = sorted.map(e => `'${e}'`).join(', ');
+    lines.push(`export const ${constName} = new Set<string>([${vals}]);`);
+
+    // Generate union type per category
+    const typeName = category
+      .split('_')
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+      .join('') + 'EdgeType';
+    const unionMembers = sorted.map(e => `'${e}'`).join(' | ');
+    lines.push(`export type ${typeName} = ${unionMembers};`);
+  }
+
+  return lines.join('\n');
+}
+
+function generateStatusCategoriesSection(schema: GraphSchema): string {
+  if (!schema.statusCategories) {
+    const lines: string[] = [];
+    lines.push('');
+    lines.push(sectionComment('Status Categories'));
+    lines.push('');
+    lines.push('// No status categories defined');
+    return lines.join('\n');
+  }
+
+  const lines: string[] = [];
+  lines.push('');
+  lines.push(sectionComment('Status Categories'));
+  lines.push('');
+
+  const categories = Object.entries(schema.statusCategories).sort(([a], [b]) => a.localeCompare(b));
+  for (const [category, statuses] of categories) {
+    const constName = `${camelToScreamingSnake(category)}_STATUSES`;
+    const sorted = [...statuses].sort();
+    const vals = sorted.map(s => `'${s}'`).join(', ');
+    lines.push(`export const ${constName} = new Set<string>([${vals}]);`);
+  }
+
+  return lines.join('\n');
+}
+
+function generateEdgeEnumSection(schema: GraphSchema): string {
+  const forward = [...schema.edgeTypes.forward];
+  const reverseKeys = Object.keys(schema.edgeTypes.reverse);
+  const allEdgeNames = [...new Set([...forward, ...reverseKeys])].sort();
+  const lines: string[] = [];
+
+  lines.push('');
+  lines.push(sectionComment('Edge Enum'));
+  lines.push('');
+  lines.push('export const EDGE = {');
+  for (const e of allEdgeNames) {
+    lines.push(`  ${e}: '${e}',`);
+  }
+  lines.push('} as const satisfies Record<EdgeType, EdgeType>;');
+
+  return lines.join('\n');
+}
+
+function generateStatusEnumSection(schema: GraphSchema): string {
+  const allStatuses = new Set<string>();
+  for (const nt of schema.nodeTypes) {
+    for (const s of nt.statuses) {
+      allStatuses.add(s);
+    }
+  }
+  const sorted = [...allStatuses].sort();
+  const lines: string[] = [];
+
+  lines.push('');
+  lines.push(sectionComment('Status Enum'));
+  lines.push('');
+  lines.push('export const STATUS = {');
+  for (const s of sorted) {
+    lines.push(`  ${s}: '${s}',`);
+  }
+  lines.push('} as const;');
 
   return lines.join('\n');
 }

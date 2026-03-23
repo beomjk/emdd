@@ -89,10 +89,83 @@ edgeTypes:
     supported_by: supports
     tested_by: tests
 
+edgeCategories:
+  evidence:
+    - supports
+    - contradicts
+    - confirms
+  generation:
+    - spawns
+    - produces
+    - answers
+    - revises
+    - promotes
+  structure:
+    - depends_on
+    - extends
+    - relates_to
+    - informs
+  composition:
+    - part_of
+    - context_for
+    - resolves
+    - tests
+  value_producing:
+    - supports
+    - contradicts
+    - confirms
+    - spawns
+    - produces
+    - answers
+    - revises
+    - promotes
+    - extends
+    - informs
+    - resolves
+    - tests
+
+statusCategories:
+  positive:
+    - SUPPORTED
+    - VALIDATED
+    - ACCEPTED
+    - ACTIVE
+    - ANSWERED
+    - COMPLETED
+    - PROMOTED
+  negative:
+    - REFUTED
+    - RETRACTED
+    - REVERTED
+    - FAILED
+    - ABANDONED
+  in_progress:
+    - TESTING
+    - RUNNING
+    - CONTESTED
+    - DISPUTED
+  terminal:
+    - DEFERRED
+    - SUPERSEDED
+    - REVISED
+    - RESOLVED
+  initial:
+    - PROPOSED
+    - DRAFT
+    - OPEN
+    - PLANNED
+
 thresholds:
   min_independent_supports: 2
   promotion_confidence: 0.9
   support_strength_min: 0.7
+  kill_confidence: 0.3
+  kill_stale_days: 14
+  branch_max_active: 3
+  branch_max_candidates: 4
+  branch_max_open_weeks: 4
+  branch_convergence_gap: 0.3
+  branch_convergence_weeks: 2
 
 transitions:
   # ─── hypothesis 전이 규칙 (8개) ───
