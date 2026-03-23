@@ -1,4 +1,4 @@
-import type { Graph, Node } from './types.js';
+import { STATUS, type Graph, type Node } from './types.js';
 
 const TITLE_MAX_LEN = 40;
 
@@ -8,9 +8,9 @@ function truncateTitle(title: string): string {
 }
 
 const STATUS_STYLES: Record<string, string> = {
-  CONFIRMED: 'fill:#90EE90',
-  REFUTED: 'fill:#FFB6C1',
-  DEPRECATED: 'fill:#D3D3D3',
+  [STATUS.SUPPORTED]: 'fill:#90EE90',
+  [STATUS.REFUTED]: 'fill:#FFB6C1',
+  [STATUS.SUPERSEDED]: 'fill:#D3D3D3',
 };
 
 export function generateMermaid(graph: Graph): string {

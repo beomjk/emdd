@@ -1,10 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import matter from 'gray-matter';
 import { identifyClusters, detectClusters, loadContextForTopic } from '../../../src/graph/clusters.js';
 import { loadGraph } from '../../../src/graph/loader.js';
+import { EDGE_TYPES } from '../../../src/graph/types.js';
 
 describe('identifyClusters (YAML frontmatter)', () => {
   let tmpDir: string;
@@ -316,5 +317,41 @@ describe('loadContextForTopic', () => {
     const context = await loadContextForTopic(graphDir, 'defect');
     expect(context.entryPoints.length).toBeGreaterThan(0);
     expect(context.openQuestions.length).toBeGreaterThan(0);
+  });
+});
+
+describe('EDGE_WEIGHTS consistency with EDGE_TYPES', () => {
+  it('all EDGE_WEIGHTS keys are valid EDGE_TYPES members', () => {
+    // Extract EDGE_WEIGHTS keys by parsing the source file (private const)
+    const source = readFileSync(join(__dirname, '../../../src/graph/clusters.ts'), 'utf-8');
+    const match = source.match(/const EDGE_WEIGHTS[^=]*=\s*\{([^}]+)\}/);
+    expect(match).not.toBeNull();
+    // Match both raw keys (supports:) and computed keys ([EDGE.supports]:)
+    const keys = match![1].match(/(?:\[EDGE\.(\w+)\]|(\w+))\s*:/g)!.map(k => {
+      const m = k.match(/(?:\[EDGE\.(\w+)\]|(\w+))\s*:/);
+      return m![1] ?? m![2];
+    });
+    for (const key of keys) {
+      expect(EDGE_TYPES.has(key)).toBe(true);
+    }
+  });
+
+  it('edge types not in EDGE_WEIGHTS use DEFAULT_EDGE_WEIGHT fallback', () => {
+    // Extract EDGE_WEIGHTS keys
+    const source = readFileSync(join(__dirname, '../../../src/graph/clusters.ts'), 'utf-8');
+    const match = source.match(/const EDGE_WEIGHTS[^=]*=\s*\{([^}]+)\}/);
+    const rawKeys = match![1].match(/(?:\[EDGE\.(\w+)\]|(\w+))\s*:/g)!.map(k => {
+      const m = k.match(/(?:\[EDGE\.(\w+)\]|(\w+))\s*:/);
+      return m![1] ?? m![2];
+    });
+    const weightKeys = new Set(rawKeys);
+    // DEFAULT_EDGE_WEIGHT
+    const defaultMatch = source.match(/const DEFAULT_EDGE_WEIGHT\s*=\s*([\d.]+)/);
+    expect(defaultMatch).not.toBeNull();
+    const defaultWeight = parseFloat(defaultMatch![1]);
+    expect(defaultWeight).toBe(0.3);
+    // Verify that some EDGE_TYPES are NOT in EDGE_WEIGHTS (they use the fallback)
+    const missingKeys = [...EDGE_TYPES].filter(e => !weightKeys.has(e));
+    expect(missingKeys.length).toBeGreaterThan(0); // Some edges use fallback
   });
 });

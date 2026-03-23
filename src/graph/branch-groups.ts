@@ -1,5 +1,6 @@
 import { loadGraph } from './loader.js';
 import { getHypothesisMeta } from './accessors.js';
+import { STATUS, THRESHOLDS } from './types.js';
 
 export interface BranchCandidate {
   id: string;
@@ -16,10 +17,6 @@ export interface BranchGroup {
   warnings: string[];
   oldestCreated: string;
 }
-
-const MAX_ACTIVE_GROUPS = 3;
-const MAX_CANDIDATES = 4;
-const MAX_OPEN_WEEKS = 4;
 
 export async function listBranchGroups(graphDir: string): Promise<BranchGroup[]> {
   const graph = await loadGraph(graphDir);
@@ -39,7 +36,7 @@ export async function listBranchGroups(graphDir: string): Promise<BranchGroup[]>
     groupMap.get(bg)!.push({
       id: node.id,
       confidence: node.confidence ?? 0,
-      status: node.status ?? 'PROPOSED',
+      status: node.status ?? STATUS.PROPOSED,
       role: meta.branch_role ?? 'candidate',
     });
     if (node.meta.created) {
@@ -55,13 +52,13 @@ export async function listBranchGroups(graphDir: string): Promise<BranchGroup[]>
     const warnings: string[] = [];
 
     // Max active groups
-    if (activeGroupIds.length > MAX_ACTIVE_GROUPS) {
-      warnings.push(`More than ${MAX_ACTIVE_GROUPS} active branch groups`);
+    if (activeGroupIds.length > THRESHOLDS.branch_max_active) {
+      warnings.push(`More than ${THRESHOLDS.branch_max_active} active branch groups`);
     }
 
     // Max candidates
-    if (candidates.length > MAX_CANDIDATES) {
-      warnings.push(`More than ${MAX_CANDIDATES} candidates in group ${groupId}`);
+    if (candidates.length > THRESHOLDS.branch_max_candidates) {
+      warnings.push(`More than ${THRESHOLDS.branch_max_candidates} candidates in group ${groupId}`);
     }
 
     // Check duration
@@ -70,8 +67,8 @@ export async function listBranchGroups(graphDir: string): Promise<BranchGroup[]>
     if (oldestCreated) {
       const created = new Date(oldestCreated);
       const weeksElapsed = (Date.now() - created.getTime()) / (1000 * 60 * 60 * 24 * 7);
-      if (weeksElapsed > MAX_OPEN_WEEKS) {
-        warnings.push(`Branch group ${groupId} has been OPEN for more than 4 weeks`);
+      if (weeksElapsed > THRESHOLDS.branch_max_open_weeks) {
+        warnings.push(`Branch group ${groupId} has been OPEN for more than ${THRESHOLDS.branch_max_open_weeks} weeks`);
       }
     }
 
@@ -83,15 +80,15 @@ export async function listBranchGroups(graphDir: string): Promise<BranchGroup[]>
     if (candidates.length >= 2) {
       const sorted = [...candidates].sort((a, b) => b.confidence - a.confidence);
       const gap = sorted[0].confidence - sorted[1].confidence;
-      if (gap >= 0.3) {
+      if (gap >= THRESHOLDS.branch_convergence_gap) {
         convergenceReady = true;
-        convergenceReason = `confidence gap >= 0.3 (${sorted[0].id}: ${sorted[0].confidence} vs ${sorted[1].id}: ${sorted[1].confidence})`;
+        convergenceReason = `confidence gap >= ${THRESHOLDS.branch_convergence_gap} (${sorted[0].id}: ${sorted[0].confidence} vs ${sorted[1].id}: ${sorted[1].confidence})`;
       }
     }
 
     // 2. All but one REFUTED
     if (!convergenceReady && candidates.length >= 2) {
-      const nonRefuted = candidates.filter(c => c.status !== 'REFUTED');
+      const nonRefuted = candidates.filter(c => c.status !== STATUS.REFUTED);
       if (nonRefuted.length === 1) {
         convergenceReady = true;
         convergenceReason = `All candidates but ${nonRefuted[0].id} are REFUTED`;
@@ -102,9 +99,9 @@ export async function listBranchGroups(graphDir: string): Promise<BranchGroup[]>
     if (!convergenceReady && oldestCreated) {
       const created = new Date(oldestCreated);
       const weeksElapsed = (Date.now() - created.getTime()) / (1000 * 60 * 60 * 24 * 7);
-      if (weeksElapsed >= 2) {
+      if (weeksElapsed >= THRESHOLDS.branch_convergence_weeks) {
         convergenceReady = true;
-        convergenceReason = `Time limit reached: ${Math.floor(weeksElapsed)} weeks (default: 2 weeks)`;
+        convergenceReason = `Time limit reached: ${Math.floor(weeksElapsed)} weeks (default: ${THRESHOLDS.branch_convergence_weeks} weeks)`;
       }
     }
 

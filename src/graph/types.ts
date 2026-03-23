@@ -92,8 +92,8 @@ export interface GapDetail {
 export interface HealthReport {
   totalNodes: number;
   totalEdges: number;
-  byType: Record<string, number>;
-  statusDistribution: Record<string, Record<string, number>>;
+  byType: Record<NodeType, number>;
+  statusDistribution: Record<NodeType, Record<string, number>>;
   avgConfidence: number | null;
   openQuestions: number;
   linkDensity: number;

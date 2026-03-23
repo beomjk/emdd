@@ -1,38 +1,15 @@
 import cytoscape from 'cytoscape';
 import fcose from 'cytoscape-fcose';
 import dagre from 'cytoscape-dagre';
-import type { SerializedGraph, SerializedNode } from '../types.js';
+import type { SerializedGraph } from '../types.js';
+import type { NodeType } from '../../graph/types.js';
 import { getClusterStyles } from './clusters.js';
+import { getNodeColor, getStatusBorder } from './constants.js';
 
 cytoscape.use(fcose);
 cytoscape.use(dagre);
 
 // ── Visual encoding ──────────────────────────────────────────────────
-
-const NODE_COLORS: Record<string, string> = {
-  hypothesis: '#4A90D9',
-  experiment: '#7B68EE',
-  finding: '#50C878',
-  knowledge: '#DAA520',
-  question: '#FF8C42',
-  episode: '#A0A0A0',
-  decision: '#20B2AA',
-};
-
-const POSITIVE_STATUSES = new Set(['SUPPORTED', 'VALIDATED', 'ACCEPTED', 'ACTIVE', 'ANSWERED', 'COMPLETED']);
-const NEGATIVE_STATUSES = new Set(['REFUTED', 'RETRACTED', 'REVERTED', 'FAILED', 'ABANDONED']);
-const IN_PROGRESS_STATUSES = new Set(['TESTING', 'RUNNING', 'CONTESTED', 'DISPUTED']);
-const DEFERRED_STATUSES = new Set(['DEFERRED', 'SUPERSEDED', 'REVISED', 'RESOLVED']);
-
-function getStatusBorder(node: SerializedNode): { width: number; style: string; color: string } {
-  if (node.invalid) return { width: 2, style: 'dashed', color: '#FF9800' };
-  const s = node.status;
-  if (POSITIVE_STATUSES.has(s)) return { width: 3, style: 'solid', color: '#2ECC71' };
-  if (NEGATIVE_STATUSES.has(s)) return { width: 2, style: 'dashed', color: '#E74C3C' };
-  if (IN_PROGRESS_STATUSES.has(s)) return { width: 2, style: 'solid', color: '#3498DB' };
-  if (DEFERRED_STATUSES.has(s)) return { width: 2, style: 'dashed', color: '#95A5A6' };
-  return { width: 1, style: 'solid', color: '#95A5A6' }; // Initial/Open
-}
 
 function truncate(text: string, max: number): string {
   return text.length > max ? text.slice(0, max - 1) + '…' : text;
@@ -67,7 +44,7 @@ export function renderGraph(
         type: node.type,
         status: node.status,
         invalid: node.invalid ?? false,
-        bgColor: NODE_COLORS[node.type] ?? '#999',
+        bgColor: getNodeColor(node.type),
         borderWidth: border.width,
         borderStyle: border.style,
         borderColor: border.color,
@@ -207,7 +184,7 @@ export function renderGraph(
 
 // Hierarchical tier order: question → hypothesis → experiment → finding → knowledge
 // Lower tier = higher rank (top of screen)
-const TYPE_TIER: Record<string, number> = {
+const TYPE_TIER: Record<NodeType, number> = {
   question: 0,
   hypothesis: 1,
   experiment: 2,
@@ -248,8 +225,8 @@ export function switchLayout(mode: LayoutMode): void {
         nodeDimensionsIncludeLabels: true,
         // Assign tier-based rank to enforce research flow direction
         sort: (a: any, b: any) => {
-          const tierA = TYPE_TIER[a.data('type')] ?? 2;
-          const tierB = TYPE_TIER[b.data('type')] ?? 2;
+          const tierA = TYPE_TIER[a.data('type') as NodeType] ?? 2;
+          const tierB = TYPE_TIER[b.data('type') as NodeType] ?? 2;
           return tierA - tierB;
         },
       }

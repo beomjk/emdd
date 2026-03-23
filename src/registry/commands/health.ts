@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { getHealth } from '../../graph/operations.js';
-import { NODE_TYPES } from '../../graph/types.js';
+import { NODE_DISPLAY_ORDER } from '../../graph/types.js';
 import type { HealthReport } from '../../graph/types.js';
 import { t } from '../../i18n/index.js';
 import type { CommandDef } from '../types.js';
@@ -26,7 +26,7 @@ export const healthDef: CommandDef<typeof schema, HealthReport> = {
     lines.push(`${t('health.total_nodes')}: ${report.totalNodes}`);
     lines.push('');
     lines.push(`${t('health.by_type')}:`);
-    for (const nodeType of NODE_TYPES) {
+    for (const nodeType of NODE_DISPLAY_ORDER) {
       const count = report.byType[nodeType] ?? 0;
       if (count > 0) lines.push(`  ${nodeType}: ${count}`);
     }

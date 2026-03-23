@@ -1,4 +1,5 @@
 import type { SerializedGraph } from '../types.js';
+import { NODE_COLORS, STATUS_BORDER_LEGEND } from './constants.js';
 import { renderGraph, highlightNeighbors, clearHighlights, getCy } from './graph.js';
 import { showDetailPanel, hideDetailPanel, setDepthChangeHandler, getCurrentDepth } from './detail-panel.js';
 import { renderFilters, setFilterChangeHandler } from './filters.js';
@@ -235,24 +236,11 @@ function renderLegend(): void {
   const legend = document.createElement('div');
   legend.className = 'legend';
 
-  const typeColors: [string, string][] = [
-    ['Hypothesis', '#4A90D9'],
-    ['Experiment', '#7B68EE'],
-    ['Finding', '#50C878'],
-    ['Knowledge', '#DAA520'],
-    ['Question', '#FF8C42'],
-    ['Episode', '#A0A0A0'],
-    ['Decision', '#20B2AA'],
-  ];
+  const typeColors: [string, string][] = Object.entries(NODE_COLORS).map(
+    ([type, color]) => [type.charAt(0).toUpperCase() + type.slice(1), color],
+  );
 
-  const statusBorders: [string, string, string, number][] = [
-    ['Positive', 'solid', '#2ECC71', 3],
-    ['Negative', 'dashed', '#E74C3C', 2],
-    ['In Progress', 'solid', '#3498DB', 2],
-    ['Initial', 'solid', '#95A5A6', 1],
-    ['Deferred', 'dashed', '#95A5A6', 2],
-    ['Invalid', 'dashed', '#FF9800', 2],
-  ];
+  const statusBorders = STATUS_BORDER_LEGEND;
 
   // Node types heading
   const typeHeading = document.createElement('div');

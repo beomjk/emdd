@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import matter from 'gray-matter';
 import { listBranchGroups } from '../../../src/graph/branch-groups.js';
+import { THRESHOLDS } from '../../../src/graph/types.js';
 
 describe('listBranchGroups', () => {
   let tmpDir: string;
@@ -159,6 +160,24 @@ describe('listBranchGroups', () => {
     });
 
     const groups = await listBranchGroups(graphDir);
-    expect(groups[0].warnings.some(w => w.includes('4 weeks'))).toBe(true);
+    expect(groups[0].warnings.some(w => w.includes(`${THRESHOLDS.branch_max_open_weeks} weeks`))).toBe(true);
+  });
+
+  it('threshold values match THRESHOLDS constants', async () => {
+    // Convergence gap uses THRESHOLDS.branch_convergence_gap (0.3)
+    writeNode('hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'TESTING',
+      confidence: 0.8, branch_group: 'bg-001', branch_role: 'candidate',
+      created: '2026-03-01', updated: '2026-03-01', tags: [], links: [],
+    });
+    writeNode('hypotheses', 'hyp-002-test.md', {
+      id: 'hyp-002', type: 'hypothesis', title: 'H2', status: 'TESTING',
+      confidence: 0.8 - THRESHOLDS.branch_convergence_gap, branch_group: 'bg-001', branch_role: 'candidate',
+      created: '2026-03-01', updated: '2026-03-01', tags: [], links: [],
+    });
+
+    const groups = await listBranchGroups(graphDir);
+    expect(groups[0].convergenceReady).toBe(true);
+    expect(groups[0].convergenceReason).toContain(`${THRESHOLDS.branch_convergence_gap}`);
   });
 });

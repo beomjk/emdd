@@ -109,7 +109,7 @@ export const messages: Record<string, string> = {
   'gap.no_edges': 'No edges — graph is disconnected',
   'gap.untested_hypothesis': '{count} hypothesis(es) in PROPOSED for {triggerInfo}',
   'gap.blocking_question': '{count} blocking question(s) open for {triggerInfo}',
-  'gap.orphan_finding': '{count} finding(s) with no outgoing spawns/answers/extends edges',
+  'gap.orphan_finding': '{count} finding(s) with no outgoing value-producing edges',
   'gap.stale_knowledge': '{count} knowledge node(s) stale for {days}+ days',
   'gap.disconnected_cluster': '{count} disconnected clusters with only {edges} inter-cluster edge(s)',
   'gap.trigger_days': '{days}+ days',

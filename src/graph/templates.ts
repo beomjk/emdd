@@ -1,7 +1,7 @@
 import path from 'node:path';
 import fs from 'node:fs';
 import type { NodeType } from './types.js';
-import { NODE_TYPE_DIRS, ID_PREFIXES, VALID_STATUSES } from './types.js';
+import { NODE_TYPE_DIRS, ID_PREFIXES, VALID_STATUSES, RISK_LEVEL, FINDING_TYPE, URGENCY, REVERSIBILITY } from './types.js';
 import type { Locale } from '../i18n/index.js';
 
 // ── sanitizeSlug ──────────────────────────────────────────────────
@@ -85,16 +85,16 @@ export function renderTemplate(
   switch (type) {
     case 'hypothesis':
       typeFields.kill_criterion = '';
-      typeFields.risk_level = 'high';
+      typeFields.risk_level = RISK_LEVEL.high;
       typeFields.priority = 1;
       break;
     case 'finding':
-      typeFields.finding_type = 'observation';
+      typeFields.finding_type = FINDING_TYPE.observation;
       typeFields.sources = [];
       break;
     case 'question':
       typeFields.question_type = '';
-      typeFields.urgency = 'MEDIUM';
+      typeFields.urgency = URGENCY.MEDIUM;
       typeFields.answer_summary = '';
       break;
     case 'episode':
@@ -107,7 +107,7 @@ export function renderTemplate(
     case 'decision':
       typeFields.rationale = '';
       typeFields.alternatives_considered = [];
-      typeFields.reversibility = 'medium';
+      typeFields.reversibility = REVERSIBILITY.medium;
       break;
     case 'experiment':
       typeFields.config = {};

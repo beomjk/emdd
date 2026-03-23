@@ -11,6 +11,17 @@ export interface UpdateResult {
   unchanged: boolean;
 }
 
+// Domain-meaningful display order for node types
+const DOMAIN_ORDER = ['hypothesis', 'experiment', 'finding', 'knowledge', 'question', 'decision', 'episode'];
+
+function sortByDomainOrder<T extends { name: string }>(items: T[]): T[] {
+  return [...items].sort((a, b) => {
+    const ai = DOMAIN_ORDER.indexOf(a.name);
+    const bi = DOMAIN_ORDER.indexOf(b.name);
+    return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+  });
+}
+
 // ── Table Generators ────────────────────────────────────────────────
 
 const GENERATORS: Record<string, (schema: GraphSchema) => string> = {
@@ -23,7 +34,7 @@ const GENERATORS: Record<string, (schema: GraphSchema) => string> = {
 };
 
 function generateNodeTypesTable(schema: GraphSchema): string {
-  const sorted = [...schema.nodeTypes].sort((a, b) => a.name.localeCompare(b.name));
+  const sorted = sortByDomainOrder(schema.nodeTypes);
   const lines = [
     '<!-- Generated from graph-schema.yaml — DO NOT EDIT -->',
     '| Type | Prefix | Directory | Status Count |',
@@ -36,7 +47,7 @@ function generateNodeTypesTable(schema: GraphSchema): string {
 }
 
 function generateStatusesTable(schema: GraphSchema): string {
-  const sorted = [...schema.nodeTypes].sort((a, b) => a.name.localeCompare(b.name));
+  const sorted = sortByDomainOrder(schema.nodeTypes);
   const lines = [
     '<!-- Generated from graph-schema.yaml — DO NOT EDIT -->',
     '| Type | Statuses |',

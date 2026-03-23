@@ -1,7 +1,8 @@
 import { loadGraph } from './loader.js';
 import { buildReverseEdgeIndex, buildNodeToComponent } from './utils.js';
+import { EDGE, STATUS, SEVERITY, type Severity } from './types.js';
 
-const SEVERITY_PENALTIES: Record<string, number> = {
+const SEVERITY_PENALTIES: Record<Severity, number> = {
   FATAL: 0.5,
   WEAKENING: 0.7,
   TENSION: 0.9,
@@ -28,29 +29,29 @@ export async function analyzeRefutation(graphDir: string): Promise<RefutationAna
 
   // Find DISPUTED knowledge and determine severity from incoming contradicts edges
   for (const [knwId, knwNode] of graph.nodes) {
-    if (knwNode.type !== 'knowledge' || knwNode.status !== 'DISPUTED') continue;
+    if (knwNode.type !== 'knowledge' || knwNode.status !== STATUS.DISPUTED) continue;
 
     // Find the contradiction severity
     const incoming = reverseIndex.get(knwId) ?? [];
-    const contradicts = incoming.filter(e => e.relation === 'contradicts');
+    const contradicts = incoming.filter(e => e.relation === EDGE.contradicts);
     if (contradicts.length === 0) continue;
 
     // Use the worst (lowest penalty = highest impact) severity
-    let worstSeverity = 'TENSION';
+    let worstSeverity: string = SEVERITY.TENSION;
     for (const edge of contradicts) {
-      const sev = edge.severity ?? 'TENSION';
-      if ((SEVERITY_PENALTIES[sev] ?? 0.9) < (SEVERITY_PENALTIES[worstSeverity] ?? 0.9)) {
+      const sev = edge.severity ?? SEVERITY.TENSION;
+      if ((SEVERITY_PENALTIES[sev as Severity] ?? 0.9) < (SEVERITY_PENALTIES[worstSeverity as Severity] ?? 0.9)) {
         worstSeverity = sev;
       }
     }
 
-    const penalty = SEVERITY_PENALTIES[worstSeverity] ?? 0.9;
+    const penalty = SEVERITY_PENALTIES[worstSeverity as Severity] ?? 0.9;
 
     // Find hypotheses that depend on this knowledge (via supports or depends_on edges FROM hypothesis TO knowledge)
     for (const [hypId, hypNode] of graph.nodes) {
       if (hypNode.type !== 'hypothesis') continue;
       const linksToKnowledge = hypNode.links.some(
-        l => l.target === knwId && (l.relation === 'supports' || l.relation === 'depends_on')
+        l => l.target === knwId && (l.relation === EDGE.supports || l.relation === EDGE.depends_on)
       );
       if (!linksToKnowledge) continue;
 
@@ -68,7 +69,7 @@ export async function analyzeRefutation(graphDir: string): Promise<RefutationAna
   // Pivot ceremony: 2+ RETRACTED knowledge nodes in the same cluster (spec §6.6, §7.4)
   const retractedKnowledgeIds: string[] = [];
   for (const [id, node] of graph.nodes) {
-    if (node.type === 'knowledge' && node.status === 'RETRACTED') {
+    if (node.type === 'knowledge' && node.status === STATUS.RETRACTED) {
       retractedKnowledgeIds.push(id);
     }
   }

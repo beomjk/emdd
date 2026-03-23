@@ -70,6 +70,8 @@ export const GraphSchemaZod = z.object({
   validValues: z.record(z.string(), z.array(z.string())),
   manualTransitions: z.record(z.string(), z.array(ManualTransitionRuleZod)).optional(),
   edgeAttributes: z.record(z.string(), EdgeAttributeDefZod).optional(),
+  edgeCategories: z.record(z.string(), z.array(z.string())).optional(),
+  statusCategories: z.record(z.string(), z.array(z.string())).optional(),
   edgeAttributeAffinity: z.record(z.string(), z.array(z.string())).optional(),
   transitionPolicy: TransitionPolicyZod.optional(),
   ceremonies: z.record(z.string(), CeremonyZod).optional(),
@@ -219,6 +221,73 @@ export function validateReferentialIntegrity(schema: GraphSchema): ValidationErr
             });
           }
         }
+      }
+    }
+  }
+
+  // ── Edge categories check ──
+  if (schema.edgeCategories) {
+    const forwardEdges = new Set(schema.edgeTypes.forward);
+    for (const [category, edges] of Object.entries(schema.edgeCategories)) {
+      for (let i = 0; i < edges.length; i++) {
+        if (!forwardEdges.has(edges[i])) {
+          errors.push({
+            path: `edgeCategories.${category}[${i}]`,
+            message: `edge "${edges[i]}" is not in edgeTypes.forward`,
+            severity: 'ERROR',
+          });
+        }
+      }
+    }
+  }
+
+  // ── Status categories check ──
+  if (schema.statusCategories) {
+    // Collect all statuses across all node types
+    const allStatuses = new Set<string>();
+    for (const nt of schema.nodeTypes) {
+      for (const s of nt.statuses) {
+        allStatuses.add(s);
+      }
+    }
+
+    // Check mutual exclusivity: each status in exactly one category
+    const statusToCategory = new Map<string, string>();
+    for (const [category, statuses] of Object.entries(schema.statusCategories)) {
+      for (let i = 0; i < statuses.length; i++) {
+        const status = statuses[i];
+
+        // Check status exists in some node type
+        if (!allStatuses.has(status)) {
+          errors.push({
+            path: `statusCategories.${category}[${i}]`,
+            message: `status "${status}" is not defined in any nodeType's statuses`,
+            severity: 'ERROR',
+          });
+        }
+
+        // Check mutual exclusivity
+        const existing = statusToCategory.get(status);
+        if (existing) {
+          errors.push({
+            path: `statusCategories.${category}[${i}]`,
+            message: `status "${status}" is already in category "${existing}" (mutual exclusivity violation)`,
+            severity: 'ERROR',
+          });
+        } else {
+          statusToCategory.set(status, category);
+        }
+      }
+    }
+
+    // Check full coverage: every status must be in some category
+    for (const status of allStatuses) {
+      if (!statusToCategory.has(status)) {
+        errors.push({
+          path: 'statusCategories',
+          message: `status "${status}" is not assigned to any category (full coverage required)`,
+          severity: 'WARNING',
+        });
       }
     }
   }

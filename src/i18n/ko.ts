@@ -109,7 +109,7 @@ export const messages: Record<string, string> = {
   'gap.no_edges': '에지가 없습니다 — 그래프가 연결되지 않았습니다',
   'gap.untested_hypothesis': '{count}개 가설이 PROPOSED 상태로 {triggerInfo} 경과',
   'gap.blocking_question': '{count}개 차단 질문이 {triggerInfo} 동안 미해결',
-  'gap.orphan_finding': '{count}개 발견사항에 outgoing spawns/answers/extends 에지 없음',
+  'gap.orphan_finding': '{count}개 발견사항에 outgoing value-producing 에지 없음',
   'gap.stale_knowledge': '{count}개 지식 노드가 {days}일 이상 오래됨',
   'gap.disconnected_cluster': '{count}개 단절된 클러스터, inter-cluster 에지 {edges}개만 존재',
   'gap.trigger_days': '{days}일 이상',

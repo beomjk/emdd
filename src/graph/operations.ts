@@ -3,10 +3,10 @@ import path from 'node:path';
 import matter from 'gray-matter';
 import { loadGraph } from './loader.js';
 import { nextId, renderTemplate, nodePath, sanitizeSlug } from './templates.js';
-import { NODE_TYPES, NODE_TYPE_DIRS, ALL_VALID_RELATIONS, REVERSE_LABELS, THRESHOLDS, VALID_STATUSES, VALID_FINDING_TYPES, VALID_URGENCIES, VALID_RISK_LEVELS, VALID_REVERSIBILITIES, EDGE_ATTRIBUTE_NAMES, EDGE_ATTRIBUTE_RANGES, EDGE_ATTRIBUTE_ENUM_VALUES, TRANSITION_POLICY_DEFAULT, TRANSITION_TABLE, MANUAL_TRANSITIONS, CEREMONY_TRIGGERS } from './types.js';
+import { NODE_TYPES, NODE_TYPE_DIRS, ALL_VALID_RELATIONS, REVERSE_LABELS, THRESHOLDS, VALID_STATUSES, VALID_FINDING_TYPES, VALID_URGENCIES, VALID_RISK_LEVELS, VALID_REVERSIBILITIES, EDGE_ATTRIBUTE_NAMES, EDGE_ATTRIBUTE_RANGES, EDGE_ATTRIBUTE_ENUM_VALUES, TRANSITION_POLICY_DEFAULT, TRANSITION_TABLE, MANUAL_TRANSITIONS, CEREMONY_TRIGGERS, URGENCY, VALUE_PRODUCING_EDGES, EDGE, STATUS } from './types.js';
 import { checkEdgeAffinity, getPresentAttrKeys } from './edge-attrs.js';
 import { validateTransition } from './transition-engine.js';
-import { FORWARD_RELATIONS, collectDeferredIds, buildNodeToComponent } from './utils.js';
+import { collectDeferredIds, buildNodeToComponent } from './utils.js';
 import type {
   Node,
   NodeType,
@@ -308,7 +308,7 @@ function resolveConsolidationAnchor(config: EmddConfig, graph: Graph): Date | nu
   // (d) Fallback: newest created date among Knowledge nodes with promotes edge
   let newest: Date | null = null;
   for (const node of graph.nodes.values()) {
-    if (node.type === 'knowledge' && node.links.some(l => l.relation === 'promotes')) {
+    if (node.type === 'knowledge' && node.links.some(l => l.relation === EDGE.promotes)) {
       const created = node.meta.created ? new Date(String(node.meta.created)) : null;
       if (created && (!newest || created > newest)) {
         newest = created;
@@ -327,7 +327,7 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
   const graph = await loadGraph(graphDir);
 
   // Count nodes by type
-  const byType: Record<string, number> = {};
+  const byType = {} as Record<NodeType, number>;
   for (const nodeType of NODE_TYPES) {
     byType[nodeType] = 0;
   }
@@ -338,13 +338,11 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
   const totalNodes = graph.nodes.size;
 
   // Status distribution per type
-  const statusDistribution: Record<string, Record<string, number>> = {};
+  const statusDistribution = {} as Record<NodeType, Record<string, number>>;
   for (const node of graph.nodes.values()) {
-    if (!statusDistribution[node.type]) {
-      statusDistribution[node.type] = {};
-    }
+    const dist = (statusDistribution[node.type] ??= {});
     const s = node.status ?? 'unknown';
-    statusDistribution[node.type][s] = (statusDistribution[node.type][s] ?? 0) + 1;
+    dist[s] = (dist[s] ?? 0) + 1;
   }
 
   // Average confidence
@@ -360,7 +358,7 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
 
   // Open questions
   const openQuestions = [...graph.nodes.values()].filter(
-    n => n.type === 'question' && n.status === 'OPEN'
+    n => n.type === 'question' && n.status === STATUS.OPEN
   ).length;
 
   // Total edges and link density
@@ -405,7 +403,7 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
   let untestedAnyDays = false;
   let untestedAnyEpisodes = false;
   for (const node of graph.nodes.values()) {
-    if (node.type === 'hypothesis' && node.status === 'PROPOSED') {
+    if (node.type === 'hypothesis' && node.status === STATUS.PROPOSED) {
       const updated = node.meta.updated ? new Date(String(node.meta.updated))
         : node.meta.created ? new Date(String(node.meta.created)) : null;
       if (updated) {
@@ -438,7 +436,7 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
   let blockingAnyDays = false;
   let blockingAnyEpisodes = false;
   for (const node of graph.nodes.values()) {
-    if (node.type === 'question' && node.status === 'OPEN' && node.meta.urgency === 'BLOCKING') {
+    if (node.type === 'question' && node.status === STATUS.OPEN && node.meta.urgency === URGENCY.BLOCKING) {
       const updated = node.meta.updated ? new Date(String(node.meta.updated))
         : node.meta.created ? new Date(String(node.meta.created)) : null;
       if (updated) {
@@ -466,11 +464,11 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
     });
   }
 
-  // 3. Orphan findings: no outgoing SPAWNS, ANSWERS, or EXTENDS edges
+  // 3. Orphan findings: no outgoing value-producing edges (edgeCategories.value_producing)
   const orphanIds: string[] = [];
   for (const node of graph.nodes.values()) {
     if (node.type === 'finding') {
-      const forwardEdges = node.links.filter(l => FORWARD_RELATIONS.has(l.relation));
+      const forwardEdges = node.links.filter(l => VALUE_PRODUCING_EDGES.has(l.relation));
       if (forwardEdges.length <= config.gaps.orphan_min_outgoing) {
         orphanIds.push(node.id);
       }
@@ -489,7 +487,7 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
   const nodeToComponent = buildNodeToComponent(graph);
   const staleIds: string[] = [];
   for (const node of knowledgeNodes) {
-    if (node.status !== 'ACTIVE') continue;
+    if (node.status !== STATUS.ACTIVE) continue;
     const updated = node.meta.updated ? new Date(String(node.meta.updated)) : null;
     if (updated) {
       const daysElapsed = Math.floor((now.getTime() - updated.getTime()) / (1000 * 60 * 60 * 24));
@@ -732,13 +730,13 @@ export async function checkConsolidation(graphDir: string): Promise<CheckResult>
         break;
       case 'question':
         questionCount.total++;
-        if (node.status === 'OPEN') {
+        if (node.status === STATUS.OPEN) {
           openQuestions.push(id);
         }
         break;
       case 'knowledge':
         for (const link of node.links) {
-          if (link.relation === 'promotes') {
+          if (link.relation === EDGE.promotes) {
             promotedIds.add(link.target);
           }
         }
@@ -800,7 +798,7 @@ export async function checkConsolidation(graphDir: string): Promise<CheckResult>
   for (const expId of experiments) {
     const expNode = graph.nodes.get(expId);
     if (!expNode) continue;
-    const producesCount = expNode.links.filter(l => l.relation === 'produces').length;
+    const producesCount = expNode.links.filter(l => l.relation === EDGE.produces).length;
     if (producesCount >= overloadThreshold) {
       triggers.push({
         type: 'experiment_overload',
@@ -817,7 +815,7 @@ export async function checkConsolidation(graphDir: string): Promise<CheckResult>
   const orphanFindings: string[] = [];
   for (const [id, node] of graph.nodes) {
     if (node.type !== 'finding') continue;
-    const forwardEdges = node.links.filter(l => FORWARD_RELATIONS.has(l.relation));
+    const forwardEdges = node.links.filter(l => VALUE_PRODUCING_EDGES.has(l.relation));
     if (forwardEdges.length <= config.gaps.orphan_min_outgoing) orphanFindings.push(id);
   }
 
@@ -845,7 +843,7 @@ export async function getPromotionCandidates(graphDir: string, preloadedGraph?: 
   for (const [, node] of graph.nodes) {
     if (node.type === 'knowledge') {
       for (const link of node.links) {
-        if (link.relation === 'promotes') {
+        if (link.relation === EDGE.promotes) {
           promotedIds.add(link.target);
         }
       }
@@ -856,7 +854,7 @@ export async function getPromotionCandidates(graphDir: string, preloadedGraph?: 
   const contradictedIds = new Set<string>();
   for (const [, node] of graph.nodes) {
     for (const link of node.links) {
-      if (link.relation === 'contradicts') {
+      if (link.relation === EDGE.contradicts) {
         contradictedIds.add(link.target);
       }
     }
@@ -866,7 +864,7 @@ export async function getPromotionCandidates(graphDir: string, preloadedGraph?: 
   const deFactoIds = new Set<string>();
   for (const [, node] of graph.nodes) {
     for (const link of node.links) {
-      if (link.relation === 'depends_on' || link.relation === 'extends') {
+      if (link.relation === EDGE.depends_on || link.relation === EDGE.extends) {
         deFactoIds.add(link.target);
       }
     }
@@ -876,7 +874,7 @@ export async function getPromotionCandidates(graphDir: string, preloadedGraph?: 
   const incomingSupportCounts = new Map<string, number>();
   for (const [, n] of graph.nodes) {
     for (const link of n.links) {
-      if (link.relation === 'supports') {
+      if (link.relation === EDGE.supports) {
         incomingSupportCounts.set(link.target, (incomingSupportCounts.get(link.target) ?? 0) + 1);
       }
     }

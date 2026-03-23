@@ -22,6 +22,16 @@ export const NODE_TYPES: NodeType[] = [
   'question',
 ];
 
+export const NODE_DISPLAY_ORDER: NodeType[] = [
+  'hypothesis',
+  'experiment',
+  'finding',
+  'knowledge',
+  'question',
+  'decision',
+  'episode',
+];
+
 // ── Node Type → Directory Mapping ────────────────────────────────────
 
 export const NODE_TYPE_DIRS: Record<NodeType, string> = {
@@ -142,9 +152,94 @@ export const ALL_VALID_RELATIONS = new Set<string>([
   ...Object.keys(REVERSE_LABELS),
 ]);
 
+// ── Edge Categories ──────────────────────────────────────────────────
+
+export const COMPOSITION_EDGES = new Set<string>(['context_for', 'part_of', 'resolves', 'tests']);
+export type CompositionEdgeType = 'context_for' | 'part_of' | 'resolves' | 'tests';
+export const EVIDENCE_EDGES = new Set<string>(['confirms', 'contradicts', 'supports']);
+export type EvidenceEdgeType = 'confirms' | 'contradicts' | 'supports';
+export const GENERATION_EDGES = new Set<string>(['answers', 'produces', 'promotes', 'revises', 'spawns']);
+export type GenerationEdgeType = 'answers' | 'produces' | 'promotes' | 'revises' | 'spawns';
+export const STRUCTURE_EDGES = new Set<string>(['depends_on', 'extends', 'informs', 'relates_to']);
+export type StructureEdgeType = 'depends_on' | 'extends' | 'informs' | 'relates_to';
+export const VALUE_PRODUCING_EDGES = new Set<string>(['answers', 'confirms', 'contradicts', 'extends', 'informs', 'produces', 'promotes', 'resolves', 'revises', 'spawns', 'supports', 'tests']);
+export type ValueProducingEdgeType = 'answers' | 'confirms' | 'contradicts' | 'extends' | 'informs' | 'produces' | 'promotes' | 'resolves' | 'revises' | 'spawns' | 'supports' | 'tests';
+
+// ── Status Categories ────────────────────────────────────────────────
+
+export const IN_PROGRESS_STATUSES = new Set<string>(['CONTESTED', 'DISPUTED', 'RUNNING', 'TESTING']);
+export const INITIAL_STATUSES = new Set<string>(['DRAFT', 'OPEN', 'PLANNED', 'PROPOSED']);
+export const NEGATIVE_STATUSES = new Set<string>(['ABANDONED', 'FAILED', 'REFUTED', 'RETRACTED', 'REVERTED']);
+export const POSITIVE_STATUSES = new Set<string>(['ACCEPTED', 'ACTIVE', 'ANSWERED', 'COMPLETED', 'PROMOTED', 'SUPPORTED', 'VALIDATED']);
+export const TERMINAL_STATUSES = new Set<string>(['DEFERRED', 'RESOLVED', 'REVISED', 'SUPERSEDED']);
+
+// ── Edge Enum ────────────────────────────────────────────────────────
+
+export const EDGE = {
+  answered_by: 'answered_by',
+  answers: 'answers',
+  confirmed_by: 'confirmed_by',
+  confirms: 'confirms',
+  context_for: 'context_for',
+  contradicts: 'contradicts',
+  depends_on: 'depends_on',
+  extends: 'extends',
+  informs: 'informs',
+  part_of: 'part_of',
+  produced_by: 'produced_by',
+  produces: 'produces',
+  promotes: 'promotes',
+  relates_to: 'relates_to',
+  resolved_by: 'resolved_by',
+  resolves: 'resolves',
+  revises: 'revises',
+  spawned_from: 'spawned_from',
+  spawns: 'spawns',
+  supported_by: 'supported_by',
+  supports: 'supports',
+  tested_by: 'tested_by',
+  tests: 'tests',
+} as const satisfies Record<EdgeType, EdgeType>;
+
+// ── Status Enum ──────────────────────────────────────────────────────
+
+export const STATUS = {
+  ABANDONED: 'ABANDONED',
+  ACCEPTED: 'ACCEPTED',
+  ACTIVE: 'ACTIVE',
+  ANSWERED: 'ANSWERED',
+  COMPLETED: 'COMPLETED',
+  CONTESTED: 'CONTESTED',
+  DEFERRED: 'DEFERRED',
+  DISPUTED: 'DISPUTED',
+  DRAFT: 'DRAFT',
+  FAILED: 'FAILED',
+  OPEN: 'OPEN',
+  PLANNED: 'PLANNED',
+  PROMOTED: 'PROMOTED',
+  PROPOSED: 'PROPOSED',
+  REFUTED: 'REFUTED',
+  RESOLVED: 'RESOLVED',
+  RETRACTED: 'RETRACTED',
+  REVERTED: 'REVERTED',
+  REVISED: 'REVISED',
+  RUNNING: 'RUNNING',
+  SUPERSEDED: 'SUPERSEDED',
+  SUPPORTED: 'SUPPORTED',
+  TESTING: 'TESTING',
+  VALIDATED: 'VALIDATED',
+} as const;
+
 // ── Thresholds ───────────────────────────────────────────────────────
 
 export const THRESHOLDS = {
+  branch_convergence_gap: 0.3,
+  branch_convergence_weeks: 2,
+  branch_max_active: 3,
+  branch_max_candidates: 4,
+  branch_max_open_weeks: 4,
+  kill_confidence: 0.3,
+  kill_stale_days: 14,
   min_independent_supports: 2,
   promotion_confidence: 0.9,
   support_strength_min: 0.7,
@@ -152,7 +247,7 @@ export const THRESHOLDS = {
 
 // ── Transition Table ─────────────────────────────────────────────────
 
-export const TRANSITION_TABLE: Record<string, { from: string; to: string; conditions: { fn: string; args: Record<string, unknown> }[] }[]> = {
+export const TRANSITION_TABLE: Partial<Record<NodeType, { from: string; to: string; conditions: { fn: string; args: Record<string, unknown> }[] }[]>> = {
   hypothesis: [
     { from: 'PROPOSED', to: 'TESTING', conditions: [{ fn: 'has_linked', args: { direction: "any", status: "RUNNING", type: "experiment" } }] },
     { from: 'TESTING', to: 'CONTESTED', conditions: [{ fn: 'has_linked', args: { direction: "incoming", status: "CONTESTED", type: "decision" } }] },
@@ -171,7 +266,7 @@ export const TRANSITION_TABLE: Record<string, { from: string; to: string; condit
   ],
 };
 
-export const MANUAL_TRANSITIONS: Record<string, { from: string; to: string }[]> = {
+export const MANUAL_TRANSITIONS: Partial<Record<NodeType, { from: string; to: string }[]>> = {
   hypothesis: [
     { from: 'ANY', to: 'DEFERRED' },
   ],
@@ -189,6 +284,53 @@ export const VALID_REVERSIBILITIES = ['high', 'medium', 'low'] as const;
 export const VALID_RISK_LEVELS = ['high', 'medium', 'low'] as const;
 export const VALID_SEVERITIES = ['FATAL', 'WEAKENING', 'TENSION'] as const;
 export const VALID_URGENCIES = ['BLOCKING', 'HIGH', 'MEDIUM', 'LOW'] as const;
+
+// ── Valid Value Enums ────────────────────────────────────────────────
+
+export const DEPENDENCY_TYPE = {
+  LOGICAL: 'LOGICAL',
+  PRACTICAL: 'PRACTICAL',
+  TEMPORAL: 'TEMPORAL',
+} as const;
+export const FINDING_TYPE = {
+  observation: 'observation',
+  insight: 'insight',
+  negative: 'negative',
+} as const;
+export const IMPACT = {
+  DECISIVE: 'DECISIVE',
+  SIGNIFICANT: 'SIGNIFICANT',
+  MINOR: 'MINOR',
+} as const;
+export const REVERSIBILITY = {
+  high: 'high',
+  medium: 'medium',
+  low: 'low',
+} as const;
+export const RISK_LEVEL = {
+  high: 'high',
+  medium: 'medium',
+  low: 'low',
+} as const;
+export const SEVERITY = {
+  FATAL: 'FATAL',
+  WEAKENING: 'WEAKENING',
+  TENSION: 'TENSION',
+} as const;
+export const URGENCY = {
+  BLOCKING: 'BLOCKING',
+  HIGH: 'HIGH',
+  MEDIUM: 'MEDIUM',
+  LOW: 'LOW',
+} as const;
+
+export type DependencyType = (typeof VALID_DEPENDENCY_TYPES)[number];
+export type FindingType = (typeof VALID_FINDING_TYPES)[number];
+export type Impact = (typeof VALID_IMPACTS)[number];
+export type Reversibility = (typeof VALID_REVERSIBILITIES)[number];
+export type RiskLevel = (typeof VALID_RISK_LEVELS)[number];
+export type Severity = (typeof VALID_SEVERITIES)[number];
+export type Urgency = (typeof VALID_URGENCIES)[number];
 
 // ── Edge Attributes Interface ────────────────────────────────────────
 
@@ -223,7 +365,7 @@ export const EDGE_ATTRIBUTE_ENUM_VALUES: Record<string, readonly string[]> = {
 
 // ── Edge Attribute Affinity ──────────────────────────────────────────
 
-export const EDGE_ATTRIBUTE_AFFINITY: Record<string, readonly string[]> = {
+export const EDGE_ATTRIBUTE_AFFINITY: Partial<Record<EdgeType, readonly string[]>> = {
   answers: ['completeness'],
   confirms: ['strength'],
   contradicts: ['severity'],

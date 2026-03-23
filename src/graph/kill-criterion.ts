@@ -1,5 +1,6 @@
 import { loadGraph } from './loader.js';
 import { getHypothesisMeta } from './accessors.js';
+import { STATUS, VALID_STATUSES, IN_PROGRESS_STATUSES, INITIAL_STATUSES, THRESHOLDS } from './types.js';
 
 export interface KillCriterionAlert {
   hypothesisId: string;
@@ -8,7 +9,9 @@ export interface KillCriterionAlert {
   message: string;
 }
 
-const INACTIVE_STATUSES = new Set(['REFUTED', 'DEFERRED', 'SUPPORTED', 'REVISED']);
+const INACTIVE_STATUSES = new Set(
+  VALID_STATUSES.hypothesis.filter(s => !IN_PROGRESS_STATUSES.has(s) && !INITIAL_STATUSES.has(s))
+);
 
 export async function checkKillCriteria(graphDir: string): Promise<KillCriterionAlert[]> {
   const graph = await loadGraph(graphDir);
@@ -24,21 +27,21 @@ export async function checkKillCriteria(graphDir: string): Promise<KillCriterion
     if (!killCriterion) continue;
 
     // Low confidence trigger
-    if ((node.confidence ?? 0) < 0.3) {
+    if ((node.confidence ?? 0) < THRESHOLDS.kill_confidence) {
       alerts.push({
         hypothesisId: node.id,
         killCriterion,
         trigger: 'low_confidence',
-        message: `Confidence ${node.confidence} is below 0.3 — review kill criterion: "${killCriterion}"`,
+        message: `Confidence ${node.confidence} is below ${THRESHOLDS.kill_confidence} — review kill criterion: "${killCriterion}"`,
       });
     }
 
-    // Stale trigger: TESTING 14+ days with no recent experiment
-    if (node.status === 'TESTING') {
+    // Stale trigger: TESTING N+ days with no recent experiment
+    if (node.status === STATUS.TESTING) {
       const updated = node.meta.updated ? new Date(String(node.meta.updated)) : null;
       if (updated) {
         const daysElapsed = Math.floor((now.getTime() - updated.getTime()) / (1000 * 60 * 60 * 24));
-        if (daysElapsed >= 14) {
+        if (daysElapsed >= THRESHOLDS.kill_stale_days) {
           alerts.push({
             hypothesisId: node.id,
             killCriterion,

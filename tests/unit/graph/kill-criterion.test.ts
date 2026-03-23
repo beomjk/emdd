@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import matter from 'gray-matter';
 import { checkKillCriteria } from '../../../src/graph/kill-criterion.js';
+import { THRESHOLDS } from '../../../src/graph/types.js';
 
 describe('checkKillCriteria', () => {
   let tmpDir: string;
@@ -160,6 +161,27 @@ describe('checkKillCriteria', () => {
 
     const alerts = await checkKillCriteria(graphDir);
     expect(alerts).toEqual([]);
+  });
+
+  it('threshold boundaries match THRESHOLDS constants', async () => {
+    // Confidence exactly at threshold → NOT triggered
+    writeNode('hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'TESTING',
+      confidence: THRESHOLDS.kill_confidence, kill_criterion: 'test',
+      created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+    });
+    const alerts1 = await checkKillCriteria(graphDir);
+    expect(alerts1.some(a => a.trigger === 'low_confidence')).toBe(false);
+
+    // Days exactly at threshold → triggered
+    const dateAtThreshold = new Date(Date.now() - THRESHOLDS.kill_stale_days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    writeNode('hypotheses', 'hyp-002-test.md', {
+      id: 'hyp-002', type: 'hypothesis', title: 'H2', status: 'TESTING',
+      confidence: 0.9, kill_criterion: 'test',
+      created: dateAtThreshold, updated: dateAtThreshold, tags: [], links: [],
+    });
+    const alerts2 = await checkKillCriteria(graphDir);
+    expect(alerts2.some(a => a.hypothesisId === 'hyp-002' && a.trigger === 'stale')).toBe(true);
   });
 
   it('both low_confidence AND stale simultaneously', async () => {

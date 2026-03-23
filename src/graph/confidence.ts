@@ -1,16 +1,15 @@
 import { loadGraph } from './loader.js';
 import { buildReverseEdgeIndex } from './utils.js';
+import { EDGE, STATUS, SEVERITY, EVIDENCE_EDGES, type EvidenceEdgeType, type Severity } from './types.js';
 
-const SEVERITY_WEIGHTS: Record<string, number> = {
+const SEVERITY_WEIGHTS: Record<Severity, number> = {
   FATAL: 0.9,
   WEAKENING: 0.6,
   TENSION: 0.3,
 };
 
-const EVIDENTIAL_RELATIONS = new Set(['supports', 'contradicts', 'confirms']);
-
 export interface EvidenceEdge {
-  type: 'supports' | 'contradicts' | 'confirms';
+  type: EvidenceEdgeType;
   sourceConfidence: number;
   strength?: number;
   severity?: string;
@@ -20,12 +19,12 @@ export function computeConfidence(initial: number, edges: EvidenceEdge[]): numbe
   let prior = initial;
 
   for (const edge of edges) {
-    if (edge.type === 'supports' || edge.type === 'confirms') {
-      const strength = edge.type === 'confirms' ? 1.0 : (edge.strength ?? 0.5);
+    if (edge.type === EDGE.supports || edge.type === EDGE.confirms) {
+      const strength = edge.type === EDGE.confirms ? 1.0 : (edge.strength ?? 0.5);
       const impact = edge.sourceConfidence * strength;
       prior = prior + (1 - prior) * impact * 0.3;
-    } else if (edge.type === 'contradicts') {
-      const severityWeight = SEVERITY_WEIGHTS[edge.severity ?? 'TENSION'] ?? 0.3;
+    } else if (edge.type === EDGE.contradicts) {
+      const severityWeight = SEVERITY_WEIGHTS[edge.severity as Severity ?? SEVERITY.TENSION] ?? 0.3;
       const impact = edge.sourceConfidence * severityWeight;
       prior = prior * (1 - impact * 0.5);
     }
@@ -47,13 +46,13 @@ export async function propagateConfidence(graphDir: string): Promise<ConfidenceR
 
   for (const [nodeId, node] of graph.nodes) {
     if (node.type !== 'hypothesis') continue;
-    if (node.status === 'CONTESTED') continue; // freeze cascade per spec §6.5
+    if (node.status === STATUS.CONTESTED) continue; // freeze cascade per spec §6.5
 
     const incoming = reverseIndex.get(nodeId) ?? [];
     const evidentialEdges: EvidenceEdge[] = incoming
-      .filter(e => EVIDENTIAL_RELATIONS.has(e.relation))
+      .filter(e => EVIDENCE_EDGES.has(e.relation))
       .map(e => ({
-        type: e.relation as EvidenceEdge['type'],
+        type: e.relation as EvidenceEdgeType,
         sourceConfidence: e.sourceConfidence,
         strength: e.strength,
         severity: e.severity,

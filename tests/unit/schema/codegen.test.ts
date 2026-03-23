@@ -56,6 +56,33 @@ describe('generateTypesFile', () => {
     expect(output).toContain("  'hypothesis',");
   });
 
+  // ── NODE_DISPLAY_ORDER ──
+
+  it('generates NODE_DISPLAY_ORDER constant', () => {
+    expect(output).toContain('export const NODE_DISPLAY_ORDER: NodeType[] = [');
+  });
+
+  it('NODE_DISPLAY_ORDER uses domain order, not alphabetical', () => {
+    // In makeTestSchema: hypothesis and experiment
+    // Domain order puts hypothesis before experiment
+    const hypIdx = output.indexOf("  'hypothesis',", output.indexOf('NODE_DISPLAY_ORDER'));
+    const expIdx = output.indexOf("  'experiment',", output.indexOf('NODE_DISPLAY_ORDER'));
+    expect(hypIdx).toBeLessThan(expIdx);
+  });
+
+  it('NODE_DISPLAY_ORDER appends unknown types after domain order', () => {
+    const schema = makeTestSchema({
+      nodeTypes: [
+        ...makeTestSchema().nodeTypes,
+        { name: 'zzz_custom', prefix: 'zzz', directory: 'zzz_customs', statuses: ['OPEN'], requiredFields: ['id', 'type'] },
+      ],
+    });
+    const out = generateTypesFile(schema);
+    const hypIdx = out.indexOf("  'hypothesis',", out.indexOf('NODE_DISPLAY_ORDER'));
+    const customIdx = out.indexOf("  'zzz_custom',", out.indexOf('NODE_DISPLAY_ORDER'));
+    expect(customIdx).toBeGreaterThan(hypIdx);
+  });
+
   // ── NODE_TYPE_DIRS ──
 
   it('generates NODE_TYPE_DIRS with correct values', () => {
@@ -115,8 +142,10 @@ describe('generateTypesFile', () => {
     expect(output).toContain("  'confirms',");
     expect(output).toContain("  'contradicts',");
     expect(output).toContain("  'supports',");
-    // Should NOT contain reverse keys
-    expect(output).not.toMatch(/EDGE_TYPES[\s\S]*?'supported_by'[\s\S]*?\]/);
+    // Should NOT contain reverse keys in EDGE_TYPES Set
+    const edgeTypesMatch = output.match(/export const EDGE_TYPES = new Set<string>\(\[([\s\S]*?)\]\);/);
+    expect(edgeTypesMatch).not.toBeNull();
+    expect(edgeTypesMatch![1]).not.toContain('supported_by');
   });
 
   // ── REVERSE_LABELS ──
@@ -151,6 +180,55 @@ describe('generateTypesFile', () => {
     const supIdx = output.indexOf('  support_strength_min:');
     expect(minIdx).toBeLessThan(proIdx);
     expect(proIdx).toBeLessThan(supIdx);
+  });
+
+  // ── TRANSITION_TABLE ──
+
+  it('generates TRANSITION_TABLE with Partial<Record<NodeType, ...>> type', () => {
+    expect(output).toContain('export const TRANSITION_TABLE: Partial<Record<NodeType,');
+  });
+
+  it('TRANSITION_TABLE contains condition with sorted args', () => {
+    // makeTestSchema has hypothesis: PROPOSED → TESTING with has_linked(status, type)
+    expect(output).toContain("hypothesis: [");
+    expect(output).toContain("from: 'PROPOSED', to: 'TESTING'");
+    // args should be sorted: status before type
+    const transitionBlock = output.match(/TRANSITION_TABLE[\s\S]*?^\};/m);
+    expect(transitionBlock).not.toBeNull();
+    const block = transitionBlock![0];
+    const statusIdx = block.indexOf('status:');
+    const typeIdx = block.indexOf('type:');
+    expect(statusIdx).toBeLessThan(typeIdx);
+  });
+
+  it('TRANSITION_TABLE handles empty transitions', () => {
+    const out = generateTypesFile(makeTestSchema({ transitions: {} }));
+    expect(out).toContain('export const TRANSITION_TABLE');
+    expect(out).toContain('};');
+  });
+
+  // ── MANUAL_TRANSITIONS ──
+
+  it('generates MANUAL_TRANSITIONS with Partial<Record<NodeType, ...>> type', () => {
+    expect(output).toContain('export const MANUAL_TRANSITIONS: Partial<Record<NodeType,');
+  });
+
+  it('generates empty MANUAL_TRANSITIONS when no manual transitions defined', () => {
+    expect(output).toContain('export const MANUAL_TRANSITIONS: Partial<Record<NodeType, { from: string; to: string }[]>> = {};');
+  });
+
+  it('generates populated MANUAL_TRANSITIONS when defined', () => {
+    const out = generateTypesFile(makeTestSchema({
+      manualTransitions: {
+        hypothesis: [
+          { from: 'TESTING', to: 'SUPPORTED' },
+          { from: 'TESTING', to: 'REFUTED' },
+        ],
+      },
+    }));
+    expect(out).toContain("hypothesis: [");
+    expect(out).toContain("from: 'TESTING', to: 'SUPPORTED'");
+    expect(out).toContain("from: 'TESTING', to: 'REFUTED'");
   });
 
   // ── Valid Values ──
@@ -247,6 +325,33 @@ describe('generateTypesFile', () => {
     expect(alphaIdx).toBeLessThan(zetaIdx);
   });
 
+  it('generates EDGE_ATTRIBUTE_TYPES with number and enum type values', () => {
+    const output = generateTypesFile(makeTestSchema({
+      edgeAttributes: {
+        strength: { type: 'number', min: 0, max: 1 },
+        severity: { type: 'enum', valuesRef: 'severities' },
+      },
+    }));
+    expect(output).toContain("export const EDGE_ATTRIBUTE_TYPES: Record<string, 'number' | 'enum'> = {");
+    expect(output).toContain("  severity: 'enum',");
+    expect(output).toContain("  strength: 'number',");
+  });
+
+  it('generates EDGE_ATTRIBUTE_RANGES with min/max for numeric attributes', () => {
+    const output = generateTypesFile(makeTestSchema({
+      edgeAttributes: {
+        strength: { type: 'number', min: 0, max: 1 },
+        severity: { type: 'enum', valuesRef: 'severities' },
+      },
+    }));
+    expect(output).toContain('export const EDGE_ATTRIBUTE_RANGES: Record<string, { min?: number; max?: number }> = {');
+    expect(output).toContain('  strength: { min: 0, max: 1 },');
+    // enum attributes should NOT appear in ranges
+    const rangesBlock = output.match(/EDGE_ATTRIBUTE_RANGES[\s\S]*?\};/);
+    expect(rangesBlock).not.toBeNull();
+    expect(rangesBlock![0]).not.toContain('severity');
+  });
+
   it('emits empty EDGE_ATTRIBUTE_RANGES when no numeric attrs have min/max', () => {
     const output = generateTypesFile(makeTestSchema({
       edgeAttributes: {
@@ -300,7 +405,7 @@ describe('generateTypesFile', () => {
         confirms: ['strength'],
       },
     }));
-    expect(affinityOutput).toContain('export const EDGE_ATTRIBUTE_AFFINITY: Record<string, readonly string[]> = {');
+    expect(affinityOutput).toContain('export const EDGE_ATTRIBUTE_AFFINITY: Partial<Record<EdgeType, readonly string[]>> = {');
     expect(affinityOutput).toContain("  confirms: ['strength'],");
     expect(affinityOutput).toContain("  contradicts: ['severity'],");
     expect(affinityOutput).toContain("  supports: ['strength'],");
@@ -323,7 +428,7 @@ describe('generateTypesFile', () => {
 
   it('emits empty EDGE_ATTRIBUTE_AFFINITY when schema section is absent', () => {
     const noAffinityOutput = generateTypesFile(makeTestSchema());
-    expect(noAffinityOutput).toContain('export const EDGE_ATTRIBUTE_AFFINITY: Record<string, readonly string[]> = {};');
+    expect(noAffinityOutput).toContain('export const EDGE_ATTRIBUTE_AFFINITY: Partial<Record<EdgeType, readonly string[]>> = {};');
   });
 
   // ── TRANSITION_POLICY_DEFAULT ──
@@ -372,6 +477,194 @@ describe('generateTypesFile', () => {
   it('emits default empty CEREMONY_TRIGGERS when schema section is absent', () => {
     const noCeremonyOutput = generateTypesFile(makeTestSchema());
     expect(noCeremonyOutput).toContain('export const CEREMONY_TRIGGERS = {} as const satisfies Record<string, Record<string, number | boolean>>;');
+  });
+
+  // ── Edge Categories ──
+
+  it('generates edge category Set constants', () => {
+    const output = generateTypesFile(makeTestSchema({
+      edgeCategories: {
+        evidence: ['supports', 'contradicts'],
+        value_producing: ['supports', 'contradicts', 'confirms'],
+      },
+    }));
+    expect(output).toContain("export const EVIDENCE_EDGES = new Set<string>(['contradicts', 'supports']);");
+    expect(output).toContain("export const VALUE_PRODUCING_EDGES = new Set<string>(['confirms', 'contradicts', 'supports']);");
+  });
+
+  it('generates empty Set for empty edge category', () => {
+    const output = generateTypesFile(makeTestSchema({
+      edgeCategories: {
+        empty_cat: [],
+      },
+    }));
+    expect(output).toContain("export const EMPTY_CAT_EDGES = new Set<string>([]);");
+  });
+
+  it('generates union type per edge category', () => {
+    const output = generateTypesFile(makeTestSchema({
+      edgeCategories: {
+        evidence: ['supports', 'contradicts', 'confirms'],
+      },
+    }));
+    expect(output).toContain("export type EvidenceEdgeType = 'confirms' | 'contradicts' | 'supports';");
+  });
+
+  // ── Status Categories ──
+
+  it('generates status category Set constants', () => {
+    const output = generateTypesFile(makeTestSchema({
+      statusCategories: {
+        positive: ['SUPPORTED', 'COMPLETED'],
+        initial: ['PROPOSED', 'PLANNED'],
+      },
+    }));
+    expect(output).toContain("export const POSITIVE_STATUSES = new Set<string>(['COMPLETED', 'SUPPORTED']);");
+    expect(output).toContain("export const INITIAL_STATUSES = new Set<string>(['PLANNED', 'PROPOSED']);");
+  });
+
+  it('generates empty Set for empty status category', () => {
+    const output = generateTypesFile(makeTestSchema({
+      statusCategories: {
+        empty_cat: [],
+        positive: ['SUPPORTED'],
+      },
+    }));
+    expect(output).toContain("export const EMPTY_CAT_STATUSES = new Set<string>([]);");
+  });
+
+  // ── EDGE Enum ──
+
+  it('generates EDGE const object with all forward + reverse edge names', () => {
+    const output = generateTypesFile(makeTestSchema());
+    expect(output).toContain('export const EDGE = {');
+    expect(output).toContain("  supports: 'supports',");
+    expect(output).toContain("  contradicts: 'contradicts',");
+    expect(output).toContain("  confirms: 'confirms',");
+    // reverse edges
+    expect(output).toContain("  supported_by: 'supported_by',");
+    expect(output).toContain("  confirmed_by: 'confirmed_by',");
+    expect(output).toContain('} as const satisfies Record<EdgeType, EdgeType>;');
+  });
+
+  it('EDGE const contains all edges from schema', () => {
+    const schema = makeTestSchema();
+    const output = generateTypesFile(schema);
+    const allEdges = [...schema.edgeTypes.forward, ...Object.keys(schema.edgeTypes.reverse)];
+    for (const edge of allEdges) {
+      expect(output).toContain(`  ${edge}: '${edge}',`);
+    }
+  });
+
+  // ── STATUS Enum ──
+
+  it('generates STATUS const object with all unique statuses', () => {
+    const output = generateTypesFile(makeTestSchema());
+    expect(output).toContain('export const STATUS = {');
+    expect(output).toContain("  PROPOSED: 'PROPOSED',");
+    expect(output).toContain("  TESTING: 'TESTING',");
+    expect(output).toContain("  SUPPORTED: 'SUPPORTED',");
+    expect(output).toContain("  PLANNED: 'PLANNED',");
+    expect(output).toContain("  RUNNING: 'RUNNING',");
+    expect(output).toContain("  COMPLETED: 'COMPLETED',");
+    expect(output).toContain('} as const;');
+  });
+
+  it('STATUS const contains all unique statuses across node types', () => {
+    const schema = makeTestSchema();
+    const output = generateTypesFile(schema);
+    const allStatuses = new Set<string>();
+    for (const nt of schema.nodeTypes) {
+      for (const s of nt.statuses) allStatuses.add(s);
+    }
+    for (const status of allStatuses) {
+      expect(output).toContain(`  ${status}: '${status}',`);
+    }
+  });
+
+  it('adding new edge/status to schema produces entries in EDGE/STATUS', () => {
+    const schema = makeTestSchema({
+      nodeTypes: [
+        ...makeTestSchema().nodeTypes,
+        { name: 'question', prefix: 'qst', directory: 'questions', statuses: ['OPEN', 'RESOLVED'], requiredFields: ['id', 'type'] },
+      ],
+      edgeTypes: {
+        forward: ['supports', 'contradicts', 'confirms', 'new_edge'],
+        reverse: { supported_by: 'supports', confirmed_by: 'confirms' },
+      },
+    });
+    const output = generateTypesFile(schema);
+    expect(output).toContain("  new_edge: 'new_edge',");
+    expect(output).toContain("  OPEN: 'OPEN',");
+    expect(output).toContain("  RESOLVED: 'RESOLVED',");
+  });
+
+  // ── No categories fallback ──
+
+  it('generates fallback comment when edgeCategories is absent', () => {
+    const output = generateTypesFile(makeTestSchema());
+    expect(output).toContain('// No edge categories defined');
+  });
+
+  it('generates fallback comment when statusCategories is absent', () => {
+    const output = generateTypesFile(makeTestSchema());
+    expect(output).toContain('// No status categories defined');
+  });
+
+  // ── Valid Value Enums ──
+
+  it('generates const object for each validValues key', () => {
+    const output = generateTypesFile(makeTestSchema());
+    expect(output).toContain('export const SEVERITY = {');
+    expect(output).toContain("  FATAL: 'FATAL',");
+    expect(output).toContain("  WEAKENING: 'WEAKENING',");
+    expect(output).toContain("  TENSION: 'TENSION',");
+    expect(output).toContain('} as const;');
+    expect(output).toContain('export const IMPACT = {');
+    expect(output).toContain("  DECISIVE: 'DECISIVE',");
+  });
+
+  it('const object keys match validValues array values', () => {
+    const schema = makeTestSchema();
+    const output = generateTypesFile(schema);
+    for (const [, values] of Object.entries(schema.validValues)) {
+      for (const v of values) {
+        expect(output).toContain(`  ${v}: '${v}',`);
+      }
+    }
+  });
+
+  it('adding new value to validValues produces corresponding entry in const object', () => {
+    const schema = makeTestSchema({
+      validValues: {
+        severities: ['FATAL', 'WEAKENING', 'TENSION', 'MINOR_ISSUE'],
+        impacts: ['DECISIVE', 'SIGNIFICANT', 'MINOR'],
+      },
+    });
+    const output = generateTypesFile(schema);
+    expect(output).toContain("  MINOR_ISSUE: 'MINOR_ISSUE',");
+  });
+
+  // ── Singularize edge cases ──
+
+  it('generates correct const names for -ies plurals (urgencies → URGENCY)', () => {
+    const output = generateTypesFile(makeTestSchema({
+      validValues: {
+        ...makeTestSchema().validValues,
+        urgencies: ['BLOCKING', 'HIGH'],
+      },
+    }));
+    expect(output).toContain('export const URGENCY = {');
+  });
+
+  it('generates correct const names for camelCase plurals (dependencyTypes → DEPENDENCY_TYPE)', () => {
+    const output = generateTypesFile(makeTestSchema({
+      validValues: {
+        ...makeTestSchema().validValues,
+        dependencyTypes: ['LOGICAL', 'PRACTICAL'],
+      },
+    }));
+    expect(output).toContain('export const DEPENDENCY_TYPE = {');
   });
 
   // ── Schema change detection ──

@@ -1,3 +1,4 @@
+import type { EdgeType } from './types.js';
 import { EDGE_ATTRIBUTE_AFFINITY, EDGE_ATTRIBUTE_NAMES } from './types.js';
 
 export interface AffinityViolation {
@@ -21,7 +22,7 @@ export function checkEdgeAffinity(
 ): AffinityViolation | null {
   if (presentAttrKeys.length === 0) return null;
 
-  const allowed = EDGE_ATTRIBUTE_AFFINITY[relation];
+  const allowed = EDGE_ATTRIBUTE_AFFINITY[relation as EdgeType];
   if (!allowed) {
     return { relation, invalidAttrs: presentAttrKeys, allowedAttrs: null };
   }

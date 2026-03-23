@@ -427,7 +427,7 @@ describe('getHealth — structural gaps §6.8', () => {
     expect(report.gapDetails.some(g => g.type === 'blocking_question')).toBe(true);
   });
 
-  it('detects orphan findings (0 outgoing spawns/answers/extends)', async () => {
+  it('detects orphan findings (no outgoing value-producing edges)', async () => {
     writeNode(tmpDir, 'findings', 'fnd-001-test.md', {
       id: 'fnd-001', type: 'finding', title: 'Test', status: 'DRAFT',
       confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
@@ -435,6 +435,91 @@ describe('getHealth — structural gaps §6.8', () => {
 
     const report = await getHealth(join(tmpDir, 'graph'));
     expect(report.gapDetails.some(g => g.type === 'orphan_finding')).toBe(true);
+  });
+
+  it('finding with supports edge is NOT orphan', async () => {
+    writeNode(tmpDir, 'findings', 'fnd-001-test.md', {
+      id: 'fnd-001', type: 'finding', title: 'Supported', status: 'DRAFT',
+      confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [],
+      links: [{ target: 'hyp-001', relation: 'supports' }],
+    });
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'H', status: 'PROPOSED',
+      confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+    });
+
+    const report = await getHealth(join(tmpDir, 'graph'));
+    expect(report.gapDetails.some(g => g.type === 'orphan_finding')).toBe(false);
+  });
+
+  it('finding with relates_to edge IS orphan', async () => {
+    writeNode(tmpDir, 'findings', 'fnd-001-test.md', {
+      id: 'fnd-001', type: 'finding', title: 'Related', status: 'DRAFT',
+      confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [],
+      links: [{ target: 'hyp-001', relation: 'relates_to' }],
+    });
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'H', status: 'PROPOSED',
+      confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+    });
+
+    const report = await getHealth(join(tmpDir, 'graph'));
+    expect(report.gapDetails.some(g => g.type === 'orphan_finding')).toBe(true);
+  });
+
+  it('finding with promotes edge is NOT orphan', async () => {
+    writeNode(tmpDir, 'findings', 'fnd-001-test.md', {
+      id: 'fnd-001', type: 'finding', title: 'Promoted', status: 'DRAFT',
+      confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [],
+      links: [{ target: 'knw-001', relation: 'promotes' }],
+    });
+    writeNode(tmpDir, 'knowledge', 'knw-001-test.md', {
+      id: 'knw-001', type: 'knowledge', title: 'K', status: 'ACTIVE',
+      confidence: 0.9, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+    });
+
+    const report = await getHealth(join(tmpDir, 'graph'));
+    expect(report.gapDetails.some(g => g.type === 'orphan_finding')).toBe(false);
+  });
+
+  it('finding with no edges IS orphan', async () => {
+    writeNode(tmpDir, 'findings', 'fnd-001-test.md', {
+      id: 'fnd-001', type: 'finding', title: 'Isolated', status: 'DRAFT',
+      confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+    });
+
+    const report = await getHealth(join(tmpDir, 'graph'));
+    expect(report.gapDetails.some(g => g.type === 'orphan_finding')).toBe(true);
+  });
+
+  it('finding with only depends_on edge is still orphan (non-value-producing)', async () => {
+    writeNode(tmpDir, 'findings', 'fnd-001-test.md', {
+      id: 'fnd-001', type: 'finding', title: 'Dependent', status: 'DRAFT',
+      confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [],
+      links: [{ target: 'hyp-001', relation: 'depends_on' }],
+    });
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'H', status: 'PROPOSED',
+      confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+    });
+
+    const report = await getHealth(join(tmpDir, 'graph'));
+    expect(report.gapDetails.some(g => g.type === 'orphan_finding' && g.nodeIds.includes('fnd-001'))).toBe(true);
+  });
+
+  it('finding with informs edge is NOT orphan', async () => {
+    writeNode(tmpDir, 'findings', 'fnd-001-test.md', {
+      id: 'fnd-001', type: 'finding', title: 'Informing', status: 'DRAFT',
+      confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [],
+      links: [{ target: 'hyp-001', relation: 'informs' }],
+    });
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'H', status: 'PROPOSED',
+      confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+    });
+
+    const report = await getHealth(join(tmpDir, 'graph'));
+    expect(report.gapDetails.some(g => g.type === 'orphan_finding')).toBe(false);
   });
 
   it('detects stale knowledge (source date > N days + newer knowledge exists in same cluster)', async () => {
