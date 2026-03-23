@@ -1,14 +1,5 @@
 import { getCy } from './graph.js';
-
-const NODE_TYPE_COLORS: Record<string, string> = {
-  hypothesis: '#4A90D9',
-  experiment: '#7B68EE',
-  finding: '#50C878',
-  knowledge: '#DAA520',
-  question: '#FF8C42',
-  episode: '#A0A0A0',
-  decision: '#20B2AA',
-};
+import { NODE_COLORS } from './constants.js';
 
 interface FilterState {
   visibleTypes: Set<string>;
@@ -108,7 +99,7 @@ export function renderFilters(
   typeSection.className = 'filter-section';
   typeSection.innerHTML = '<span class="filter-label">Types</span>';
   for (const type of types) {
-    const btn = createToggleButton(type, true, NODE_TYPE_COLORS[type] ?? null, (active) => {
+    const btn = createToggleButton(type, true, NODE_COLORS[type] ?? null, (active) => {
       if (active) filterState.visibleTypes.add(type);
       else filterState.visibleTypes.delete(type);
       applyFilters();

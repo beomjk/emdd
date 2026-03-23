@@ -1,34 +1,14 @@
 import cytoscape from 'cytoscape';
 import fcose from 'cytoscape-fcose';
 import dagre from 'cytoscape-dagre';
-import type { SerializedGraph, SerializedNode } from '../types.js';
+import type { SerializedGraph } from '../types.js';
 import { getClusterStyles } from './clusters.js';
-import { POSITIVE_STATUSES, NEGATIVE_STATUSES, IN_PROGRESS_STATUSES, TERMINAL_STATUSES } from '../../graph/types.js';
+import { getNodeColor, getStatusBorder } from './constants.js';
 
 cytoscape.use(fcose);
 cytoscape.use(dagre);
 
 // ── Visual encoding ──────────────────────────────────────────────────
-
-const NODE_COLORS: Record<string, string> = {
-  hypothesis: '#4A90D9',
-  experiment: '#7B68EE',
-  finding: '#50C878',
-  knowledge: '#DAA520',
-  question: '#FF8C42',
-  episode: '#A0A0A0',
-  decision: '#20B2AA',
-};
-
-function getStatusBorder(node: SerializedNode): { width: number; style: string; color: string } {
-  if (node.invalid) return { width: 2, style: 'dashed', color: '#FF9800' };
-  const s = node.status;
-  if (POSITIVE_STATUSES.has(s)) return { width: 3, style: 'solid', color: '#2ECC71' };
-  if (NEGATIVE_STATUSES.has(s)) return { width: 2, style: 'dashed', color: '#E74C3C' };
-  if (IN_PROGRESS_STATUSES.has(s)) return { width: 2, style: 'solid', color: '#3498DB' };
-  if (TERMINAL_STATUSES.has(s)) return { width: 2, style: 'dashed', color: '#95A5A6' };
-  return { width: 1, style: 'solid', color: '#95A5A6' }; // Initial/Open
-}
 
 function truncate(text: string, max: number): string {
   return text.length > max ? text.slice(0, max - 1) + '…' : text;
@@ -63,7 +43,7 @@ export function renderGraph(
         type: node.type,
         status: node.status,
         invalid: node.invalid ?? false,
-        bgColor: NODE_COLORS[node.type] ?? '#999',
+        bgColor: getNodeColor(node.type),
         borderWidth: border.width,
         borderStyle: border.style,
         borderColor: border.color,

@@ -3,7 +3,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import type { SerializedGraph, SerializedNode, SerializedEdge } from './types.js';
 import type { LayoutMode } from './frontend/graph.js';
-import { POSITIVE_STATUSES, NEGATIVE_STATUSES, IN_PROGRESS_STATUSES, TERMINAL_STATUSES } from '../graph/types.js';
+import { NODE_COLORS, getNodeColor, getStatusBorder } from './frontend/constants.js';
 
 export interface ExportOptions {
   layout?: LayoutMode;
@@ -15,28 +15,6 @@ export interface ExportResult {
   html: string;
   nodeCount: number;
   edgeCount: number;
-}
-
-// ── Node visual encoding (mirrors frontend/graph.ts) ────────────────
-
-const NODE_COLORS: Record<string, string> = {
-  hypothesis: '#4A90D9',
-  experiment: '#7B68EE',
-  finding: '#50C878',
-  knowledge: '#DAA520',
-  question: '#FF8C42',
-  episode: '#A0A0A0',
-  decision: '#20B2AA',
-};
-
-function getStatusBorder(node: SerializedNode): { width: number; style: string; color: string } {
-  if (node.invalid) return { width: 2, style: 'dashed', color: '#FF9800' };
-  const s = node.status;
-  if (POSITIVE_STATUSES.has(s)) return { width: 3, style: 'solid', color: '#2ECC71' };
-  if (NEGATIVE_STATUSES.has(s)) return { width: 2, style: 'dashed', color: '#E74C3C' };
-  if (IN_PROGRESS_STATUSES.has(s)) return { width: 2, style: 'solid', color: '#3498DB' };
-  if (TERMINAL_STATUSES.has(s)) return { width: 2, style: 'dashed', color: '#95A5A6' };
-  return { width: 1, style: 'solid', color: '#95A5A6' };
 }
 
 // ── Filter graph ────────────────────────────────────────────────────
@@ -102,7 +80,7 @@ export function generateExportHtml(
         type: node.type,
         status: node.status,
         invalid: node.invalid ?? false,
-        bgColor: NODE_COLORS[node.type] ?? '#999',
+        bgColor: getNodeColor(node.type),
         borderWidth: border.width,
         borderStyle: border.style,
         borderColor: border.color,
@@ -178,7 +156,7 @@ var cy = cytoscape({
 });
 cy.on('mouseover','edge',function(e){e.target.style('label',e.target.data('relation'));e.target.style('font-size','9px');e.target.style('color','#888');e.target.style('text-rotation','autorotate')});
 cy.on('mouseout','edge',function(e){e.target.style('label','')});
-var colors={hypothesis:'#4A90D9',experiment:'#7B68EE',finding:'#50C878',knowledge:'#DAA520',question:'#FF8C42',episode:'#A0A0A0',decision:'#20B2AA'};
+var colors=${JSON.stringify(NODE_COLORS)};
 cy.on('tap','node',function(e){
   var d=e.target.data();
   var h='<h3>'+d.title+'</h3>';

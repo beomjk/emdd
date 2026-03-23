@@ -1,4 +1,5 @@
 import type { SerializedNode } from '../types.js';
+import { NODE_COLORS } from './constants.js';
 
 interface NodeDetailResponse {
   id: string;
@@ -48,16 +49,7 @@ function renderMarkdown(md: string): string {
 }
 
 function typeBadge(type: string): string {
-  const colors: Record<string, string> = {
-    hypothesis: '#4A90D9',
-    experiment: '#7B68EE',
-    finding: '#50C878',
-    knowledge: '#DAA520',
-    question: '#FF8C42',
-    episode: '#A0A0A0',
-    decision: '#20B2AA',
-  };
-  const color = colors[type] ?? '#999';
+  const color = NODE_COLORS[type] ?? '#999';
   return `<span style="display:inline-block;padding:2px 8px;border-radius:3px;background:${color};color:#fff;font-size:11px;font-weight:600;">${type}</span>`;
 }
 
