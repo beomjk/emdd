@@ -56,6 +56,33 @@ describe('generateTypesFile', () => {
     expect(output).toContain("  'hypothesis',");
   });
 
+  // ── NODE_DISPLAY_ORDER ──
+
+  it('generates NODE_DISPLAY_ORDER constant', () => {
+    expect(output).toContain('export const NODE_DISPLAY_ORDER: NodeType[] = [');
+  });
+
+  it('NODE_DISPLAY_ORDER uses domain order, not alphabetical', () => {
+    // In makeTestSchema: hypothesis and experiment
+    // Domain order puts hypothesis before experiment
+    const hypIdx = output.indexOf("  'hypothesis',", output.indexOf('NODE_DISPLAY_ORDER'));
+    const expIdx = output.indexOf("  'experiment',", output.indexOf('NODE_DISPLAY_ORDER'));
+    expect(hypIdx).toBeLessThan(expIdx);
+  });
+
+  it('NODE_DISPLAY_ORDER appends unknown types after domain order', () => {
+    const schema = makeTestSchema({
+      nodeTypes: [
+        ...makeTestSchema().nodeTypes,
+        { name: 'zzz_custom', prefix: 'zzz', directory: 'zzz_customs', statuses: ['OPEN'], requiredFields: ['id', 'type'] },
+      ],
+    });
+    const out = generateTypesFile(schema);
+    const hypIdx = out.indexOf("  'hypothesis',", out.indexOf('NODE_DISPLAY_ORDER'));
+    const customIdx = out.indexOf("  'zzz_custom',", out.indexOf('NODE_DISPLAY_ORDER'));
+    expect(customIdx).toBeGreaterThan(hypIdx);
+  });
+
   // ── NODE_TYPE_DIRS ──
 
   it('generates NODE_TYPE_DIRS with correct values', () => {
@@ -153,6 +180,55 @@ describe('generateTypesFile', () => {
     const supIdx = output.indexOf('  support_strength_min:');
     expect(minIdx).toBeLessThan(proIdx);
     expect(proIdx).toBeLessThan(supIdx);
+  });
+
+  // ── TRANSITION_TABLE ──
+
+  it('generates TRANSITION_TABLE with Partial<Record<NodeType, ...>> type', () => {
+    expect(output).toContain('export const TRANSITION_TABLE: Partial<Record<NodeType,');
+  });
+
+  it('TRANSITION_TABLE contains condition with sorted args', () => {
+    // makeTestSchema has hypothesis: PROPOSED → TESTING with has_linked(status, type)
+    expect(output).toContain("hypothesis: [");
+    expect(output).toContain("from: 'PROPOSED', to: 'TESTING'");
+    // args should be sorted: status before type
+    const transitionBlock = output.match(/TRANSITION_TABLE[\s\S]*?^\};/m);
+    expect(transitionBlock).not.toBeNull();
+    const block = transitionBlock![0];
+    const statusIdx = block.indexOf('status:');
+    const typeIdx = block.indexOf('type:');
+    expect(statusIdx).toBeLessThan(typeIdx);
+  });
+
+  it('TRANSITION_TABLE handles empty transitions', () => {
+    const out = generateTypesFile(makeTestSchema({ transitions: {} }));
+    expect(out).toContain('export const TRANSITION_TABLE');
+    expect(out).toContain('};');
+  });
+
+  // ── MANUAL_TRANSITIONS ──
+
+  it('generates MANUAL_TRANSITIONS with Partial<Record<NodeType, ...>> type', () => {
+    expect(output).toContain('export const MANUAL_TRANSITIONS: Partial<Record<NodeType,');
+  });
+
+  it('generates empty MANUAL_TRANSITIONS when no manual transitions defined', () => {
+    expect(output).toContain('export const MANUAL_TRANSITIONS: Partial<Record<NodeType, { from: string; to: string }[]>> = {};');
+  });
+
+  it('generates populated MANUAL_TRANSITIONS when defined', () => {
+    const out = generateTypesFile(makeTestSchema({
+      manualTransitions: {
+        hypothesis: [
+          { from: 'TESTING', to: 'SUPPORTED' },
+          { from: 'TESTING', to: 'REFUTED' },
+        ],
+      },
+    }));
+    expect(out).toContain("hypothesis: [");
+    expect(out).toContain("from: 'TESTING', to: 'SUPPORTED'");
+    expect(out).toContain("from: 'TESTING', to: 'REFUTED'");
   });
 
   // ── Valid Values ──

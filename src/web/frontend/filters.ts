@@ -1,5 +1,5 @@
 import { getCy } from './graph.js';
-import { NODE_COLORS } from './constants.js';
+import { getNodeColor } from './constants.js';
 
 interface FilterState {
   visibleTypes: Set<string>;
@@ -99,7 +99,7 @@ export function renderFilters(
   typeSection.className = 'filter-section';
   typeSection.innerHTML = '<span class="filter-label">Types</span>';
   for (const type of types) {
-    const btn = createToggleButton(type, true, NODE_COLORS[type as import('../../graph/types.js').NodeType] ?? null, (active) => {
+    const btn = createToggleButton(type, true, getNodeColor(type), (active) => {
       if (active) filterState.visibleTypes.add(type);
       else filterState.visibleTypes.delete(type);
       applyFilters();

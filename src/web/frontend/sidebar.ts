@@ -1,5 +1,5 @@
 import { panToNode, pulseNode } from './graph.js';
-import { NODE_COLORS } from './constants.js';
+import { getNodeColor } from './constants.js';
 import type { HealthReport, GapDetail, PromoteCandidate, CheckResult } from '../types.js';
 
 function escapeHtml(text: string): string {
@@ -36,7 +36,7 @@ function renderTypeDistribution(byType: Record<string, number>): string {
   for (const [type, count] of Object.entries(byType).sort((a, b) => b[1] - a[1])) {
     if (count === 0) continue;
     const pct = (count / maxCount) * 100;
-    const color = NODE_COLORS[type as import('../../graph/types.js').NodeType] ?? '#999';
+    const color = getNodeColor(type);
     bars += `<div class="type-bar-row">
       <span class="type-bar-label">${type}</span>
       <div class="type-bar-track"><div class="type-bar-fill" style="width:${pct}%;background:${color};"></div></div>

@@ -1,5 +1,5 @@
 import type { SerializedNode } from '../types.js';
-import { NODE_COLORS } from './constants.js';
+import { getNodeColor } from './constants.js';
 
 interface NodeDetailResponse {
   id: string;
@@ -49,7 +49,7 @@ function renderMarkdown(md: string): string {
 }
 
 function typeBadge(type: string): string {
-  const color = NODE_COLORS[type as import('../../graph/types.js').NodeType] ?? '#999';
+  const color = getNodeColor(type);
   return `<span style="display:inline-block;padding:2px 8px;border-radius:3px;background:${color};color:#fff;font-size:11px;font-weight:600;">${type}</span>`;
 }
 

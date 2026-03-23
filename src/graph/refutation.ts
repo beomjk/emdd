@@ -1,6 +1,6 @@
 import { loadGraph } from './loader.js';
 import { buildReverseEdgeIndex, buildNodeToComponent } from './utils.js';
-import { EDGE, STATUS, SEVERITY, VALID_SEVERITIES, type Severity } from './types.js';
+import { EDGE, STATUS, SEVERITY, type Severity } from './types.js';
 
 const SEVERITY_PENALTIES: Record<Severity, number> = {
   FATAL: 0.5,

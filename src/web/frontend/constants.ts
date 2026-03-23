@@ -3,7 +3,6 @@ import {
   NEGATIVE_STATUSES,
   IN_PROGRESS_STATUSES,
   TERMINAL_STATUSES,
-  INITIAL_STATUSES,
 } from '../../graph/types.js';
 import type { NodeType } from '../../graph/types.js';
 

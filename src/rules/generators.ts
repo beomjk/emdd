@@ -8,6 +8,7 @@ import {
   ID_PREFIXES,
   EDGE_TYPES,
   CEREMONY_TRIGGERS,
+  type NodeType,
 } from '../graph/types.js';
 
 export type ToolType = 'claude' | 'cursor' | 'windsurf' | 'cline' | 'copilot' | 'all';
@@ -27,7 +28,7 @@ const TOOL_PATHS: Record<Exclude<ToolType, 'all'>, string> = {
 const ALL_TOOLS: Exclude<ToolType, 'all'>[] = ['claude', 'cursor', 'windsurf', 'cline', 'copilot'];
 
 // Short descriptions for each node type used in rules output
-const NODE_DESCRIPTIONS: Record<string, string> = {
+const NODE_DESCRIPTIONS: Record<NodeType, string> = {
   hypothesis: 'testable claims with confidence 0.0-1.0',
   experiment: 'work units testing hypotheses',
   finding: 'observations from experiments',
