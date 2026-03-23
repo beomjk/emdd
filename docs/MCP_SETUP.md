@@ -6,7 +6,7 @@
 
 The EMDD MCP server exposes the knowledge graph to any MCP-compatible AI coding assistant. It provides:
 
-- **13 tools** for reading, creating, and analyzing graph nodes and edges
+- **21 tools** for reading, creating, updating, and analyzing graph nodes and edges
 - **4 prompts** for guided workflows (context loading, episode creation, consolidation, health review)
 
 The server communicates over stdio transport and is started with `emdd mcp`.
@@ -127,7 +127,10 @@ All tools accept a `graphDir` parameter — the path to your EMDD `graph/` direc
 | `list-nodes` | List all nodes, optionally filtered by type and/or status | `graphDir`, `type?`, `status?` |
 | `read-node` | Read a single node by ID, returning full content including body | `graphDir`, `nodeId` |
 | `create-node` | Create a new node of the given type with the given slug | `graphDir`, `type`, `slug`, `lang?` |
-| `create-edge` | Add an edge (link) from source to target with the given relation | `graphDir`, `source`, `target`, `relation` |
+| `create-edge` | Add an edge (link) from source to target with the given relation | `graphDir`, `source`, `target`, `relation`, `strength?`, `severity?`, `completeness?`, `dependencyType?`, `impact?` |
+| `update-node` | Update frontmatter fields on a node | `graphDir`, `nodeId`, `set`, `transitionPolicy?` |
+| `delete-edge` | Remove a link between nodes | `graphDir`, `source`, `target`, `relation?` |
+| `mark-done` | Mark a checklist item as done in an episode | `graphDir`, `episodeId`, `item`, `marker?` |
 | `health` | Compute a health report for the graph | `graphDir` |
 | `check` | Check consolidation triggers | `graphDir` |
 | `promote` | Identify findings eligible for promotion to knowledge | `graphDir` |
@@ -135,8 +138,13 @@ All tools accept a `graphDir` parameter — the path to your EMDD `graph/` direc
 | `status-transitions` | Detect recommended status transitions | `graphDir` |
 | `kill-check` | Check kill criteria status for hypotheses | `graphDir` |
 | `branch-groups` | List and analyze branch groups | `graphDir` |
-| `graph_neighbors` | Get connected nodes for a given node | `graphDir`, `nodeId`, `depth?` |
-| `graph_gaps` | Analyze structural gaps in the graph | `graphDir` |
+| `graph-neighbors` | Get connected nodes for a given node | `graphDir`, `nodeId`, `depth?` |
+| `graph-gaps` | Analyze structural gaps in the graph | `graphDir` |
+| `index-graph` | Generate the _index.md file | `graphDir` |
+| `lint` | Lint the graph for schema errors | `graphDir` |
+| `backlog` | Show project backlog (open items, deferred, checklists) | `graphDir`, `status?` |
+| `mark-consolidated` | Record a consolidation date to reset episode counting | `graphDir`, `date?` |
+| `analyze-refutation` | Analyze refutation patterns in the graph | `graphDir` |
 
 ### Parameter Details
 
@@ -147,6 +155,17 @@ All tools accept a `graphDir` parameter — the path to your EMDD `graph/` direc
 - **`slug`** — URL-friendly slug for new nodes (e.g., `surface-crack-analysis`)
 - **`relation`** — Edge relation type: `supports`, `contradicts`, `produces`, `spawns`, `depends_on`, `tests`, `promotes`, `answers`, `extends`, `relates_to`, `informs`, `part_of`, `context_for`, `revises`, `confirms`
 - **`lang`** — Language locale: `en` (default) or `ko`
+- **`set`** — Key-value pairs to update (e.g., `{"status": "TESTING", "confidence": "0.8"}`)
+- **`transitionPolicy`** — Status transition validation: `strict` (block invalid), `warn` (allow with warning), `off` (no check)
+- **`marker`** — Checklist marker: `done`, `deferred`, or `superseded`
+- **`strength`** — Link strength: `0.0`--`1.0` (for `supports`, `confirms` edges)
+- **`severity`** — Contradiction severity: `FATAL`, `WEAKENING`, or `TENSION`
+- **`completeness`** — Answer completeness: `0.0`--`1.0` (for `answers` edges)
+- **`dependencyType`** — Dependency type: `LOGICAL`, `PRACTICAL`, or `TEMPORAL`
+- **`impact`** — Impact level: `DECISIVE`, `SIGNIFICANT`, or `MINOR`
+- **`date`** — Date in `YYYY-MM-DD` format (defaults to today)
+
+> **Note:** All tools also accept an optional `lang` parameter (`en` or `ko`) for locale selection.
 
 ---
 
@@ -160,6 +179,8 @@ All tools accept a `graphDir` parameter — the path to your EMDD `graph/` direc
 | `health-review` | `path` (required) | Analyze graph health and generate recommendations |
 
 Prompts are available in tools that support MCP prompts (e.g., Claude Code).
+
+> **Note:** Tools use the `graphDir` parameter for the graph directory path, while prompts use `path`. Prompts do not support the `lang` parameter.
 
 ---
 

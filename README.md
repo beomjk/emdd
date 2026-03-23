@@ -104,13 +104,13 @@ All registry-based commands accept `--graphDir <path>` (graph directory), `--lan
 |---------|-------------|
 | `emdd init [path]` | Initialize a new EMDD project (`--tool claude\|cursor\|windsurf\|cline\|copilot\|all`, `--lang en\|ko`) |
 | `emdd list` | List nodes (`--type`, `--status` filters) |
-| `emdd new --type <type> --slug <slug>` | Create a node (hypothesis, experiment, finding, ...) |
-| `emdd link --source <src> --target <tgt> --relation <rel>` | Add a link between nodes (`--strength`, `--severity`, `--completeness`, `--dependencyType`, `--impact`) |
-| `emdd unlink --source <src> --target <tgt>` | Remove a link between nodes (`--relation` optional) |
-| `emdd read --nodeId <id>` | Read a node by ID, showing frontmatter and body |
-| `emdd update --nodeId <id> --set key=value` | Update node frontmatter (supports JSON arrays/objects, `--transitionPolicy strict\|warn\|off`) |
-| `emdd done --episodeId <id> --item "<item>"` | Mark an episode item with a status marker (`--marker <done\|deferred\|superseded>`) |
-| `emdd neighbors --nodeId <id>` | Get a node's neighbors and connections (`--depth`, default 1) |
+| `emdd new <type> <slug>` | Create a node (hypothesis, experiment, finding, ...) |
+| `emdd link <source> <target> <relation>` | Add a link between nodes (`--strength`, `--severity`, `--completeness`, `--dependencyType`, `--impact`) |
+| `emdd unlink <source> <target>` | Remove a link between nodes (`--relation` optional) |
+| `emdd read <nodeId>` | Read a node by ID, showing frontmatter and body |
+| `emdd update <nodeId> --set key=value` | Update node frontmatter (supports JSON arrays/objects, `--transitionPolicy strict\|warn\|off`) |
+| `emdd done <episodeId> <item>` | Mark an episode item with a status marker (`--marker <done\|deferred\|superseded>`) |
+| `emdd neighbors <nodeId>` | Get a node's neighbors and connections (`--depth`, default 1) |
 | `emdd gaps` | Detect structural gaps (orphans, stale, disconnected) |
 | `emdd lint` | Validate schema and link integrity |
 | `emdd health` | Show graph health dashboard |

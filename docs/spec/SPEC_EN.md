@@ -364,8 +364,6 @@ During Consolidation, if 3 or more `[deferred]` items have accumulated, conduct 
 - `PART_OF` — A is a sub-element of B
 - `CONTEXT_FOR` — A provides context/background for B
 - `RESOLVES` — A resolves the outcome of branch group B. Reverse label: `resolved_by`
-
-**Alias edges:**
 - `TESTS` — A tests B (Experiment tests Hypothesis). Reverse label: `tested_by`
 
 **Edge selection guide (commonly confused pairs):**

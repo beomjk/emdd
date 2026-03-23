@@ -53,7 +53,7 @@ nodeTypes:
     directory: questions
     statuses: [OPEN, RESOLVED, ANSWERED, DEFERRED]
     requiredFields: [id, type, title, status, created, updated]
-    optionalFields: [tags, links, urgency, question_type, answer_summary]
+    optionalFields: [tags, links, urgency, question_type, answer_summary, spawns_branch_group]
 
 edgeTypes:
   forward:
