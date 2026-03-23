@@ -3,6 +3,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import type { SerializedGraph, SerializedNode, SerializedEdge } from './types.js';
 import type { LayoutMode } from './frontend/graph.js';
+import { POSITIVE_STATUSES, NEGATIVE_STATUSES, IN_PROGRESS_STATUSES, TERMINAL_STATUSES } from '../graph/types.js';
 
 export interface ExportOptions {
   layout?: LayoutMode;
@@ -28,18 +29,13 @@ const NODE_COLORS: Record<string, string> = {
   decision: '#20B2AA',
 };
 
-const POSITIVE_STATUSES = new Set(['SUPPORTED', 'VALIDATED', 'ACCEPTED', 'ACTIVE', 'ANSWERED', 'COMPLETED']);
-const NEGATIVE_STATUSES = new Set(['REFUTED', 'RETRACTED', 'REVERTED', 'FAILED', 'ABANDONED']);
-const IN_PROGRESS_STATUSES = new Set(['TESTING', 'RUNNING', 'CONTESTED', 'DISPUTED']);
-const DEFERRED_STATUSES = new Set(['DEFERRED', 'SUPERSEDED', 'REVISED', 'RESOLVED']);
-
 function getStatusBorder(node: SerializedNode): { width: number; style: string; color: string } {
   if (node.invalid) return { width: 2, style: 'dashed', color: '#FF9800' };
   const s = node.status;
   if (POSITIVE_STATUSES.has(s)) return { width: 3, style: 'solid', color: '#2ECC71' };
   if (NEGATIVE_STATUSES.has(s)) return { width: 2, style: 'dashed', color: '#E74C3C' };
   if (IN_PROGRESS_STATUSES.has(s)) return { width: 2, style: 'solid', color: '#3498DB' };
-  if (DEFERRED_STATUSES.has(s)) return { width: 2, style: 'dashed', color: '#95A5A6' };
+  if (TERMINAL_STATUSES.has(s)) return { width: 2, style: 'dashed', color: '#95A5A6' };
   return { width: 1, style: 'solid', color: '#95A5A6' };
 }
 
