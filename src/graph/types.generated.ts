@@ -275,6 +275,45 @@ export const VALID_RISK_LEVELS = ['high', 'medium', 'low'] as const;
 export const VALID_SEVERITIES = ['FATAL', 'WEAKENING', 'TENSION'] as const;
 export const VALID_URGENCIES = ['BLOCKING', 'HIGH', 'MEDIUM', 'LOW'] as const;
 
+// ── Valid Value Enums ────────────────────────────────────────────────
+
+export const DEPENDENCY_TYPE = {
+  LOGICAL: 'LOGICAL',
+  PRACTICAL: 'PRACTICAL',
+  TEMPORAL: 'TEMPORAL',
+} as const;
+export const FINDING_TYPE = {
+  observation: 'observation',
+  insight: 'insight',
+  negative: 'negative',
+} as const;
+export const IMPACT = {
+  DECISIVE: 'DECISIVE',
+  SIGNIFICANT: 'SIGNIFICANT',
+  MINOR: 'MINOR',
+} as const;
+export const REVERSIBILITY = {
+  high: 'high',
+  medium: 'medium',
+  low: 'low',
+} as const;
+export const RISK_LEVEL = {
+  high: 'high',
+  medium: 'medium',
+  low: 'low',
+} as const;
+export const SEVERITY = {
+  FATAL: 'FATAL',
+  WEAKENING: 'WEAKENING',
+  TENSION: 'TENSION',
+} as const;
+export const URGENCY = {
+  BLOCKING: 'BLOCKING',
+  HIGH: 'HIGH',
+  MEDIUM: 'MEDIUM',
+  LOW: 'LOW',
+} as const;
+
 // ── Edge Attributes Interface ────────────────────────────────────────
 
 export interface EdgeAttributes {

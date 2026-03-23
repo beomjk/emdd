@@ -508,6 +508,40 @@ describe('generateTypesFile', () => {
     expect(output).toContain('// No status categories defined');
   });
 
+  // ── Valid Value Enums ──
+
+  it('generates const object for each validValues key', () => {
+    const output = generateTypesFile(makeTestSchema());
+    expect(output).toContain('export const SEVERITY = {');
+    expect(output).toContain("  FATAL: 'FATAL',");
+    expect(output).toContain("  WEAKENING: 'WEAKENING',");
+    expect(output).toContain("  TENSION: 'TENSION',");
+    expect(output).toContain('} as const;');
+    expect(output).toContain('export const IMPACT = {');
+    expect(output).toContain("  DECISIVE: 'DECISIVE',");
+  });
+
+  it('const object keys match validValues array values', () => {
+    const schema = makeTestSchema();
+    const output = generateTypesFile(schema);
+    for (const [, values] of Object.entries(schema.validValues)) {
+      for (const v of values) {
+        expect(output).toContain(`  ${v}: '${v}',`);
+      }
+    }
+  });
+
+  it('adding new value to validValues produces corresponding entry in const object', () => {
+    const schema = makeTestSchema({
+      validValues: {
+        severities: ['FATAL', 'WEAKENING', 'TENSION', 'MINOR_ISSUE'],
+        impacts: ['DECISIVE', 'SIGNIFICANT', 'MINOR'],
+      },
+    });
+    const output = generateTypesFile(schema);
+    expect(output).toContain("  MINOR_ISSUE: 'MINOR_ISSUE',");
+  });
+
   // ── Schema change detection ──
 
   it('modifying schema input changes generated output', () => {

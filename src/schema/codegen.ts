@@ -22,6 +22,7 @@ export function generateTypesFile(schema: GraphSchema): string {
     generateThresholdsSection(schema),
     generateTransitionsSection(schema),
     generateValidValuesSection(schema),
+    generateValidValueEnumsSection(schema),
     generateEdgeAttributesInterfaceSection(schema),
     generateEdgeAttributeAffinitySection(schema),
     generateTransitionPolicySection(schema),
@@ -230,6 +231,33 @@ function generateValidValuesSection(schema: GraphSchema): string {
     const constName = `VALID_${camelToScreamingSnake(key)}`;
     const vals = values.map(v => `'${v}'`).join(', ');
     lines.push(`export const ${constName} = [${vals}] as const;`);
+  }
+
+  return lines.join('\n');
+}
+
+function singularize(key: string): string {
+  if (key.endsWith('ies')) return key.slice(0, -3) + 'y'; // urgencies → urgency
+  if (key.endsWith('s')) return key.slice(0, -1); // impacts → impact, dependencyTypes → dependencyType
+  return key;
+}
+
+function generateValidValueEnumsSection(schema: GraphSchema): string {
+  const entries = Object.entries(schema.validValues).sort(([a], [b]) => a.localeCompare(b));
+  const lines: string[] = [];
+
+  lines.push('');
+  lines.push(sectionComment('Valid Value Enums'));
+  lines.push('');
+
+  for (const [key, values] of entries) {
+    const singular = singularize(key);
+    const constName = camelToScreamingSnake(singular);
+    lines.push(`export const ${constName} = {`);
+    for (const v of values) {
+      lines.push(`  ${v}: '${v}',`);
+    }
+    lines.push('} as const;');
   }
 
   return lines.join('\n');

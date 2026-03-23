@@ -3,7 +3,7 @@ import path from 'node:path';
 import matter from 'gray-matter';
 import { loadGraph } from './loader.js';
 import { nextId, renderTemplate, nodePath, sanitizeSlug } from './templates.js';
-import { NODE_TYPES, NODE_TYPE_DIRS, ALL_VALID_RELATIONS, REVERSE_LABELS, THRESHOLDS, VALID_STATUSES, VALID_FINDING_TYPES, VALID_URGENCIES, VALID_RISK_LEVELS, VALID_REVERSIBILITIES, EDGE_ATTRIBUTE_NAMES, EDGE_ATTRIBUTE_RANGES, EDGE_ATTRIBUTE_ENUM_VALUES, TRANSITION_POLICY_DEFAULT, TRANSITION_TABLE, MANUAL_TRANSITIONS, CEREMONY_TRIGGERS } from './types.js';
+import { NODE_TYPES, NODE_TYPE_DIRS, ALL_VALID_RELATIONS, REVERSE_LABELS, THRESHOLDS, VALID_STATUSES, VALID_FINDING_TYPES, VALID_URGENCIES, VALID_RISK_LEVELS, VALID_REVERSIBILITIES, EDGE_ATTRIBUTE_NAMES, EDGE_ATTRIBUTE_RANGES, EDGE_ATTRIBUTE_ENUM_VALUES, TRANSITION_POLICY_DEFAULT, TRANSITION_TABLE, MANUAL_TRANSITIONS, CEREMONY_TRIGGERS, URGENCY } from './types.js';
 import { checkEdgeAffinity, getPresentAttrKeys } from './edge-attrs.js';
 import { validateTransition } from './transition-engine.js';
 import { VALUE_PRODUCING_EDGES, collectDeferredIds, buildNodeToComponent } from './utils.js';
@@ -439,7 +439,7 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
   let blockingAnyDays = false;
   let blockingAnyEpisodes = false;
   for (const node of graph.nodes.values()) {
-    if (node.type === 'question' && node.status === STATUS.OPEN && node.meta.urgency === 'BLOCKING') {
+    if (node.type === 'question' && node.status === STATUS.OPEN && node.meta.urgency === URGENCY.BLOCKING) {
       const updated = node.meta.updated ? new Date(String(node.meta.updated))
         : node.meta.created ? new Date(String(node.meta.created)) : null;
       if (updated) {

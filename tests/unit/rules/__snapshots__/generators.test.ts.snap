@@ -11,15 +11,15 @@ The graph contains 7 node types, each in its own subdirectory:
 
 | Node Type | Directory | Purpose |
 |-----------|-----------|---------|
-| Hypothesis | \`graph/hypotheses/\` | Testable claims with confidence scores |
-| Experiment | \`graph/experiments/\` | Units of work that test hypotheses |
+| Decision | \`graph/decisions/\` | Recorded choices with rationale |
+| Episode | \`graph/episodes/\` | Session logs (mandatory: "What I Tried" + "What's Next") |
+| Experiment | \`graph/experiments/\` | Work units testing hypotheses |
 | Finding | \`graph/findings/\` | Observations from experiments |
+| Hypothesis | \`graph/hypotheses/\` | Testable claims with confidence 0.0-1.0 |
 | Knowledge | \`graph/knowledge/\` | Established facts promoted from findings |
 | Question | \`graph/questions/\` | Open questions driving exploration |
-| Decision | \`graph/decisions/\` | Recorded choices with rationale |
-| Episode | \`graph/episodes/\` | Session logs linking work to the graph |
 
-Nodes are connected by typed edges (supports, contradicts, spawns, produces, tests, depends_on, extends, promotes, answers, etc.) declared in YAML frontmatter \`links:\` arrays.
+Nodes are connected by typed edges (answers, confirms, context_for, contradicts, depends_on, extends, informs, part_of, produces, promotes, relates_to, resolves, revises, spawns, supports, tests) declared in YAML frontmatter \`links:\` arrays.
 
 ## Node File Format
 
@@ -27,8 +27,8 @@ Every node is a Markdown file with YAML frontmatter:
 
 \`\`\`yaml
 ---
-id: hyp-001
-type: hypothesis
+id: dec-001
+type: decision
 status: PROPOSED
 confidence: 0.4
 created: 2026-03-15
@@ -47,7 +47,7 @@ Required fields vary by type. All nodes need: \`id\`, \`type\`, \`title\`, \`sta
 
 ## Node ID Convention
 
-IDs use type prefix + sequential number: \`hyp-001\`, \`exp-003\`, \`fnd-012\`, \`knw-005\`, \`qst-002\`, \`dec-001\`, \`epi-007\`.
+IDs use type prefix + sequential number: \`dec-001\`, \`epi-001\`, \`exp-001\`, \`fnd-001\`, \`hyp-001\`, \`knw-001\`, \`qst-001\`.
 
 ## Episode Writing Protocol
 
@@ -100,7 +100,6 @@ You are a **gardener** of the graph:
 - Suggest exploration directions based on structural gaps
 - Automate routine tasks (literature search, result summarization)
 - Never make judgment calls — suggest, don't decide
-
 
 # EMDD Agent Behavior Guidelines
 
@@ -191,15 +190,15 @@ The graph contains 7 node types, each in its own subdirectory:
 
 | Node Type | Directory | Purpose |
 |-----------|-----------|---------|
-| Hypothesis | \`graph/hypotheses/\` | Testable claims with confidence scores |
-| Experiment | \`graph/experiments/\` | Units of work that test hypotheses |
+| Decision | \`graph/decisions/\` | Recorded choices with rationale |
+| Episode | \`graph/episodes/\` | Session logs (mandatory: "What I Tried" + "What's Next") |
+| Experiment | \`graph/experiments/\` | Work units testing hypotheses |
 | Finding | \`graph/findings/\` | Observations from experiments |
+| Hypothesis | \`graph/hypotheses/\` | Testable claims with confidence 0.0-1.0 |
 | Knowledge | \`graph/knowledge/\` | Established facts promoted from findings |
 | Question | \`graph/questions/\` | Open questions driving exploration |
-| Decision | \`graph/decisions/\` | Recorded choices with rationale |
-| Episode | \`graph/episodes/\` | Session logs linking work to the graph |
 
-Nodes are connected by typed edges (supports, contradicts, spawns, produces, tests, depends_on, extends, promotes, answers, etc.) declared in YAML frontmatter \`links:\` arrays.
+Nodes are connected by typed edges (answers, confirms, context_for, contradicts, depends_on, extends, informs, part_of, produces, promotes, relates_to, resolves, revises, spawns, supports, tests) declared in YAML frontmatter \`links:\` arrays.
 
 ## Node File Format
 
@@ -207,8 +206,8 @@ Every node is a Markdown file with YAML frontmatter:
 
 \`\`\`yaml
 ---
-id: hyp-001
-type: hypothesis
+id: dec-001
+type: decision
 status: PROPOSED
 confidence: 0.4
 created: 2026-03-15
@@ -227,7 +226,7 @@ Required fields vary by type. All nodes need: \`id\`, \`type\`, \`title\`, \`sta
 
 ## Node ID Convention
 
-IDs use type prefix + sequential number: \`hyp-001\`, \`exp-003\`, \`fnd-012\`, \`knw-005\`, \`qst-002\`, \`dec-001\`, \`epi-007\`.
+IDs use type prefix + sequential number: \`dec-001\`, \`epi-001\`, \`exp-001\`, \`fnd-001\`, \`hyp-001\`, \`knw-001\`, \`qst-001\`.
 
 ## Episode Writing Protocol
 
@@ -280,7 +279,6 @@ You are a **gardener** of the graph:
 - Suggest exploration directions based on structural gaps
 - Automate routine tasks (literature search, result summarization)
 - Never make judgment calls — suggest, don't decide
-
 
 # EMDD Agent Behavior Guidelines
 
@@ -371,15 +369,15 @@ The graph contains 7 node types, each in its own subdirectory:
 
 | Node Type | Directory | Purpose |
 |-----------|-----------|---------|
-| Hypothesis | \`graph/hypotheses/\` | Testable claims with confidence scores |
-| Experiment | \`graph/experiments/\` | Units of work that test hypotheses |
+| Decision | \`graph/decisions/\` | Recorded choices with rationale |
+| Episode | \`graph/episodes/\` | Session logs (mandatory: "What I Tried" + "What's Next") |
+| Experiment | \`graph/experiments/\` | Work units testing hypotheses |
 | Finding | \`graph/findings/\` | Observations from experiments |
+| Hypothesis | \`graph/hypotheses/\` | Testable claims with confidence 0.0-1.0 |
 | Knowledge | \`graph/knowledge/\` | Established facts promoted from findings |
 | Question | \`graph/questions/\` | Open questions driving exploration |
-| Decision | \`graph/decisions/\` | Recorded choices with rationale |
-| Episode | \`graph/episodes/\` | Session logs linking work to the graph |
 
-Nodes are connected by typed edges (supports, contradicts, spawns, produces, tests, depends_on, extends, promotes, answers, etc.) declared in YAML frontmatter \`links:\` arrays.
+Nodes are connected by typed edges (answers, confirms, context_for, contradicts, depends_on, extends, informs, part_of, produces, promotes, relates_to, resolves, revises, spawns, supports, tests) declared in YAML frontmatter \`links:\` arrays.
 
 ## Node File Format
 
@@ -387,8 +385,8 @@ Every node is a Markdown file with YAML frontmatter:
 
 \`\`\`yaml
 ---
-id: hyp-001
-type: hypothesis
+id: dec-001
+type: decision
 status: PROPOSED
 confidence: 0.4
 created: 2026-03-15
@@ -407,7 +405,7 @@ Required fields vary by type. All nodes need: \`id\`, \`type\`, \`title\`, \`sta
 
 ## Node ID Convention
 
-IDs use type prefix + sequential number: \`hyp-001\`, \`exp-003\`, \`fnd-012\`, \`knw-005\`, \`qst-002\`, \`dec-001\`, \`epi-007\`.
+IDs use type prefix + sequential number: \`dec-001\`, \`epi-001\`, \`exp-001\`, \`fnd-001\`, \`hyp-001\`, \`knw-001\`, \`qst-001\`.
 
 ## Episode Writing Protocol
 
@@ -460,7 +458,6 @@ You are a **gardener** of the graph:
 - Suggest exploration directions based on structural gaps
 - Automate routine tasks (literature search, result summarization)
 - Never make judgment calls — suggest, don't decide
-
 
 # EMDD Agent Behavior Guidelines
 
@@ -555,15 +552,15 @@ The graph contains 7 node types, each in its own subdirectory:
 
 | Node Type | Directory | Purpose |
 |-----------|-----------|---------|
-| Hypothesis | \`graph/hypotheses/\` | Testable claims with confidence scores |
-| Experiment | \`graph/experiments/\` | Units of work that test hypotheses |
+| Decision | \`graph/decisions/\` | Recorded choices with rationale |
+| Episode | \`graph/episodes/\` | Session logs (mandatory: "What I Tried" + "What's Next") |
+| Experiment | \`graph/experiments/\` | Work units testing hypotheses |
 | Finding | \`graph/findings/\` | Observations from experiments |
+| Hypothesis | \`graph/hypotheses/\` | Testable claims with confidence 0.0-1.0 |
 | Knowledge | \`graph/knowledge/\` | Established facts promoted from findings |
 | Question | \`graph/questions/\` | Open questions driving exploration |
-| Decision | \`graph/decisions/\` | Recorded choices with rationale |
-| Episode | \`graph/episodes/\` | Session logs linking work to the graph |
 
-Nodes are connected by typed edges (supports, contradicts, spawns, produces, tests, depends_on, extends, promotes, answers, etc.) declared in YAML frontmatter \`links:\` arrays.
+Nodes are connected by typed edges (answers, confirms, context_for, contradicts, depends_on, extends, informs, part_of, produces, promotes, relates_to, resolves, revises, spawns, supports, tests) declared in YAML frontmatter \`links:\` arrays.
 
 ## Node File Format
 
@@ -571,8 +568,8 @@ Every node is a Markdown file with YAML frontmatter:
 
 \`\`\`yaml
 ---
-id: hyp-001
-type: hypothesis
+id: dec-001
+type: decision
 status: PROPOSED
 confidence: 0.4
 created: 2026-03-15
@@ -591,7 +588,7 @@ Required fields vary by type. All nodes need: \`id\`, \`type\`, \`title\`, \`sta
 
 ## Node ID Convention
 
-IDs use type prefix + sequential number: \`hyp-001\`, \`exp-003\`, \`fnd-012\`, \`knw-005\`, \`qst-002\`, \`dec-001\`, \`epi-007\`.
+IDs use type prefix + sequential number: \`dec-001\`, \`epi-001\`, \`exp-001\`, \`fnd-001\`, \`hyp-001\`, \`knw-001\`, \`qst-001\`.
 
 ## Episode Writing Protocol
 
@@ -644,7 +641,6 @@ You are a **gardener** of the graph:
 - Suggest exploration directions based on structural gaps
 - Automate routine tasks (literature search, result summarization)
 - Never make judgment calls — suggest, don't decide
-
 
 # EMDD Agent Behavior Guidelines
 
@@ -735,15 +731,15 @@ The graph contains 7 node types, each in its own subdirectory:
 
 | Node Type | Directory | Purpose |
 |-----------|-----------|---------|
-| Hypothesis | \`graph/hypotheses/\` | Testable claims with confidence scores |
-| Experiment | \`graph/experiments/\` | Units of work that test hypotheses |
+| Decision | \`graph/decisions/\` | Recorded choices with rationale |
+| Episode | \`graph/episodes/\` | Session logs (mandatory: "What I Tried" + "What's Next") |
+| Experiment | \`graph/experiments/\` | Work units testing hypotheses |
 | Finding | \`graph/findings/\` | Observations from experiments |
+| Hypothesis | \`graph/hypotheses/\` | Testable claims with confidence 0.0-1.0 |
 | Knowledge | \`graph/knowledge/\` | Established facts promoted from findings |
 | Question | \`graph/questions/\` | Open questions driving exploration |
-| Decision | \`graph/decisions/\` | Recorded choices with rationale |
-| Episode | \`graph/episodes/\` | Session logs linking work to the graph |
 
-Nodes are connected by typed edges (supports, contradicts, spawns, produces, tests, depends_on, extends, promotes, answers, etc.) declared in YAML frontmatter \`links:\` arrays.
+Nodes are connected by typed edges (answers, confirms, context_for, contradicts, depends_on, extends, informs, part_of, produces, promotes, relates_to, resolves, revises, spawns, supports, tests) declared in YAML frontmatter \`links:\` arrays.
 
 ## Node File Format
 
@@ -751,8 +747,8 @@ Every node is a Markdown file with YAML frontmatter:
 
 \`\`\`yaml
 ---
-id: hyp-001
-type: hypothesis
+id: dec-001
+type: decision
 status: PROPOSED
 confidence: 0.4
 created: 2026-03-15
@@ -771,7 +767,7 @@ Required fields vary by type. All nodes need: \`id\`, \`type\`, \`title\`, \`sta
 
 ## Node ID Convention
 
-IDs use type prefix + sequential number: \`hyp-001\`, \`exp-003\`, \`fnd-012\`, \`knw-005\`, \`qst-002\`, \`dec-001\`, \`epi-007\`.
+IDs use type prefix + sequential number: \`dec-001\`, \`epi-001\`, \`exp-001\`, \`fnd-001\`, \`hyp-001\`, \`knw-001\`, \`qst-001\`.
 
 ## Episode Writing Protocol
 
@@ -824,7 +820,6 @@ You are a **gardener** of the graph:
 - Suggest exploration directions based on structural gaps
 - Automate routine tasks (literature search, result summarization)
 - Never make judgment calls — suggest, don't decide
-
 
 # EMDD Agent Behavior Guidelines
 
@@ -911,17 +906,17 @@ You are working in an EMDD project. The knowledge graph lives in \`graph/\` as M
 
 ## Node Types
 
-- **Hypothesis** (\`graph/hypotheses/\`) — testable claims with confidence 0.0-1.0
-- **Experiment** (\`graph/experiments/\`) — work units testing hypotheses
-- **Finding** (\`graph/findings/\`) — observations from experiments
-- **Knowledge** (\`graph/knowledge/\`) — established facts promoted from findings
-- **Question** (\`graph/questions/\`) — open questions driving exploration
 - **Decision** (\`graph/decisions/\`) — recorded choices with rationale
 - **Episode** (\`graph/episodes/\`) — session logs (mandatory: "What I Tried" + "What's Next")
+- **Experiment** (\`graph/experiments/\`) — work units testing hypotheses
+- **Finding** (\`graph/findings/\`) — observations from experiments
+- **Hypothesis** (\`graph/hypotheses/\`) — testable claims with confidence 0.0-1.0
+- **Knowledge** (\`graph/knowledge/\`) — established facts promoted from findings
+- **Question** (\`graph/questions/\`) — open questions driving exploration
 
 ## ID Convention
 
-\`hyp-001\`, \`exp-003\`, \`fnd-012\`, \`knw-005\`, \`qst-002\`, \`dec-001\`, \`epi-007\`
+\`dec-001\`, \`epi-001\`, \`exp-001\`, \`fnd-001\`, \`hyp-001\`, \`knw-001\`, \`qst-001\`
 
 ## Key Rules
 
@@ -944,17 +939,17 @@ You are working in an EMDD project. The knowledge graph lives in \`graph/\` as M
 
 ## Node Types
 
-- **Hypothesis** (\`graph/hypotheses/\`) — testable claims with confidence 0.0-1.0
-- **Experiment** (\`graph/experiments/\`) — work units testing hypotheses
-- **Finding** (\`graph/findings/\`) — observations from experiments
-- **Knowledge** (\`graph/knowledge/\`) — established facts promoted from findings
-- **Question** (\`graph/questions/\`) — open questions driving exploration
 - **Decision** (\`graph/decisions/\`) — recorded choices with rationale
 - **Episode** (\`graph/episodes/\`) — session logs (mandatory: "What I Tried" + "What's Next")
+- **Experiment** (\`graph/experiments/\`) — work units testing hypotheses
+- **Finding** (\`graph/findings/\`) — observations from experiments
+- **Hypothesis** (\`graph/hypotheses/\`) — testable claims with confidence 0.0-1.0
+- **Knowledge** (\`graph/knowledge/\`) — established facts promoted from findings
+- **Question** (\`graph/questions/\`) — open questions driving exploration
 
 ## ID Convention
 
-\`hyp-001\`, \`exp-003\`, \`fnd-012\`, \`knw-005\`, \`qst-002\`, \`dec-001\`, \`epi-007\`
+\`dec-001\`, \`epi-001\`, \`exp-001\`, \`fnd-001\`, \`hyp-001\`, \`knw-001\`, \`qst-001\`
 
 ## Key Rules
 
