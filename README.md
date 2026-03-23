@@ -1,9 +1,27 @@
 # EMDD: Evolving Mindmap-Driven Development
 
+[![npm version](https://img.shields.io/npm/v/@beomjk/emdd.svg)](https://www.npmjs.com/package/@beomjk/emdd)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 > [!WARNING]
 > This project is in an **experimental stage**. APIs and file formats may change without notice.
 
 > **A methodology that gives structure to R&D exploration through an AI-maintained evolving knowledge graph -- without killing the exploration itself.**
+
+## Table of Contents
+
+- [Demo](#demo)
+- [What is EMDD?](#what-is-emdd)
+- [Who is it for?](#who-is-it-for)
+- [The EMDD Equation](#the-emdd-equation)
+- [How It Works](#how-it-works)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [CLI Commands](#cli-commands)
+- [Phased Adoption](#phased-adoption)
+- [Documentation](#documentation)
+- [What EMDD is NOT](#what-emdd-is-not)
+- [Contributing](#contributing)
 
 ## Demo
 
@@ -23,16 +41,17 @@ Too much structure suffocates research. Too little structure evaporates it. Exis
 
 ## The EMDD Equation
 
-```
-EMDD = Zettelkasten's bottom-up emergence
-     + DDP's risk-first validation
-     + InfraNodus's structural gap detection
-     + Graphiti's temporal evolution
-     ─────────────────────────────────
-       Autonomous maintenance and suggestions by an AI agent
-```
-
-Delegate cognitive load to the graph and the AI, but never delegate judgment.
+> [!TIP]
+> ```
+> EMDD = Zettelkasten's bottom-up emergence
+>      + DDP's risk-first validation
+>      + InfraNodus's structural gap detection
+>      + Graphiti's temporal evolution
+>      ─────────────────────────────────
+>        Autonomous maintenance and suggestions by an AI agent
+> ```
+>
+> Delegate cognitive load to the graph and the AI, but never delegate judgment.
 
 ## How It Works
 
@@ -155,13 +174,16 @@ See [section 11 of the specification](docs/spec/SPEC_EN.md#11-phased-adoption-gu
 - [Glossary](docs/GLOSSARY.md) -- definitions of all EMDD terms
 - [한국어 스펙](docs/spec/SPEC_KO.md) -- Korean specification
 
-## What EMDD is NOT
+<details>
+<summary><h2>What EMDD is NOT</h2></summary>
 
 - **Not a project management tool.** No deadlines, no progress percentages -- it tracks what you know and what you don't.
 - **Not a knowledge base.** The value is in the tensions, contradictions, and gaps between information, not in tidy organization.
 - **Not SDD with a graph bolted on.** Direction emerges from exploration; the specification does not come first.
 - **Not a personal knowledge management system.** It is project-scoped working memory, not a second brain for a lifetime.
 - **Not outsourcing research to AI.** The AI prunes branches and points to empty ground. The researcher decides where to walk.
+
+</details>
 
 ## Contributing
 
