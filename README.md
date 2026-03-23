@@ -17,6 +17,7 @@
 - [How It Works](#how-it-works)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
+- [Using with AI Assistants](#using-with-ai-assistants)
 - [CLI Commands](#cli-commands)
 - [Phased Adoption](#phased-adoption)
 - [Documentation](#documentation)
@@ -31,9 +32,23 @@
 
 <img src="docs/assets/dashboard-v2.png" alt="EMDD Web Dashboard" width="720">
 
+Interactive graph visualization with community clustering, force-directed / hierarchical layouts, node detail panel, and search. Launch with `emdd serve`.
+
 ## What is EMDD?
 
 Too much structure suffocates research. Too little structure evaporates it. Existing approaches each solve one piece -- Zettelkasten gives bottom-up emergence, HDD gives hypothesis testing, DDP gives risk prioritization -- but none of them track the *relationships* between what you know, what you don't know, and what to explore next. EMDD fills that gap: it is a lightweight, AI-maintained knowledge graph that structures your exploration as it happens, surfaces blind spots, and remembers every dead end so you never walk it twice.
+
+### Without EMDD
+
+- "I tried this last week... why didn't it work again?"
+- You re-attempt a dead-end approach because no one recorded why it failed.
+- No way to know which assumptions are still untested.
+
+### With EMDD
+
+- `emdd health` -- instantly see 3 untested hypotheses and 2 orphan nodes.
+- Failed experiments are recorded as Findings -- you never walk the same dead end twice.
+- `emdd gaps` -- "No experiment tests hyp-002" is detected automatically.
 
 ## Who is it for?
 
@@ -108,58 +123,108 @@ npx @beomjk/emdd <command>
 ## Quick Start
 
 ```bash
-# Initialize an EMDD project
+# Initialize -- creates graph/ directory and AI tool rules
 emdd init my-research
+# → EMDD project initialized at my-research
 
-# Create your first nodes
 cd my-research
-emdd new question "what-causes-defects"
-emdd new hypothesis "surface-cracks-from-stress"
 
-# Link them
+# Create a question and a hypothesis to answer it
+emdd new question "what-causes-defects"
+# → Created question node: qst-001  (graph/questions/qst-001-what-causes-defects.md)
+
+emdd new hypothesis "surface-cracks-from-stress"
+# → Created hypothesis node: hyp-001  (graph/hypotheses/hyp-001-surface-cracks-from-stress.md)
+
+# Link them -- the hypothesis was spawned from the question
 emdd link hyp-001 qst-001 spawned_from
+# → Linked hyp-001 → qst-001 [spawned_from]
+
+# Create an experiment to test the hypothesis
+emdd new experiment "stress-test-baseline"
+# → Created experiment node: exp-001
+
+emdd link exp-001 hyp-001 tests
+# → Linked exp-001 → hyp-001 [tests]
 
 # Check graph health
-emdd lint
-emdd health
+emdd lint     # validate schema and link integrity
+emdd health   # node counts, confidence, gaps, link density
 ```
 
 See the [Quick Start Guide](docs/QUICK_START.md) for a full walkthrough.
 
+## Using with AI Assistants
+
+EMDD exposes its full graph API via an [MCP server](docs/MCP_SETUP.md) -- 21 tools + 4 guided prompts (context loading, episode creation, consolidation, health review).
+
+**Claude Code** (one-line setup):
+
+```bash
+claude mcp add emdd -- npx @beomjk/emdd mcp
+```
+
+**Cursor, Windsurf, VS Code Copilot, Continue** -- see the [MCP Setup Guide](docs/MCP_SETUP.md) for config snippets.
+
+**Auto-generate AI rules** with `emdd init --tool`:
+
+```bash
+emdd init my-research --tool cursor   # creates .cursor/rules/emdd.mdc
+emdd init my-research --tool all      # generates rules for all supported tools
+```
+
+Supported tools: `claude` (default), `cursor`, `windsurf`, `cline`, `copilot`, `all`.
+
 ## CLI Commands
 
-All registry-based commands accept `--graphDir <path>` (graph directory), `--lang <en|ko>` (locale), and `--json` (JSON output).
+All commands accept `--graphDir <path>`, `--lang <en|ko>`, and `--json`.
+
+### Core
 
 | Command | Description |
 |---------|-------------|
 | `emdd init [path]` | Initialize a new EMDD project (`--tool claude\|cursor\|windsurf\|cline\|copilot\|all`, `--lang en\|ko`) |
-| `emdd list` | List nodes (`--type`, `--status` filters) |
 | `emdd new <type> <slug>` | Create a node (hypothesis, experiment, finding, ...) |
+| `emdd read <nodeId>` | Read a node by ID, showing frontmatter and body |
+| `emdd update <nodeId> --set key=value` | Update node frontmatter (`--transitionPolicy strict\|warn\|off`) |
+| `emdd list` | List nodes (`--type`, `--status` filters) |
 | `emdd link <source> <target> <relation>` | Add a link between nodes (`--strength`, `--severity`, `--completeness`, `--dependencyType`, `--impact`) |
 | `emdd unlink <source> <target>` | Remove a link between nodes (`--relation` optional) |
-| `emdd read <nodeId>` | Read a node by ID, showing frontmatter and body |
-| `emdd update <nodeId> --set key=value` | Update node frontmatter (supports JSON arrays/objects, `--transitionPolicy strict\|warn\|off`) |
-| `emdd done <episodeId> <item>` | Mark an episode item with a status marker (`--marker <done\|deferred\|superseded>`) |
-| `emdd neighbors <nodeId>` | Get a node's neighbors and connections (`--depth`, default 1) |
-| `emdd gaps` | Detect structural gaps (orphans, stale, disconnected) |
+| `emdd done <episodeId> <item>` | Mark an episode item (`--marker <done\|deferred\|superseded>`) |
+
+<details>
+<summary><b>Analysis</b> (11 commands)</summary>
+
+| Command | Description |
+|---------|-------------|
+| `emdd health` | Graph health dashboard (node counts, confidence, gaps, link density) |
 | `emdd lint` | Validate schema and link integrity |
-| `emdd health` | Show graph health dashboard |
+| `emdd gaps` | Detect structural gaps (orphans, stale, disconnected) |
+| `emdd neighbors <nodeId>` | Get a node's neighbors and connections (`--depth`, default 1) |
 | `emdd check` | Check consolidation triggers |
-| `emdd promote` | Identify promotion candidates |
-| `emdd backlog` | List incomplete items across all episodes (`--status <pending\|done\|deferred\|superseded\|all>`) |
-| `emdd index` | Generate `_index.md` |
-| `emdd graph [path]` | Generate `_graph.mmd` (Mermaid) |
+| `emdd promote` | Identify findings eligible for promotion to knowledge |
 | `emdd confidence` | Propagate confidence across the graph |
 | `emdd transitions` | Detect recommended status transitions |
 | `emdd kill-check` | Check kill criteria status for hypotheses |
 | `emdd branches` | List and analyze branch groups |
 | `emdd analyze-refutation` | Analyze refutation impact on hypotheses |
+| `emdd backlog` | List incomplete items across all episodes (`--status <pending\|done\|deferred\|superseded\|all>`) |
 | `emdd mark-consolidated` | Record consolidation date (`--date`, default today) |
+
+</details>
+
+<details>
+<summary><b>Export & Server</b> (5 commands)</summary>
+
+| Command | Description |
+|---------|-------------|
 | `emdd serve [path]` | Start web dashboard server (`-p, --port`, `--no-open`) |
 | `emdd export-html [output]` | Export graph as standalone HTML file (`--layout force\|hierarchical`, `--types`, `--statuses`) |
+| `emdd graph [path]` | Generate `_graph.mmd` (Mermaid diagram) |
+| `emdd index` | Generate `_index.md` |
 | `emdd mcp` | Start MCP server (stdio transport) |
 
-The `init` command supports `--lang en|ko` for bilingual project setup.
+</details>
 
 ## Phased Adoption
 
