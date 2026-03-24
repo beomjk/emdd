@@ -1,6 +1,7 @@
+import type { Entity } from '@beomjk/state-engine/engine';
 import { loadGraph } from './loader.js';
-import { TRANSITION_TABLE, MANUAL_TRANSITIONS } from './types.js';
-import { evaluateTransition } from './transition-engine.js';
+import { TRANSITION_TABLE } from './types.js';
+import { engine } from './engine-setup.js';
 
 export interface TransitionRecommendation {
   nodeId: string;
@@ -25,7 +26,7 @@ export async function detectTransitions(graphDir: string): Promise<TransitionRec
       if (rule.from !== node.status) continue;
       if (matchedFromStatuses.has(rule.from)) continue;
 
-      const result = evaluateTransition(node, graph, rule);
+      const result = engine.evaluate(node as unknown as Entity, graph, rule);
       if (result.met) {
         const conditionNames = rule.conditions.map(c => c.fn).join(', ');
         recommendations.push({
@@ -33,7 +34,7 @@ export async function detectTransitions(graphDir: string): Promise<TransitionRec
           currentStatus: node.status!,
           recommendedStatus: rule.to,
           reason: `Transition ${rule.from}→${rule.to}: ${conditionNames} condition met`,
-          evidenceIds: result.matchedNodeIds,
+          evidenceIds: result.matchedIds,
         });
         matchedFromStatuses.add(rule.from);
       }
