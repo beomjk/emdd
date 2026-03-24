@@ -94,14 +94,14 @@ export interface ValidationError {
   severity: 'ERROR' | 'WARNING';
 }
 
-export const VALID_PRESET_FNS = [
-  'has_linked',
-  'field_present',
-  'min_linked_count',
-  'all_linked_with',
-] as const;
+/**
+ * Valid preset function names, derived from the EMDD graph preset registry.
+ * Adding a new preset to graph-presets.ts automatically makes it valid here.
+ */
+export { EMDD_PRESET_NAMES as VALID_PRESET_FNS } from '../graph/graph-presets.js';
+import { EMDD_PRESET_NAMES } from '../graph/graph-presets.js';
 
-const presetFnSet = new Set<string>(VALID_PRESET_FNS);
+const presetFnSet = new Set<string>(EMDD_PRESET_NAMES);
 
 export function validateReferentialIntegrity(schema: GraphSchema): ValidationError[] {
   const errors: ValidationError[] = [];
