@@ -35,6 +35,9 @@
     "cli"
   ],
   "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
   "publishConfig": {
     "access": "public"
   },

@@ -1,7 +1,20 @@
 # EMDD: Evolving Mindmap-Driven Development
 
-[![npm version](https://img.shields.io/npm/v/@beomjk/emdd.svg)](https://www.npmjs.com/package/@beomjk/emdd)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+<p align="center">
+  <a href="https://www.npmjs.com/package/@beomjk/emdd"><img src="https://img.shields.io/npm/v/@beomjk/emdd.svg" alt="npm version"></a>
+  <a href="https://www.npmjs.com/package/@beomjk/emdd"><img src="https://img.shields.io/npm/dm/@beomjk/emdd.svg" alt="npm downloads"></a>
+  <img src="https://img.shields.io/badge/node-%3E%3D20-brightgreen" alt="Node.js >= 20">
+  <img src="https://img.shields.io/badge/TypeScript-5.9-blue?logo=typescript&logoColor=white" alt="TypeScript">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+</p>
+
+<p align="center">
+  <a href="docs/TUTORIAL.md">5-Min Tutorial</a> &bull;
+  <a href="docs/QUICK_START.md">Quick Start</a> &bull;
+  <a href="docs/MCP_SETUP.md">AI Setup</a> &bull;
+  <a href="docs/spec/SPEC_EN.md">Specification</a> &bull;
+  <a href="examples/ml-backbone-selection/">Example Graph</a>
+</p>
 
 > [!WARNING]
 > This project is in an **experimental stage**. APIs and file formats may change without notice.
@@ -11,13 +24,13 @@
 ## Table of Contents
 
 - [Demo](#demo)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Using with AI Assistants](#using-with-ai-assistants)
 - [What is EMDD?](#what-is-emdd)
 - [Who is it for?](#who-is-it-for)
 - [The EMDD Equation](#the-emdd-equation)
 - [How It Works](#how-it-works)
-- [Installation](#installation)
-- [Quick Start](#quick-start)
-- [Using with AI Assistants](#using-with-ai-assistants)
 - [CLI Commands](#cli-commands)
 - [Phased Adoption](#phased-adoption)
 - [Documentation](#documentation)
@@ -33,6 +46,58 @@
 <img src="docs/assets/dashboard-v2.png" alt="EMDD Web Dashboard" width="720">
 
 Interactive graph visualization with community clustering, force-directed / hierarchical layouts, node detail panel, and search. Launch with `emdd serve`.
+
+## Installation
+
+Requires **Node.js 20** or later.
+
+```bash
+npm install -g @beomjk/emdd
+```
+
+Or use directly with npx:
+
+```bash
+npx @beomjk/emdd <command>
+```
+
+## Quick Start
+
+```bash
+# 1. Initialize
+emdd init my-research && cd my-research
+
+# 2. Create nodes and connect them
+emdd new hypothesis "surface-cracks-from-stress"
+emdd new experiment "stress-test-baseline"
+emdd link exp-001 hyp-001 tests
+
+# 3. Check graph health
+emdd health
+```
+
+See the [5-minute tutorial](docs/TUTORIAL.md) for a full walkthrough, or the [Quick Start Guide](docs/QUICK_START.md) for a 15-minute deep dive.
+
+## Using with AI Assistants
+
+EMDD exposes its full graph API via an [MCP server](docs/MCP_SETUP.md) -- 21 tools + 4 guided prompts (context loading, episode creation, consolidation, health review).
+
+**Claude Code** (one-line setup):
+
+```bash
+claude mcp add emdd -- npx @beomjk/emdd mcp
+```
+
+**Cursor, Windsurf, VS Code Copilot, Continue** -- see the [MCP Setup Guide](docs/MCP_SETUP.md) for config snippets.
+
+**Auto-generate AI rules** with `emdd init --tool`:
+
+```bash
+emdd init my-research --tool cursor   # creates .cursor/rules/emdd.mdc
+emdd init my-research --tool all      # generates rules for all supported tools
+```
+
+Supported tools: `claude` (default), `cursor`, `windsurf`, `cline`, `copilot`, `all`.
 
 ## What is EMDD?
 
@@ -108,73 +173,6 @@ graph LR
 
 Hypotheses move through `PROPOSED -> TESTING -> SUPPORTED / REFUTED / REVISED`. Findings accumulate evidence. When a Finding has sufficient independent support, it is promoted to Knowledge. Refuted hypotheses are preserved -- the knowledge of *why* something failed is itself knowledge.
 
-## Installation
-
-```bash
-npm install -g @beomjk/emdd
-```
-
-Or use directly with npx:
-
-```bash
-npx @beomjk/emdd <command>
-```
-
-## Quick Start
-
-```bash
-# Initialize -- creates graph/ directory and AI tool rules
-emdd init my-research
-# → EMDD project initialized at my-research
-
-cd my-research
-
-# Create a question and a hypothesis to answer it
-emdd new question "what-causes-defects"
-# → Created question node: qst-001  (graph/questions/qst-001-what-causes-defects.md)
-
-emdd new hypothesis "surface-cracks-from-stress"
-# → Created hypothesis node: hyp-001  (graph/hypotheses/hyp-001-surface-cracks-from-stress.md)
-
-# Link them -- the hypothesis was spawned from the question
-emdd link hyp-001 qst-001 spawned_from
-# → Linked hyp-001 → qst-001 [spawned_from]
-
-# Create an experiment to test the hypothesis
-emdd new experiment "stress-test-baseline"
-# → Created experiment node: exp-001
-
-emdd link exp-001 hyp-001 tests
-# → Linked exp-001 → hyp-001 [tests]
-
-# Check graph health
-emdd lint     # validate schema and link integrity
-emdd health   # node counts, confidence, gaps, link density
-```
-
-See the [Quick Start Guide](docs/QUICK_START.md) for a full walkthrough.
-
-## Using with AI Assistants
-
-EMDD exposes its full graph API via an [MCP server](docs/MCP_SETUP.md) -- 21 tools + 4 guided prompts (context loading, episode creation, consolidation, health review).
-
-**Claude Code** (one-line setup):
-
-```bash
-claude mcp add emdd -- npx @beomjk/emdd mcp
-```
-
-**Cursor, Windsurf, VS Code Copilot, Continue** -- see the [MCP Setup Guide](docs/MCP_SETUP.md) for config snippets.
-
-**Auto-generate AI rules** with `emdd init --tool`:
-
-```bash
-emdd init my-research --tool cursor   # creates .cursor/rules/emdd.mdc
-emdd init my-research --tool all      # generates rules for all supported tools
-```
-
-Supported tools: `claude` (default), `cursor`, `windsurf`, `cline`, `copilot`, `all`.
-
 ## CLI Commands
 
 All commands accept `--graphDir <path>`, `--lang <en|ko>`, and `--json`.
@@ -184,16 +182,16 @@ All commands accept `--graphDir <path>`, `--lang <en|ko>`, and `--json`.
 | Command | Description |
 |---------|-------------|
 | `emdd init [path]` | Initialize a new EMDD project (`--tool claude\|cursor\|windsurf\|cline\|copilot\|all`, `--lang en\|ko`) |
-| `emdd new <type> <slug>` | Create a node (hypothesis, experiment, finding, ...) |
+| `emdd new <type> <slug>` | Create a node (hypothesis, experiment, finding, ...) (`--title`, `--lang`) |
 | `emdd read <nodeId>` | Read a node by ID, showing frontmatter and body |
 | `emdd update <nodeId> --set key=value` | Update node frontmatter (`--transitionPolicy strict\|warn\|off`) |
 | `emdd list` | List nodes (`--type`, `--status` filters) |
-| `emdd link <source> <target> <relation>` | Add a link between nodes (`--strength`, `--severity`, `--completeness`, `--dependencyType`, `--impact`) |
+| `emdd link <source> <target> <relation>` | Add a link between nodes (`--strength`, `--severity`, `--completeness`, `--dependencyType`, `--impact`, `--force`) |
 | `emdd unlink <source> <target>` | Remove a link between nodes (`--relation` optional) |
 | `emdd done <episodeId> <item>` | Mark an episode item (`--marker <done\|deferred\|superseded>`) |
 
 <details>
-<summary><b>Analysis</b> (11 commands)</summary>
+<summary><b>Analysis</b> (13 commands)</summary>
 
 | Command | Description |
 |---------|-------------|
@@ -251,7 +249,7 @@ See [section 11 of the specification](docs/spec/SPEC_EN.md#11-phased-adoption-gu
 - [한국어 스펙](docs/spec/SPEC_KO.md) -- Korean specification
 
 <details>
-<summary><h2>What EMDD is NOT</h2></summary>
+<summary><b>What EMDD is NOT</b></summary>
 
 - **Not a project management tool.** No deadlines, no progress percentages -- it tracks what you know and what you don't.
 - **Not a knowledge base.** The value is in the tensions, contradictions, and gaps between information, not in tidy organization.
