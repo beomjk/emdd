@@ -1,5 +1,5 @@
-import type { Entity } from '@beomjk/state-engine/engine';
 import { loadGraph } from './loader.js';
+import type { NodeWithStatus } from './types.js';
 import { TRANSITION_TABLE } from './types.js';
 import { engine } from './engine-setup.js';
 
@@ -26,7 +26,7 @@ export async function detectTransitions(graphDir: string): Promise<TransitionRec
       if (rule.from !== node.status) continue;
       if (matchedFromStatuses.has(rule.from)) continue;
 
-      const result = engine.evaluate(node as unknown as Entity, graph, rule);
+      const result = engine.evaluate(node as NodeWithStatus, graph, rule);
       if (result.met) {
         const conditionNames = rule.conditions.map(c => c.fn).join(', ');
         recommendations.push({

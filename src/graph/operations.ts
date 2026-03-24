@@ -13,6 +13,7 @@ import type {
   NodeType,
   NodeFilter,
   NodeDetail,
+  NodeWithStatus,
   Graph,
   CreateNodeResult,
   CreateEdgeResult,
@@ -937,7 +938,7 @@ export async function updateNode(
         const transitionRules = TRANSITION_TABLE[node.type];
         if (transitionRules) {
           const manualRules = MANUAL_TRANSITIONS[node.type];
-          const result = engine.validate(node as Parameters<typeof engine.validate>[0], graph, transitionRules, value, manualRules);
+          const result = engine.validate(node as NodeWithStatus, graph, transitionRules, value, manualRules);
           if (!result.valid) {
             // Determine violation type: no rule exists vs conditions unmet
             const hasRule = transitionRules.some(r => r.from === node.status && r.to === value);

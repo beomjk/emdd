@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import type { Node, Graph } from '../../../src/graph/types.js';
-import type { TransitionRule, ManualTransition, Entity } from '@beomjk/state-engine/engine';
+import type { Node, Graph, NodeWithStatus } from '../../../src/graph/types.js';
+import type { TransitionRule, ManualTransition } from '@beomjk/state-engine/engine';
 import { engine } from '../../../src/graph/engine-setup.js';
 
 function makeNode(overrides: Partial<Node> & { id: string; type: Node['type'] }): Node {
@@ -21,9 +21,9 @@ function makeGraph(nodes: Node[]): Graph {
   return { nodes: map, errors: [], warnings: [] };
 }
 
-/** Cast Node (status?: string) to Entity (status: string) for engine calls. */
-function asEntity(node: Node): Entity {
-  return node as unknown as Entity;
+/** Narrow Node to NodeWithStatus for engine calls. All test nodes have status. */
+function withStatus(node: Node): NodeWithStatus {
+  return node as NodeWithStatus;
 }
 
 describe('transition-engine', () => {
@@ -42,7 +42,7 @@ describe('transition-engine', () => {
         conditions: [{ fn: 'has_linked', args: { type: 'experiment', status: 'RUNNING', direction: 'any' } }],
       };
 
-      const result = engine.evaluate(asEntity(hyp), graph, rule);
+      const result = engine.evaluate(withStatus(hyp), graph, rule);
       expect(result.met).toBe(true);
       expect(result.matchedIds).toContain('exp-001');
     });
@@ -58,7 +58,7 @@ describe('transition-engine', () => {
         conditions: [{ fn: 'has_linked', args: { type: 'experiment', status: 'RUNNING', direction: 'any' } }],
       };
 
-      const result = engine.evaluate(asEntity(hyp), graph, rule);
+      const result = engine.evaluate(withStatus(hyp), graph, rule);
       expect(result.met).toBe(false);
       expect(result.matchedIds).toEqual([]);
     });
@@ -77,7 +77,7 @@ describe('transition-engine', () => {
         conditions: [{ fn: 'has_linked', args: { relation: 'supports', min_strength: 0.7, direction: 'incoming' } }],
       };
 
-      const result = engine.evaluate(asEntity(hyp), graph, rule);
+      const result = engine.evaluate(withStatus(hyp), graph, rule);
       expect(result.met).toBe(true);
       expect(result.matchedIds).toContain('fnd-001');
     });
@@ -93,7 +93,7 @@ describe('transition-engine', () => {
         conditions: [{ fn: 'field_present', args: { name: 'methodology' } }],
       };
 
-      const result = engine.evaluate(asEntity(node), graph, rule);
+      const result = engine.evaluate(withStatus(node), graph, rule);
       expect(result.met).toBe(true);
     });
 
@@ -108,7 +108,7 @@ describe('transition-engine', () => {
         conditions: [{ fn: 'field_present', args: { name: 'methodology' } }],
       };
 
-      const result = engine.evaluate(asEntity(node), graph, rule);
+      const result = engine.evaluate(withStatus(node), graph, rule);
       expect(result.met).toBe(false);
     });
 
@@ -128,7 +128,7 @@ describe('transition-engine', () => {
         conditions: [{ fn: 'min_linked_count', args: { type: 'finding', count: 2 } }],
       };
 
-      const result = engine.evaluate(asEntity(hyp), graph, rule);
+      const result = engine.evaluate(withStatus(hyp), graph, rule);
       expect(result.met).toBe(true);
       expect(result.matchedIds).toHaveLength(2);
     });
@@ -149,7 +149,7 @@ describe('transition-engine', () => {
         conditions: [{ fn: 'all_linked_with', args: { relation: 'contradicts', status: 'RETRACTED' } }],
       };
 
-      const result = engine.evaluate(asEntity(knw), graph, rule);
+      const result = engine.evaluate(withStatus(knw), graph, rule);
       expect(result.met).toBe(true);
       expect(result.matchedIds).toContain('fnd-001');
       expect(result.matchedIds).toContain('fnd-002');
@@ -163,7 +163,7 @@ describe('transition-engine', () => {
         conditions: [{ fn: 'all_linked_with', args: { relation: 'contradicts', status: 'RETRACTED' } }],
       };
 
-      const result = engine.evaluate(asEntity(knw), graph, rule);
+      const result = engine.evaluate(withStatus(knw), graph, rule);
       expect(result.met).toBe(false);
     });
   });
@@ -188,7 +188,7 @@ describe('transition-engine', () => {
         ],
       };
 
-      const result = engine.evaluate(asEntity(hyp), graph, rule);
+      const result = engine.evaluate(withStatus(hyp), graph, rule);
       expect(result.met).toBe(true);
       expect(result.matchedIds).toContain('dec-001');
       expect(result.matchedIds).toContain('fnd-001');
@@ -210,7 +210,7 @@ describe('transition-engine', () => {
         ],
       };
 
-      const result = engine.evaluate(asEntity(hyp), graph, rule);
+      const result = engine.evaluate(withStatus(hyp), graph, rule);
       expect(result.met).toBe(false);
     });
   });
@@ -224,7 +224,7 @@ describe('transition-engine', () => {
         conditions: [{ fn: 'field_present', args: {} }],
       };
 
-      expect(() => engine.evaluate(asEntity(node), graph, rule)).toThrow('name');
+      expect(() => engine.evaluate(withStatus(node), graph, rule)).toThrow('name');
     });
 
     it('min_linked_count throws when args are missing', () => {
@@ -235,7 +235,7 @@ describe('transition-engine', () => {
         conditions: [{ fn: 'min_linked_count', args: {} }],
       };
 
-      expect(() => engine.evaluate(asEntity(node), graph, rule)).toThrow();
+      expect(() => engine.evaluate(withStatus(node), graph, rule)).toThrow();
     });
 
     it('all_linked_with throws when args are missing', () => {
@@ -246,7 +246,7 @@ describe('transition-engine', () => {
         conditions: [{ fn: 'all_linked_with', args: {} }],
       };
 
-      expect(() => engine.evaluate(asEntity(node), graph, rule)).toThrow();
+      expect(() => engine.evaluate(withStatus(node), graph, rule)).toThrow();
     });
   });
 
@@ -262,7 +262,7 @@ describe('transition-engine', () => {
         { from: 'PROPOSED', to: 'TESTING', conditions: [{ fn: 'has_linked', args: { type: 'experiment', status: 'RUNNING', direction: 'any' } }] },
       ];
 
-      const result = engine.validate(asEntity(hyp), graph, rules, 'TESTING');
+      const result = engine.validate(withStatus(hyp), graph, rules, 'TESTING');
       expect(result.valid).toBe(true);
       if (result.valid) {
         expect(result.matchedIds).toContain('exp-001');
@@ -276,7 +276,7 @@ describe('transition-engine', () => {
         { from: 'PROPOSED', to: 'TESTING', conditions: [{ fn: 'has_linked', args: { type: 'experiment', status: 'RUNNING', direction: 'any' } }] },
       ];
 
-      const result = engine.validate(asEntity(hyp), graph, rules, 'TESTING');
+      const result = engine.validate(withStatus(hyp), graph, rules, 'TESTING');
       expect(result.valid).toBe(false);
       if (!result.valid) {
         expect(result.reason).toBeTruthy();
@@ -289,7 +289,7 @@ describe('transition-engine', () => {
       const rules: TransitionRule[] = [];
       const manual: ManualTransition[] = [{ from: 'ANY', to: 'DEFERRED' }];
 
-      const result = engine.validate(asEntity(hyp), graph, rules, 'DEFERRED', manual);
+      const result = engine.validate(withStatus(hyp), graph, rules, 'DEFERRED', manual);
       expect(result.valid).toBe(true);
       if (result.valid) {
         expect(result.matchedIds).toEqual([]);
@@ -302,7 +302,7 @@ describe('transition-engine', () => {
       const rules: TransitionRule[] = [];
       const manual: ManualTransition[] = [{ from: 'PROPOSED', to: 'DEFERRED' }];
 
-      const result = engine.validate(asEntity(hyp), graph, rules, 'DEFERRED', manual);
+      const result = engine.validate(withStatus(hyp), graph, rules, 'DEFERRED', manual);
       expect(result.valid).toBe(true);
     });
   });
@@ -316,7 +316,7 @@ describe('transition-engine', () => {
         conditions: [{ fn: 'nonexistent_preset', args: {} }],
       };
 
-      expect(() => engine.evaluate(asEntity(node), graph, rule)).toThrow(/nonexistent_preset/);
+      expect(() => engine.evaluate(withStatus(node), graph, rule)).toThrow(/nonexistent_preset/);
     });
   });
 
@@ -333,7 +333,7 @@ describe('transition-engine', () => {
         { from: 'TESTING', to: 'SUPPORTED', conditions: [{ fn: 'has_linked', args: { relation: 'supports', min_strength: 0.7, direction: 'incoming' } }] },
       ];
 
-      const valid = engine.getValidTransitions(asEntity(hyp), graph, rules);
+      const valid = engine.getValidTransitions(withStatus(hyp), graph, rules);
       expect(valid.map(v => v.status)).toEqual(['TESTING']);
     });
   });
@@ -350,7 +350,7 @@ describe('transition-engine', () => {
         { from: 'OPEN', to: 'RESOLVED', conditions: [{ fn: 'field_present', args: { name: 'resolution' } }] },
       ];
 
-      const result = engine.validate(asEntity(qst), graph, rules, 'RESOLVED');
+      const result = engine.validate(withStatus(qst), graph, rules, 'RESOLVED');
       expect(result.valid).toBe(true);
     });
   });
