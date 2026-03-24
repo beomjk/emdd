@@ -2,13 +2,16 @@ import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { getHealth } from '../../graph/operations.js';
 import { CEREMONY_TRIGGERS } from '../../graph/types.js';
+import { getLocale, setLocale } from '../../i18n/index.js';
 
 export function registerHealthReview(server: McpServer): void {
   server.prompt(
     'health-review',
     'Full health dashboard with actionable recommendations — analyzes node distribution, structural gaps, and link density',
-    { path: z.string().describe('Path to the EMDD graph directory') },
-    async ({ path: graphDir }) => {
+    { graphDir: z.string().describe('Path to the EMDD graph directory'), lang: z.string().optional().describe('Language locale (en or ko)') },
+    async ({ graphDir, lang }) => {
+      const locale = getLocale(lang);
+      setLocale(locale);
       const health = await getHealth(graphDir);
 
       const typeBreakdown = Object.entries(health.byType)

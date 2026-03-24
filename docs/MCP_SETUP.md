@@ -173,14 +173,12 @@ All tools accept a `graphDir` parameter — the path to your EMDD `graph/` direc
 
 | Prompt | Parameters | Description |
 |--------|-----------|-------------|
-| `context-loading` | `path` (required) | Load graph context at the start of a session — summarizes graph state, active hypotheses, and latest episode |
+| `context-loading` | `graphDir` (required), `lang?` | Load graph context at the start of a session — summarizes graph state, active hypotheses, and latest episode |
 | `episode-creation` | (none) | Guided workflow for writing an Episode node at the end of a session |
-| `consolidation` | `path` (required) | Step-by-step guide for running a Consolidation ceremony |
-| `health-review` | `path` (required) | Analyze graph health and generate recommendations |
+| `consolidation` | `graphDir` (required), `lang?` | Step-by-step guide for running a Consolidation ceremony |
+| `health-review` | `graphDir` (required), `lang?` | Analyze graph health and generate recommendations |
 
 Prompts are available in tools that support MCP prompts (e.g., Claude Code).
-
-> **Note:** Tools use the `graphDir` parameter for the graph directory path, while prompts use `path`. Prompts do not support the `lang` parameter.
 
 ---
 

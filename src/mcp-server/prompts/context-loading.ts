@@ -2,13 +2,16 @@ import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { getHealth, checkConsolidation } from '../../graph/operations.js';
 import { listNodes } from '../../graph/operations.js';
+import { getLocale, setLocale } from '../../i18n/index.js';
 
 export function registerContextLoading(server: McpServer): void {
   server.prompt(
     'context-loading',
     'Load EMDD graph context for session start — provides a summary of nodes, edges, health, and structural gaps',
-    { path: z.string().describe('Path to the EMDD graph directory') },
-    async ({ path: graphDir }) => {
+    { graphDir: z.string().describe('Path to the EMDD graph directory'), lang: z.string().optional().describe('Language locale (en or ko)') },
+    async ({ graphDir, lang }) => {
+      const locale = getLocale(lang);
+      setLocale(locale);
       const health = await getHealth(graphDir);
       const nodes = await listNodes(graphDir);
       const consolidation = await checkConsolidation(graphDir);

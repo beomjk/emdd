@@ -76,7 +76,6 @@ edgeTypes:
     - part_of
     - context_for
     - resolves
-    # aliases
     - tests
   reverse:
     # 16 forward 중 7개만 reverse label이 정의됨.

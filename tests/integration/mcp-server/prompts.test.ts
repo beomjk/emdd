@@ -35,7 +35,7 @@ describe('MCP Prompts via SDK Client', () => {
     it('returns graph summary prompt', async () => {
       const result = await client.getPrompt({
         name: 'context-loading',
-        arguments: { path: SAMPLE_GRAPH },
+        arguments: { graphDir: SAMPLE_GRAPH },
       });
       expect(result.messages).toHaveLength(1);
       expect(result.messages[0].role).toBe('user');
@@ -47,7 +47,7 @@ describe('MCP Prompts via SDK Client', () => {
     it('includes node count and types', async () => {
       const result = await client.getPrompt({
         name: 'context-loading',
-        arguments: { path: SAMPLE_GRAPH },
+        arguments: { graphDir: SAMPLE_GRAPH },
       });
       const text = (result.messages[0].content as { type: string; text: string }).text;
       expect(text).toContain('14');
@@ -60,7 +60,7 @@ describe('MCP Prompts via SDK Client', () => {
     it('accepts custom path', async () => {
       const result = await client.getPrompt({
         name: 'context-loading',
-        arguments: { path: SAMPLE_GRAPH },
+        arguments: { graphDir: SAMPLE_GRAPH },
       });
       const text = (result.messages[0].content as { type: string; text: string }).text;
       // Should reflect the sample graph data, not fail
@@ -99,7 +99,7 @@ describe('MCP Prompts via SDK Client', () => {
     it('returns trigger analysis', async () => {
       const result = await client.getPrompt({
         name: 'consolidation',
-        arguments: { path: SAMPLE_GRAPH },
+        arguments: { graphDir: SAMPLE_GRAPH },
       });
       expect(result.messages).toHaveLength(1);
       expect(result.messages[0].role).toBe('user');
@@ -111,7 +111,7 @@ describe('MCP Prompts via SDK Client', () => {
     it('includes step-by-step guide', async () => {
       const result = await client.getPrompt({
         name: 'consolidation',
-        arguments: { path: SAMPLE_GRAPH },
+        arguments: { graphDir: SAMPLE_GRAPH },
       });
       const text = (result.messages[0].content as { type: string; text: string }).text;
       expect(text).toMatch(/promot/i);
@@ -126,7 +126,7 @@ describe('MCP Prompts via SDK Client', () => {
     it('returns health analysis prompt', async () => {
       const result = await client.getPrompt({
         name: 'health-review',
-        arguments: { path: SAMPLE_GRAPH },
+        arguments: { graphDir: SAMPLE_GRAPH },
       });
       expect(result.messages).toHaveLength(1);
       expect(result.messages[0].role).toBe('user');
@@ -138,7 +138,7 @@ describe('MCP Prompts via SDK Client', () => {
     it('includes recommendations', async () => {
       const result = await client.getPrompt({
         name: 'health-review',
-        arguments: { path: SAMPLE_GRAPH },
+        arguments: { graphDir: SAMPLE_GRAPH },
       });
       const text = (result.messages[0].content as { type: string; text: string }).text;
       expect(text).toMatch(/recommend/i);

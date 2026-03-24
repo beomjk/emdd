@@ -71,7 +71,7 @@ describe('health-review prompt (unit)', () => {
 
     const result = await client.getPrompt({
       name: 'health-review',
-      arguments: { path: '/any' },
+      arguments: { graphDir: '/any' },
     });
 
     const text = getPromptText(result);
@@ -88,7 +88,7 @@ describe('health-review prompt (unit)', () => {
 
     const result = await client.getPrompt({
       name: 'health-review',
-      arguments: { path: '/any' },
+      arguments: { graphDir: '/any' },
     });
 
     const text = getPromptText(result);
@@ -102,7 +102,7 @@ describe('health-review prompt (unit)', () => {
 
     const result = await client.getPrompt({
       name: 'health-review',
-      arguments: { path: '/any' },
+      arguments: { graphDir: '/any' },
     });
 
     const text = getPromptText(result);
@@ -116,7 +116,7 @@ describe('health-review prompt (unit)', () => {
 
     const result = await client.getPrompt({
       name: 'health-review',
-      arguments: { path: '/any' },
+      arguments: { graphDir: '/any' },
     });
 
     const text = getPromptText(result);
@@ -130,7 +130,7 @@ describe('health-review prompt (unit)', () => {
 
     const result = await client.getPrompt({
       name: 'health-review',
-      arguments: { path: '/any' },
+      arguments: { graphDir: '/any' },
     });
 
     const text = getPromptText(result);
@@ -155,7 +155,7 @@ describe('health-review prompt (unit)', () => {
 
     const result = await client.getPrompt({
       name: 'health-review',
-      arguments: { path: '/any' },
+      arguments: { graphDir: '/any' },
     });
 
     const text = getPromptText(result);
@@ -179,7 +179,7 @@ describe('health-review prompt (unit)', () => {
 
     const result = await client.getPrompt({
       name: 'health-review',
-      arguments: { path: '/any' },
+      arguments: { graphDir: '/any' },
     });
 
     const text = getPromptText(result);
@@ -207,7 +207,7 @@ describe('health-review prompt (unit)', () => {
 
     const result = await client.getPrompt({
       name: 'health-review',
-      arguments: { path: '/any' },
+      arguments: { graphDir: '/any' },
     });
 
     const text = getPromptText(result);

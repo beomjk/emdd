@@ -2,13 +2,16 @@ import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { checkConsolidation, getHealth } from '../../graph/operations.js';
 import { CEREMONY_TRIGGERS, THRESHOLDS } from '../../graph/types.js';
+import { getLocale, setLocale } from '../../i18n/index.js';
 
 export function registerConsolidation(server: McpServer): void {
   server.prompt(
     'consolidation',
     'Consolidation execution guide — checks triggers and provides a step-by-step procedure for promoting findings, generating questions, and updating hypotheses',
-    { path: z.string().describe('Path to the EMDD graph directory') },
-    async ({ path: graphDir }) => {
+    { graphDir: z.string().describe('Path to the EMDD graph directory'), lang: z.string().optional().describe('Language locale (en or ko)') },
+    async ({ graphDir, lang }) => {
+      const locale = getLocale(lang);
+      setLocale(locale);
       const checkResult = await checkConsolidation(graphDir);
       const health = await getHealth(graphDir);
       const ct = CEREMONY_TRIGGERS.consolidation;
