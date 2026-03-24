@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { Node, Graph } from '../../../src/graph/types.js';
-import { PRESET_REGISTRY } from '../../../src/graph/transition-presets.js';
+import { hasLinked, fieldPresent, minLinkedCount, allLinkedWith } from '../../../src/graph/graph-presets.js';
 
 function makeNode(overrides: Partial<Node> & { id: string; type: Node['type'] }): Node {
   return {
@@ -20,13 +20,11 @@ function makeGraph(nodes: Node[]): Graph {
   return { nodes: map, errors: [], warnings: [] };
 }
 
-const hasLinked = PRESET_REGISTRY['has_linked'];
-const fieldPresent = PRESET_REGISTRY['field_present'];
-const minLinkedCount = PRESET_REGISTRY['min_linked_count'];
-const allLinkedWith = PRESET_REGISTRY['all_linked_with'];
+// Note: PresetFn<Graph> signature is (entity: Entity, context: Graph, args)
+// Node satisfies Entity (has id, type, status, meta), so we can pass Node directly.
 
-describe('transition-presets', () => {
-  describe('has_linked', () => {
+describe('graph-presets (state-engine PresetFn<Graph>)', () => {
+  describe('hasLinked', () => {
     it('returns met=true when outgoing link matches', () => {
       const hyp = makeNode({
         id: 'hyp-001', type: 'hypothesis',
@@ -37,7 +35,7 @@ describe('transition-presets', () => {
 
       const result = hasLinked(hyp, graph, { type: 'experiment', relation: 'tests' });
       expect(result.met).toBe(true);
-      expect(result.matchedNodeIds).toEqual(['exp-001']);
+      expect(result.matchedIds).toEqual(['exp-001']);
     });
 
     it('returns met=false when no links match', () => {
@@ -62,7 +60,7 @@ describe('transition-presets', () => {
 
       const result = hasLinked(hyp, graph, { relation: 'supports', min_strength: 0.5 });
       expect(result.met).toBe(true);
-      expect(result.matchedNodeIds).toEqual(['fnd-002']);
+      expect(result.matchedIds).toEqual(['fnd-002']);
     });
 
     it('direction=incoming only checks incoming edges', () => {
@@ -73,7 +71,6 @@ describe('transition-presets', () => {
       const exp = makeNode({ id: 'exp-001', type: 'experiment', links: [] });
       const graph = makeGraph([hyp, exp]);
 
-      // hyp has outgoing to exp, but exp has no incoming when checked from exp's perspective
       const resultIncoming = hasLinked(hyp, graph, { direction: 'incoming' });
       expect(resultIncoming.met).toBe(false);
 
@@ -91,11 +88,11 @@ describe('transition-presets', () => {
 
       const result = hasLinked(fnd, graph, { direction: 'incoming', relation: 'produces' });
       expect(result.met).toBe(true);
-      expect(result.matchedNodeIds).toEqual(['exp-001']);
+      expect(result.matchedIds).toEqual(['exp-001']);
     });
   });
 
-  describe('field_present', () => {
+  describe('fieldPresent', () => {
     it('returns met=true when meta field has value', () => {
       const node = makeNode({ id: 'hyp-001', type: 'hypothesis', meta: { method: 'cnn' } });
       const graph = makeGraph([node]);
@@ -136,7 +133,7 @@ describe('transition-presets', () => {
     });
   });
 
-  describe('min_linked_count', () => {
+  describe('minLinkedCount', () => {
     it('returns met=true when outgoing count meets threshold', () => {
       const exp = makeNode({
         id: 'exp-001', type: 'experiment',
@@ -151,7 +148,7 @@ describe('transition-presets', () => {
 
       const result = minLinkedCount(exp, graph, { type: 'finding', count: 2 });
       expect(result.met).toBe(true);
-      expect(result.matchedNodeIds.length).toBe(2);
+      expect(result.matchedIds.length).toBe(2);
     });
 
     it('returns met=false when count below threshold', () => {
@@ -180,8 +177,8 @@ describe('transition-presets', () => {
 
       const result = minLinkedCount(hyp, graph, { type: 'finding', count: 2 });
       expect(result.met).toBe(true);
-      expect(result.matchedNodeIds).toContain('fnd-001');
-      expect(result.matchedNodeIds).toContain('fnd-002');
+      expect(result.matchedIds).toContain('fnd-001');
+      expect(result.matchedIds).toContain('fnd-002');
     });
 
     it('throws when required args missing', () => {
@@ -193,7 +190,7 @@ describe('transition-presets', () => {
     });
   });
 
-  describe('all_linked_with', () => {
+  describe('allLinkedWith', () => {
     it('returns met=true when all incoming with relation have status', () => {
       const hyp = makeNode({ id: 'hyp-001', type: 'hypothesis', links: [] });
       const fnd1 = makeNode({
@@ -208,7 +205,7 @@ describe('transition-presets', () => {
 
       const result = allLinkedWith(hyp, graph, { relation: 'supports', status: 'VALIDATED' });
       expect(result.met).toBe(true);
-      expect(result.matchedNodeIds.length).toBe(2);
+      expect(result.matchedIds.length).toBe(2);
     });
 
     it('returns met=false when any incoming node has wrong status', () => {
@@ -233,7 +230,7 @@ describe('transition-presets', () => {
 
       const result = allLinkedWith(hyp, graph, { relation: 'supports', status: 'VALIDATED' });
       expect(result.met).toBe(false);
-      expect(result.matchedNodeIds).toEqual([]);
+      expect(result.matchedIds).toEqual([]);
     });
 
     it('throws when required args missing', () => {

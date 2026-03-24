@@ -33,6 +33,13 @@ export interface Graph {
   warnings: string[];
 }
 
+/**
+ * A Node with guaranteed status. Satisfies @beomjk/state-engine Entity
+ * interface (status: string). Use at transition evaluation boundaries
+ * where status existence has already been verified.
+ */
+export type NodeWithStatus = Node & { status: string };
+
 // ── Operations Return Types ────────────────────────────────────────
 
 export interface NodeFilter {

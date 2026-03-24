@@ -5,7 +5,7 @@ import { loadGraph } from './loader.js';
 import { nextId, renderTemplate, nodePath, sanitizeSlug } from './templates.js';
 import { NODE_TYPES, NODE_TYPE_DIRS, ALL_VALID_RELATIONS, REVERSE_LABELS, THRESHOLDS, VALID_STATUSES, VALID_FINDING_TYPES, VALID_URGENCIES, VALID_RISK_LEVELS, VALID_REVERSIBILITIES, EDGE_ATTRIBUTE_NAMES, EDGE_ATTRIBUTE_RANGES, EDGE_ATTRIBUTE_ENUM_VALUES, TRANSITION_POLICY_DEFAULT, TRANSITION_TABLE, MANUAL_TRANSITIONS, CEREMONY_TRIGGERS, URGENCY, VALUE_PRODUCING_EDGES, EDGE, STATUS } from './types.js';
 import { checkEdgeAffinity, getPresentAttrKeys } from './edge-attrs.js';
-import { validateTransition } from './transition-engine.js';
+import { engine } from './engine-setup.js';
 import { collectDeferredIds, buildNodeToComponent, getConnectedComponents } from './utils.js';
 import { toGraphologyGraph } from './graphology-bridge.js';
 import type {
@@ -13,6 +13,7 @@ import type {
   NodeType,
   NodeFilter,
   NodeDetail,
+  NodeWithStatus,
   Graph,
   CreateNodeResult,
   CreateEdgeResult,
@@ -937,7 +938,7 @@ export async function updateNode(
         const transitionRules = TRANSITION_TABLE[node.type];
         if (transitionRules) {
           const manualRules = MANUAL_TRANSITIONS[node.type];
-          const result = validateTransition(node, graph, transitionRules, value, manualRules);
+          const result = engine.validate(node as NodeWithStatus, graph, transitionRules, value, manualRules);
           if (!result.valid) {
             // Determine violation type: no rule exists vs conditions unmet
             const hasRule = transitionRules.some(r => r.from === node.status && r.to === value);
