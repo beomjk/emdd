@@ -191,11 +191,13 @@ describe('type-specific template fields', () => {
     expect(parsed.data).toHaveProperty('answer_summary');
   });
 
-  it('experiment template includes results and artifacts', () => {
+  it('experiment template includes inputs and outputs (not artifacts)', () => {
     const output = renderTemplate('experiment', 'test', { locale: 'en' });
     const parsed = matter(output);
     expect(parsed.data).toHaveProperty('results');
-    expect(parsed.data).toHaveProperty('artifacts');
+    expect(parsed.data).toHaveProperty('inputs');
+    expect(parsed.data).toHaveProperty('outputs');
+    expect(parsed.data).not.toHaveProperty('artifacts');
   });
 });
 

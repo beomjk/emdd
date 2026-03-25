@@ -922,6 +922,14 @@ export async function updateNode(
   const parsed = matter(raw);
   const data: Record<string, unknown> = structuredClone(parsed.data);
 
+  // Deprecated: artifacts → outputs (will be removed in 0.2.0)
+  if (node.type === 'experiment' && data.artifacts !== undefined) {
+    if (data.outputs === undefined) {
+      data.outputs = data.artifacts;
+    }
+    delete data.artifacts;
+  }
+
   // NOTE: Transition validation uses the pre-update `node` state.
   // If a future transition rule uses `field_present` on a field being
   // updated in the same call, it would evaluate against stale data.

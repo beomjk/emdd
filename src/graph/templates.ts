@@ -112,7 +112,8 @@ export function renderTemplate(
     case 'experiment':
       typeFields.config = {};
       typeFields.results = {};
-      typeFields.artifacts = [];
+      typeFields.inputs = [];
+      typeFields.outputs = [];
       break;
     case 'knowledge':
       typeFields.knowledge_type = '';

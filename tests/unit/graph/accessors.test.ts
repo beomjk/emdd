@@ -120,15 +120,26 @@ describe('getEpisodeMeta', () => {
 });
 
 describe('getExperimentMeta', () => {
-  it('returns config, results, artifacts', () => {
+  it('returns config, results, inputs, outputs', () => {
     const node = makeNode({
       type: 'experiment',
-      meta: { config: { lr: 0.001 }, results: { accuracy: 0.95 }, artifacts: ['model.pt'] },
+      meta: { config: { lr: 0.001 }, results: { accuracy: 0.95 }, inputs: ['exp-002'], outputs: ['model.pt'] },
     });
     const m = getExperimentMeta(node);
     expect(m!.config).toEqual({ lr: 0.001 });
     expect(m!.results).toEqual({ accuracy: 0.95 });
-    expect(m!.artifacts).toEqual(['model.pt']);
+    expect(m!.inputs).toEqual(['exp-002']);
+    expect(m!.outputs).toEqual(['model.pt']);
+  });
+
+  it('falls back from deprecated artifacts to outputs', () => {
+    const node = makeNode({
+      type: 'experiment',
+      meta: { config: {}, results: {}, artifacts: ['old-model.pt'] },
+    });
+    const m = getExperimentMeta(node);
+    expect(m!.outputs).toEqual(['old-model.pt']);
+    expect(m!).not.toHaveProperty('artifacts');
   });
 });
 

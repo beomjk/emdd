@@ -30,7 +30,8 @@ export interface EpisodeMeta {
 export interface ExperimentMeta {
   config?: Record<string, unknown>;
   results?: Record<string, unknown>;
-  artifacts?: string[];
+  inputs?: string[];
+  outputs?: string[];
 }
 
 export interface DecisionMeta {
@@ -74,7 +75,16 @@ export function getEpisodeMeta(node: Node): EpisodeMeta | null {
 }
 
 export function getExperimentMeta(node: Node): ExperimentMeta | null {
-  return extract<ExperimentMeta>(node, 'experiment', ['config', 'results', 'artifacts']);
+  const meta = extract<ExperimentMeta & { artifacts?: string[] }>(
+    node, 'experiment', ['config', 'results', 'inputs', 'outputs', 'artifacts'],
+  );
+  if (!meta) return meta;
+  // Deprecated: artifacts → outputs (will be removed in 0.2.0)
+  if (meta.artifacts !== undefined) {
+    if (meta.outputs === undefined) meta.outputs = meta.artifacts;
+    delete meta.artifacts;
+  }
+  return meta;
 }
 
 export function getDecisionMeta(node: Node): DecisionMeta | null {

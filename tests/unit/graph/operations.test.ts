@@ -1907,6 +1907,76 @@ describe('updateNode', () => {
   });
 });
 
+// ── artifacts → outputs lazy write-back ──
+
+describe('updateNode — artifacts→outputs migration on write', () => {
+  let tmpDir: string;
+  beforeEach(() => { tmpDir = setupProject(); });
+  afterEach(() => { rmSync(tmpDir, { recursive: true, force: true }); });
+
+  it('migrates artifacts to outputs when experiment node is updated', async () => {
+    writeNode(tmpDir, 'experiments', 'exp-001-old.md', {
+      id: 'exp-001', type: 'experiment', title: 'Old format',
+      status: 'PLANNED', created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [], config: {}, results: {}, artifacts: ['model.pt'],
+    });
+
+    await updateNode(join(tmpDir, 'graph'), 'exp-001', { status: 'RUNNING' }, { transitionPolicy: 'off' });
+
+    const content = readFileSync(join(tmpDir, 'graph', 'experiments', 'exp-001-old.md'), 'utf-8');
+    const parsed = matter(content);
+    expect(parsed.data.outputs).toEqual(['model.pt']);
+    expect(parsed.data.artifacts).toBeUndefined();
+  });
+
+  it('preserves outputs when both artifacts and outputs exist on disk', async () => {
+    writeNode(tmpDir, 'experiments', 'exp-002-both.md', {
+      id: 'exp-002', type: 'experiment', title: 'Both fields',
+      status: 'PLANNED', created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [], config: {}, results: {},
+      outputs: ['new.pt'], artifacts: ['old.pt'],
+    });
+
+    await updateNode(join(tmpDir, 'graph'), 'exp-002', { status: 'RUNNING' }, { transitionPolicy: 'off' });
+
+    const content = readFileSync(join(tmpDir, 'graph', 'experiments', 'exp-002-both.md'), 'utf-8');
+    const parsed = matter(content);
+    expect(parsed.data.outputs).toEqual(['new.pt']);
+    expect(parsed.data.artifacts).toBeUndefined();
+  });
+
+  it('migrates empty artifacts array', async () => {
+    writeNode(tmpDir, 'experiments', 'exp-003-empty.md', {
+      id: 'exp-003', type: 'experiment', title: 'Empty artifacts',
+      status: 'PLANNED', created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [], config: {}, results: {}, artifacts: [],
+    });
+
+    await updateNode(join(tmpDir, 'graph'), 'exp-003', { status: 'RUNNING' }, { transitionPolicy: 'off' });
+
+    const content = readFileSync(join(tmpDir, 'graph', 'experiments', 'exp-003-empty.md'), 'utf-8');
+    const parsed = matter(content);
+    expect(parsed.data.outputs).toEqual([]);
+    expect(parsed.data.artifacts).toBeUndefined();
+  });
+
+  it('does not migrate artifacts on non-experiment nodes', async () => {
+    writeNode(tmpDir, 'hypotheses', 'hyp-010-art.md', {
+      id: 'hyp-010', type: 'hypothesis', title: 'Has artifacts field',
+      status: 'PROPOSED', confidence: 0.5,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [], artifacts: ['stray.pt'],
+    });
+
+    await updateNode(join(tmpDir, 'graph'), 'hyp-010', { confidence: '0.7' });
+
+    const content = readFileSync(join(tmpDir, 'graph', 'hypotheses', 'hyp-010-art.md'), 'utf-8');
+    const parsed = matter(content);
+    expect(parsed.data.artifacts).toEqual(['stray.pt']);
+    expect(parsed.data.outputs).toBeUndefined();
+  });
+});
+
 // ── Transition Policy Enforcement (T029) ──
 
 describe('updateNode — transition policy', () => {

@@ -100,6 +100,14 @@ export async function loadNode(filePath: string): Promise<Node | null> {
   const type = meta.type as NodeType | undefined;
   if (!type) return null;
 
+  // Deprecated: artifacts → outputs (will be removed in 0.2.0)
+  if (type === 'experiment' && meta.artifacts !== undefined) {
+    if (meta.outputs === undefined) {
+      meta.outputs = meta.artifacts;
+    }
+    delete meta.artifacts;
+  }
+
   return {
     id: String(id),
     type,

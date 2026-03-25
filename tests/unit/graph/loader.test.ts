@@ -309,6 +309,59 @@ describe('loadGraph permissive mode', () => {
   });
 });
 
+describe('loadNode artifacts → outputs migration', () => {
+  let tmpDir: string;
+  let graphDir: string;
+
+  beforeEach(() => {
+    tmpDir = mkdtempSync(join(tmpdir(), 'emdd-loader-migrate-'));
+    graphDir = join(tmpDir, 'graph');
+    mkdirSync(join(graphDir, 'experiments'), { recursive: true });
+  });
+
+  afterEach(() => {
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  function writeFixture(filename: string, frontmatter: Record<string, unknown>) {
+    const content = matter.stringify('', frontmatter);
+    writeFileSync(join(graphDir, 'experiments', filename), content);
+  }
+
+  it('migrates artifacts to outputs in meta', async () => {
+    writeFixture('exp-001-test.md', {
+      id: 'exp-001', type: 'experiment', title: 'Test', status: 'PLANNED',
+      created: '2026-01-01', updated: '2026-01-01', tags: [],
+      config: {}, results: {}, artifacts: ['model.pt', 'metrics.json'],
+    });
+    const node = await loadNode(join(graphDir, 'experiments/exp-001-test.md'));
+    expect(node!.meta.outputs).toEqual(['model.pt', 'metrics.json']);
+    expect(node!.meta.artifacts).toBeUndefined();
+  });
+
+  it('does not overwrite existing outputs with artifacts', async () => {
+    writeFixture('exp-001-test.md', {
+      id: 'exp-001', type: 'experiment', title: 'Test', status: 'PLANNED',
+      created: '2026-01-01', updated: '2026-01-01', tags: [],
+      config: {}, results: {}, outputs: ['new.pt'], artifacts: ['old.pt'],
+    });
+    const node = await loadNode(join(graphDir, 'experiments/exp-001-test.md'));
+    expect(node!.meta.outputs).toEqual(['new.pt']);
+    expect(node!.meta.artifacts).toBeUndefined();
+  });
+
+  it('leaves nodes without artifacts unchanged', async () => {
+    writeFixture('exp-001-test.md', {
+      id: 'exp-001', type: 'experiment', title: 'Test', status: 'PLANNED',
+      created: '2026-01-01', updated: '2026-01-01', tags: [],
+      config: {}, results: {}, outputs: ['already.pt'],
+    });
+    const node = await loadNode(join(graphDir, 'experiments/exp-001-test.md'));
+    expect(node!.meta.outputs).toEqual(['already.pt']);
+    expect(node!.meta.artifacts).toBeUndefined();
+  });
+});
+
 describe('resolveGraphDir', () => {
   it('finds graph/ in sample-project fixture', () => {
     const projectDir = path.join(FIXTURES, 'sample-project');
