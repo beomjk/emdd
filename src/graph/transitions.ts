@@ -23,8 +23,8 @@ export async function detectTransitions(graphDir: string): Promise<TransitionRec
       node as NodeWithStatus, graph, rules,
     );
 
-    // First-match-per-from-status: take only the first passing rule
-    // (all results share the same `from` since getValidTransitions filters by current status)
+    // First passing rule wins (declaration-order priority).
+    // getValidTransitions returns all matching rules, but we only take the first.
     if (validTransitions.length > 0) {
       const first = validTransitions[0];
       if (first.rule) {
