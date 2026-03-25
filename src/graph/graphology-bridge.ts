@@ -11,7 +11,7 @@ export type GraphologyInstance = InstanceType<typeof GraphologyGraph>;
  * Nodes and edges are added with their core attributes for algorithm use.
  */
 export function toGraphologyGraph(graph: EmddGraph): GraphologyInstance {
-  const g = new GraphologyGraph({ type: 'directed' });
+  const g = new GraphologyGraph({ type: 'directed', multi: true });
 
   for (const [id, node] of graph.nodes) {
     g.addNode(id, { type: node.type, title: node.title, status: node.status });
