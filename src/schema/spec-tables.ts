@@ -1,9 +1,12 @@
 // ── Spec Table Generator ────────────────────────────────────────────
 // Updates SPEC_EN.md tables from graph-schema.yaml using AUTO markers.
+// Transition tables are delegated to @beomjk/state-engine's generateDocs().
 
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { generateDocs } from '@beomjk/state-engine/schema';
 import type { GraphSchema } from './validator.js';
+import { toSchemaDefinition } from './schema-bridge.js';
 
 export interface UpdateResult {
   updatedSections: string[];
@@ -31,6 +34,8 @@ const GENERATORS: Record<string, (schema: GraphSchema) => string> = {
   'reverse-labels': generateReverseLabelsTable,
   'thresholds': generateThresholdsTable,
   'transition-rules': generateTransitionRulesTable,
+  // manual-transitions: generator ready; add <!-- AUTO:manual-transitions --> marker to SPEC docs to activate
+  'manual-transitions': generateManualTransitionsTable,
 };
 
 function generateNodeTypesTable(schema: GraphSchema): string {
@@ -99,30 +104,15 @@ function generateThresholdsTable(schema: GraphSchema): string {
 }
 
 function generateTransitionRulesTable(schema: GraphSchema): string {
-  const lines = [
-    '<!-- Generated from graph-schema.yaml — DO NOT EDIT -->',
-  ];
+  const schemaDef = toSchemaDefinition(schema);
+  const docs = generateDocs(schemaDef, { tables: ['transitions'] });
+  return `<!-- Generated via @beomjk/state-engine — DO NOT EDIT -->\n${docs['transitions']}`;
+}
 
-  const typeNames = Object.keys(schema.transitions).sort();
-  for (const typeName of typeNames) {
-    const rules = schema.transitions[typeName];
-    lines.push('');
-    lines.push(`**${typeName}**`);
-    lines.push('');
-    lines.push('| From | To | Conditions |');
-    lines.push('|------|----|------------|');
-    for (const rule of rules) {
-      const conditions = rule.conditions.map(c => {
-        const argParts = Object.entries(c.args)
-          .map(([k, v]) => `${k}=${v}`)
-          .join(', ');
-        return `${c.fn}(${argParts})`;
-      }).join(' AND ');
-      lines.push(`| ${rule.from} | ${rule.to} | ${conditions} |`);
-    }
-  }
-
-  return lines.join('\n');
+function generateManualTransitionsTable(schema: GraphSchema): string {
+  const schemaDef = toSchemaDefinition(schema);
+  const docs = generateDocs(schemaDef, { tables: ['manual-transitions'] });
+  return `<!-- Generated via @beomjk/state-engine — DO NOT EDIT -->\n${docs['manual-transitions']}`;
 }
 
 // ── Public API ──────────────────────────────────────────────────────
