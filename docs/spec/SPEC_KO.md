@@ -1378,8 +1378,18 @@ mkdir -p scratchpad
 #   status-transitions(graphDir) → 권장 상태 전이
 #   kill-check(graphDir) → 킬 기준 상태
 #   branch-groups(graphDir) → 브랜치 그룹 분석
-#   graph_neighbors(id, depth=1) → 연결 노드들
-#   graph_gaps() → 구조적 공백 분석
+#   graph-neighbors(nodeId, depth=1) → 연결 노드들
+#   graph-gaps() → 구조적 공백 분석
+#
+# v0.4 추가:
+#   delete-edge(source, target, relation?) → 링크 삭제
+#   update-node(nodeId, set) → 프론트매터 필드 업데이트
+#   mark-done(episodeId, marker) → 에피소드 체크리스트 항목 표시
+#   mark-consolidated(date?) → 통합 날짜 기록
+#   index-graph() → _index.md 생성
+#   lint() → 스키마 및 링크 무결성 검증
+#   backlog(status?) → 에피소드 간 미완료 항목 목록
+#   analyze-refutation() → 반증 영향 분석
 ```
 
 ### Week 4+: Cytoscape.js 시각화, 시간 슬라이더, 자율 분석

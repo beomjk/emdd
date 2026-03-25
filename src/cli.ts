@@ -39,7 +39,7 @@ new CliAdapter(registry).attachTo(program);
 program
   .command('init [path]')
   .description('Initialize EMDD project')
-  .option('--lang <locale>', 'Language', 'en')
+  .option('--lang <locale>', 'Language (en|ko)', 'en')
   .option('--tool <tool>', 'AI tool rules to generate (claude|cursor|windsurf|cline|copilot|all)', 'claude')
   .action(withCliErrorHandling(async (path, options) => {
     initCommand(path, options);

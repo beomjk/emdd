@@ -1452,8 +1452,18 @@ mkdir -p scratchpad
 #   status-transitions(graphDir) -> recommended status transitions
 #   kill-check(graphDir) -> kill criteria status
 #   branch-groups(graphDir) -> branch group analysis
-#   graph_neighbors(id, depth=1) -> connected nodes
-#   graph_gaps() -> structural gap analysis
+#   graph-neighbors(nodeId, depth=1) -> connected nodes
+#   graph-gaps() -> structural gap analysis
+#
+# v0.4 additions:
+#   delete-edge(source, target, relation?) -> remove a link
+#   update-node(nodeId, set) -> update frontmatter fields
+#   mark-done(episodeId, marker) -> mark episode checklist item
+#   mark-consolidated(date?) -> record consolidation date
+#   index-graph() -> generate _index.md
+#   lint() -> validate schema and link integrity
+#   backlog(status?) -> list incomplete items across episodes
+#   analyze-refutation() -> analyze refutation impact
 ```
 
 ### Week 4+: Cytoscape.js visualization, time slider, autonomous analysis

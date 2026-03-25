@@ -11,7 +11,7 @@ const schema = z.object({
 export const markConsolidatedDef: CommandDef<typeof schema, MarkConsolidatedResult> = {
   name: 'mark-consolidated',
   description: 'Record a consolidation date to reset episode counting',
-  category: 'write',
+  category: 'analysis',
   schema,
 
   async execute(input) {

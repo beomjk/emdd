@@ -52,7 +52,6 @@
 - `update-node` — Update node frontmatter fields
 - `delete-edge` — Remove a link between nodes
 - `mark-done` — Mark an episode checklist item
-- `mark-consolidated` — Record consolidation date
 - `index-graph` — Generate _index.md
 
 **Analysis operations:**
@@ -67,6 +66,7 @@
 - `lint` — Lint the graph for schema errors
 - `backlog` — Show project backlog (open items, deferred, checklists)
 - `branch-groups` — List and analyze branch groups
+- `mark-consolidated` — Record consolidation date
 
 **Prompts:**
 - `context-loading` — Load graph context for a session

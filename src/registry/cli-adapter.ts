@@ -66,7 +66,7 @@ export class CliAdapter {
       // Add --json, --lang, --graphDir per-command flags (skip if schema already defines them)
       const schemaKeys = new Set(Object.keys(def.schema.shape));
       if (!schemaKeys.has('json')) cmd.option('--json', 'Output as JSON');
-      if (!schemaKeys.has('lang')) cmd.option('--lang <locale>', 'Language locale');
+      if (!schemaKeys.has('lang')) cmd.option('--lang <locale>', 'Language locale (en|ko)');
       if (!schemaKeys.has('graphDir')) cmd.option('--graphDir <path>', 'Path to graph directory');
 
       // CLI aliases
