@@ -860,6 +860,7 @@ export async function getPromotionCandidates(graphDir: string, preloadedGraph?: 
 
   for (const [id, node] of graph.nodes) {
     if (node.type !== 'finding') continue;
+    if (node.status === STATUS.PROMOTED) continue;
     if (promotedIds.has(id)) continue;
     if (contradictedIds.has(id)) continue;
 

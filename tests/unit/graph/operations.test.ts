@@ -1403,6 +1403,34 @@ describe('getPromotionCandidates', () => {
     }
   });
 
+  it('finding with PROMOTED status is excluded even without promotes edge', async () => {
+    let tmpDir2 = setupProject();
+    try {
+      // Finding already PROMOTED by status, but no knowledge node with promotes edge
+      writeNode(tmpDir2, 'findings', 'fnd-001-test.md', {
+        id: 'fnd-001', type: 'finding', title: 'F1', status: 'PROMOTED',
+        confidence: 0.95, created: '2026-01-01', updated: '2026-01-01', tags: [],
+        links: [],
+      });
+      // Two supports to make it otherwise eligible
+      writeNode(tmpDir2, 'experiments', 'exp-001-test.md', {
+        id: 'exp-001', type: 'experiment', title: 'E1', status: 'COMPLETED',
+        created: '2026-01-01', updated: '2026-01-01', tags: [],
+        links: [{ target: 'fnd-001', relation: 'supports' }],
+      });
+      writeNode(tmpDir2, 'experiments', 'exp-002-test.md', {
+        id: 'exp-002', type: 'experiment', title: 'E2', status: 'COMPLETED',
+        created: '2026-01-01', updated: '2026-01-01', tags: [],
+        links: [{ target: 'fnd-001', relation: 'supports' }],
+      });
+
+      const candidates = await getPromotionCandidates(join(tmpDir2, 'graph'));
+      expect(candidates.some(c => c.id === 'fnd-001')).toBe(false);
+    } finally {
+      rmSync(tmpDir2, { recursive: true, force: true });
+    }
+  });
+
   it('counts incoming supports (other nodes targeting the finding)', async () => {
     let tmpDir2 = setupProject();
     try {
