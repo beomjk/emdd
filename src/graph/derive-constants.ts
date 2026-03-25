@@ -55,8 +55,8 @@ export const VALID_STATUSES: Record<NodeType, readonly string[]> = Object.fromEn
 // ── Required Fields per Node Type ────────────────────────────────────
 
 export const REQUIRED_FIELDS: Record<NodeType, readonly string[]> = Object.fromEntries(
-  NODE_TYPES.map(t => [t, [...nodeMetadata[t].requiredFields] as string[]])
-) as unknown as Record<NodeType, readonly string[]>;
+  NODE_TYPES.map(t => [t, nodeMetadata[t].requiredFields as readonly string[]])
+) as Record<NodeType, readonly string[]>;
 
 // ── Edge Types ───────────────────────────────────────────────────────
 
@@ -64,31 +64,7 @@ const allForward = [...forwardEdges].sort();
 const allReverse = Object.keys(reverseEdges).sort();
 const allEdgeNames = [...allForward, ...allReverse].sort();
 
-export type EdgeType =
-  | 'answered_by'
-  | 'answers'
-  | 'confirmed_by'
-  | 'confirms'
-  | 'context_for'
-  | 'contradicts'
-  | 'depends_on'
-  | 'extends'
-  | 'informs'
-  | 'part_of'
-  | 'produced_by'
-  | 'produces'
-  | 'promotes'
-  | 'relates_to'
-  | 'resolved_by'
-  | 'resolves'
-  | 'revises'
-  | 'spawned_from'
-  | 'spawns'
-  | 'supported_by'
-  | 'supports'
-  | 'tested_by'
-  | 'tests'
-;
+export type EdgeType = (typeof forwardEdges)[number] | keyof typeof reverseEdges;
 
 export const EDGE_TYPES = new Set<string>(allForward);
 
@@ -142,26 +118,18 @@ for (const t of NODE_TYPES) {
 }
 const sortedStatuses = [...allStatuses].sort();
 
+// Derive status union from statusCategories which covers all statuses with literal types
+type AllStatuses = (typeof statusCategories)[keyof typeof statusCategories][number];
+
 export const STATUS = Object.fromEntries(
   sortedStatuses.map(s => [s, s])
-) as { readonly [K in string]: K };
+) as { readonly [K in AllStatuses]: K };
 
 // ── Thresholds ───────────────────────────────────────────────────────
 
-const sortedThresholdEntries = Object.entries(schemaThresholds).sort(([a], [b]) => a.localeCompare(b));
-
-export const THRESHOLDS = Object.fromEntries(sortedThresholdEntries) as {
-  readonly branch_convergence_gap: 0.3;
-  readonly branch_convergence_weeks: 2;
-  readonly branch_max_active: 3;
-  readonly branch_max_candidates: 4;
-  readonly branch_max_open_weeks: 4;
-  readonly kill_confidence: 0.3;
-  readonly kill_stale_days: 14;
-  readonly min_independent_supports: 2;
-  readonly promotion_confidence: 0.9;
-  readonly support_strength_min: 0.7;
-};
+export const THRESHOLDS = Object.fromEntries(
+  Object.entries(schemaThresholds).sort(([a], [b]) => a.localeCompare(b))
+) as typeof schemaThresholds;
 
 // ── Transition Table ─────────────────────────────────────────────────
 
@@ -260,11 +228,9 @@ export const EDGE_ATTRIBUTE_RANGES: Record<string, { min?: number; max?: number 
     .map(([k, v]) => [k, { min: (v as { min: number }).min, max: (v as { max: number }).max }])
 );
 
-const valuesRefToArray: Record<string, readonly string[]> = {
-  dependencyTypes: validValues.dependencyTypes,
-  impacts: validValues.impacts,
-  severities: validValues.severities,
-};
+const valuesRefToArray: Record<string, readonly string[]> = Object.fromEntries(
+  Object.entries(validValues)
+);
 
 export const EDGE_ATTRIBUTE_ENUM_VALUES: Record<string, readonly string[]> = Object.fromEntries(
   Object.entries(edgeAttributes)
@@ -293,10 +259,7 @@ export const CEREMONY_TRIGGERS = Object.fromEntries(
     ),
   ])
 ) as {
-  readonly consolidation: {
-    readonly all_questions_resolved: true;
-    readonly episodes_threshold: 3;
-    readonly experiment_overload_threshold: 5;
-    readonly unpromoted_findings_threshold: 5;
-  };
-};
+  readonly [K in keyof typeof ceremonies]: {
+    readonly [T in keyof (typeof ceremonies)[K]['triggers']]: (typeof ceremonies)[K]['triggers'][T]
+  }
+} satisfies Record<string, Record<string, number | boolean>>;

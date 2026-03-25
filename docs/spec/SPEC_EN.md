@@ -121,7 +121,7 @@ The AI agent is a **gardener** of the graph, not an architect:
 <!-- ASSERT §6.2.8: episode has 2 statuses (ACTIVE, COMPLETED) -->
 
 <!-- AUTO:node-types -->
-<!-- Generated from graph-schema.yaml — DO NOT EDIT -->
+<!-- Generated from schema.config.ts — DO NOT EDIT -->
 | Type | Prefix | Directory | Status Count |
 |------|--------|-----------|-------------|
 | hypothesis | hyp | hypotheses | 7 |
@@ -134,7 +134,7 @@ The AI agent is a **gardener** of the graph, not an architect:
 <!-- /AUTO:node-types -->
 
 <!-- AUTO:statuses -->
-<!-- Generated from graph-schema.yaml — DO NOT EDIT -->
+<!-- Generated from schema.config.ts — DO NOT EDIT -->
 | Type | Statuses |
 |------|----------|
 | hypothesis | PROPOSED, TESTING, SUPPORTED, REFUTED, REVISED, DEFERRED, CONTESTED |
@@ -303,7 +303,7 @@ During Consolidation, if 3 or more `[deferred]` items have accumulated, conduct 
 ### 6.4 Edge Types (16)
 
 <!-- AUTO:edge-types -->
-<!-- Generated from graph-schema.yaml — DO NOT EDIT -->
+<!-- Generated from schema.config.ts — DO NOT EDIT -->
 | # | Edge Type |
 |---|-----------|
 | 1 | answers |
@@ -325,7 +325,7 @@ During Consolidation, if 3 or more `[deferred]` items have accumulated, conduct 
 <!-- /AUTO:edge-types -->
 
 <!-- AUTO:reverse-labels -->
-<!-- Generated from graph-schema.yaml — DO NOT EDIT -->
+<!-- Generated from schema.config.ts — DO NOT EDIT -->
 | Reverse Label | Forward Edge |
 |---------------|-------------|
 | answered_by | answers |
@@ -382,10 +382,8 @@ During Consolidation, if 3 or more `[deferred]` items have accumulated, conduct 
 ### 6.5 Hypothesis Status Transitions
 
 <!-- AUTO:transition-rules -->
-<!-- Generated from graph-schema.yaml — DO NOT EDIT -->
-
+<!-- Generated via @beomjk/state-engine — DO NOT EDIT -->
 **hypothesis**
-
 | From | To | Conditions |
 |------|----|------------|
 | PROPOSED | TESTING | has_linked(type=experiment, status=RUNNING, direction=any) |
@@ -395,17 +393,17 @@ During Consolidation, if 3 or more `[deferred]` items have accumulated, conduct 
 | TESTING | SUPPORTED | has_linked(relation=supports, min_strength=0.7, direction=incoming) |
 | TESTING | REFUTED | has_linked(relation=contradicts, direction=incoming) |
 | CONTESTED | REVISED | has_linked(relation=revises, direction=incoming) |
-| CONTESTED | SUPPORTED | has_linked(relation=supports, min_strength=0.7, direction=incoming) AND has_linked(type=decision, status=ACCEPTED, direction=incoming) |
-| CONTESTED | REFUTED | has_linked(relation=contradicts, direction=incoming) AND has_linked(type=decision, status=ACCEPTED, direction=incoming) |
+| CONTESTED | SUPPORTED | has_linked(relation=supports, min_strength=0.7, direction=incoming), has_linked(type=decision, status=ACCEPTED, direction=incoming) |
+| CONTESTED | REFUTED | has_linked(relation=contradicts, direction=incoming), has_linked(type=decision, status=ACCEPTED, direction=incoming) |
 
 **knowledge**
-
 | From | To | Conditions |
 |------|----|------------|
 | ACTIVE | DISPUTED | has_linked(relation=contradicts, direction=incoming) |
 | ACTIVE | SUPERSEDED | has_linked(relation=revises, type=knowledge, direction=incoming) |
 | DISPUTED | SUPERSEDED | has_linked(relation=revises, type=knowledge, direction=incoming) |
 | DISPUTED | ACTIVE | all_linked_with(relation=contradicts, status=RETRACTED) |
+
 <!-- /AUTO:transition-rules -->
 
 ```
@@ -516,7 +514,7 @@ ACTIVE      -> SUPERSEDED  : direct replacement without dispute phase
 ### 6.7 Confidence Propagation (Bayesian-inspired)
 
 <!-- AUTO:thresholds -->
-<!-- Generated from graph-schema.yaml — DO NOT EDIT -->
+<!-- Generated from schema.config.ts — DO NOT EDIT -->
 | Threshold | Value |
 |-----------|-------|
 | branch_convergence_gap | 0.3 |

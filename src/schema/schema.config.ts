@@ -144,7 +144,7 @@ export const questionEntity = define.entity({
 
 // ── All entity definitions keyed by node type ───────────────────────
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- EntityDefinition generics differ per entity; `any` avoids union complexity
 export const entityDefinitions: Record<string, EntityDefinition<readonly string[], readonly string[], any>> = {
   decision: decisionEntity,
   episode: episodeEntity,
@@ -280,7 +280,7 @@ export const ceremonies = {
     triggers: {
       unpromoted_findings_threshold: 5,
       episodes_threshold: 3,
-      all_questions_resolved: true as boolean,
+      all_questions_resolved: true,
       experiment_overload_threshold: 5,
     },
   },
