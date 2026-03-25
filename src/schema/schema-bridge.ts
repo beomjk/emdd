@@ -4,20 +4,18 @@
 
 import type { SchemaDefinition } from '@beomjk/state-engine/schema';
 import type { GraphSchema } from './validator.js';
-import { EMDD_PRESET_NAMES } from '../graph/graph-presets.js';
+import { ALL_PRESET_FNS } from '../graph/engine-setup.js';
 
-const PRESET_NAMES = [...EMDD_PRESET_NAMES, 'field_equals'] as const;
-
-type PresetName = (typeof PRESET_NAMES)[number];
+type PresetName = (typeof ALL_PRESET_FNS)[number];
 
 /**
  * Convert a validated GraphSchema into a state-engine SchemaDefinition.
  * The YAML-parsed `fn: string` fields are cast to preset name literals
  * since defineSchema() is an identity function at runtime.
  */
-export function toSchemaDefinition(schema: GraphSchema): SchemaDefinition<typeof PRESET_NAMES> {
+export function toSchemaDefinition(schema: GraphSchema): SchemaDefinition<typeof ALL_PRESET_FNS> {
   return {
-    presetNames: PRESET_NAMES,
+    presetNames: ALL_PRESET_FNS,
     entities: Object.fromEntries(
       schema.nodeTypes.map(nt => [nt.name, {
         name: nt.name,
