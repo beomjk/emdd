@@ -4,7 +4,7 @@ import { NODE_TYPE_DIRS } from '../graph/types.js';
 import { t } from '../i18n/index.js';
 import { generateRulesFile, type ToolType } from '../rules/generators.js';
 
-export function initCommand(targetPath: string | undefined, options: { lang?: string; tool?: string }): void {
+export function initCommand(targetPath: string | undefined, options: { lang?: string; tool?: string; force?: boolean }): void {
   const target = path.resolve(targetPath ?? '.');
   const graphDir = path.join(target, 'graph');
   const configPath = path.join(target, '.emdd.yml');
@@ -34,7 +34,7 @@ export function initCommand(targetPath: string | undefined, options: { lang?: st
   }
 
   // Generate tool-specific rules files
-  const result = generateRulesFile(tool, target);
+  const result = generateRulesFile(tool, target, { force: options.force });
 
   for (const created of result.created) {
     console.log(`Created ${created}`);
