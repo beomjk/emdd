@@ -15,9 +15,8 @@
   ],
   "main": "./dist/index.js",
   "scripts": {
-    "gen:schema": "tsx src/schema/codegen.ts",
     "gen:spec-tables": "tsx src/schema/spec-tables.ts",
-    "build": "npm run gen:schema && tsc && cp src/rules/*.md dist/rules/ && npm run build:web",
+    "build": "tsc && cp src/rules/*.md dist/rules/ && npm run build:web",
     "build:web": "tsx scripts/build-web.ts",
     "dev": "tsx src/cli.ts",
     "test": "vitest",

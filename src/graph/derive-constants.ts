@@ -1,9 +1,8 @@
 /**
  * derive-constants.ts — Derives all constants from schema.config.ts.
  *
- * Produces the exact same exports as types.generated.ts but computed
- * from the TypeScript schema config instead of being code-generated
- * from graph-schema.yaml.
+ * Derives all runtime constants from schema.config.ts.
+ * These are computed at import time — no code generation step needed.
  */
 import { extractRules, extractManualTransitions } from '@beomjk/state-engine/schema';
 import {
