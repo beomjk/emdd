@@ -14,7 +14,7 @@ import {
   transitionPolicy,
   type NodeTypeName,
 } from './schema.config.js';
-import { ALL_PRESET_FNS } from '../graph/engine-setup.js';
+import { ALL_PRESET_FNS } from './preset-names.js';
 
 export interface UpdateResult {
   updatedSections: string[];

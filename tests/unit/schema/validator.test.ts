@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { VALID_PRESET_FNS, type ValidationError } from '../../../src/schema/validator.js';
+import { BUILTIN_PRESET_NAMES } from '../../../src/schema/preset-names.js';
+import { builtinPresets } from '@beomjk/state-engine/presets';
 
 // ── ValidationError type ────────────────────────────────────────────
 
@@ -26,5 +28,11 @@ describe('VALID_PRESET_FNS', () => {
     expect(VALID_PRESET_FNS).toContain('min_linked_count');
     expect(VALID_PRESET_FNS).toContain('all_linked_with');
     expect(VALID_PRESET_FNS).toHaveLength(5);
+  });
+
+  it('BUILTIN_PRESET_NAMES matches actual builtinPresets keys', () => {
+    const actualKeys = Object.keys(builtinPresets).sort();
+    const declared = [...BUILTIN_PRESET_NAMES].sort();
+    expect(declared).toEqual(actualKeys);
   });
 });

@@ -4,16 +4,16 @@
  * Replaces graph-schema.yaml with a type-safe TypeScript configuration.
  * Uses @beomjk/state-engine/schema for entity definitions and transition rules.
  *
- * IMPORTANT: This file must NOT import from engine-setup.ts or any file
- * under src/graph/ to prevent circular dependencies.
+ * IMPORTANT: This file must NOT import from src/graph/ to prevent circular
+ * dependencies (types.ts → derive-constants.ts → schema.config.ts → ∞).
+ * Imports from src/schema/ are safe.
  */
 import { createDefiner, type EntityDefinition } from '@beomjk/state-engine/schema';
+import { ALL_PRESET_FNS } from './preset-names.js';
 
-// ── Definer (preset names defined inline to avoid circular imports) ──
+// ── Definer ─────────────────────────────────────────────────────────
 
-const define = createDefiner([
-  'has_linked', 'field_present', 'field_equals', 'min_linked_count', 'all_linked_with',
-] as const);
+const define = createDefiner(ALL_PRESET_FNS);
 
 // ── Node Entity Definitions (statuses + transitions) ────────────────
 

@@ -9,14 +9,9 @@
 import { createEngine } from '@beomjk/state-engine/engine';
 import { builtinPresets } from '@beomjk/state-engine/presets';
 import type { Graph } from './types.js';
-import { emddPresets, EMDD_PRESET_NAMES } from './graph-presets.js';
+import { emddPresets } from './graph-presets.js';
+export { ALL_PRESET_FNS } from '../schema/preset-names.js';
 
 export const engine = createEngine<Graph>({
   presets: { ...builtinPresets, ...emddPresets },
 });
-
-/** All preset function names registered in the engine (EMDD + builtins). */
-export const ALL_PRESET_FNS = [
-  ...EMDD_PRESET_NAMES,
-  ...Object.keys(builtinPresets),
-] as const;
