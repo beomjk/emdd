@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { Node, Graph } from '../../../src/graph/types.js';
-import { hasLinked, fieldPresent, minLinkedCount, allLinkedWith } from '../../../src/graph/graph-presets.js';
+import { hasLinked, minLinkedCount, allLinkedWith } from '../../../src/graph/graph-presets.js';
 
 function makeNode(overrides: Partial<Node> & { id: string; type: Node['type'] }): Node {
   return {
@@ -89,47 +89,6 @@ describe('graph-presets (state-engine PresetFn<Graph>)', () => {
       const result = hasLinked(fnd, graph, { direction: 'incoming', relation: 'produces' });
       expect(result.met).toBe(true);
       expect(result.matchedIds).toEqual(['exp-001']);
-    });
-  });
-
-  describe('fieldPresent', () => {
-    it('returns met=true when meta field has value', () => {
-      const node = makeNode({ id: 'hyp-001', type: 'hypothesis', meta: { method: 'cnn' } });
-      const graph = makeGraph([node]);
-
-      const result = fieldPresent(node, graph, { name: 'method' });
-      expect(result.met).toBe(true);
-    });
-
-    it('returns met=false when meta field is undefined', () => {
-      const node = makeNode({ id: 'hyp-001', type: 'hypothesis', meta: {} });
-      const graph = makeGraph([node]);
-
-      const result = fieldPresent(node, graph, { name: 'method' });
-      expect(result.met).toBe(false);
-    });
-
-    it('returns met=false when meta field is null', () => {
-      const node = makeNode({ id: 'hyp-001', type: 'hypothesis', meta: { method: null } });
-      const graph = makeGraph([node]);
-
-      const result = fieldPresent(node, graph, { name: 'method' });
-      expect(result.met).toBe(false);
-    });
-
-    it('returns met=false when meta field is empty string', () => {
-      const node = makeNode({ id: 'hyp-001', type: 'hypothesis', meta: { method: '' } });
-      const graph = makeGraph([node]);
-
-      const result = fieldPresent(node, graph, { name: 'method' });
-      expect(result.met).toBe(false);
-    });
-
-    it('throws when name arg is missing', () => {
-      const node = makeNode({ id: 'hyp-001', type: 'hypothesis', meta: {} });
-      const graph = makeGraph([node]);
-
-      expect(() => fieldPresent(node, graph, {})).toThrow('field_present preset requires "name" arg');
     });
   });
 

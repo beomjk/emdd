@@ -95,13 +95,13 @@ export interface ValidationError {
 }
 
 /**
- * Valid preset function names, derived from the EMDD graph preset registry.
- * Adding a new preset to graph-presets.ts automatically makes it valid here.
+ * Valid preset function names — EMDD graph presets + state-engine builtins.
+ * Adding a new preset to graph-presets.ts or state-engine builtins makes it valid here.
  */
-export { EMDD_PRESET_NAMES as VALID_PRESET_FNS } from '../graph/graph-presets.js';
-import { EMDD_PRESET_NAMES } from '../graph/graph-presets.js';
+export { ALL_PRESET_FNS as VALID_PRESET_FNS } from '../graph/engine-setup.js';
+import { ALL_PRESET_FNS } from '../graph/engine-setup.js';
 
-const presetFnSet = new Set<string>(EMDD_PRESET_NAMES);
+const presetFnSet = new Set<string>(ALL_PRESET_FNS);
 
 export function validateReferentialIntegrity(schema: GraphSchema): ValidationError[] {
   const errors: ValidationError[] = [];

@@ -216,7 +216,7 @@ describe('transition-engine', () => {
   });
 
   describe('missing condition args error', () => {
-    it('field_present throws when name arg is missing', () => {
+    it('field_present returns met=false when name arg is missing', () => {
       const node = makeNode({ id: 'hyp-001', type: 'hypothesis' });
       const graph = makeGraph([node]);
       const rule: TransitionRule = {
@@ -224,7 +224,33 @@ describe('transition-engine', () => {
         conditions: [{ fn: 'field_present', args: {} }],
       };
 
-      expect(() => engine.evaluate(withStatus(node), graph, rule)).toThrow('name');
+      // Builtin field_present gracefully returns met=false for missing name
+      const result = engine.evaluate(withStatus(node), graph, rule);
+      expect(result.met).toBe(false);
+    });
+
+    it('field_present returns met=false for null value', () => {
+      const node = makeNode({ id: 'hyp-001', type: 'hypothesis', meta: { method: null } });
+      const graph = makeGraph([node]);
+      const rule: TransitionRule = {
+        from: 'PROPOSED', to: 'TESTING',
+        conditions: [{ fn: 'field_present', args: { name: 'method' } }],
+      };
+
+      const result = engine.evaluate(withStatus(node), graph, rule);
+      expect(result.met).toBe(false);
+    });
+
+    it('field_present returns met=false for empty string', () => {
+      const node = makeNode({ id: 'hyp-001', type: 'hypothesis', meta: { method: '' } });
+      const graph = makeGraph([node]);
+      const rule: TransitionRule = {
+        from: 'PROPOSED', to: 'TESTING',
+        conditions: [{ fn: 'field_present', args: { name: 'method' } }],
+      };
+
+      const result = engine.evaluate(withStatus(node), graph, rule);
+      expect(result.met).toBe(false);
     });
 
     it('min_linked_count throws when args are missing', () => {

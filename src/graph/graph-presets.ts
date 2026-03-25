@@ -69,20 +69,6 @@ export const hasLinked: PresetFn<Graph> = (entity, graph, args) => {
 };
 
 /**
- * field_present — checks entity.meta[name] exists and is non-empty.
- * Args: name (required)
- */
-export const fieldPresent: PresetFn<Graph> = (entity, _graph, args) => {
-  const name = args.name as string;
-  if (!name) {
-    throw new Error('field_present preset requires "name" arg');
-  }
-  const value = entity.meta[name];
-  const met = value !== undefined && value !== null && value !== '';
-  return { met, matchedIds: [] };
-};
-
-/**
  * min_linked_count — checks >= count linked nodes of given type.
  * Args: type (required), count (required)
  */
@@ -152,7 +138,6 @@ export const allLinkedWith: PresetFn<Graph> = (entity, graph, args) => {
 /** All EMDD graph preset names. */
 export const EMDD_PRESET_NAMES = [
   'has_linked',
-  'field_present',
   'min_linked_count',
   'all_linked_with',
 ] as const;
@@ -160,7 +145,6 @@ export const EMDD_PRESET_NAMES = [
 /** EMDD graph presets keyed by name, for engine registration. */
 export const emddPresets: Record<string, PresetFn<Graph>> = {
   has_linked: hasLinked,
-  field_present: fieldPresent,
   min_linked_count: minLinkedCount,
   all_linked_with: allLinkedWith,
 };

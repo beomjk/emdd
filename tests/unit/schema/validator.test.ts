@@ -290,9 +290,10 @@ describe('validateReferentialIntegrity', () => {
   it('exports VALID_PRESET_FNS list', () => {
     expect(VALID_PRESET_FNS).toContain('has_linked');
     expect(VALID_PRESET_FNS).toContain('field_present');
+    expect(VALID_PRESET_FNS).toContain('field_equals');
     expect(VALID_PRESET_FNS).toContain('min_linked_count');
     expect(VALID_PRESET_FNS).toContain('all_linked_with');
-    expect(VALID_PRESET_FNS).toHaveLength(4);
+    expect(VALID_PRESET_FNS).toHaveLength(5);
   });
 
   it('detects edgeAttributeAffinity referencing non-existent edge type', () => {
