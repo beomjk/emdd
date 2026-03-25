@@ -1443,7 +1443,7 @@ mkdir -p scratchpad
 # Tools (implemented in TypeScript MCP server):
 #   list-nodes(type?, status?) -> node listing
 #   read-node(id) -> single node details
-#   create-node(type, slug) -> create a new node
+#   create-node(type, slug, title?, body?, lang?) -> create a new node
 #   create-edge(source, target, relation) -> add an edge
 #   health(graphDir) -> graph health dashboard (replaces graph_stats)
 #   check(graphDir) -> consolidation triggers

@@ -47,7 +47,7 @@
 - `graph-neighbors` — Get a node's neighbors and connections
 
 **Write operations:**
-- `create-node` — Create a new node
+- `create-node` — Create a new node (supports optional `body` to set content in one call)
 - `create-edge` — Add a link between nodes
 - `update-node` — Update node frontmatter fields
 - `delete-edge` — Remove a link between nodes

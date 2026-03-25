@@ -1369,7 +1369,7 @@ mkdir -p scratchpad
 # Tools (TypeScript MCP 서버로 구현됨):
 #   list-nodes(type?, status?) → 노드 목록
 #   read-node(id) → 단일 노드 상세
-#   create-node(type, slug) → 새 노드 생성
+#   create-node(type, slug, title?, body?, lang?) → 새 노드 생성
 #   create-edge(source, target, relation) → 에지 추가
 #   health(graphDir) → 그래프 건강 대시보드 (graph_stats 대체)
 #   check(graphDir) → 통합 트리거

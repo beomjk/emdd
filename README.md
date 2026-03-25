@@ -181,8 +181,8 @@ All commands accept `--graphDir <path>`, `--lang <en|ko>`, and `--json`.
 
 | Command | Description |
 |---------|-------------|
-| `emdd init [path]` | Initialize a new EMDD project (`--tool claude\|cursor\|windsurf\|cline\|copilot\|all`, `--lang en\|ko`) |
-| `emdd new <type> <slug>` | Create a node (hypothesis, experiment, finding, ...) (`--title`, `--lang`) |
+| `emdd init [path]` | Initialize a new EMDD project (`--tool claude\|cursor\|windsurf\|cline\|copilot\|all`, `--lang en\|ko`, `--force`) |
+| `emdd new <type> <slug>` | Create a node (hypothesis, experiment, finding, ...) (`--title`, `--body`, `--lang`) |
 | `emdd read <nodeId>` | Read a node by ID, showing frontmatter and body |
 | `emdd update <nodeId> --set key=value` | Update node frontmatter (`--transitionPolicy strict\|warn\|off`) |
 | `emdd list` | List nodes (`--type`, `--status` filters) |

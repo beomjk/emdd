@@ -126,7 +126,7 @@ All tools accept a `graphDir` parameter — the path to your EMDD `graph/` direc
 |------|-------------|------------|
 | `list-nodes` | List all nodes, optionally filtered by type and/or status | `graphDir`, `type?`, `status?` |
 | `read-node` | Read a single node by ID, returning full content including body | `graphDir`, `nodeId` |
-| `create-node` | Create a new node of the given type with the given slug | `graphDir`, `type`, `slug`, `lang?` |
+| `create-node` | Create a new node of the given type with the given slug | `graphDir`, `type`, `slug`, `title?`, `body?`, `lang?` |
 | `create-edge` | Add an edge (link) from source to target with the given relation | `graphDir`, `source`, `target`, `relation`, `strength?`, `severity?`, `completeness?`, `dependencyType?`, `impact?` |
 | `update-node` | Update frontmatter fields on a node | `graphDir`, `nodeId`, `set`, `transitionPolicy?` |
 | `delete-edge` | Remove a link between nodes | `graphDir`, `source`, `target`, `relation?` |
