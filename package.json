@@ -1,6 +1,6 @@
 {
   "name": "@beomjk/emdd",
-  "version": "0.1.15",
+  "version": "0.1.16",
   "description": "CLI for Evolving Mindmap-Driven Development",
   "type": "module",
   "bin": {
