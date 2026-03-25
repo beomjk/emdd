@@ -83,4 +83,17 @@ describe('toSchemaDefinition', () => {
     const def = toSchemaDefinition(schema);
     expect(def.policy).toBeUndefined();
   });
+
+  it('converts real graph-schema.yaml without errors', async () => {
+    const { loadSchema } = await import('../../../src/schema/loader.js');
+    const schema = await loadSchema('graph-schema.yaml');
+    const def = toSchemaDefinition(schema);
+
+    // Should have all 7 node types
+    expect(Object.keys(def.entities)).toHaveLength(7);
+    // hypothesis should have transitions
+    expect(def.entities['hypothesis'].transitions!.length).toBeGreaterThan(0);
+    // knowledge should have manual transitions
+    expect(def.entities['knowledge'].manualTransitions!.length).toBeGreaterThan(0);
+  });
 });
