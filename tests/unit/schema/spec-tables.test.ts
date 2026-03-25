@@ -9,7 +9,7 @@ function makeSchema(): GraphSchema {
   return {
     version: '1.0',
     nodeTypes: [
-      { name: 'hypothesis', prefix: 'hyp', directory: 'hypotheses', statuses: ['PROPOSED', 'TESTING', 'SUPPORTED'], requiredFields: ['id', 'type'] },
+      { name: 'hypothesis', prefix: 'hyp', directory: 'hypotheses', statuses: ['PROPOSED', 'TESTING', 'SUPPORTED', 'DEFERRED'], requiredFields: ['id', 'type'] },
       { name: 'experiment', prefix: 'exp', directory: 'experiments', statuses: ['PLANNED', 'RUNNING'], requiredFields: ['id', 'type'] },
     ],
     edgeTypes: { forward: ['supports', 'contradicts'], reverse: { supported_by: 'supports' } },
@@ -20,6 +20,9 @@ function makeSchema(): GraphSchema {
       ],
     },
     validValues: { severities: ['FATAL'] },
+    manualTransitions: {
+      hypothesis: [{ from: 'ANY', to: 'DEFERRED' }],
+    },
   };
 }
 
@@ -68,10 +71,22 @@ describe('generateTable', () => {
     expect(table).toContain('| PROPOSED | TESTING |');
   });
 
+  it('generates manual-transitions table', () => {
+    const table = generateTable(schema, 'manual-transitions');
+    expect(table).toContain('**hypothesis**');
+    expect(table).toContain('| From | To |');
+    expect(table).toContain('| ANY | DEFERRED |');
+  });
+
   it('includes auto-generation attribution comment (FR-008)', () => {
-    for (const marker of ['node-types', 'statuses', 'edge-types', 'reverse-labels', 'thresholds', 'transition-rules']) {
+    for (const marker of ['node-types', 'statuses', 'edge-types', 'reverse-labels', 'thresholds']) {
       const table = generateTable(schema, marker);
       expect(table).toContain('<!-- Generated from graph-schema.yaml — DO NOT EDIT -->');
+    }
+    // Transition tables delegated to state-engine have different attribution
+    for (const marker of ['transition-rules', 'manual-transitions']) {
+      const table = generateTable(schema, marker);
+      expect(table).toContain('<!-- Generated via @beomjk/state-engine — DO NOT EDIT -->');
     }
   });
 
