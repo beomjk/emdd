@@ -9,15 +9,15 @@ You are working in a project that uses the EMDD methodology. EMDD organizes rese
 
 The graph contains 7 node types, each in its own subdirectory:
 
-| Node Type | Directory | Purpose |
-|-----------|-----------|---------|
-| Hypothesis | \`graph/hypotheses/\` | Testable claims with confidence 0.0-1.0 |
-| Experiment | \`graph/experiments/\` | Work units testing hypotheses |
-| Finding | \`graph/findings/\` | Observations from experiments |
-| Knowledge | \`graph/knowledge/\` | Established facts promoted from findings |
-| Question | \`graph/questions/\` | Open questions driving exploration |
-| Decision | \`graph/decisions/\` | Recorded choices with rationale |
-| Episode | \`graph/episodes/\` | Session logs (mandatory: "What I Tried" + "What's Next") |
+| Node Type | Directory | Valid Statuses | Purpose |
+|-----------|-----------|----------------|---------|
+| Hypothesis | \`graph/hypotheses/\` | PROPOSED, TESTING, SUPPORTED, REFUTED, REVISED, DEFERRED, CONTESTED | Testable claims with confidence 0.0-1.0 |
+| Experiment | \`graph/experiments/\` | PLANNED, RUNNING, COMPLETED, FAILED, ABANDONED | Work units testing hypotheses |
+| Finding | \`graph/findings/\` | DRAFT, VALIDATED, PROMOTED, RETRACTED | Observations from experiments |
+| Knowledge | \`graph/knowledge/\` | ACTIVE, DISPUTED, SUPERSEDED, RETRACTED | Established facts promoted from findings |
+| Question | \`graph/questions/\` | OPEN, RESOLVED, ANSWERED, DEFERRED | Open questions driving exploration |
+| Decision | \`graph/decisions/\` | PROPOSED, ACCEPTED, SUPERSEDED, REVERTED, CONTESTED | Recorded choices with rationale |
+| Episode | \`graph/episodes/\` | ACTIVE, COMPLETED | Session logs (mandatory: "What I Tried" + "What's Next") |
 
 Nodes are connected by typed edges (answers, confirms, context_for, contradicts, depends_on, extends, informs, part_of, produces, promotes, relates_to, resolves, revises, spawns, supports, tests) declared in YAML frontmatter \`links:\` arrays.
 
@@ -188,15 +188,15 @@ You are working in a project that uses the EMDD methodology. EMDD organizes rese
 
 The graph contains 7 node types, each in its own subdirectory:
 
-| Node Type | Directory | Purpose |
-|-----------|-----------|---------|
-| Hypothesis | \`graph/hypotheses/\` | Testable claims with confidence 0.0-1.0 |
-| Experiment | \`graph/experiments/\` | Work units testing hypotheses |
-| Finding | \`graph/findings/\` | Observations from experiments |
-| Knowledge | \`graph/knowledge/\` | Established facts promoted from findings |
-| Question | \`graph/questions/\` | Open questions driving exploration |
-| Decision | \`graph/decisions/\` | Recorded choices with rationale |
-| Episode | \`graph/episodes/\` | Session logs (mandatory: "What I Tried" + "What's Next") |
+| Node Type | Directory | Valid Statuses | Purpose |
+|-----------|-----------|----------------|---------|
+| Hypothesis | \`graph/hypotheses/\` | PROPOSED, TESTING, SUPPORTED, REFUTED, REVISED, DEFERRED, CONTESTED | Testable claims with confidence 0.0-1.0 |
+| Experiment | \`graph/experiments/\` | PLANNED, RUNNING, COMPLETED, FAILED, ABANDONED | Work units testing hypotheses |
+| Finding | \`graph/findings/\` | DRAFT, VALIDATED, PROMOTED, RETRACTED | Observations from experiments |
+| Knowledge | \`graph/knowledge/\` | ACTIVE, DISPUTED, SUPERSEDED, RETRACTED | Established facts promoted from findings |
+| Question | \`graph/questions/\` | OPEN, RESOLVED, ANSWERED, DEFERRED | Open questions driving exploration |
+| Decision | \`graph/decisions/\` | PROPOSED, ACCEPTED, SUPERSEDED, REVERTED, CONTESTED | Recorded choices with rationale |
+| Episode | \`graph/episodes/\` | ACTIVE, COMPLETED | Session logs (mandatory: "What I Tried" + "What's Next") |
 
 Nodes are connected by typed edges (answers, confirms, context_for, contradicts, depends_on, extends, informs, part_of, produces, promotes, relates_to, resolves, revises, spawns, supports, tests) declared in YAML frontmatter \`links:\` arrays.
 
@@ -367,15 +367,15 @@ You are working in a project that uses the EMDD methodology. EMDD organizes rese
 
 The graph contains 7 node types, each in its own subdirectory:
 
-| Node Type | Directory | Purpose |
-|-----------|-----------|---------|
-| Hypothesis | \`graph/hypotheses/\` | Testable claims with confidence 0.0-1.0 |
-| Experiment | \`graph/experiments/\` | Work units testing hypotheses |
-| Finding | \`graph/findings/\` | Observations from experiments |
-| Knowledge | \`graph/knowledge/\` | Established facts promoted from findings |
-| Question | \`graph/questions/\` | Open questions driving exploration |
-| Decision | \`graph/decisions/\` | Recorded choices with rationale |
-| Episode | \`graph/episodes/\` | Session logs (mandatory: "What I Tried" + "What's Next") |
+| Node Type | Directory | Valid Statuses | Purpose |
+|-----------|-----------|----------------|---------|
+| Hypothesis | \`graph/hypotheses/\` | PROPOSED, TESTING, SUPPORTED, REFUTED, REVISED, DEFERRED, CONTESTED | Testable claims with confidence 0.0-1.0 |
+| Experiment | \`graph/experiments/\` | PLANNED, RUNNING, COMPLETED, FAILED, ABANDONED | Work units testing hypotheses |
+| Finding | \`graph/findings/\` | DRAFT, VALIDATED, PROMOTED, RETRACTED | Observations from experiments |
+| Knowledge | \`graph/knowledge/\` | ACTIVE, DISPUTED, SUPERSEDED, RETRACTED | Established facts promoted from findings |
+| Question | \`graph/questions/\` | OPEN, RESOLVED, ANSWERED, DEFERRED | Open questions driving exploration |
+| Decision | \`graph/decisions/\` | PROPOSED, ACCEPTED, SUPERSEDED, REVERTED, CONTESTED | Recorded choices with rationale |
+| Episode | \`graph/episodes/\` | ACTIVE, COMPLETED | Session logs (mandatory: "What I Tried" + "What's Next") |
 
 Nodes are connected by typed edges (answers, confirms, context_for, contradicts, depends_on, extends, informs, part_of, produces, promotes, relates_to, resolves, revises, spawns, supports, tests) declared in YAML frontmatter \`links:\` arrays.
 
@@ -550,15 +550,15 @@ You are working in a project that uses the EMDD methodology. EMDD organizes rese
 
 The graph contains 7 node types, each in its own subdirectory:
 
-| Node Type | Directory | Purpose |
-|-----------|-----------|---------|
-| Hypothesis | \`graph/hypotheses/\` | Testable claims with confidence 0.0-1.0 |
-| Experiment | \`graph/experiments/\` | Work units testing hypotheses |
-| Finding | \`graph/findings/\` | Observations from experiments |
-| Knowledge | \`graph/knowledge/\` | Established facts promoted from findings |
-| Question | \`graph/questions/\` | Open questions driving exploration |
-| Decision | \`graph/decisions/\` | Recorded choices with rationale |
-| Episode | \`graph/episodes/\` | Session logs (mandatory: "What I Tried" + "What's Next") |
+| Node Type | Directory | Valid Statuses | Purpose |
+|-----------|-----------|----------------|---------|
+| Hypothesis | \`graph/hypotheses/\` | PROPOSED, TESTING, SUPPORTED, REFUTED, REVISED, DEFERRED, CONTESTED | Testable claims with confidence 0.0-1.0 |
+| Experiment | \`graph/experiments/\` | PLANNED, RUNNING, COMPLETED, FAILED, ABANDONED | Work units testing hypotheses |
+| Finding | \`graph/findings/\` | DRAFT, VALIDATED, PROMOTED, RETRACTED | Observations from experiments |
+| Knowledge | \`graph/knowledge/\` | ACTIVE, DISPUTED, SUPERSEDED, RETRACTED | Established facts promoted from findings |
+| Question | \`graph/questions/\` | OPEN, RESOLVED, ANSWERED, DEFERRED | Open questions driving exploration |
+| Decision | \`graph/decisions/\` | PROPOSED, ACCEPTED, SUPERSEDED, REVERTED, CONTESTED | Recorded choices with rationale |
+| Episode | \`graph/episodes/\` | ACTIVE, COMPLETED | Session logs (mandatory: "What I Tried" + "What's Next") |
 
 Nodes are connected by typed edges (answers, confirms, context_for, contradicts, depends_on, extends, informs, part_of, produces, promotes, relates_to, resolves, revises, spawns, supports, tests) declared in YAML frontmatter \`links:\` arrays.
 
@@ -729,15 +729,15 @@ You are working in a project that uses the EMDD methodology. EMDD organizes rese
 
 The graph contains 7 node types, each in its own subdirectory:
 
-| Node Type | Directory | Purpose |
-|-----------|-----------|---------|
-| Hypothesis | \`graph/hypotheses/\` | Testable claims with confidence 0.0-1.0 |
-| Experiment | \`graph/experiments/\` | Work units testing hypotheses |
-| Finding | \`graph/findings/\` | Observations from experiments |
-| Knowledge | \`graph/knowledge/\` | Established facts promoted from findings |
-| Question | \`graph/questions/\` | Open questions driving exploration |
-| Decision | \`graph/decisions/\` | Recorded choices with rationale |
-| Episode | \`graph/episodes/\` | Session logs (mandatory: "What I Tried" + "What's Next") |
+| Node Type | Directory | Valid Statuses | Purpose |
+|-----------|-----------|----------------|---------|
+| Hypothesis | \`graph/hypotheses/\` | PROPOSED, TESTING, SUPPORTED, REFUTED, REVISED, DEFERRED, CONTESTED | Testable claims with confidence 0.0-1.0 |
+| Experiment | \`graph/experiments/\` | PLANNED, RUNNING, COMPLETED, FAILED, ABANDONED | Work units testing hypotheses |
+| Finding | \`graph/findings/\` | DRAFT, VALIDATED, PROMOTED, RETRACTED | Observations from experiments |
+| Knowledge | \`graph/knowledge/\` | ACTIVE, DISPUTED, SUPERSEDED, RETRACTED | Established facts promoted from findings |
+| Question | \`graph/questions/\` | OPEN, RESOLVED, ANSWERED, DEFERRED | Open questions driving exploration |
+| Decision | \`graph/decisions/\` | PROPOSED, ACCEPTED, SUPERSEDED, REVERTED, CONTESTED | Recorded choices with rationale |
+| Episode | \`graph/episodes/\` | ACTIVE, COMPLETED | Session logs (mandatory: "What I Tried" + "What's Next") |
 
 Nodes are connected by typed edges (answers, confirms, context_for, contradicts, depends_on, extends, informs, part_of, produces, promotes, relates_to, resolves, revises, spawns, supports, tests) declared in YAML frontmatter \`links:\` arrays.
 
@@ -906,13 +906,13 @@ You are working in an EMDD project. The knowledge graph lives in \`graph/\` as M
 
 ## Node Types
 
-- **Hypothesis** (\`graph/hypotheses/\`) — testable claims with confidence 0.0-1.0
-- **Experiment** (\`graph/experiments/\`) — work units testing hypotheses
-- **Finding** (\`graph/findings/\`) — observations from experiments
-- **Knowledge** (\`graph/knowledge/\`) — established facts promoted from findings
-- **Question** (\`graph/questions/\`) — open questions driving exploration
-- **Decision** (\`graph/decisions/\`) — recorded choices with rationale
-- **Episode** (\`graph/episodes/\`) — session logs (mandatory: "What I Tried" + "What's Next")
+- **Hypothesis** (\`graph/hypotheses/\`) [PROPOSED, TESTING, SUPPORTED, REFUTED, REVISED, DEFERRED, CONTESTED] — testable claims with confidence 0.0-1.0
+- **Experiment** (\`graph/experiments/\`) [PLANNED, RUNNING, COMPLETED, FAILED, ABANDONED] — work units testing hypotheses
+- **Finding** (\`graph/findings/\`) [DRAFT, VALIDATED, PROMOTED, RETRACTED] — observations from experiments
+- **Knowledge** (\`graph/knowledge/\`) [ACTIVE, DISPUTED, SUPERSEDED, RETRACTED] — established facts promoted from findings
+- **Question** (\`graph/questions/\`) [OPEN, RESOLVED, ANSWERED, DEFERRED] — open questions driving exploration
+- **Decision** (\`graph/decisions/\`) [PROPOSED, ACCEPTED, SUPERSEDED, REVERTED, CONTESTED] — recorded choices with rationale
+- **Episode** (\`graph/episodes/\`) [ACTIVE, COMPLETED] — session logs (mandatory: "What I Tried" + "What's Next")
 
 ## ID Convention
 
@@ -939,13 +939,13 @@ You are working in an EMDD project. The knowledge graph lives in \`graph/\` as M
 
 ## Node Types
 
-- **Hypothesis** (\`graph/hypotheses/\`) — testable claims with confidence 0.0-1.0
-- **Experiment** (\`graph/experiments/\`) — work units testing hypotheses
-- **Finding** (\`graph/findings/\`) — observations from experiments
-- **Knowledge** (\`graph/knowledge/\`) — established facts promoted from findings
-- **Question** (\`graph/questions/\`) — open questions driving exploration
-- **Decision** (\`graph/decisions/\`) — recorded choices with rationale
-- **Episode** (\`graph/episodes/\`) — session logs (mandatory: "What I Tried" + "What's Next")
+- **Hypothesis** (\`graph/hypotheses/\`) [PROPOSED, TESTING, SUPPORTED, REFUTED, REVISED, DEFERRED, CONTESTED] — testable claims with confidence 0.0-1.0
+- **Experiment** (\`graph/experiments/\`) [PLANNED, RUNNING, COMPLETED, FAILED, ABANDONED] — work units testing hypotheses
+- **Finding** (\`graph/findings/\`) [DRAFT, VALIDATED, PROMOTED, RETRACTED] — observations from experiments
+- **Knowledge** (\`graph/knowledge/\`) [ACTIVE, DISPUTED, SUPERSEDED, RETRACTED] — established facts promoted from findings
+- **Question** (\`graph/questions/\`) [OPEN, RESOLVED, ANSWERED, DEFERRED] — open questions driving exploration
+- **Decision** (\`graph/decisions/\`) [PROPOSED, ACCEPTED, SUPERSEDED, REVERTED, CONTESTED] — recorded choices with rationale
+- **Episode** (\`graph/episodes/\`) [ACTIVE, COMPLETED] — session logs (mandatory: "What I Tried" + "What's Next")
 
 ## ID Convention
 

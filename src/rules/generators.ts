@@ -8,6 +8,7 @@ import {
   ID_PREFIXES,
   EDGE_TYPES,
   CEREMONY_TRIGGERS,
+  VALID_STATUSES,
   type NodeType,
 } from '../graph/types.js';
 
@@ -45,7 +46,8 @@ function titleCase(s: string): string {
 function makeCompactRules(): string {
   const nodeLines = NODE_DISPLAY_ORDER.map((t) => {
     const desc = NODE_DESCRIPTIONS[t] ?? t;
-    return `- **${titleCase(t)}** (\`graph/${NODE_TYPE_DIRS[t]}/\`) — ${desc}`;
+    const statuses = VALID_STATUSES[t].join(', ');
+    return `- **${titleCase(t)}** (\`graph/${NODE_TYPE_DIRS[t]}/\`) [${statuses}] — ${desc}`;
   }).join('\n');
 
   const idExamples = NODE_DISPLAY_ORDER.map((t) => `\`${ID_PREFIXES[t]}-001\``).join(', ');
@@ -78,7 +80,8 @@ function makeFullRules(): string {
   // Node type table
   const nodeTableRows = NODE_DISPLAY_ORDER.map((t) => {
     const desc = NODE_DESCRIPTIONS[t] ?? t;
-    return `| ${titleCase(t)} | \`graph/${NODE_TYPE_DIRS[t]}/\` | ${titleCase(desc)} |`;
+    const statuses = VALID_STATUSES[t].join(', ');
+    return `| ${titleCase(t)} | \`graph/${NODE_TYPE_DIRS[t]}/\` | ${statuses} | ${titleCase(desc)} |`;
   }).join('\n');
 
   // ID convention examples
@@ -98,8 +101,8 @@ You are working in a project that uses the EMDD methodology. EMDD organizes rese
 
 The graph contains ${NODE_TYPES.length} node types, each in its own subdirectory:
 
-| Node Type | Directory | Purpose |
-|-----------|-----------|---------|
+| Node Type | Directory | Valid Statuses | Purpose |
+|-----------|-----------|----------------|---------|
 ${nodeTableRows}
 
 Nodes are connected by typed edges (${edgeList}) declared in YAML frontmatter \`links:\` arrays.

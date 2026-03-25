@@ -51,7 +51,7 @@ const CONFIDENCE_TYPES: Partial<Record<NodeType, number>> = {
 export function renderTemplate(
   type: NodeType,
   slug: string,
-  options?: { locale?: Locale; user?: string; id?: string; title?: string },
+  options?: { locale?: Locale; user?: string; id?: string; title?: string; body?: string },
 ): string {
   const locale = options?.locale ?? 'en';
   const today = new Date().toISOString().slice(0, 10);
@@ -78,7 +78,7 @@ export function renderTemplate(
   }
 
   // Build body
-  const body = BODY_TEMPLATES[locale]?.[type] ?? BODY_TEMPLATES['en'][type];
+  const body = options?.body ?? (BODY_TEMPLATES[locale]?.[type] ?? BODY_TEMPLATES['en'][type]);
 
   // Type-specific fields
   const typeFields: Record<string, unknown> = {};

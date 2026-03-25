@@ -126,6 +126,7 @@ export function planCreateNode(
   slug: string,
   lang?: string,
   title?: string,
+  body?: string,
 ): CreateNodePlan {
   if (!NODE_TYPES.includes(type as NodeType)) {
     throw new Error(t('error.invalid_node_type', { type, valid: NODE_TYPES.join(', ') }));
@@ -138,6 +139,7 @@ export function planCreateNode(
     id,
     locale: (lang as Locale) ?? 'en',
     title,
+    body,
   });
   const filePath = nodePath(graphDir, nodeType, id, sanitized);
   const dir = path.dirname(filePath);
@@ -160,8 +162,9 @@ export async function createNode(
   slug: string,
   lang?: string,
   title?: string,
+  body?: string,
 ): Promise<CreateNodeResult> {
-  const plan = planCreateNode(graphDir, type, slug, lang, title);
+  const plan = planCreateNode(graphDir, type, slug, lang, title, body);
   await executeOps(plan.ops);
   return { id: plan.id, type: plan.type, path: plan.path };
 }

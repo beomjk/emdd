@@ -131,6 +131,22 @@ describe('createNode', () => {
     expect(parsed.data.title).toBe('수면이 기억에 미치는 영향');
   });
 
+  it('creates node with custom body content', async () => {
+    const customBody = '## My Analysis\n\nThis is custom content from the agent.';
+    const result = await createNode(join(tmpDir, 'graph'), 'finding', 'custom-body', 'en', 'Custom Finding', customBody);
+    const content = readFileSync(result.path, 'utf-8');
+    expect(content).toContain('My Analysis');
+    expect(content).toContain('custom content from the agent');
+    // Should NOT contain the default template body
+    expect(content).not.toContain('## Summary');
+  });
+
+  it('falls back to template body when body is undefined', async () => {
+    const result = await createNode(join(tmpDir, 'graph'), 'finding', 'default-body');
+    const content = readFileSync(result.path, 'utf-8');
+    expect(content).toContain('## Summary');
+  });
+
   it('throws on invalid node type', async () => {
     await expect(
       createNode(join(tmpDir, 'graph'), 'invalid_type' as any, 'test')

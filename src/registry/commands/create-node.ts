@@ -9,6 +9,7 @@ const schema = z.object({
   type: z.enum(NODE_TYPES as unknown as [string, ...string[]]).describe('Node type (hypothesis, experiment, finding, etc.)'),
   slug: z.string().min(1).max(80).regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/, 'Slug: alphanumeric start, then alphanumeric/dash/underscore').describe('URL-friendly slug for the node'),
   title: z.string().optional().describe('Human-readable title (default: slug)'),
+  body: z.string().optional().describe('Custom body content (default: type-specific template)'),
   lang: z.string().optional().describe('Language locale (default: en)'),
 });
 
@@ -20,7 +21,7 @@ export const createNodeDef: CommandDef<typeof schema, CreateNodeResult> = {
   cli: { commandName: 'new', positional: ['type', 'slug'] },
 
   async execute(input) {
-    return createNode(input.graphDir, input.type, input.slug, input.lang, input.title);
+    return createNode(input.graphDir, input.type, input.slug, input.lang, input.title, input.body);
   },
 
   format(result) {
