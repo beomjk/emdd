@@ -246,7 +246,7 @@ export async function planCreateEdge(
       (l) => l.target === target && (REVERSE_LABELS[l.relation] ?? l.relation) === canonical,
     );
     if (duplicate) {
-      throw new Error(t('error.duplicate_edge', { source, target, relation: canonical }));
+      return { source, target, relation: canonical, ops: [], skipped: true };
     }
   }
 
@@ -287,6 +287,7 @@ export async function createEdge(
   const plan = await planCreateEdge(graphDir, source, target, relation, attrs, options);
   await executeOps(plan.ops);
   const result: CreateEdgeResult = { source: plan.source, target: plan.target, relation: plan.relation };
+  if (plan.skipped) result.skipped = true;
   if (attrs) {
     for (const attr of EDGE_ATTRIBUTE_NAMES) {
       if (attrs[attr] !== undefined) (result as unknown as Record<string, unknown>)[attr] = attrs[attr];

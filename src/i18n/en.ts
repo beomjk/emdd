@@ -50,6 +50,7 @@ export const messages: Record<string, string> = {
 
   // Format output
   'format.link_created': 'Linked {source} → {target} [{relation}]',
+  'format.link_skipped': 'Edge already exists: {source} → {target} [{relation}] (skipped)',
   'format.edge_deleted': 'Deleted {count} link(s) from {source} → {target}',
   'format.node_updated': 'Updated {nodeId}: {fields}',
   'format.item_marked': 'Marked "{item}" as {marker} in {episodeId}',

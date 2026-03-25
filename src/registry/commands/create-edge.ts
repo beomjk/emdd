@@ -35,6 +35,7 @@ export const createEdgeDef: CommandDef<typeof schema, CreateEdgeResult> = {
   },
 
   format(result) {
-    return t('format.link_created', { source: result.source, target: result.target, relation: result.relation });
+    const key = result.skipped ? 'format.link_skipped' : 'format.link_created';
+    return t(key, { source: result.source, target: result.target, relation: result.relation });
   },
 };

@@ -50,6 +50,7 @@ export const messages: Record<string, string> = {
 
   // 포맷 출력
   'format.link_created': '{source} → {target} 연결됨 [{relation}]',
+  'format.link_skipped': '에지가 이미 존재합니다: {source} → {target} [{relation}] (건너뜀)',
   'format.edge_deleted': '{source} → {target}에서 {count}개 링크 삭제됨',
   'format.node_updated': '{nodeId} 업데이트됨: {fields}',
   'format.item_marked': '{episodeId}에서 "{item}"을(를) {marker}로 표시',

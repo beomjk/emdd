@@ -368,7 +368,7 @@ describe('createEdge', () => {
 
   // ── Duplicate edge detection ──
 
-  it('throws on duplicate edge (same source+target+relation)', async () => {
+  it('skips duplicate edge idempotently (same source+target+relation)', async () => {
     writeNode(tmpDir, 'experiments', 'exp-001-test.md', {
       id: 'exp-001', type: 'experiment', title: 'Test Exp',
       status: 'COMPLETED', created: '2026-01-01', updated: '2026-01-01',
@@ -382,9 +382,16 @@ describe('createEdge', () => {
     });
 
     await createEdge(join(tmpDir, 'graph'), 'exp-001', 'hyp-001', 'supports');
-    await expect(
-      createEdge(join(tmpDir, 'graph'), 'exp-001', 'hyp-001', 'supports')
-    ).rejects.toThrow(/duplicate/i);
+    const result = await createEdge(join(tmpDir, 'graph'), 'exp-001', 'hyp-001', 'supports');
+    expect(result.skipped).toBe(true);
+    expect(result.source).toBe('exp-001');
+    expect(result.target).toBe('hyp-001');
+    expect(result.relation).toBe('supports');
+
+    // Verify file still has only one edge
+    const content = readFileSync(join(tmpDir, 'graph', 'experiments', 'exp-001-test.md'), 'utf-8');
+    const parsed = matter(content);
+    expect(parsed.data.links).toHaveLength(1);
   });
 
   it('allows duplicate edge with force: true', async () => {
@@ -427,7 +434,7 @@ describe('createEdge', () => {
     expect(result.relation).toBe('relates_to');
   });
 
-  it('detects duplicate when using reverse label', async () => {
+  it('skips duplicate when using reverse label', async () => {
     writeNode(tmpDir, 'experiments', 'exp-001-test.md', {
       id: 'exp-001', type: 'experiment', title: 'Test Exp',
       status: 'COMPLETED', created: '2026-01-01', updated: '2026-01-01',
@@ -441,9 +448,8 @@ describe('createEdge', () => {
     });
 
     await createEdge(join(tmpDir, 'graph'), 'exp-001', 'hyp-001', 'supports');
-    await expect(
-      createEdge(join(tmpDir, 'graph'), 'exp-001', 'hyp-001', 'supported_by')
-    ).rejects.toThrow(/duplicate/i);
+    const result = await createEdge(join(tmpDir, 'graph'), 'exp-001', 'hyp-001', 'supported_by');
+    expect(result.skipped).toBe(true);
   });
 });
 

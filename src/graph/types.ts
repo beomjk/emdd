@@ -61,6 +61,7 @@ export interface CreateEdgeResult extends EdgeAttributes {
   source: string;
   target: string;
   relation: string;
+  skipped?: boolean;
 }
 
 export interface UpdateNodeResult {
@@ -137,4 +138,4 @@ export interface MkdirOp { kind: 'mkdir'; path: string; }
 export type FileOp = WriteFileOp | MkdirOp;
 
 export interface CreateNodePlan { id: string; type: NodeType; path: string; ops: FileOp[]; }
-export interface CreateEdgePlan { source: string; target: string; relation: string; ops: FileOp[]; }
+export interface CreateEdgePlan { source: string; target: string; relation: string; ops: FileOp[]; skipped?: boolean; }
