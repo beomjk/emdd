@@ -406,6 +406,22 @@ During Consolidation, if 3 or more `[deferred]` items have accumulated, conduct 
 
 <!-- /AUTO:transition-rules -->
 
+#### Manual Transitions
+
+<!-- AUTO:manual-transitions -->
+<!-- Generated via @beomjk/state-engine — DO NOT EDIT -->
+**hypothesis**
+| From | To |
+|------|----|
+| ANY | DEFERRED |
+
+**knowledge**
+| From | To |
+|------|----|
+| DISPUTED | RETRACTED |
+
+<!-- /AUTO:manual-transitions -->
+
 ```
 PROPOSED -> TESTING       : connected Experiment is RUNNING
 PROPOSED -> SUPPORTED     : SUPPORTS edge (strength >= 0.7), no experiment needed
