@@ -104,6 +104,9 @@ export const TERMINAL_STATUSES = new Set<string>([...statusCategories.terminal].
 
 // ── Edge Enum ────────────────────────────────────────────────────────
 
+// Completeness guaranteed by construction: allEdgeNames and EdgeType both
+// derive from the same source (forwardEdges + reverseEdges in schema.config).
+// Runtime completeness verified in types.test.ts → "EDGE const has entry for every ALL_VALID_RELATIONS member".
 export const EDGE = Object.fromEntries(
   allEdgeNames.map(e => [e, e])
 ) as { readonly [K in EdgeType]: K };
