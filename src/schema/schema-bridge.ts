@@ -4,14 +4,9 @@
 
 import type { SchemaDefinition } from '@beomjk/state-engine/schema';
 import type { GraphSchema } from './validator.js';
+import { EMDD_PRESET_NAMES } from '../graph/graph-presets.js';
 
-const PRESET_NAMES = [
-  'has_linked',
-  'field_present',
-  'field_equals',
-  'min_linked_count',
-  'all_linked_with',
-] as const;
+const PRESET_NAMES = [...EMDD_PRESET_NAMES, 'field_equals'] as const;
 
 type PresetName = (typeof PRESET_NAMES)[number];
 

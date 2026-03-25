@@ -34,6 +34,7 @@ const GENERATORS: Record<string, (schema: GraphSchema) => string> = {
   'reverse-labels': generateReverseLabelsTable,
   'thresholds': generateThresholdsTable,
   'transition-rules': generateTransitionRulesTable,
+  // manual-transitions: generator ready; add <!-- AUTO:manual-transitions --> marker to SPEC docs to activate
   'manual-transitions': generateManualTransitionsTable,
 };
 
