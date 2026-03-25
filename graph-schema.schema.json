@@ -86,7 +86,7 @@
                 "properties": {
                   "fn": {
                     "type": "string",
-                    "enum": ["has_linked", "field_present", "min_linked_count", "all_linked_with"],
+                    "enum": ["has_linked", "field_present", "field_equals", "min_linked_count", "all_linked_with"],
                     "description": "Preset function name"
                   },
                   "args": {

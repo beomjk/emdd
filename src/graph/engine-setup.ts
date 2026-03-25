@@ -18,6 +18,5 @@ export const engine = createEngine<Graph>({
 /** All preset function names registered in the engine (EMDD + builtins). */
 export const ALL_PRESET_FNS = [
   ...EMDD_PRESET_NAMES,
-  'field_present',
-  'field_equals',
+  ...Object.keys(builtinPresets),
 ] as const;
