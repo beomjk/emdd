@@ -1,11 +1,15 @@
 // ── Compatibility Checker ────────────────────────────────────────────
-// Checks existing graph/ Markdown files against a GraphSchema.
+// Checks existing graph/ Markdown files against schema.config.ts.
 
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import matter from 'gray-matter';
-import type { GraphSchema } from './validator.js';
 import type { ValidationError } from './validator.js';
+import {
+  entityDefinitions,
+  forwardEdges,
+  reverseEdges,
+} from './schema.config.js';
 
 export interface CompatResult {
   compatible: boolean;
@@ -14,18 +18,19 @@ export interface CompatResult {
 }
 
 export async function checkCompatibility(
-  schema: GraphSchema,
   graphDir: string,
 ): Promise<CompatResult> {
   const errors: ValidationError[] = [];
   const warnings: ValidationError[] = [];
 
-  // Build lookup sets
-  const validTypes = new Set(schema.nodeTypes.map(n => n.name));
-  const statusesByType = new Map(schema.nodeTypes.map(n => [n.name, new Set(n.statuses)]));
+  // Build lookup sets from schema.config.ts
+  const validTypes = new Set(Object.keys(entityDefinitions));
+  const statusesByType = new Map(
+    Object.entries(entityDefinitions).map(([name, entity]) => [name, new Set(entity.statuses as readonly string[])])
+  );
   const allRelations = new Set([
-    ...schema.edgeTypes.forward,
-    ...Object.keys(schema.edgeTypes.reverse),
+    ...forwardEdges,
+    ...Object.keys(reverseEdges),
   ]);
 
   // Get all subdirectories in graphDir

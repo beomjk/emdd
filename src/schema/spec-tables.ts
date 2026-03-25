@@ -1,12 +1,20 @@
 // ── Spec Table Generator ────────────────────────────────────────────
-// Updates SPEC_EN.md tables from graph-schema.yaml using AUTO markers.
+// Updates SPEC_EN.md tables from schema.config.ts using AUTO markers.
 // Transition tables are delegated to @beomjk/state-engine's generateDocs().
 
 import { readFile, writeFile } from 'node:fs/promises';
-import path from 'node:path';
-import { generateDocs } from '@beomjk/state-engine/schema';
-import type { GraphSchema } from './validator.js';
-import { toSchemaDefinition } from './schema-bridge.js';
+import { defineSchema, generateDocs } from '@beomjk/state-engine/schema';
+import {
+  entityDefinitions,
+  nodeMetadata,
+  nodeDisplayOrder,
+  forwardEdges,
+  reverseEdges,
+  thresholds,
+  transitionPolicy,
+  type NodeTypeName,
+} from './schema.config.js';
+import { ALL_PRESET_FNS } from './preset-names.js';
 
 export interface UpdateResult {
   updatedSections: string[];
@@ -14,20 +22,17 @@ export interface UpdateResult {
   unchanged: boolean;
 }
 
-// Domain-meaningful display order for node types
-const DOMAIN_ORDER = ['hypothesis', 'experiment', 'finding', 'knowledge', 'question', 'decision', 'episode'];
+// ── Build SchemaDefinition for transition table generation ────────────
 
-function sortByDomainOrder<T extends { name: string }>(items: T[]): T[] {
-  return [...items].sort((a, b) => {
-    const ai = DOMAIN_ORDER.indexOf(a.name);
-    const bi = DOMAIN_ORDER.indexOf(b.name);
-    return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
-  });
-}
+const schemaDef = defineSchema({
+  presetNames: ALL_PRESET_FNS,
+  entities: entityDefinitions,
+  policy: { mode: transitionPolicy.mode },
+});
 
 // ── Table Generators ────────────────────────────────────────────────
 
-const GENERATORS: Record<string, (schema: GraphSchema) => string> = {
+const GENERATORS: Record<string, () => string> = {
   'node-types': generateNodeTypesTable,
   'statuses': generateStatusesTable,
   'edge-types': generateEdgeTypesTable,
@@ -38,36 +43,43 @@ const GENERATORS: Record<string, (schema: GraphSchema) => string> = {
   'manual-transitions': generateManualTransitionsTable,
 };
 
-function generateNodeTypesTable(schema: GraphSchema): string {
-  const sorted = sortByDomainOrder(schema.nodeTypes);
+function generateNodeTypesTable(): string {
+  const ordered = nodeDisplayOrder.map(name => ({
+    name,
+    ...nodeMetadata[name as NodeTypeName],
+    statusCount: entityDefinitions[name].statuses.length,
+  }));
   const lines = [
-    '<!-- Generated from graph-schema.yaml — DO NOT EDIT -->',
+    '<!-- Generated from schema.config.ts — DO NOT EDIT -->',
     '| Type | Prefix | Directory | Status Count |',
     '|------|--------|-----------|-------------|',
   ];
-  for (const nt of sorted) {
-    lines.push(`| ${nt.name} | ${nt.prefix} | ${nt.directory} | ${nt.statuses.length} |`);
+  for (const nt of ordered) {
+    lines.push(`| ${nt.name} | ${nt.prefix} | ${nt.directory} | ${nt.statusCount} |`);
   }
   return lines.join('\n');
 }
 
-function generateStatusesTable(schema: GraphSchema): string {
-  const sorted = sortByDomainOrder(schema.nodeTypes);
+function generateStatusesTable(): string {
+  const ordered = nodeDisplayOrder.map(name => ({
+    name,
+    statuses: entityDefinitions[name].statuses,
+  }));
   const lines = [
-    '<!-- Generated from graph-schema.yaml — DO NOT EDIT -->',
+    '<!-- Generated from schema.config.ts — DO NOT EDIT -->',
     '| Type | Statuses |',
     '|------|----------|',
   ];
-  for (const nt of sorted) {
+  for (const nt of ordered) {
     lines.push(`| ${nt.name} | ${nt.statuses.join(', ')} |`);
   }
   return lines.join('\n');
 }
 
-function generateEdgeTypesTable(schema: GraphSchema): string {
-  const sorted = [...schema.edgeTypes.forward].sort();
+function generateEdgeTypesTable(): string {
+  const sorted = [...forwardEdges].sort();
   const lines = [
-    '<!-- Generated from graph-schema.yaml — DO NOT EDIT -->',
+    '<!-- Generated from schema.config.ts — DO NOT EDIT -->',
     '| # | Edge Type |',
     '|---|-----------|',
   ];
@@ -77,10 +89,10 @@ function generateEdgeTypesTable(schema: GraphSchema): string {
   return lines.join('\n');
 }
 
-function generateReverseLabelsTable(schema: GraphSchema): string {
-  const entries = Object.entries(schema.edgeTypes.reverse).sort(([a], [b]) => a.localeCompare(b));
+function generateReverseLabelsTable(): string {
+  const entries = Object.entries(reverseEdges).sort(([a], [b]) => a.localeCompare(b));
   const lines = [
-    '<!-- Generated from graph-schema.yaml — DO NOT EDIT -->',
+    '<!-- Generated from schema.config.ts — DO NOT EDIT -->',
     '| Reverse Label | Forward Edge |',
     '|---------------|-------------|',
   ];
@@ -90,10 +102,10 @@ function generateReverseLabelsTable(schema: GraphSchema): string {
   return lines.join('\n');
 }
 
-function generateThresholdsTable(schema: GraphSchema): string {
-  const entries = Object.entries(schema.thresholds).sort(([a], [b]) => a.localeCompare(b));
+function generateThresholdsTable(): string {
+  const entries = Object.entries(thresholds).sort(([a], [b]) => a.localeCompare(b));
   const lines = [
-    '<!-- Generated from graph-schema.yaml — DO NOT EDIT -->',
+    '<!-- Generated from schema.config.ts — DO NOT EDIT -->',
     '| Threshold | Value |',
     '|-----------|-------|',
   ];
@@ -103,35 +115,29 @@ function generateThresholdsTable(schema: GraphSchema): string {
   return lines.join('\n');
 }
 
-function generateTransitionRulesTable(schema: GraphSchema): string {
-  const schemaDef = toSchemaDefinition(schema);
+function generateTransitionRulesTable(): string {
   const docs = generateDocs(schemaDef, { tables: ['transitions'] });
   return `<!-- Generated via @beomjk/state-engine — DO NOT EDIT -->\n${docs['transitions']}`;
 }
 
-function generateManualTransitionsTable(schema: GraphSchema): string {
-  const schemaDef = toSchemaDefinition(schema);
+function generateManualTransitionsTable(): string {
   const docs = generateDocs(schemaDef, { tables: ['manual-transitions'] });
   return `<!-- Generated via @beomjk/state-engine — DO NOT EDIT -->\n${docs['manual-transitions']}`;
 }
 
 // ── Public API ──────────────────────────────────────────────────────
 
-export function generateTable(schema: GraphSchema, markerName: string): string {
+export function generateTable(markerName: string): string {
   const generator = GENERATORS[markerName];
   if (!generator) {
     throw new Error(`Unknown marker name: ${markerName}`);
   }
-  return generator(schema);
+  return generator();
 }
 
 export async function updateSpecTables(
-  schemaPath: string,
   specPath: string,
 ): Promise<UpdateResult> {
-  const { loadSchema } = await import('./loader.js');
-  const schema = await loadSchema(schemaPath);
-
   let content = await readFile(specPath, 'utf-8');
   const updatedSections: string[] = [];
   const warnings: string[] = [];
@@ -139,7 +145,6 @@ export async function updateSpecTables(
 
   // Find all AUTO marker pairs
   const markerRegex = /<!-- AUTO:(\S+) -->([\s\S]*?)<!-- \/AUTO:\1 -->/g;
-  let match: RegExpExecArray | null;
 
   // Check for unpaired markers
   const openMarkers = [...content.matchAll(/<!-- AUTO:(\S+) -->/g)].map(m => m[1]);
@@ -164,7 +169,7 @@ export async function updateSpecTables(
       return _fullMatch;
     }
 
-    const generated = generator(schema);
+    const generated = generator();
     updatedSections.push(markerName);
     return `<!-- AUTO:${markerName} -->\n${generated}\n<!-- /AUTO:${markerName} -->`;
   });
@@ -198,7 +203,7 @@ async function main(): Promise<void> {
       continue; // skip if file doesn't exist
     }
 
-    const result = await updateSpecTables('graph-schema.yaml', specFile);
+    const result = await updateSpecTables(specFile);
 
     if (result.warnings.length > 0) {
       for (const w of result.warnings) {

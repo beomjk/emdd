@@ -8,7 +8,6 @@ export default defineConfig({
       provider: 'v8',
       include: ['src/**/*.ts'],
       exclude: [
-        'src/graph/types.generated.ts',
         'src/web/frontend/**',
         '**/*.d.ts',
       ],

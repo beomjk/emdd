@@ -1,12 +1,12 @@
-// ── Re-export generated constants and types ─────────────────────────
-// All constants, type unions, and valid-value arrays are auto-generated
-// from graph-schema.yaml. See types.generated.ts.
+// ── Re-export derived constants and types ────────────────────────────
+// All constants, type unions, and valid-value arrays are derived
+// from schema.config.ts. See derive-constants.ts.
 
-export * from './types.generated.js';
+export * from './derive-constants.js';
 
 // ── Data Interfaces ─────────────────────────────────────────────────
 
-import type { NodeType, EdgeAttributes } from './types.generated.js';
+import type { NodeType, EdgeAttributes } from './derive-constants.js';
 
 export type { EdgeAttributes };
 

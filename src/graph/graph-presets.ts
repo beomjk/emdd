@@ -9,6 +9,7 @@
 import type { PresetFn } from '@beomjk/state-engine/engine';
 import type { Graph, Node } from './types.js';
 import { buildReverseEdgeIndex } from './utils.js';
+export { EMDD_PRESET_NAMES } from '../schema/preset-names.js';
 
 /** Helper: get the full Node from graph (Entity doesn't have links). */
 function getNode(entityId: string, graph: Graph): Node {
@@ -134,13 +135,6 @@ export const allLinkedWith: PresetFn<Graph> = (entity, graph, args) => {
 
   return { met: true, matchedIds };
 };
-
-/** All EMDD graph preset names. */
-export const EMDD_PRESET_NAMES = [
-  'has_linked',
-  'min_linked_count',
-  'all_linked_with',
-] as const;
 
 /** EMDD graph presets keyed by name, for engine registration. */
 export const emddPresets: Record<string, PresetFn<Graph>> = {
