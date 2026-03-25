@@ -17,26 +17,25 @@ export async function detectTransitions(graphDir: string): Promise<TransitionRec
 
   for (const [nodeId, node] of graph.nodes) {
     const rules = TRANSITION_TABLE[node.type];
-    if (!rules) continue;
+    if (!rules || !node.status) continue;
 
-    // Track which from-statuses have already matched (first match wins per from-status)
-    const matchedFromStatuses = new Set<string>();
+    const validTransitions = engine.getValidTransitions(
+      node as NodeWithStatus, graph, rules,
+    );
 
-    for (const rule of rules) {
-      if (rule.from !== node.status) continue;
-      if (matchedFromStatuses.has(rule.from)) continue;
-
-      const result = engine.evaluate(node as NodeWithStatus, graph, rule);
-      if (result.met) {
-        const conditionNames = rule.conditions.map(c => c.fn).join(', ');
+    // First passing rule wins (declaration-order priority).
+    // getValidTransitions returns all matching rules, but we only take the first.
+    if (validTransitions.length > 0) {
+      const first = validTransitions[0];
+      if (first.rule) {
+        const conditionNames = first.rule.conditions.map(c => c.fn).join(', ');
         recommendations.push({
           nodeId,
-          currentStatus: node.status!,
-          recommendedStatus: rule.to,
-          reason: `Transition ${rule.from}→${rule.to}: ${conditionNames} condition met`,
-          evidenceIds: result.matchedIds,
+          currentStatus: node.status,
+          recommendedStatus: first.status,
+          reason: `Transition ${first.rule.from}→${first.rule.to}: ${conditionNames} condition met`,
+          evidenceIds: first.matchedIds,
         });
-        matchedFromStatuses.add(rule.from);
       }
     }
   }
