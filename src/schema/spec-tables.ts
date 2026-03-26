@@ -135,10 +135,12 @@ export function generateTable(markerName: string): string {
   return generator();
 }
 
-export async function updateSpecTables(
-  specPath: string,
+/** Generic marker-replacement engine. Replaces content between AUTO markers using the provided generators map. */
+export async function updateAutoMarkers(
+  filePath: string,
+  generators: Record<string, () => string>,
 ): Promise<UpdateResult> {
-  let content = await readFile(specPath, 'utf-8');
+  let content = await readFile(filePath, 'utf-8');
   const updatedSections: string[] = [];
   const warnings: string[] = [];
   const originalContent = content;
@@ -163,7 +165,7 @@ export async function updateSpecTables(
 
   // Replace content between markers
   content = content.replace(markerRegex, (_fullMatch, markerName: string) => {
-    const generator = GENERATORS[markerName];
+    const generator = generators[markerName];
     if (!generator) {
       warnings.push(`Unknown marker name: ${markerName}`);
       return _fullMatch;
@@ -180,10 +182,16 @@ export async function updateSpecTables(
 
   const unchanged = content === originalContent;
   if (!unchanged) {
-    await writeFile(specPath, content, 'utf-8');
+    await writeFile(filePath, content, 'utf-8');
   }
 
   return { updatedSections, warnings, unchanged };
+}
+
+export async function updateSpecTables(
+  specPath: string,
+): Promise<UpdateResult> {
+  return updateAutoMarkers(specPath, GENERATORS);
 }
 
 // ── CLI Entry Point ─────────────────────────────────────────────────
