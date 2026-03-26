@@ -128,12 +128,12 @@ All tools accept a `graphDir` parameter — the path to your EMDD `graph/` direc
 | `read-node` | Read a single node by ID, returning full content including body | `graphDir`, `nodeId` |
 | `read-nodes` | Read multiple nodes in a single operation (batch, MCP only) | `graphDir`, `nodeIds` |
 | `create-node` | Create a new node of the given type with the given slug | `graphDir`, `type`, `slug`, `title?`, `body?`, `lang?` |
-| `create-edge` | Add an edge (link) from source to target with the given relation | `graphDir`, `source`, `target`, `relation`, `strength?`, `severity?`, `completeness?`, `dependencyType?`, `impact?` |
+| `create-edge` | Add an edge (link) from source to target with the given relation | `graphDir`, `source`, `target`, `relation`, `strength?`, `severity?`, `completeness?`, `dependencyType?`, `impact?`, `force?` |
 | `update-node` | Update frontmatter fields on a node | `graphDir`, `nodeId`, `set`, `transitionPolicy?` |
 | `delete-edge` | Remove a link between nodes | `graphDir`, `source`, `target`, `relation?` |
 | `mark-done` | Mark a checklist item as done in an episode | `graphDir`, `episodeId`, `item`, `marker?` |
 | `health` | Compute a health report for the graph | `graphDir` |
-| `check` | Check consolidation triggers | `graphDir` |
+| `check` | Check consolidation readiness | `graphDir` |
 | `promote` | Identify findings eligible for promotion to knowledge | `graphDir` |
 | `confidence-propagate` | Propagate confidence scores across the graph | `graphDir` |
 | `status-transitions` | Detect recommended status transitions | `graphDir` |
