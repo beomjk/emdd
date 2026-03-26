@@ -135,10 +135,12 @@ export function generateTable(markerName: string): string {
   return generator();
 }
 
-export async function updateSpecTables(
-  specPath: string,
+/** Generic marker-replacement engine. Replaces content between AUTO markers using the provided generators map. */
+export async function updateAutoMarkers(
+  filePath: string,
+  generators: Record<string, () => string>,
 ): Promise<UpdateResult> {
-  let content = await readFile(specPath, 'utf-8');
+  let content = await readFile(filePath, 'utf-8');
   const updatedSections: string[] = [];
   const warnings: string[] = [];
   const originalContent = content;
@@ -163,7 +165,7 @@ export async function updateSpecTables(
 
   // Replace content between markers
   content = content.replace(markerRegex, (_fullMatch, markerName: string) => {
-    const generator = GENERATORS[markerName];
+    const generator = generators[markerName];
     if (!generator) {
       warnings.push(`Unknown marker name: ${markerName}`);
       return _fullMatch;
@@ -180,10 +182,47 @@ export async function updateSpecTables(
 
   const unchanged = content === originalContent;
   if (!unchanged) {
-    await writeFile(specPath, content, 'utf-8');
+    await writeFile(filePath, content, 'utf-8');
   }
 
   return { updatedSections, warnings, unchanged };
+}
+
+export async function updateSpecTables(
+  specPath: string,
+): Promise<UpdateResult> {
+  return updateAutoMarkers(specPath, GENERATORS);
+}
+
+// ── Shared CLI Runner ───────────────────────────────────────────────
+
+export async function runAutoMarkerCli(
+  files: string[],
+  generators: Record<string, () => string>,
+): Promise<void> {
+  const { accessSync } = await import('node:fs');
+
+  for (const file of files) {
+    try {
+      accessSync(file);
+    } catch {
+      continue; // skip if file doesn't exist
+    }
+
+    const result = await updateAutoMarkers(file, generators);
+
+    if (result.warnings.length > 0) {
+      for (const w of result.warnings) {
+        console.warn(`WARNING [${file}]: ${w}`);
+      }
+    }
+
+    if (result.updatedSections.length > 0) {
+      console.log(`[${file}] Updated sections: ${result.updatedSections.join(', ')}`);
+    } else if (result.unchanged) {
+      console.log(`[${file}] No changes needed`);
+    }
+  }
 }
 
 // ── CLI Entry Point ─────────────────────────────────────────────────
@@ -194,29 +233,7 @@ const SPEC_FILES = [
 ];
 
 async function main(): Promise<void> {
-  const { accessSync } = await import('node:fs');
-
-  for (const specFile of SPEC_FILES) {
-    try {
-      accessSync(specFile);
-    } catch {
-      continue; // skip if file doesn't exist
-    }
-
-    const result = await updateSpecTables(specFile);
-
-    if (result.warnings.length > 0) {
-      for (const w of result.warnings) {
-        console.warn(`WARNING [${specFile}]: ${w}`);
-      }
-    }
-
-    if (result.updatedSections.length > 0) {
-      console.log(`[${specFile}] Updated sections: ${result.updatedSections.join(', ')}`);
-    } else if (result.unchanged) {
-      console.log(`[${specFile}] No changes needed`);
-    }
-  }
+  await runAutoMarkerCli(SPEC_FILES, GENERATORS);
 }
 
 const isMain = process.argv[1] &&

@@ -16,6 +16,8 @@
   "main": "./dist/index.js",
   "scripts": {
     "gen:spec-tables": "tsx src/schema/spec-tables.ts",
+    "gen:doc-tables": "tsx src/schema/doc-tables.ts",
+    "gen:tables": "npm run gen:spec-tables && npm run gen:doc-tables",
     "build": "tsc && cp src/rules/*.md dist/rules/ && npm run build:web",
     "build:web": "tsx scripts/build-web.ts",
     "dev": "tsx src/cli.ts",

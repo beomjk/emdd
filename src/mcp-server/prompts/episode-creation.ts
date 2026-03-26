@@ -1,9 +1,12 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { PROMPT_META } from './meta.js';
+
+const meta = PROMPT_META.find(p => p.name === 'episode-creation')!;
 
 export function registerEpisodeCreation(server: McpServer): void {
   server.prompt(
-    'episode-creation',
-    'Step-by-step guide for writing an EMDD Episode node — includes frontmatter template, mandatory sections, and linking instructions',
+    meta.name,
+    meta.description,
     async () => {
       const text = `# EMDD Episode Creation Guide
 

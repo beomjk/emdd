@@ -3,11 +3,14 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { getHealth, checkConsolidation } from '../../graph/operations.js';
 import { listNodes } from '../../graph/operations.js';
 import { getLocale, setLocale } from '../../i18n/index.js';
+import { PROMPT_META } from './meta.js';
+
+const meta = PROMPT_META.find(p => p.name === 'context-loading')!;
 
 export function registerContextLoading(server: McpServer): void {
   server.prompt(
-    'context-loading',
-    'Load EMDD graph context for session start — provides a summary of nodes, edges, health, and structural gaps',
+    meta.name,
+    meta.description,
     { graphDir: z.string().describe('Path to the EMDD graph directory'), lang: z.string().optional().describe('Language locale (en or ko)') },
     async ({ graphDir, lang }) => {
       const locale = getLocale(lang);

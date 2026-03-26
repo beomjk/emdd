@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, rmSync, writeFileSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
-import { generateTable, updateSpecTables } from '../../../src/schema/spec-tables.js';
+import { generateTable, updateSpecTables, updateAutoMarkers } from '../../../src/schema/spec-tables.js';
 
 // ── generateTable ───────────────────────────────────────────────────
 
@@ -184,5 +184,149 @@ describe('updateSpecTables', () => {
 
     const result = await updateSpecTables(specPath);
     expect(result.warnings.some(w => w.includes('unknown-marker'))).toBe(true);
+  });
+});
+
+// ── updateAutoMarkers ────────────────────────────────────────────────
+
+describe('updateAutoMarkers', () => {
+  let tmpDir: string;
+  let filePath: string;
+
+  beforeEach(() => {
+    tmpDir = mkdtempSync(path.join(tmpdir(), 'auto-markers-'));
+    filePath = path.join(tmpDir, 'DOC.md');
+  });
+
+  afterEach(() => {
+    rmSync(tmpDir, { recursive: true });
+  });
+
+  it('replaces marker content with custom generators', async () => {
+    const generators: Record<string, () => string> = {
+      'my-section': () => '<!-- Generated -->\n| Col A | Col B |\n|-------|-------|\n| a1 | b1 |',
+    };
+
+    writeFileSync(filePath, [
+      'Before.',
+      '<!-- AUTO:my-section -->',
+      'old stuff',
+      '<!-- /AUTO:my-section -->',
+      'After.',
+    ].join('\n'));
+
+    const result = await updateAutoMarkers(filePath, generators);
+    expect(result.updatedSections).toContain('my-section');
+    expect(result.unchanged).toBe(false);
+
+    const updated = readFileSync(filePath, 'utf-8');
+    expect(updated).toContain('| a1 | b1 |');
+    expect(updated).not.toContain('old stuff');
+    expect(updated).toContain('Before.');
+    expect(updated).toContain('After.');
+  });
+
+  it('handles multiple custom generators', async () => {
+    const generators: Record<string, () => string> = {
+      'alpha': () => 'Alpha content',
+      'beta': () => 'Beta content',
+    };
+
+    writeFileSync(filePath, [
+      '<!-- AUTO:alpha -->',
+      'old-a',
+      '<!-- /AUTO:alpha -->',
+      '',
+      '<!-- AUTO:beta -->',
+      'old-b',
+      '<!-- /AUTO:beta -->',
+    ].join('\n'));
+
+    const result = await updateAutoMarkers(filePath, generators);
+    expect(result.updatedSections).toEqual(expect.arrayContaining(['alpha', 'beta']));
+
+    const updated = readFileSync(filePath, 'utf-8');
+    expect(updated).toContain('Alpha content');
+    expect(updated).toContain('Beta content');
+  });
+
+  it('warns for markers not in the generators map', async () => {
+    const generators: Record<string, () => string> = {
+      'known': () => 'Known content',
+    };
+
+    writeFileSync(filePath, [
+      '<!-- AUTO:known -->',
+      'old',
+      '<!-- /AUTO:known -->',
+      '<!-- AUTO:unknown -->',
+      'old',
+      '<!-- /AUTO:unknown -->',
+    ].join('\n'));
+
+    const result = await updateAutoMarkers(filePath, generators);
+    expect(result.updatedSections).toContain('known');
+    expect(result.warnings.some(w => w.includes('unknown'))).toBe(true);
+  });
+
+  it('warns for all markers when generators map is empty', async () => {
+    writeFileSync(filePath, [
+      '<!-- AUTO:foo -->',
+      'content',
+      '<!-- /AUTO:foo -->',
+      '<!-- AUTO:bar -->',
+      'content',
+      '<!-- /AUTO:bar -->',
+    ].join('\n'));
+
+    const result = await updateAutoMarkers(filePath, {});
+    expect(result.warnings).toHaveLength(2);
+    expect(result.warnings.some(w => w.includes('foo'))).toBe(true);
+    expect(result.warnings.some(w => w.includes('bar'))).toBe(true);
+  });
+
+  it('propagates error when generator throws', async () => {
+    const generators: Record<string, () => string> = {
+      'broken': () => { throw new Error('generator failed'); },
+    };
+
+    writeFileSync(filePath, [
+      '<!-- AUTO:broken -->',
+      'old',
+      '<!-- /AUTO:broken -->',
+    ].join('\n'));
+
+    await expect(updateAutoMarkers(filePath, generators)).rejects.toThrow('generator failed');
+  });
+
+  it('handles empty region between adjacent markers', async () => {
+    const generators: Record<string, () => string> = {
+      'empty': () => 'filled',
+    };
+
+    writeFileSync(filePath, [
+      '<!-- AUTO:empty -->',
+      '<!-- /AUTO:empty -->',
+    ].join('\n'));
+
+    const result = await updateAutoMarkers(filePath, generators);
+    expect(result.updatedSections).toContain('empty');
+
+    const updated = readFileSync(filePath, 'utf-8');
+    expect(updated).toContain('filled');
+  });
+
+  it('updateSpecTables still works as regression', async () => {
+    writeFileSync(filePath, [
+      '<!-- AUTO:thresholds -->',
+      'old',
+      '<!-- /AUTO:thresholds -->',
+    ].join('\n'));
+
+    const result = await updateSpecTables(filePath);
+    expect(result.updatedSections).toContain('thresholds');
+
+    const updated = readFileSync(filePath, 'utf-8');
+    expect(updated).toContain('| promotion_confidence | 0.9 |');
   });
 });
