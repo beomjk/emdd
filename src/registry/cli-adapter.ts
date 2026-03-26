@@ -4,25 +4,7 @@ import chalk from 'chalk';
 import type { CommandRegistry } from './registry.js';
 import { resolveGraphDir } from '../graph/loader.js';
 import { getLocale, setLocale, t } from '../i18n/index.js';
-
-/** Get the Zod v4 schema type string via public API */
-function zodDefType(schema: z.ZodType): string {
-  return schema.type;
-}
-
-/** Unwrap optional/default wrappers recursively to get the inner type */
-function unwrapZod(schema: z.ZodType): z.ZodType {
-  let current = schema;
-  while (current.type === 'optional' || current.type === 'default') {
-    current = (current as z.ZodOptional | z.ZodDefault).unwrap() as z.ZodType;
-  }
-  return current;
-}
-
-/** Get enum values from a ZodEnum via public .options */
-function getEnumValues(schema: z.ZodType): string[] {
-  return (schema as z.ZodEnum).options.map(String);
-}
+import { zodDefType, unwrapZod, getEnumValues } from './schema-introspect.js';
 
 /** Extract warnings array from command output, if present. */
 function extractWarnings(output: unknown): string[] {
