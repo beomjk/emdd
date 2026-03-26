@@ -80,7 +80,7 @@ See the [5-minute tutorial](docs/TUTORIAL.md) for a full walkthrough, or the [Qu
 
 ## Using with AI Assistants
 
-EMDD exposes its full graph API via an [MCP server](docs/MCP_SETUP.md) -- 21 tools + 4 guided prompts (context loading, episode creation, consolidation, health review).
+EMDD exposes its full graph API via an [MCP server](docs/MCP_SETUP.md) -- 22 tools + 4 guided prompts (context loading, episode creation, consolidation, health review).
 
 **Claude Code** (one-line setup):
 
@@ -175,7 +175,7 @@ Hypotheses move through `PROPOSED -> TESTING -> SUPPORTED / REFUTED / REVISED`. 
 
 ## CLI Commands
 
-All commands accept `--graphDir <path>`, `--lang <en|ko>`, and `--json`.
+Graph commands accept `--graphDir <path>`, `--lang <en|ko>`, and `--json`. Utility commands (`init`, `graph`, `serve`, `export-html`, `mcp`) accept only their own options as listed below.
 
 ### Core
 
@@ -185,7 +185,7 @@ All commands accept `--graphDir <path>`, `--lang <en|ko>`, and `--json`.
 | `emdd new <type> <slug>` | Create a node (hypothesis, experiment, finding, ...) (`--title`, `--body`, `--lang`) |
 | `emdd read <nodeId>` | Read a node by ID, showing frontmatter and body |
 | `emdd update <nodeId> --set key=value` | Update node frontmatter (`--transitionPolicy strict\|warn\|off`) |
-| `emdd list` | List nodes (`--type`, `--status` filters) |
+| `emdd list` | List nodes (`--type`, `--status`, `--since` filters) |
 | `emdd link <source> <target> <relation>` | Add a link between nodes (`--strength`, `--severity`, `--completeness`, `--dependencyType`, `--impact`, `--force`) |
 | `emdd unlink <source> <target>` | Remove a link between nodes (`--relation` optional) |
 | `emdd done <episodeId> <item>` | Mark an episode item (`--marker <done\|deferred\|superseded>`) |
@@ -199,7 +199,7 @@ All commands accept `--graphDir <path>`, `--lang <en|ko>`, and `--json`.
 | `emdd lint` | Validate schema and link integrity |
 | `emdd gaps` | Detect structural gaps (orphans, stale, disconnected) |
 | `emdd neighbors <nodeId>` | Get a node's neighbors and connections (`--depth`, default 1) |
-| `emdd check` | Check consolidation triggers |
+| `emdd check` | Check consolidation readiness |
 | `emdd promote` | Identify findings eligible for promotion to knowledge |
 | `emdd confidence` | Propagate confidence across the graph |
 | `emdd transitions` | Detect recommended status transitions |
