@@ -80,7 +80,7 @@ See the [5-minute tutorial](docs/TUTORIAL.md) for a full walkthrough, or the [Qu
 
 ## Using with AI Assistants
 
-EMDD exposes its full graph API via an [MCP server](docs/MCP_SETUP.md) -- 22 tools + 4 guided prompts (context loading, episode creation, consolidation, health review).
+EMDD exposes its full graph API via an [MCP server](docs/MCP_SETUP.md) -- 22 tools + 4 guided prompts that form a **session cycle**: `context-loading` (start) → work → `episode-creation` (end) → `consolidation` (maintenance) → `health-review` (review).
 
 **Claude Code** (one-line setup):
 

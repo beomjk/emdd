@@ -1,10 +1,23 @@
 # EMDD Agent Behavior Guidelines
 
-## Session Workflow
+## Session Cycle (MCP Prompts)
 
-1. **Session Start**: Read the latest Episode's "What's Next" section. Load prerequisite nodes.
-2. **During Work**: Execute experiments, write code, take notes. Mark surprises with [!].
-3. **Session End**: Write a new Episode. Record what was tried, create Findings, list next steps.
+Every session follows this prompt cycle:
+
+```
+  ┌→ context-loading ──→ [Work] ──→ episode-creation ──┐
+  │    Session Start                  Session End       │
+  └── health-review ◄── consolidation ◄────────────────┘
+       Review             Maintenance (if triggered)
+```
+
+1. **Session Start** → Run the `context-loading` prompt. Review graph state, check gaps, read latest Episode's "What's Next".
+2. **During Work** — Execute experiments, write code, take notes. Mark surprises with [!].
+3. **Session End** → Run the `episode-creation` prompt. Record what was tried, create Findings, list next steps with prerequisite node IDs.
+4. **Maintenance** → Run the `consolidation` prompt when triggers fire. Promote findings, split experiments, update confidence.
+5. **Review** → Run the `health-review` prompt periodically for a full health dashboard with recommendations.
+
+> Steps 4-5 are not mandatory every session — run when consolidation triggers fire or on a weekly cadence.
 
 ## Intervention Rules
 
@@ -73,8 +86,8 @@
 - `mark-consolidated` — Record a consolidation date to reset episode counting
 
 **Prompts:**
-- `context-loading` — Load EMDD graph context for session start — provides a summary of nodes, edges, health, and structural gaps
-- `episode-creation` — Step-by-step guide for writing an EMDD Episode node — includes frontmatter template, mandatory sections, and linking instructions
-- `consolidation` — Consolidation execution guide — checks triggers and provides a step-by-step procedure for promoting findings, generating questions, and updating hypotheses
-- `health-review` — Full health dashboard with actionable recommendations — analyzes node distribution, structural gaps, and link density
+- `context-loading` — [Cycle 1/4 · Session Start] Load EMDD graph context — provides a summary of nodes, edges, health, and structural gaps
+- `episode-creation` — [Cycle 2/4 · Session End] Step-by-step guide for writing an EMDD Episode node — includes frontmatter template, mandatory sections, and linking instructions
+- `consolidation` — [Cycle 3/4 · Maintenance] Consolidation execution guide — checks triggers and provides a step-by-step procedure for promoting findings, generating questions, and updating hypotheses
+- `health-review` — [Cycle 4/4 · Review] Full health dashboard with actionable recommendations — analyzes node distribution, structural gaps, and link density
 <!-- /AUTO:agent-tools -->

@@ -66,6 +66,10 @@ ${nodeLines}
 
 ${idExamples}
 
+## Session Cycle
+
+Use MCP prompts in order: \`context-loading\` (start) → work → \`episode-creation\` (end) → \`consolidation\` (if triggered) → \`health-review\` (periodic).
+
 ## Key Rules
 
 1. Write an Episode at end of each session with "What I Tried" and "What's Next" (with prerequisite node IDs)
