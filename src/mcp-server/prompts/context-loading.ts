@@ -4,20 +4,9 @@ import { getHealth, checkConsolidation } from '../../graph/operations.js';
 import { listNodes } from '../../graph/operations.js';
 import { getLocale, setLocale } from '../../i18n/index.js';
 import { PROMPT_META } from './meta.js';
-import type { HealthReport } from '../../graph/types.js';
+import type { HealthReport, CheckResult, Node } from '../../graph/types.js';
 
 const meta = PROMPT_META.find(p => p.name === 'context-loading')!;
-
-interface ConsolidationResult {
-  triggers: { message: string }[];
-}
-
-interface NodeSummary {
-  id: string;
-  title: string;
-  type: string;
-  status?: string;
-}
 
 function buildFirstSessionGuide(): string {
   return `# EMDD First Session Guide
@@ -69,13 +58,13 @@ the Episode curates the context for your next session.
 - \`list-nodes\` — see all nodes in the graph
 - \`read-node\` — read a specific node's content
 - \`health\` — check graph health and structural gaps
-- \`gaps\` — identify missing connections in the research loop`;
+- \`graph-gaps\` — identify missing connections in the research loop`;
 }
 
 function buildSessionContext(
   health: HealthReport,
-  nodes: NodeSummary[],
-  consolidation: ConsolidationResult,
+  nodes: Node[],
+  consolidation: CheckResult,
 ): string {
   const typeBreakdown = Object.entries(health.byType)
     .filter(([, count]) => count > 0)
