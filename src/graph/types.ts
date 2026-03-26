@@ -45,6 +45,7 @@ export type NodeWithStatus = Node & { status: string };
 export interface NodeFilter {
   type?: NodeType;
   status?: string;
+  since?: string;
 }
 
 export interface NodeDetail extends Node {

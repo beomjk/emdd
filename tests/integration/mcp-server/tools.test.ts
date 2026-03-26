@@ -83,6 +83,16 @@ describe('MCP Server — tools', () => {
       const nodes = await callTool(client, 'list-nodes', { graphDir: EMPTY_GRAPH }) as unknown[];
       expect(nodes).toEqual([]);
     });
+
+    it('filters by since date', async () => {
+      const nodes = await callTool(client, 'list-nodes', {
+        graphDir: SAMPLE_GRAPH,
+        since: '2026-02-21',
+      }) as Array<{ id: string }>;
+      expect(nodes).toHaveLength(4);
+      const ids = nodes.map(n => n.id).sort();
+      expect(ids).toEqual(['epi-003', 'fnd-004', 'fnd-005', 'hyp-002']);
+    });
   });
 
   // ── read-node ───────────────────────────────────────────────────────
@@ -104,6 +114,29 @@ describe('MCP Server — tools', () => {
         nodeId: 'nonexistent-999',
       });
       expect(errText).toMatch(/not found/i);
+    });
+  });
+
+  // ── read-nodes (batch) ────────────────────────────────────────────
+
+  describe('read-nodes', () => {
+    it('reads multiple nodes in one call', async () => {
+      const details = await callTool(client, 'read-nodes', {
+        graphDir: SAMPLE_GRAPH,
+        nodeIds: ['hyp-001', 'fnd-001'],
+      }) as Array<{ id: string; body: string }>;
+      expect(details).toHaveLength(2);
+      expect(details[0].id).toBe('hyp-001');
+      expect(details[1].id).toBe('fnd-001');
+    });
+
+    it('skips missing IDs', async () => {
+      const details = await callTool(client, 'read-nodes', {
+        graphDir: SAMPLE_GRAPH,
+        nodeIds: ['hyp-001', 'nonexistent-999'],
+      }) as Array<{ id: string }>;
+      expect(details).toHaveLength(1);
+      expect(details[0].id).toBe('hyp-001');
     });
   });
 

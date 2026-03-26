@@ -1441,8 +1441,9 @@ mkdir -p scratchpad
 
 ```python
 # Tools (implemented in TypeScript MCP server):
-#   list-nodes(type?, status?) -> node listing
+#   list-nodes(type?, status?, since?) -> node listing
 #   read-node(id) -> single node details
+#   read-nodes(nodeIds[]) -> batch read multiple nodes (MCP only)
 #   create-node(type, slug, title?, body?, lang?) -> create a new node
 #   create-edge(source, target, relation) -> add an edge
 #   health(graphDir) -> graph health dashboard (replaces graph_stats)

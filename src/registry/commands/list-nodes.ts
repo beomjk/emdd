@@ -8,6 +8,7 @@ import type { CommandDef } from '../types.js';
 const schema = z.object({
   type: z.enum(NODE_TYPES as unknown as [string, ...string[]]).optional().describe('Filter by node type'),
   status: z.string().optional().describe('Filter by status'),
+  since: z.string().optional().describe('Filter nodes updated since date (YYYY-MM-DD)'),
 });
 
 export const listNodesDef: CommandDef<typeof schema, Node[]> = {
@@ -21,6 +22,7 @@ export const listNodesDef: CommandDef<typeof schema, Node[]> = {
     const filter: NodeFilter = {};
     if (input.type) filter.type = input.type as NodeType;
     if (input.status) filter.status = input.status.toUpperCase();
+    if (input.since) filter.since = input.since;
     return listNodes(input.graphDir, filter);
   },
 
