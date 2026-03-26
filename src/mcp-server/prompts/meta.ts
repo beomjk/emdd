@@ -7,7 +7,9 @@ export interface PromptMeta {
   description: string;
   hasGraphDir: boolean;
   hasLang: boolean;
+  /** Logical grouping for related prompts (e.g., 'session-cycle'). Used by doc-tables and future prompt-listing UIs. */
   group?: string;
+  /** Display order within a group (1-based). Used by doc-tables and future prompt-listing UIs. */
   order?: number;
 }
 
