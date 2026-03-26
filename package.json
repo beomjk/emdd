@@ -26,7 +26,7 @@
     "test:coverage": "vitest run --coverage",
     "lint": "tsc --noEmit",
     "spec:coverage": "tsx src/schema/spec-coverage.ts",
-    "demo:record": "npx terminal-demo play docs/assets/demo.md --prompt '' --record docs/assets/demo.cast && npx svg-term-cli --in docs/assets/demo.cast --out docs/assets/demo.svg --window --width 80 --height 24"
+    "demo:svg": "tsx scripts/generate-demo-svg.ts"
   },
   "keywords": [
     "emdd",
