@@ -23,6 +23,9 @@ jobs:
           node-version: ${{ matrix.node-version }}
       - run: npm ci
       - run: npm run lint
+      - run: npm run gen:tables
+      - name: Check generated tables are up to date
+        run: git diff --exit-code README.md docs/ src/rules/emdd-agent.md
       - run: npm run test:coverage
       - name: Coverage Report
         if: always() && github.event_name == 'pull_request'
