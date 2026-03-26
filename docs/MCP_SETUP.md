@@ -184,11 +184,22 @@ All tools accept a `graphDir` parameter — the path to your EMDD `graph/` direc
 <!-- Generated from command registry — DO NOT EDIT -->
 | Prompt | Parameters | Description |
 |--------|-----------|-------------|
-| `context-loading` | `graphDir` (required), `lang?` | Load EMDD graph context for session start — provides a summary of nodes, edges, health, and structural gaps |
-| `episode-creation` | (none) | Step-by-step guide for writing an EMDD Episode node — includes frontmatter template, mandatory sections, and linking instructions |
-| `consolidation` | `graphDir` (required), `lang?` | Consolidation execution guide — checks triggers and provides a step-by-step procedure for promoting findings, generating questions, and updating hypotheses |
-| `health-review` | `graphDir` (required), `lang?` | Full health dashboard with actionable recommendations — analyzes node distribution, structural gaps, and link density |
+| `context-loading` | `graphDir` (required), `lang?` | [Cycle 1/4 · Session Start] Load EMDD graph context — provides a summary of nodes, edges, health, and structural gaps |
+| `episode-creation` | (none) | [Cycle 2/4 · Session End] Step-by-step guide for writing an EMDD Episode node — includes frontmatter template, mandatory sections, and linking instructions |
+| `consolidation` | `graphDir` (required), `lang?` | [Cycle 3/4 · Maintenance] Consolidation execution guide — checks triggers and provides a step-by-step procedure for promoting findings, generating questions, and updating hypotheses |
+| `health-review` | `graphDir` (required), `lang?` | [Cycle 4/4 · Review] Full health dashboard with actionable recommendations — analyzes node distribution, structural gaps, and link density |
 <!-- /AUTO:mcp-prompt-table -->
+
+### Session Cycle
+
+The four prompts form a recurring session cycle:
+
+1. **`context-loading`** — Run at session start to load graph state and identify next steps.
+2. **`episode-creation`** — Run at session end to record what happened and plan next steps.
+3. **`consolidation`** — Run when triggers are met to promote findings and maintain the graph.
+4. **`health-review`** — Run periodically for a full health dashboard with recommendations.
+
+Steps 1-2 happen every session. Steps 3-4 are triggered by graph state or run on a weekly cadence.
 
 Prompts are available in tools that support MCP prompts (e.g., Claude Code).
 

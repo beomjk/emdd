@@ -7,31 +7,41 @@ export interface PromptMeta {
   description: string;
   hasGraphDir: boolean;
   hasLang: boolean;
+  group?: string;
+  order?: number;
 }
 
 export const PROMPT_META: PromptMeta[] = [
   {
     name: 'context-loading',
-    description: 'Load EMDD graph context for session start — provides a summary of nodes, edges, health, and structural gaps',
+    description: '[Cycle 1/4 · Session Start] Load EMDD graph context — provides a summary of nodes, edges, health, and structural gaps',
     hasGraphDir: true,
     hasLang: true,
+    group: 'session-cycle',
+    order: 1,
   },
   {
     name: 'episode-creation',
-    description: 'Step-by-step guide for writing an EMDD Episode node — includes frontmatter template, mandatory sections, and linking instructions',
+    description: '[Cycle 2/4 · Session End] Step-by-step guide for writing an EMDD Episode node — includes frontmatter template, mandatory sections, and linking instructions',
     hasGraphDir: false,
     hasLang: false,
+    group: 'session-cycle',
+    order: 2,
   },
   {
     name: 'consolidation',
-    description: 'Consolidation execution guide — checks triggers and provides a step-by-step procedure for promoting findings, generating questions, and updating hypotheses',
+    description: '[Cycle 3/4 · Maintenance] Consolidation execution guide — checks triggers and provides a step-by-step procedure for promoting findings, generating questions, and updating hypotheses',
     hasGraphDir: true,
     hasLang: true,
+    group: 'session-cycle',
+    order: 3,
   },
   {
     name: 'health-review',
-    description: 'Full health dashboard with actionable recommendations — analyzes node distribution, structural gaps, and link density',
+    description: '[Cycle 4/4 · Review] Full health dashboard with actionable recommendations — analyzes node distribution, structural gaps, and link density',
     hasGraphDir: true,
     hasLang: true,
+    group: 'session-cycle',
+    order: 4,
   },
 ];
