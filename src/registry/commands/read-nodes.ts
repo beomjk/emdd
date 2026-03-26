@@ -5,7 +5,7 @@ import { t } from '../../i18n/index.js';
 import type { CommandDef } from '../types.js';
 
 const schema = z.object({
-  nodeIds: z.array(z.string()).describe('Array of node IDs to read'),
+  nodeIds: z.array(z.string()).describe('Array of node IDs to read (missing IDs are silently skipped)'),
 });
 
 export const readNodesDef: CommandDef<typeof schema, NodeDetail[]> = {

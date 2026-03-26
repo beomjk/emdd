@@ -103,6 +103,7 @@ export const messages: Record<string, string> = {
   'error.item_already_marked': '{id}에서 이미 표시된 항목입니다: {item}',
   'error.item_not_found': '{id}에서 항목을 찾을 수 없습니다: {item}',
   'error.multiple_matches': "'{item}'에 대한 복수 일치가 {id}에 있습니다",
+  'error.invalid_date': '잘못된 날짜: {value}',
 
   // 갭 메시지 (getHealth)
   'gap.no_experiments': '실험이 없습니다 — 가설에 테스트가 부족합니다',

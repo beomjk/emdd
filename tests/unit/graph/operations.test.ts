@@ -90,6 +90,10 @@ describe('listNodes', () => {
     const nodes = await listNodes(SAMPLE_GRAPH, { since: '2099-01-01' });
     expect(nodes).toEqual([]);
   });
+
+  it('throws on invalid since date string', async () => {
+    await expect(listNodes(SAMPLE_GRAPH, { since: 'garbage' })).rejects.toThrow(/invalid date/i);
+  });
 });
 
 describe('readNode', () => {
@@ -693,6 +697,25 @@ describe('getHealth — structural gaps §6.8', () => {
 
     const report = await getHealth(join(tmpDir, 'graph'));
     expect(report.gapDetails.some(g => g.type === 'stale_knowledge')).toBe(true);
+  });
+
+  it('detects stale knowledge node with only created date (no updated)', async () => {
+    const oldDate = new Date(Date.now() - 100 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const recentDate = new Date().toISOString().slice(0, 10);
+    writeNode(tmpDir, 'knowledge', 'knw-001-old.md', {
+      id: 'knw-001', type: 'knowledge', title: 'Old No Updated', status: 'ACTIVE',
+      confidence: 0.9, created: oldDate, tags: [],
+      links: [{ target: 'knw-002', relation: 'relates_to' }],
+    });
+    writeNode(tmpDir, 'knowledge', 'knw-002-new.md', {
+      id: 'knw-002', type: 'knowledge', title: 'New', status: 'ACTIVE',
+      confidence: 0.9, created: recentDate, updated: recentDate, tags: [], links: [],
+    });
+
+    const report = await getHealth(join(tmpDir, 'graph'));
+    const gap = report.gapDetails.find(g => g.type === 'stale_knowledge');
+    expect(gap).toBeDefined();
+    expect(gap!.nodeIds).toContain('knw-001');
   });
 
   it('detects disconnected clusters', async () => {

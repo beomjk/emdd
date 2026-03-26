@@ -73,6 +73,9 @@ export async function listNodes(graphDir: string, filter?: NodeFilter): Promise<
   }
   if (filter?.since) {
     const sinceDate = new Date(filter.since);
+    if (isNaN(sinceDate.getTime())) {
+      throw new Error(t('error.invalid_date', { value: filter.since }));
+    }
     nodes = nodes.filter(n => {
       const d = nodeDate(n);
       return d !== null && d >= sinceDate;

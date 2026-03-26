@@ -13,7 +13,7 @@ const schema = z.object({
 
 export const listNodesDef: CommandDef<typeof schema, Node[]> = {
   name: 'list-nodes',
-  description: 'List nodes, optionally filtered by type and/or status',
+  description: 'List nodes, optionally filtered by type, status, and/or date',
   category: 'read',
   schema,
   cli: { commandName: 'list' },
