@@ -1367,8 +1367,9 @@ mkdir -p scratchpad
 
 ```python
 # Tools (TypeScript MCP 서버로 구현됨):
-#   list-nodes(type?, status?) → 노드 목록
+#   list-nodes(type?, status?, since?) → 노드 목록
 #   read-node(id) → 단일 노드 상세
+#   read-nodes(nodeIds[]) → 복수 노드 일괄 읽기 (MCP 전용)
 #   create-node(type, slug, title?, body?, lang?) → 새 노드 생성
 #   create-edge(source, target, relation) → 에지 추가
 #   health(graphDir) → 그래프 건강 대시보드 (graph_stats 대체)

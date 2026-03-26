@@ -3,6 +3,7 @@ import { CommandRegistry } from './registry.js';
 // Read commands
 import { listNodesDef } from './commands/list-nodes.js';
 import { readNodeDef } from './commands/read-node.js';
+import { readNodesDef } from './commands/read-nodes.js';
 import { neighborsDef } from './commands/neighbors.js';
 import { gapsDef } from './commands/gaps.js';
 
@@ -33,6 +34,7 @@ export function createDefaultRegistry(): CommandRegistry {
   // Read commands
   registry.register(listNodesDef);
   registry.register(readNodeDef);
+  registry.register(readNodesDef);
   registry.register(neighborsDef);
   registry.register(gapsDef);
 

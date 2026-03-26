@@ -75,12 +75,12 @@ describe('FR-018: CLI/MCP Parity', () => {
     const registry = createDefaultRegistry();
     const allCommands = registry.getAll();
 
-    // All commands should be visible to both CLI and MCP (no exclusions currently)
-    expect(allCommands.length).toBe(21);
-    expect(allCommands.every(c => c.cli !== false)).toBe(true);
+    // 22 commands total; read-nodes is MCP-only (cli: false)
+    expect(allCommands.length).toBe(22);
+    expect(allCommands.filter(c => c.cli !== false).length).toBe(21);
     expect(allCommands.every(c => c.mcp !== false)).toBe(true);
 
-    // Verify CLI adapter registers all commands
+    // Verify CLI adapter registers CLI-visible commands only
     const program = new Command().name('emdd').exitOverride();
     new CliAdapter(registry).attachTo(program);
     expect(program.commands.length).toBe(21);
@@ -93,7 +93,7 @@ describe('FR-018: CLI/MCP Parity', () => {
     const client = new Client({ name: 'test', version: '1.0' });
     await client.connect(clientTransport);
     const tools = await client.listTools();
-    expect(tools.tools.length).toBe(21);
+    expect(tools.tools.length).toBe(22);
     await client.close();
     await server.close();
   });

@@ -124,8 +124,9 @@ All tools accept a `graphDir` parameter — the path to your EMDD `graph/` direc
 
 | Tool | Description | Parameters |
 |------|-------------|------------|
-| `list-nodes` | List all nodes, optionally filtered by type and/or status | `graphDir`, `type?`, `status?` |
+| `list-nodes` | List all nodes, optionally filtered by type, status, and/or date | `graphDir`, `type?`, `status?`, `since?` |
 | `read-node` | Read a single node by ID, returning full content including body | `graphDir`, `nodeId` |
+| `read-nodes` | Read multiple nodes in a single operation (batch, MCP only) | `graphDir`, `nodeIds` |
 | `create-node` | Create a new node of the given type with the given slug | `graphDir`, `type`, `slug`, `title?`, `body?`, `lang?` |
 | `create-edge` | Add an edge (link) from source to target with the given relation | `graphDir`, `source`, `target`, `relation`, `strength?`, `severity?`, `completeness?`, `dependencyType?`, `impact?` |
 | `update-node` | Update frontmatter fields on a node | `graphDir`, `nodeId`, `set`, `transitionPolicy?` |
@@ -151,7 +152,9 @@ All tools accept a `graphDir` parameter — the path to your EMDD `graph/` direc
 - **`graphDir`** — Absolute or relative path to the `graph/` directory (e.g., `./graph` or `/home/user/project/graph`)
 - **`type`** — Node type: `hypothesis`, `experiment`, `finding`, `knowledge`, `question`, `decision`, `episode`
 - **`status`** — Any valid status string for the node type (e.g., `proposed`, `testing`, `supported`, `refuted`, `active`)
+- **`since`** — Date filter in `YYYY-MM-DD` format — returns nodes updated (or created) on or after this date
 - **`nodeId`** — Node ID in the format `prefix-NNN` (e.g., `hyp-001`, `fnd-003`)
+- **`nodeIds`** — Array of node IDs for batch read (e.g., `["hyp-001", "fnd-003"]`)
 - **`slug`** — URL-friendly slug for new nodes (e.g., `surface-crack-analysis`)
 - **`relation`** — Edge relation type: `supports`, `contradicts`, `produces`, `spawns`, `depends_on`, `tests`, `promotes`, `answers`, `extends`, `relates_to`, `informs`, `part_of`, `context_for`, `revises`, `confirms`
 - **`lang`** — Language locale: `en` (default) or `ko`

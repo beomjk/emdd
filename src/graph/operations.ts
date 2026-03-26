@@ -8,6 +8,7 @@ import { checkEdgeAffinity, getPresentAttrKeys } from './edge-attrs.js';
 import { engine } from './engine-setup.js';
 import { collectDeferredIds, buildNodeToComponent, getConnectedComponents } from './utils.js';
 import { toGraphologyGraph } from './graphology-bridge.js';
+import { normalizeDateFields, nodeDate } from './date-utils.js';
 import type {
   Node,
   NodeType,
@@ -70,6 +71,16 @@ export async function listNodes(graphDir: string, filter?: NodeFilter): Promise<
   if (filter?.status) {
     nodes = nodes.filter(n => n.status === filter.status);
   }
+  if (filter?.since) {
+    const sinceDate = new Date(filter.since);
+    if (isNaN(sinceDate.getTime())) {
+      throw new Error(t('error.invalid_date', { value: filter.since }));
+    }
+    nodes = nodes.filter(n => {
+      const d = nodeDate(n);
+      return d !== null && d >= sinceDate;
+    });
+  }
 
   return nodes;
 }
@@ -93,6 +104,28 @@ export async function readNode(graphDir: string, nodeId: string): Promise<NodeDe
     ...node,
     body: parsed.content,
   };
+}
+
+// ── readNodes (batch) ────────────────────────────────────────────────
+
+/**
+ * Read multiple nodes by ID in a single operation.
+ * Loads graph once for efficiency. Missing IDs are silently skipped.
+ */
+export async function readNodes(graphDir: string, nodeIds: string[]): Promise<NodeDetail[]> {
+  const graph = await loadGraph(graphDir);
+  const results: NodeDetail[] = [];
+
+  for (const nodeId of nodeIds) {
+    const node = graph.nodes.get(nodeId);
+    if (!node) continue;
+
+    const raw = fs.readFileSync(node.path, 'utf-8');
+    const parsed = matter(raw);
+    results.push({ ...node, body: parsed.content });
+  }
+
+  return results;
 }
 
 // ── executeOps ──────────────────────────────────────────────────────
@@ -268,6 +301,7 @@ export async function planCreateEdge(
   data.updated = new Date().toISOString().slice(0, 10);
 
   // Compute new file content
+  normalizeDateFields(data);
   const output = matter.stringify(parsed.content, data);
   const ops: FileOp[] = [{ kind: 'write', path: filePath, content: output }];
 
@@ -425,8 +459,7 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
   let untestedAnyEpisodes = false;
   for (const node of graph.nodes.values()) {
     if (node.type === 'hypothesis' && node.status === STATUS.PROPOSED) {
-      const updated = node.meta.updated ? new Date(String(node.meta.updated))
-        : node.meta.created ? new Date(String(node.meta.created)) : null;
+      const updated = nodeDate(node);
       if (updated) {
         const daysElapsed = Math.floor((now.getTime() - updated.getTime()) / (1000 * 60 * 60 * 24));
         const daysMet = daysElapsed >= config.gaps.untested_days;
@@ -458,8 +491,7 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
   let blockingAnyEpisodes = false;
   for (const node of graph.nodes.values()) {
     if (node.type === 'question' && node.status === STATUS.OPEN && node.meta.urgency === URGENCY.BLOCKING) {
-      const updated = node.meta.updated ? new Date(String(node.meta.updated))
-        : node.meta.created ? new Date(String(node.meta.created)) : null;
+      const updated = nodeDate(node);
       if (updated) {
         const daysElapsed = Math.floor((now.getTime() - updated.getTime()) / (1000 * 60 * 60 * 24));
         const daysMet = daysElapsed >= config.gaps.blocking_days;
@@ -509,7 +541,7 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
   const staleIds: string[] = [];
   for (const node of knowledgeNodes) {
     if (node.status !== STATUS.ACTIVE) continue;
-    const updated = node.meta.updated ? new Date(String(node.meta.updated)) : null;
+    const updated = nodeDate(node);
     if (updated) {
       const daysElapsed = Math.floor((now.getTime() - updated.getTime()) / (1000 * 60 * 60 * 24));
       if (daysElapsed >= config.gaps.stale_days) {
@@ -518,7 +550,7 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
         const hasNewer = knowledgeNodes.some(other => {
           if (other.id === node.id) return false;
           if (nodeToComponent.get(other.id) !== myComp) return false;
-          const otherUpdated = other.meta.updated ? new Date(String(other.meta.updated)) : null;
+          const otherUpdated = nodeDate(other);
           return otherUpdated && otherUpdated > updated;
         });
         if (hasNewer) {
@@ -1018,6 +1050,7 @@ export async function updateNode(
   const updatedDate = new Date().toISOString().slice(0, 10);
   data.updated = updatedDate;
 
+  normalizeDateFields(data);
   const output = matter.stringify(parsed.content, data);
   fs.writeFileSync(filePath, output);
 
@@ -1085,6 +1118,7 @@ export async function deleteEdge(
   data.links = remaining;
   data.updated = new Date().toISOString().slice(0, 10);
 
+  normalizeDateFields(data);
   const output = matter.stringify(parsed.content, data);
   fs.writeFileSync(filePath, output);
 

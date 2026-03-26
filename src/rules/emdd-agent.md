@@ -42,8 +42,9 @@
 ## Available MCP Tools
 
 **Read operations:**
-- `list-nodes` — List nodes with optional type/status filters
+- `list-nodes` — List nodes with optional type/status/since filters
 - `read-node` — Read a single node (frontmatter + body)
+- `read-nodes` — Read multiple nodes in a single call (batch, MCP only)
 - `graph-neighbors` — Get a node's neighbors and connections
 
 **Write operations:**

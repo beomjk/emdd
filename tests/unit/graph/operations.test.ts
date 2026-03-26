@@ -16,6 +16,7 @@ const EMPTY_GRAPH = path.join(FIXTURES, 'empty-graph');
 import {
   listNodes,
   readNode,
+  readNodes,
   createNode,
   createEdge,
   planCreateNode,
@@ -70,6 +71,29 @@ describe('listNodes', () => {
     const nodes = await listNodes(EMPTY_GRAPH);
     expect(nodes).toEqual([]);
   });
+
+  it('filters nodes updated since a given date', async () => {
+    // Fixture nodes with updated >= 2026-02-21: hyp-002, epi-003, fnd-004, fnd-005
+    const nodes = await listNodes(SAMPLE_GRAPH, { since: '2026-02-21' });
+    expect(nodes.length).toBe(4);
+    const ids = nodes.map(n => n.id).sort();
+    expect(ids).toEqual(['epi-003', 'fnd-004', 'fnd-005', 'hyp-002']);
+  });
+
+  it('combines since filter with type filter', async () => {
+    const nodes = await listNodes(SAMPLE_GRAPH, { type: 'finding', since: '2026-02-21' });
+    expect(nodes.length).toBe(2);
+    expect(nodes.every(n => n.type === 'finding')).toBe(true);
+  });
+
+  it('returns empty array when since date is in the future', async () => {
+    const nodes = await listNodes(SAMPLE_GRAPH, { since: '2099-01-01' });
+    expect(nodes).toEqual([]);
+  });
+
+  it('throws on invalid since date string', async () => {
+    await expect(listNodes(SAMPLE_GRAPH, { since: 'garbage' })).rejects.toThrow(/invalid date/i);
+  });
 });
 
 describe('readNode', () => {
@@ -93,6 +117,33 @@ describe('readNode', () => {
     expect(detail!.body).toContain('Rationale');
     expect(detail!.status).toBe('TESTING');
     expect(detail!.confidence).toBe(0.6);
+  });
+});
+
+describe('readNodes', () => {
+  it('reads multiple nodes in one call', async () => {
+    const results = await readNodes(SAMPLE_GRAPH, ['hyp-001', 'fnd-001']);
+    expect(results.length).toBe(2);
+    expect(results[0].id).toBe('hyp-001');
+    expect(results[1].id).toBe('fnd-001');
+    expect(results[0].body).toBeTruthy();
+    expect(results[1].body).toBeTruthy();
+  });
+
+  it('skips missing node IDs', async () => {
+    const results = await readNodes(SAMPLE_GRAPH, ['hyp-001', 'nonexistent-999']);
+    expect(results.length).toBe(1);
+    expect(results[0].id).toBe('hyp-001');
+  });
+
+  it('returns empty array for all-missing IDs', async () => {
+    const results = await readNodes(SAMPLE_GRAPH, ['missing-001', 'missing-002']);
+    expect(results).toEqual([]);
+  });
+
+  it('returns empty array for empty input', async () => {
+    const results = await readNodes(SAMPLE_GRAPH, []);
+    expect(results).toEqual([]);
   });
 });
 
@@ -646,6 +697,25 @@ describe('getHealth — structural gaps §6.8', () => {
 
     const report = await getHealth(join(tmpDir, 'graph'));
     expect(report.gapDetails.some(g => g.type === 'stale_knowledge')).toBe(true);
+  });
+
+  it('detects stale knowledge node with only created date (no updated)', async () => {
+    const oldDate = new Date(Date.now() - 100 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const recentDate = new Date().toISOString().slice(0, 10);
+    writeNode(tmpDir, 'knowledge', 'knw-001-old.md', {
+      id: 'knw-001', type: 'knowledge', title: 'Old No Updated', status: 'ACTIVE',
+      confidence: 0.9, created: oldDate, tags: [],
+      links: [{ target: 'knw-002', relation: 'relates_to' }],
+    });
+    writeNode(tmpDir, 'knowledge', 'knw-002-new.md', {
+      id: 'knw-002', type: 'knowledge', title: 'New', status: 'ACTIVE',
+      confidence: 0.9, created: recentDate, updated: recentDate, tags: [], links: [],
+    });
+
+    const report = await getHealth(join(tmpDir, 'graph'));
+    const gap = report.gapDetails.find(g => g.type === 'stale_knowledge');
+    expect(gap).toBeDefined();
+    expect(gap!.nodeIds).toContain('knw-001');
   });
 
   it('detects disconnected clusters', async () => {
@@ -1646,6 +1716,23 @@ describe('updateNode', () => {
     const content = readFileSync(join(tmpDir, 'graph', 'hypotheses', 'hyp-001-test.md'), 'utf-8');
     const parsed = matter(content);
     expect(parsed.data.status).toBe('TESTING');
+  });
+
+  it('preserves YYYY-MM-DD date format after round-trip', async () => {
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'Test',
+      status: 'PROPOSED', confidence: 0.5,
+      created: '2026-01-15', updated: '2026-01-15',
+      tags: [], links: [],
+    });
+
+    await updateNode(join(tmpDir, 'graph'), 'hyp-001', { title: 'Updated' }, { transitionPolicy: 'off' });
+
+    const raw = readFileSync(join(tmpDir, 'graph', 'hypotheses', 'hyp-001-test.md'), 'utf-8');
+    // Ensure no ISO timestamp leak (e.g., 2026-01-15T00:00:00.000Z)
+    expect(raw).not.toContain('T00:00:00');
+    const parsed = matter(raw);
+    expect(String(parsed.data.created)).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
   it('parses confidence as number', async () => {

@@ -103,6 +103,7 @@ export const messages: Record<string, string> = {
   'error.item_already_marked': 'Item already marked in {id}: {item}',
   'error.item_not_found': 'Item not found in {id}: {item}',
   'error.multiple_matches': "Multiple matches for '{item}' in {id}",
+  'error.invalid_date': 'Invalid date: {value}',
 
   // Gap messages (getHealth)
   'gap.no_experiments': 'No experiments — hypotheses lack testing',

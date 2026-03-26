@@ -1,6 +1,7 @@
 import { loadGraph } from './loader.js';
 import { getHypothesisMeta } from './accessors.js';
 import { STATUS, VALID_STATUSES, IN_PROGRESS_STATUSES, INITIAL_STATUSES, THRESHOLDS } from './types.js';
+import { nodeDate } from './date-utils.js';
 
 export interface KillCriterionAlert {
   hypothesisId: string;
@@ -38,7 +39,7 @@ export async function checkKillCriteria(graphDir: string): Promise<KillCriterion
 
     // Stale trigger: TESTING N+ days with no recent experiment
     if (node.status === STATUS.TESTING) {
-      const updated = node.meta.updated ? new Date(String(node.meta.updated)) : null;
+      const updated = nodeDate(node);
       if (updated) {
         const daysElapsed = Math.floor((now.getTime() - updated.getTime()) / (1000 * 60 * 60 * 24));
         if (daysElapsed >= THRESHOLDS.kill_stale_days) {
