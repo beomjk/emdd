@@ -22,11 +22,11 @@
 > **A methodology that gives structure to R&D exploration through an AI-maintained evolving knowledge graph -- without killing the exploration itself.**
 
 <p align="center">
-  <img src="docs/assets/demo.svg" alt="EMDD workflow: (1) emdd init creates a project and connects an AI assistant via MCP, (2) AI follows a 4-step session cycle — context-loading, episode-creation, consolidation, health-review, (3) result is an evolving knowledge graph with hypothesis, experiment, finding, question, knowledge, and decision nodes" width="720">
+  <img src="docs/assets/demo.svg" alt="EMDD workflow: (1) emdd init creates a project and connects an AI assistant via MCP, (2) AI follows a 4-step session cycle — context-loading, episode-creation, consolidation, health-review, (3) result is an evolving knowledge graph with hypothesis, experiment, finding, question, knowledge, and decision nodes" width="900">
 </p>
 
 <p align="center">
-  <img src="docs/assets/dashboard-v2.png" alt="EMDD Web Dashboard" width="720">
+  <img src="docs/assets/dashboard-v2.png" alt="EMDD Web Dashboard" width="900">
 </p>
 
 <p align="center">Interactive graph visualization with community clustering, force-directed / hierarchical layouts, node detail panel, and search. Launch with <code>emdd serve</code>.</p>
