@@ -63,6 +63,21 @@ npx @beomjk/emdd <command>
 
 ## Quick Start
 
+### With AI Assistant (recommended)
+
+```bash
+# 1. Initialize and connect
+emdd init my-research --tool claude && cd my-research
+claude mcp add emdd -- npx @beomjk/emdd mcp
+
+# 2. Ask your AI to start
+# "Load the EMDD context and help me create my first hypothesis."
+```
+
+Your AI guides you through the session cycle -- creating nodes, linking them, and recording episodes.
+
+### With CLI
+
 ```bash
 # 1. Initialize
 emdd init my-research && cd my-research

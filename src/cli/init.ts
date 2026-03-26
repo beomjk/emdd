@@ -4,6 +4,33 @@ import { NODE_TYPE_DIRS } from '../graph/types.js';
 import { t } from '../i18n/index.js';
 import { generateRulesFile, type ToolType } from '../rules/generators.js';
 
+const MCP_SETUP_HINTS: Record<Exclude<ToolType, 'all'>, string> = {
+  claude: 'claude mcp add emdd -- npx @beomjk/emdd mcp',
+  cursor: 'Add to .cursor/mcp.json: {"mcpServers":{"emdd":{"command":"npx","args":["@beomjk/emdd","mcp"]}}}',
+  windsurf: 'Add to Windsurf MCP settings: command "npx", args ["@beomjk/emdd", "mcp"]',
+  cline: 'Add to .continue/config.yaml: mcpServers > name: emdd, command: npx, args: [@beomjk/emdd, mcp]',
+  copilot: 'Add to .vscode/mcp.json: {"servers":{"emdd":{"command":"npx","args":["@beomjk/emdd","mcp"]}}}',
+};
+
+function printNextSteps(tool: ToolType): void {
+  const displayTool = tool === 'all' ? 'claude' : (tool as Exclude<ToolType, 'all'>);
+
+  console.log('');
+  console.log(`  ${t('init.next_steps_header')}`);
+  console.log('');
+  console.log(`    ${t('init.ai_recommended')}`);
+  console.log(`      ${MCP_SETUP_HINTS[displayTool]}`);
+  console.log('');
+  console.log(`    ${t('init.ai_then')}`);
+  console.log('');
+  console.log(`    ${t('init.cli_alternative')}`);
+  console.log(`      ${t('init.cli_command')}`);
+  if (tool === 'all') {
+    console.log('');
+    console.log(`    ${t('init.mcp_docs')}`);
+  }
+}
+
 export function initCommand(targetPath: string | undefined, options: { lang?: string; tool?: string; force?: boolean }): void {
   const target = path.resolve(targetPath ?? '.');
   const graphDir = path.join(target, 'graph');
@@ -30,7 +57,7 @@ export function initCommand(targetPath: string | undefined, options: { lang?: st
     fs.writeFileSync(configPath, config, 'utf-8');
 
     console.log(t('init.success', { path: target }));
-    console.log(t('init.next_steps'));
+    printNextSteps(tool);
   }
 
   // Generate tool-specific rules files
