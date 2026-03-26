@@ -41,36 +41,40 @@
 
 ## Available MCP Tools
 
+<!-- AUTO:agent-tools -->
+<!-- Generated from command registry — DO NOT EDIT -->
+
 **Read operations:**
-- `list-nodes` — List nodes with optional type/status/since filters
-- `read-node` — Read a single node (frontmatter + body)
-- `read-nodes` — Read multiple nodes in a single call (batch, MCP only)
-- `graph-neighbors` — Get a node's neighbors and connections
+- `list-nodes` — List nodes, optionally filtered by type, status, and/or date
+- `read-node` — Read a node detail
+- `read-nodes` — Read multiple nodes in a single operation (batch)
+- `graph-neighbors` — List neighbor nodes within BFS depth
 
 **Write operations:**
-- `create-node` — Create a new node (supports optional `body` to set content in one call)
-- `create-edge` — Add a link between nodes
-- `update-node` — Update node frontmatter fields
+- `create-node` — Create a new node
+- `create-edge` — Create an edge between two nodes
 - `delete-edge` — Remove a link between nodes
-- `mark-done` — Mark an episode checklist item
-- `index-graph` — Generate _index.md
+- `update-node` — Update frontmatter fields on a node
+- `mark-done` — Mark a checklist item as done in an episode
+- `index-graph` — Generate the _index.md file
 
 **Analysis operations:**
-- `health` — Compute graph health report
-- `check` — Check consolidation triggers
-- `promote` — Identify promotion candidates
-- `confidence-propagate` — Propagate confidence across the graph
-- `status-transitions` — Detect recommended status transitions
-- `kill-check` — Check kill criteria for hypotheses
-- `graph-gaps` — Detect structural gaps (orphans, stale, disconnected)
-- `analyze-refutation` — Analyze refutation impact on hypotheses
+- `graph-gaps` — Show structural gaps in the graph
+- `health` — Show health dashboard
+- `check` — Check consolidation readiness
+- `promote` — Show promotion candidates
+- `confidence-propagate` — Propagate confidence scores through the graph
+- `status-transitions` — Detect available status transitions
+- `kill-check` — Check kill criteria alerts
+- `branch-groups` — List hypothesis branch groups
 - `lint` — Lint the graph for schema errors
 - `backlog` — Show project backlog (open items, deferred, checklists)
-- `branch-groups` — List and analyze branch groups
-- `mark-consolidated` — Record consolidation date
+- `analyze-refutation` — Analyze refutation patterns in the graph
+- `mark-consolidated` — Record a consolidation date to reset episode counting
 
 **Prompts:**
-- `context-loading` — Load graph context for a session
-- `episode-creation` — Guide episode creation
-- `consolidation` — Guide consolidation workflow
-- `health-review` — Guide health review workflow
+- `context-loading` — Load graph context at the start of a session
+- `episode-creation` — Guided workflow for writing an Episode node at the end of a session
+- `consolidation` — Step-by-step guide for running a Consolidation ceremony
+- `health-review` — Analyze graph health and generate recommendations
+<!-- /AUTO:agent-tools -->

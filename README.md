@@ -179,48 +179,57 @@ Graph commands accept `--graphDir <path>`, `--lang <en|ko>`, and `--json`. Utili
 
 ### Core
 
+<!-- AUTO:readme-cli-core -->
+<!-- Generated from command registry — DO NOT EDIT -->
 | Command | Description |
 |---------|-------------|
 | `emdd init [path]` | Initialize a new EMDD project (`--tool claude\|cursor\|windsurf\|cline\|copilot\|all`, `--lang en\|ko`, `--force`) |
-| `emdd new <type> <slug>` | Create a node (hypothesis, experiment, finding, ...) (`--title`, `--body`, `--lang`) |
-| `emdd read <nodeId>` | Read a node by ID, showing frontmatter and body |
-| `emdd update <nodeId> --set key=value` | Update node frontmatter (`--transitionPolicy strict\|warn\|off`) |
-| `emdd list` | List nodes (`--type`, `--status`, `--since` filters) |
-| `emdd link <source> <target> <relation>` | Add a link between nodes (`--strength`, `--severity`, `--completeness`, `--dependencyType`, `--impact`, `--force`) |
-| `emdd unlink <source> <target>` | Remove a link between nodes (`--relation` optional) |
-| `emdd done <episodeId> <item>` | Mark an episode item (`--marker <done\|deferred\|superseded>`) |
+| `emdd list` | List nodes, optionally filtered by type, status, and/or date (`--type`, `--status`, `--since`) |
+| `emdd read <nodeId>` | Read a node detail |
+| `emdd new <type> <slug>` | Create a new node (`--title`, `--body`, `--lang`) |
+| `emdd link <source> <target> <relation>` | Create an edge between two nodes (`--strength`, `--severity`, `--completeness`, `--dependencyType`, `--impact`, `--force`) |
+| `emdd unlink <source> <target>` | Remove a link between nodes (`--relation`) |
+| `emdd update <nodeId>` | Update frontmatter fields on a node (`--set`, `--transitionPolicy`) |
+| `emdd done <episodeId> <item>` | Mark a checklist item as done in an episode (`--marker`) |
+<!-- /AUTO:readme-cli-core -->
 
 <details>
 <summary><b>Analysis</b> (13 commands)</summary>
 
+<!-- AUTO:readme-cli-analysis -->
+<!-- Generated from command registry — DO NOT EDIT -->
 | Command | Description |
 |---------|-------------|
-| `emdd health` | Graph health dashboard (node counts, confidence, gaps, link density) |
-| `emdd lint` | Validate schema and link integrity |
-| `emdd gaps` | Detect structural gaps (orphans, stale, disconnected) |
-| `emdd neighbors <nodeId>` | Get a node's neighbors and connections (`--depth`, default 1) |
+| `emdd neighbors <nodeId>` | List neighbor nodes within BFS depth (`--depth`) |
+| `emdd gaps` | Show structural gaps in the graph |
+| `emdd health` | Show health dashboard |
 | `emdd check` | Check consolidation readiness |
-| `emdd promote` | Identify findings eligible for promotion to knowledge |
-| `emdd confidence` | Propagate confidence across the graph |
-| `emdd transitions` | Detect recommended status transitions |
-| `emdd kill-check` | Check kill criteria status for hypotheses |
-| `emdd branches` | List and analyze branch groups |
-| `emdd analyze-refutation` | Analyze refutation impact on hypotheses |
-| `emdd backlog` | List incomplete items across all episodes (`--status <pending\|done\|deferred\|superseded\|all>`) |
-| `emdd mark-consolidated` | Record consolidation date (`--date`, default today) |
+| `emdd promote` | Show promotion candidates |
+| `emdd confidence` | Propagate confidence scores through the graph |
+| `emdd transitions` | Detect available status transitions |
+| `emdd kill-check` | Check kill criteria alerts |
+| `emdd branches` | List hypothesis branch groups |
+| `emdd lint` | Lint the graph for schema errors |
+| `emdd backlog` | Show project backlog (open items, deferred, checklists) (`--status`) |
+| `emdd analyze-refutation` | Analyze refutation patterns in the graph |
+| `emdd mark-consolidated` | Record a consolidation date to reset episode counting (`--date`) |
+<!-- /AUTO:readme-cli-analysis -->
 
 </details>
 
 <details>
 <summary><b>Export & Server</b> (5 commands)</summary>
 
+<!-- AUTO:readme-cli-export -->
+<!-- Generated from command registry — DO NOT EDIT -->
 | Command | Description |
 |---------|-------------|
+| `emdd index` | Generate the _index.md file |
 | `emdd serve [path]` | Start web dashboard server (`-p, --port`, `--no-open`) |
 | `emdd export-html [output]` | Export graph as standalone HTML file (`--layout force\|hierarchical`, `--types`, `--statuses`) |
 | `emdd graph [path]` | Generate `_graph.mmd` (Mermaid diagram) |
-| `emdd index` | Generate `_index.md` |
 | `emdd mcp` | Start MCP server (stdio transport) |
+<!-- /AUTO:readme-cli-export -->
 
 </details>
 

@@ -6,8 +6,11 @@
 
 The EMDD MCP server exposes the knowledge graph to any MCP-compatible AI coding assistant. It provides:
 
-- **21 tools** for reading, creating, updating, and analyzing graph nodes and edges
+<!-- AUTO:mcp-tool-count -->
+<!-- Generated from command registry — DO NOT EDIT -->
+- **22 tools** for reading, creating, updating, and analyzing graph nodes and edges
 - **4 prompts** for guided workflows (context loading, episode creation, consolidation, health review)
+<!-- /AUTO:mcp-tool-count -->
 
 The server communicates over stdio transport and is started with `emdd mcp`.
 
@@ -122,30 +125,33 @@ This makes the EMDD tools available to GitHub Copilot's agent mode.
 
 All tools accept a `graphDir` parameter — the path to your EMDD `graph/` directory.
 
+<!-- AUTO:mcp-tool-table -->
+<!-- Generated from command registry — DO NOT EDIT -->
 | Tool | Description | Parameters |
 |------|-------------|------------|
-| `list-nodes` | List all nodes, optionally filtered by type, status, and/or date | `graphDir`, `type?`, `status?`, `since?` |
-| `read-node` | Read a single node by ID, returning full content including body | `graphDir`, `nodeId` |
-| `read-nodes` | Read multiple nodes in a single operation (batch, MCP only) | `graphDir`, `nodeIds` |
-| `create-node` | Create a new node of the given type with the given slug | `graphDir`, `type`, `slug`, `title?`, `body?`, `lang?` |
-| `create-edge` | Add an edge (link) from source to target with the given relation | `graphDir`, `source`, `target`, `relation`, `strength?`, `severity?`, `completeness?`, `dependencyType?`, `impact?`, `force?` |
-| `update-node` | Update frontmatter fields on a node | `graphDir`, `nodeId`, `set`, `transitionPolicy?` |
+| `list-nodes` | List nodes, optionally filtered by type, status, and/or date | `graphDir`, `type?`, `status?`, `since?` |
+| `read-node` | Read a node detail | `graphDir`, `nodeId` |
+| `read-nodes` | Read multiple nodes in a single operation (batch) | `graphDir`, `nodeIds` |
+| `graph-neighbors` | List neighbor nodes within BFS depth | `graphDir`, `nodeId`, `depth?` |
+| `graph-gaps` | Show structural gaps in the graph | `graphDir` |
+| `create-node` | Create a new node | `graphDir`, `type`, `slug`, `title?`, `body?`, `lang?` |
+| `create-edge` | Create an edge between two nodes | `graphDir`, `source`, `target`, `relation`, `strength?`, `severity?`, `completeness?`, `dependencyType?`, `impact?`, `force?` |
 | `delete-edge` | Remove a link between nodes | `graphDir`, `source`, `target`, `relation?` |
+| `update-node` | Update frontmatter fields on a node | `graphDir`, `nodeId`, `set`, `transitionPolicy?` |
 | `mark-done` | Mark a checklist item as done in an episode | `graphDir`, `episodeId`, `item`, `marker?` |
-| `health` | Compute a health report for the graph | `graphDir` |
-| `check` | Check consolidation readiness | `graphDir` |
-| `promote` | Identify findings eligible for promotion to knowledge | `graphDir` |
-| `confidence-propagate` | Propagate confidence scores across the graph | `graphDir` |
-| `status-transitions` | Detect recommended status transitions | `graphDir` |
-| `kill-check` | Check kill criteria status for hypotheses | `graphDir` |
-| `branch-groups` | List and analyze branch groups | `graphDir` |
-| `graph-neighbors` | Get connected nodes for a given node | `graphDir`, `nodeId`, `depth?` |
-| `graph-gaps` | Analyze structural gaps in the graph | `graphDir` |
 | `index-graph` | Generate the _index.md file | `graphDir` |
+| `health` | Show health dashboard | `graphDir` |
+| `check` | Check consolidation readiness | `graphDir` |
+| `promote` | Show promotion candidates | `graphDir` |
+| `confidence-propagate` | Propagate confidence scores through the graph | `graphDir` |
+| `status-transitions` | Detect available status transitions | `graphDir` |
+| `kill-check` | Check kill criteria alerts | `graphDir` |
+| `branch-groups` | List hypothesis branch groups | `graphDir` |
 | `lint` | Lint the graph for schema errors | `graphDir` |
 | `backlog` | Show project backlog (open items, deferred, checklists) | `graphDir`, `status?` |
-| `mark-consolidated` | Record a consolidation date to reset episode counting | `graphDir`, `date?` |
 | `analyze-refutation` | Analyze refutation patterns in the graph | `graphDir` |
+| `mark-consolidated` | Record a consolidation date to reset episode counting | `graphDir`, `date?` |
+<!-- /AUTO:mcp-tool-table -->
 
 ### Parameter Details
 
@@ -174,12 +180,15 @@ All tools accept a `graphDir` parameter — the path to your EMDD `graph/` direc
 
 ## Prompt Reference
 
+<!-- AUTO:mcp-prompt-table -->
+<!-- Generated from command registry — DO NOT EDIT -->
 | Prompt | Parameters | Description |
 |--------|-----------|-------------|
-| `context-loading` | `graphDir` (required), `lang?` | Load graph context at the start of a session — summarizes graph state, active hypotheses, and latest episode |
+| `context-loading` | `graphDir` (required), `lang?` | Load graph context at the start of a session |
 | `episode-creation` | (none) | Guided workflow for writing an Episode node at the end of a session |
 | `consolidation` | `graphDir` (required), `lang?` | Step-by-step guide for running a Consolidation ceremony |
 | `health-review` | `graphDir` (required), `lang?` | Analyze graph health and generate recommendations |
+<!-- /AUTO:mcp-prompt-table -->
 
 Prompts are available in tools that support MCP prompts (e.g., Claude Code).
 
