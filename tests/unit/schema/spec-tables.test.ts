@@ -269,6 +269,53 @@ describe('updateAutoMarkers', () => {
     expect(result.warnings.some(w => w.includes('unknown'))).toBe(true);
   });
 
+  it('warns for all markers when generators map is empty', async () => {
+    writeFileSync(filePath, [
+      '<!-- AUTO:foo -->',
+      'content',
+      '<!-- /AUTO:foo -->',
+      '<!-- AUTO:bar -->',
+      'content',
+      '<!-- /AUTO:bar -->',
+    ].join('\n'));
+
+    const result = await updateAutoMarkers(filePath, {});
+    expect(result.warnings).toHaveLength(2);
+    expect(result.warnings.some(w => w.includes('foo'))).toBe(true);
+    expect(result.warnings.some(w => w.includes('bar'))).toBe(true);
+  });
+
+  it('propagates error when generator throws', async () => {
+    const generators: Record<string, () => string> = {
+      'broken': () => { throw new Error('generator failed'); },
+    };
+
+    writeFileSync(filePath, [
+      '<!-- AUTO:broken -->',
+      'old',
+      '<!-- /AUTO:broken -->',
+    ].join('\n'));
+
+    await expect(updateAutoMarkers(filePath, generators)).rejects.toThrow('generator failed');
+  });
+
+  it('handles empty region between adjacent markers', async () => {
+    const generators: Record<string, () => string> = {
+      'empty': () => 'filled',
+    };
+
+    writeFileSync(filePath, [
+      '<!-- AUTO:empty -->',
+      '<!-- /AUTO:empty -->',
+    ].join('\n'));
+
+    const result = await updateAutoMarkers(filePath, generators);
+    expect(result.updatedSections).toContain('empty');
+
+    const updated = readFileSync(filePath, 'utf-8');
+    expect(updated).toContain('filled');
+  });
+
   it('updateSpecTables still works as regression', async () => {
     writeFileSync(filePath, [
       '<!-- AUTO:thresholds -->',

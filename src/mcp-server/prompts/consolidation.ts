@@ -3,11 +3,14 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { checkConsolidation, getHealth } from '../../graph/operations.js';
 import { CEREMONY_TRIGGERS, THRESHOLDS } from '../../graph/types.js';
 import { getLocale, setLocale } from '../../i18n/index.js';
+import { PROMPT_META } from './meta.js';
+
+const meta = PROMPT_META.find(p => p.name === 'consolidation')!;
 
 export function registerConsolidation(server: McpServer): void {
   server.prompt(
-    'consolidation',
-    'Consolidation execution guide — checks triggers and provides a step-by-step procedure for promoting findings, generating questions, and updating hypotheses',
+    meta.name,
+    meta.description,
     { graphDir: z.string().describe('Path to the EMDD graph directory'), lang: z.string().optional().describe('Language locale (en or ko)') },
     async ({ graphDir, lang }) => {
       const locale = getLocale(lang);

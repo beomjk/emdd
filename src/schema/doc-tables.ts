@@ -3,10 +3,11 @@
 // command registry. Uses the same AUTO marker pattern as spec-tables.ts.
 
 import { createDefaultRegistry } from '../registry/all-commands.js';
-import { describeParam } from '../registry/schema-introspect.js';
+import { describeParam, unwrapZod, zodDefType, getEnumValues } from '../registry/schema-introspect.js';
 import type { CommandDef } from '../registry/types.js';
 import type { z } from 'zod';
-import { updateAutoMarkers } from './spec-tables.js';
+import { runAutoMarkerCli } from './spec-tables.js';
+import { PROMPT_META } from '../mcp-server/prompts/meta.js';
 
 // ── Non-Registry Commands (defined in src/cli.ts) ──────────────────
 
@@ -25,20 +26,15 @@ const NON_REGISTRY_COMMANDS: NonRegistryCommand[] = [
   { cliName: 'mcp', description: 'Start MCP server (stdio transport)', options: '' },
 ];
 
-// ── Prompt Metadata ────────────────────────────────────────────────
+// ── Prompt Metadata (derived from PROMPT_META SSOT) ────────────────
 
-interface PromptMeta {
-  name: string;
-  description: string;
-  params: string;
+function promptParams(meta: typeof PROMPT_META[number]): string {
+  if (!meta.hasGraphDir && !meta.hasLang) return '(none)';
+  const parts: string[] = [];
+  if (meta.hasGraphDir) parts.push('`graphDir` (required)');
+  if (meta.hasLang) parts.push('`lang?`');
+  return parts.join(', ');
 }
-
-const PROMPTS: PromptMeta[] = [
-  { name: 'context-loading', description: 'Load graph context at the start of a session', params: '`graphDir` (required), `lang?`' },
-  { name: 'episode-creation', description: 'Guided workflow for writing an Episode node at the end of a session', params: '(none)' },
-  { name: 'consolidation', description: 'Step-by-step guide for running a Consolidation ceremony', params: '`graphDir` (required), `lang?`' },
-  { name: 'health-review', description: 'Analyze graph health and generate recommendations', params: '`graphDir` (required), `lang?`' },
-];
 
 // ── README Doc Group Mapping ────────────────────────────────────────
 
@@ -99,7 +95,12 @@ function buildCliRow(def: CommandDef): string {
   for (const [key, val] of Object.entries(shape)) {
     if (positionalSet.has(key)) continue;
     const zodField = val as z.ZodType;
-    optionKeys.push(`\`--${key}\``);
+    const inner = unwrapZod(zodField);
+    if (zodDefType(inner) === 'enum') {
+      optionKeys.push(`\`--${key} ${getEnumValues(inner).join('\\|')}\``);
+    } else {
+      optionKeys.push(`\`--${key}\``);
+    }
   }
 
   const desc = optionKeys.length > 0
@@ -173,7 +174,7 @@ function generateReadmeCliTable(group: DocGroup): string {
 function generateMcpToolCount(): string {
   const allDefs = getRegistryDefs();
   const toolCount = allDefs.filter(def => def.mcp !== false).length;
-  const promptCount = PROMPTS.length;
+  const promptCount = PROMPT_META.length;
   return [
     '<!-- Generated from command registry — DO NOT EDIT -->',
     `- **${toolCount} tools** for reading, creating, updating, and analyzing graph nodes and edges`,
@@ -198,7 +199,7 @@ function generateMcpToolTable(): string {
 }
 
 function generateMcpPromptTable(): string {
-  const rows = PROMPTS.map(p => `| \`${p.name}\` | ${p.params} | ${p.description} |`);
+  const rows = PROMPT_META.map(p => `| \`${p.name}\` | ${promptParams(p)} | ${p.description} |`);
   const lines = [
     '<!-- Generated from command registry — DO NOT EDIT -->',
     '| Prompt | Parameters | Description |',
@@ -233,7 +234,7 @@ function generateAgentTools(): string {
   // Prompts
   sections.push('');
   sections.push('**Prompts:**');
-  for (const p of PROMPTS) {
+  for (const p of PROMPT_META) {
     sections.push(`- \`${p.name}\` — ${p.description}`);
   }
 
@@ -257,29 +258,7 @@ export const DOC_GENERATORS: Record<string, () => string> = {
 const DOC_FILES = ['README.md', 'docs/MCP_SETUP.md', 'src/rules/emdd-agent.md'];
 
 async function main(): Promise<void> {
-  const { accessSync } = await import('node:fs');
-
-  for (const docFile of DOC_FILES) {
-    try {
-      accessSync(docFile);
-    } catch {
-      continue; // skip if file doesn't exist
-    }
-
-    const result = await updateAutoMarkers(docFile, DOC_GENERATORS);
-
-    if (result.warnings.length > 0) {
-      for (const w of result.warnings) {
-        console.warn(`WARNING [${docFile}]: ${w}`);
-      }
-    }
-
-    if (result.updatedSections.length > 0) {
-      console.log(`[${docFile}] Updated sections: ${result.updatedSections.join(', ')}`);
-    } else if (result.unchanged) {
-      console.log(`[${docFile}] No changes needed`);
-    }
-  }
+  await runAutoMarkerCli(DOC_FILES, DOC_GENERATORS);
 }
 
 const isMain = process.argv[1] &&

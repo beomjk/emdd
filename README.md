@@ -184,13 +184,13 @@ Graph commands accept `--graphDir <path>`, `--lang <en|ko>`, and `--json`. Utili
 | Command | Description |
 |---------|-------------|
 | `emdd init [path]` | Initialize a new EMDD project (`--tool claude\|cursor\|windsurf\|cline\|copilot\|all`, `--lang en\|ko`, `--force`) |
-| `emdd list` | List nodes, optionally filtered by type, status, and/or date (`--type`, `--status`, `--since`) |
+| `emdd list` | List nodes, optionally filtered by type, status, and/or date (`--type decision\|episode\|experiment\|finding\|hypothesis\|knowledge\|question`, `--status`, `--since`) |
 | `emdd read <nodeId>` | Read a node detail |
 | `emdd new <type> <slug>` | Create a new node (`--title`, `--body`, `--lang`) |
-| `emdd link <source> <target> <relation>` | Create an edge between two nodes (`--strength`, `--severity`, `--completeness`, `--dependencyType`, `--impact`, `--force`) |
-| `emdd unlink <source> <target>` | Remove a link between nodes (`--relation`) |
-| `emdd update <nodeId>` | Update frontmatter fields on a node (`--set`, `--transitionPolicy`) |
-| `emdd done <episodeId> <item>` | Mark a checklist item as done in an episode (`--marker`) |
+| `emdd link <source> <target> <relation>` | Create an edge between two nodes (`--strength`, `--severity FATAL\|WEAKENING\|TENSION`, `--completeness`, `--dependencyType LOGICAL\|PRACTICAL\|TEMPORAL`, `--impact DECISIVE\|SIGNIFICANT\|MINOR`, `--force`) |
+| `emdd unlink <source> <target>` | Remove a link between nodes (`--relation answers\|confirms\|context_for\|contradicts\|depends_on\|extends\|informs\|part_of\|produces\|promotes\|relates_to\|resolves\|revises\|spawns\|supports\|tests\|answered_by\|confirmed_by\|produced_by\|resolved_by\|spawned_from\|supported_by\|tested_by`) |
+| `emdd update <nodeId>` | Update frontmatter fields on a node (`--set`, `--transitionPolicy strict\|warn\|off`) |
+| `emdd done <episodeId> <item>` | Mark a checklist item as done in an episode (`--marker done\|deferred\|superseded`) |
 <!-- /AUTO:readme-cli-core -->
 
 <details>
@@ -210,7 +210,7 @@ Graph commands accept `--graphDir <path>`, `--lang <en|ko>`, and `--json`. Utili
 | `emdd kill-check` | Check kill criteria alerts |
 | `emdd branches` | List hypothesis branch groups |
 | `emdd lint` | Lint the graph for schema errors |
-| `emdd backlog` | Show project backlog (open items, deferred, checklists) (`--status`) |
+| `emdd backlog` | Show project backlog (open items, deferred, checklists) (`--status pending\|done\|deferred\|superseded\|all`) |
 | `emdd analyze-refutation` | Analyze refutation patterns in the graph |
 | `emdd mark-consolidated` | Record a consolidation date to reset episode counting (`--date`) |
 <!-- /AUTO:readme-cli-analysis -->

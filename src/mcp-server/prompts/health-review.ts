@@ -3,11 +3,14 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { getHealth } from '../../graph/operations.js';
 import { CEREMONY_TRIGGERS } from '../../graph/types.js';
 import { getLocale, setLocale } from '../../i18n/index.js';
+import { PROMPT_META } from './meta.js';
+
+const meta = PROMPT_META.find(p => p.name === 'health-review')!;
 
 export function registerHealthReview(server: McpServer): void {
   server.prompt(
-    'health-review',
-    'Full health dashboard with actionable recommendations — analyzes node distribution, structural gaps, and link density',
+    meta.name,
+    meta.description,
     { graphDir: z.string().describe('Path to the EMDD graph directory'), lang: z.string().optional().describe('Language locale (en or ko)') },
     async ({ graphDir, lang }) => {
       const locale = getLocale(lang);

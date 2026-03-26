@@ -73,8 +73,8 @@
 - `mark-consolidated` — Record a consolidation date to reset episode counting
 
 **Prompts:**
-- `context-loading` — Load graph context at the start of a session
-- `episode-creation` — Guided workflow for writing an Episode node at the end of a session
-- `consolidation` — Step-by-step guide for running a Consolidation ceremony
-- `health-review` — Analyze graph health and generate recommendations
+- `context-loading` — Load EMDD graph context for session start — provides a summary of nodes, edges, health, and structural gaps
+- `episode-creation` — Step-by-step guide for writing an EMDD Episode node — includes frontmatter template, mandatory sections, and linking instructions
+- `consolidation` — Consolidation execution guide — checks triggers and provides a step-by-step procedure for promoting findings, generating questions, and updating hypotheses
+- `health-review` — Full health dashboard with actionable recommendations — analyzes node distribution, structural gaps, and link density
 <!-- /AUTO:agent-tools -->

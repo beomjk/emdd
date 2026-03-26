@@ -184,10 +184,10 @@ All tools accept a `graphDir` parameter — the path to your EMDD `graph/` direc
 <!-- Generated from command registry — DO NOT EDIT -->
 | Prompt | Parameters | Description |
 |--------|-----------|-------------|
-| `context-loading` | `graphDir` (required), `lang?` | Load graph context at the start of a session |
-| `episode-creation` | (none) | Guided workflow for writing an Episode node at the end of a session |
-| `consolidation` | `graphDir` (required), `lang?` | Step-by-step guide for running a Consolidation ceremony |
-| `health-review` | `graphDir` (required), `lang?` | Analyze graph health and generate recommendations |
+| `context-loading` | `graphDir` (required), `lang?` | Load EMDD graph context for session start — provides a summary of nodes, edges, health, and structural gaps |
+| `episode-creation` | (none) | Step-by-step guide for writing an EMDD Episode node — includes frontmatter template, mandatory sections, and linking instructions |
+| `consolidation` | `graphDir` (required), `lang?` | Consolidation execution guide — checks triggers and provides a step-by-step procedure for promoting findings, generating questions, and updating hypotheses |
+| `health-review` | `graphDir` (required), `lang?` | Full health dashboard with actionable recommendations — analyzes node distribution, structural gaps, and link density |
 <!-- /AUTO:mcp-prompt-table -->
 
 Prompts are available in tools that support MCP prompts (e.g., Claude Code).
