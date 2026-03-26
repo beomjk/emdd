@@ -114,15 +114,6 @@ emdd init my-research --tool all      # generates rules for all supported tools
 
 Supported tools: `claude` (default), `cursor`, `windsurf`, `cline`, `copilot`, `all`.
 
-### The AI Session Cycle
-
-Each AI-assisted session follows this pattern:
-
-1. **Start** → `context-loading` prompt -- summarizes graph state and suggests focus areas
-2. **Work** → create and connect nodes via MCP tools
-3. **End** → `episode-creation` prompt -- records what happened and plans next steps
-4. **Maintain** → `consolidation` prompt (when triggered) + `health-review` prompt (periodic)
-
 ## What is EMDD?
 
 Too much structure suffocates research. Too little structure evaporates it. Existing approaches each solve one piece -- Zettelkasten gives bottom-up emergence, HDD gives hypothesis testing, DDP gives risk prioritization -- but none of them track the *relationships* between what you know, what you don't know, and what to explore next. EMDD fills that gap: it is a lightweight, AI-maintained knowledge graph that structures your exploration as it happens, surfaces blind spots, and remembers every dead end so you never walk it twice.

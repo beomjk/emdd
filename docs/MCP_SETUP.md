@@ -178,19 +178,6 @@ All tools accept a `graphDir` parameter — the path to your EMDD `graph/` direc
 
 ---
 
-## Session Cycle
-
-Each AI-assisted EMDD session follows a structured cycle:
-
-1. **Start** → `context-loading` prompt -- load graph state and identify next steps
-2. **Work** → use tools (`create-node`, `create-edge`, `update-node`, etc.)
-3. **End** → `episode-creation` prompt -- record what you tried and what comes next
-4. **Check** → `consolidation` prompt (if triggers are met) + `health-review` prompt (periodic)
-
-This cycle ensures continuity -- each Episode curates the context for the next session.
-
----
-
 ## Prompt Reference
 
 <!-- AUTO:mcp-prompt-table -->
