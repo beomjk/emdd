@@ -19,6 +19,12 @@ export const messages: Record<string, string> = {
   'init.success': 'EMDD project initialized at {path}',
   'init.already_exists': 'EMDD project already exists at {path}',
   'init.next_steps': 'Next: emdd new hypothesis <slug>',
+  'init.next_steps_header': 'What\'s next?',
+  'init.ai_recommended': '(recommended) Connect your AI assistant via MCP:',
+  'init.ai_then': 'Then ask your AI: "Load the EMDD context and start the first session."',
+  'init.cli_alternative': 'Or use the CLI directly:',
+  'init.cli_command': 'emdd new hypothesis <slug>',
+  'init.mcp_docs': 'Full MCP setup guide: docs/MCP_SETUP.md',
 
   // Lint
   'lint.clean': 'All nodes valid. No errors found.',

@@ -19,6 +19,12 @@ export const messages: Record<string, string> = {
   'init.success': '{path}에 EMDD 프로젝트가 초기화되었습니다',
   'init.already_exists': '{path}에 EMDD 프로젝트가 이미 존재합니다',
   'init.next_steps': '다음: emdd new hypothesis <slug>',
+  'init.next_steps_header': '다음 단계',
+  'init.ai_recommended': '(추천) AI 어시스턴트를 MCP로 연결하세요:',
+  'init.ai_then': 'AI에게 요청하세요: "EMDD 컨텍스트를 로드하고 첫 세션을 시작하자."',
+  'init.cli_alternative': '또는 CLI를 직접 사용하세요:',
+  'init.cli_command': 'emdd new hypothesis <slug>',
+  'init.mcp_docs': 'MCP 설정 가이드: docs/MCP_SETUP.md',
 
   // 린트
   'lint.clean': '모든 노드가 유효합니다. 오류가 없습니다.',

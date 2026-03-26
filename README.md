@@ -63,6 +63,21 @@ npx @beomjk/emdd <command>
 
 ## Quick Start
 
+### With AI Assistant (recommended)
+
+```bash
+# 1. Initialize and connect
+emdd init my-research --tool claude && cd my-research
+claude mcp add emdd -- npx @beomjk/emdd mcp
+
+# 2. Ask your AI to start
+# "Load the EMDD context and help me create my first hypothesis."
+```
+
+Your AI guides you through the session cycle -- creating nodes, linking them, and recording episodes.
+
+### With CLI
+
 ```bash
 # 1. Initialize
 emdd init my-research && cd my-research
@@ -98,6 +113,15 @@ emdd init my-research --tool all      # generates rules for all supported tools
 ```
 
 Supported tools: `claude` (default), `cursor`, `windsurf`, `cline`, `copilot`, `all`.
+
+### The AI Session Cycle
+
+Each AI-assisted session follows this pattern:
+
+1. **Start** → `context-loading` prompt -- summarizes graph state and suggests focus areas
+2. **Work** → create and connect nodes via MCP tools
+3. **End** → `episode-creation` prompt -- records what happened and plans next steps
+4. **Maintain** → `consolidation` prompt (when triggered) + `health-review` prompt (periodic)
 
 ## What is EMDD?
 

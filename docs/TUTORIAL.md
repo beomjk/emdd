@@ -1,5 +1,7 @@
 # EMDD in 5 Minutes
 
+> **Using an AI assistant?** You can skip the manual steps below. After `emdd init`, connect via MCP and ask your AI to load the `context-loading` prompt. See [MCP Setup](MCP_SETUP.md).
+
 > One terminal is all you need. Copy-paste and follow along.
 
 ## 1. Install (30 seconds)
