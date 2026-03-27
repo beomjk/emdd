@@ -1,13 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import path from 'node:path';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import matter from 'gray-matter';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const SAMPLE_GRAPH = path.resolve(__dirname, '../../fixtures/sample-graph');
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const SAMPLE_GRAPH = resolve(__dirname, '../../fixtures/sample-graph');
 
 import { listNodesDef } from '../../../src/registry/commands/list-nodes.js';
 import { readNodeDef } from '../../../src/registry/commands/read-node.js';
@@ -40,6 +39,20 @@ function setupProject(): string {
   }
   return dir;
 }
+
+const HYP_FM = {
+  id: 'hyp-001', type: 'hypothesis', title: 'Test Hyp',
+  status: 'PROPOSED', confidence: 0.5,
+  created: '2026-01-01', updated: '2026-01-01',
+  tags: [], links: [],
+} as const;
+
+const EXP_FM = {
+  id: 'exp-001', type: 'experiment', title: 'Test Exp',
+  status: 'PLANNED',
+  created: '2026-01-01', updated: '2026-01-01',
+  tags: [], links: [],
+} as const;
 
 function writeNode(dir: string, subdir: string, filename: string, frontmatter: Record<string, unknown>, body: string = '') {
   const content = matter.stringify(body, frontmatter);
@@ -105,8 +118,8 @@ describe('command execute() wiring', () => {
 
   it('backlog returns backlog items', async () => {
     const result = await backlogDef.execute({ graphDir: SAMPLE_GRAPH });
-    expect(result).toHaveProperty('items');
     expect(Array.isArray(result.items)).toBe(true);
+    expect(result.items.length).toBeGreaterThanOrEqual(0);
   });
 
   it('read-nodes returns details for multiple nodes', async () => {
@@ -119,30 +132,22 @@ describe('command execute() wiring', () => {
 
   it('gaps returns gap analysis', async () => {
     const result = await gapsDef.execute({ graphDir: SAMPLE_GRAPH });
-    expect(result).toHaveProperty('gaps');
-    expect(result).toHaveProperty('gapDetails');
     expect(Array.isArray(result.gaps)).toBe(true);
     expect(Array.isArray(result.gapDetails)).toBe(true);
   });
 
-  it('promote returns promotion candidates', async () => {
+  it('promote returns empty array when no candidates meet threshold', async () => {
     const result = await promoteDef.execute({ graphDir: SAMPLE_GRAPH });
-    expect(Array.isArray(result)).toBe(true);
-    // Each candidate should have id, confidence, supports, reason
-    for (const c of result) {
-      expect(c).toHaveProperty('id');
-      expect(c).toHaveProperty('confidence');
-      expect(c).toHaveProperty('supports');
-      expect(c).toHaveProperty('reason');
-    }
+    // sample graph has no findings with confidence >= 0.9 and >= 2 independent supports
+    expect(result).toEqual([]);
   });
 
   it('analyze-refutation returns refutation analysis', async () => {
     const result = await analyzeRefutationDef.execute({ graphDir: SAMPLE_GRAPH });
-    expect(result).toHaveProperty('affectedHypotheses');
-    expect(result).toHaveProperty('pivotCeremonyTriggered');
-    expect(result).toHaveProperty('retractedKnowledgeIds');
-    expect(Array.isArray(result.affectedHypotheses)).toBe(true);
+    // sample graph has no contradicts edges, so no affected hypotheses
+    expect(result.affectedHypotheses).toEqual([]);
+    expect(result.pivotCeremonyTriggered).toBe(false);
+    expect(Array.isArray(result.retractedKnowledgeIds)).toBe(true);
   });
 
   it('branch-groups returns branch group array', async () => {
@@ -187,26 +192,14 @@ describe('command execute() wiring — write commands', () => {
       type: 'hypothesis',
       slug: 'test-hyp',
     });
-    expect(result).toHaveProperty('id');
-    expect(result).toHaveProperty('type');
-    expect(result).toHaveProperty('path');
     expect(result.type).toBe('hypothesis');
     expect(result.id).toMatch(/^hyp-\d+$/);
+    expect(result.path).toBeTruthy();
   });
 
   it('create-edge creates an edge between two nodes', async () => {
-    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
-      id: 'hyp-001', type: 'hypothesis', title: 'Test Hyp',
-      status: 'PROPOSED', confidence: 0.5,
-      created: '2026-01-01', updated: '2026-01-01',
-      tags: [], links: [],
-    });
-    writeNode(tmpDir, 'experiments', 'exp-001-test.md', {
-      id: 'exp-001', type: 'experiment', title: 'Test Exp',
-      status: 'PLANNED',
-      created: '2026-01-01', updated: '2026-01-01',
-      tags: [], links: [],
-    });
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', { ...HYP_FM });
+    writeNode(tmpDir, 'experiments', 'exp-001-test.md', { ...EXP_FM });
 
     const result = await createEdgeDef.execute({
       graphDir,
@@ -214,45 +207,27 @@ describe('command execute() wiring — write commands', () => {
       target: 'hyp-001',
       relation: 'supports',
     });
-    expect(result).toHaveProperty('source');
-    expect(result).toHaveProperty('target');
-    expect(result).toHaveProperty('relation');
     expect(result.source).toBe('exp-001');
     expect(result.target).toBe('hyp-001');
     expect(result.relation).toBe('supports');
   });
 
   it('update-node updates a node field', async () => {
-    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
-      id: 'hyp-001', type: 'hypothesis', title: 'Test Hyp',
-      status: 'PROPOSED', confidence: 0.5,
-      created: '2026-01-01', updated: '2026-01-01',
-      tags: [], links: [],
-    });
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', { ...HYP_FM });
 
     const result = await updateNodeDef.execute({
       graphDir,
       nodeId: 'hyp-001',
       set: { title: 'Updated Title' },
     });
-    expect(result).toHaveProperty('nodeId');
-    expect(result).toHaveProperty('updatedFields');
     expect(result.nodeId).toBe('hyp-001');
     expect(result.updatedFields).toContain('title');
   });
 
   it('delete-edge removes an edge between nodes', async () => {
-    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
-      id: 'hyp-001', type: 'hypothesis', title: 'Test Hyp',
-      status: 'PROPOSED', confidence: 0.5,
-      created: '2026-01-01', updated: '2026-01-01',
-      tags: [], links: [],
-    });
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', { ...HYP_FM });
     writeNode(tmpDir, 'experiments', 'exp-001-test.md', {
-      id: 'exp-001', type: 'experiment', title: 'Test Exp',
-      status: 'PLANNED',
-      created: '2026-01-01', updated: '2026-01-01',
-      tags: [],
+      ...EXP_FM,
       links: [{ target: 'hyp-001', relation: 'supports' }],
     });
 
@@ -262,10 +237,9 @@ describe('command execute() wiring — write commands', () => {
       target: 'hyp-001',
       relation: 'supports',
     });
-    expect(result).toHaveProperty('deletedCount');
-    expect(result).toHaveProperty('source');
-    expect(result).toHaveProperty('target');
     expect(result.deletedCount).toBe(1);
+    expect(result.source).toBe('exp-001');
+    expect(result.target).toBe('hyp-001');
   });
 
   it('mark-done marks a checklist item in an episode', async () => {
@@ -281,9 +255,6 @@ describe('command execute() wiring — write commands', () => {
       episodeId: 'epi-001',
       item: 'task one',
     });
-    expect(result).toHaveProperty('episodeId');
-    expect(result).toHaveProperty('item');
-    expect(result).toHaveProperty('marker');
     expect(result.episodeId).toBe('epi-001');
     expect(result.item).toBe('task one');
     expect(result.marker).toBe('done');
@@ -294,20 +265,13 @@ describe('command execute() wiring — write commands', () => {
       graphDir,
       date: '2026-03-01',
     });
-    expect(result).toHaveProperty('date');
     expect(result.date).toBe('2026-03-01');
   });
 
   it('index-graph generates index file', async () => {
-    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
-      id: 'hyp-001', type: 'hypothesis', title: 'Test Hyp',
-      status: 'PROPOSED', confidence: 0.5,
-      created: '2026-01-01', updated: '2026-01-01',
-      tags: [], links: [],
-    });
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', { ...HYP_FM });
 
     const result = await indexGraphDef.execute({ graphDir });
-    expect(result).toHaveProperty('nodeCount');
     expect(result.nodeCount).toBe(1);
   });
 });
