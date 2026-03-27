@@ -1,9 +1,11 @@
 import { Hono } from 'hono';
+import { streamSSE } from 'hono/streaming';
 import type { GraphCache } from '../cache.js';
+import type { SSEManager } from '../sse.js';
 import { readNode, getNeighbors, getPromotionCandidates, checkConsolidation } from '../../graph/operations.js';
 import { generateExportHtml } from '../export.js';
 
-export function createApiRoutes(graphDir: string, cache: GraphCache): Hono {
+export function createApiRoutes(graphDir: string, cache: GraphCache, sseManager?: SSEManager): Hono {
   const api = new Hono();
 
   // GET /api/graph
@@ -97,6 +99,36 @@ export function createApiRoutes(graphDir: string, cache: GraphCache): Hono {
   api.get('/clusters', async (c) => {
     const clusters = await cache.getClusters();
     return c.json({ clusters });
+  });
+
+  // GET /api/events (SSE)
+  api.get('/events', (c) => {
+    if (!sseManager) {
+      return c.json({ error: 'SSE not available' }, 503);
+    }
+    return streamSSE(c, async (stream) => {
+      sseManager.addClient(stream);
+
+      await stream.writeSSE({ event: 'connected', data: JSON.stringify({ timestamp: new Date().toISOString() }) });
+
+      // Heartbeat every 30s to keep connection alive
+      const heartbeat = setInterval(async () => {
+        try {
+          await stream.writeSSE({ event: 'heartbeat', data: '' });
+        } catch {
+          clearInterval(heartbeat);
+        }
+      }, 30_000);
+
+      // Keep stream open until client disconnects
+      await new Promise<void>((resolve) => {
+        stream.onAbort(() => {
+          clearInterval(heartbeat);
+          sseManager.removeClient(stream);
+          resolve();
+        });
+      });
+    });
   });
 
   // POST /api/refresh

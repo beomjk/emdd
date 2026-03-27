@@ -47,10 +47,19 @@ function makeFakeCache(graph: ReturnType<typeof makeFakeGraph>) {
   };
 }
 
+function makeFakeWatcher() {
+  const { EventEmitter } = require('node:events');
+  const emitter = new EventEmitter();
+  emitter.close = vi.fn();
+  return emitter;
+}
+
 function makeFakeDashboard(graph: ReturnType<typeof makeFakeGraph>) {
   return {
     app: { fetch: vi.fn() },
     cache: makeFakeCache(graph),
+    watcher: makeFakeWatcher(),
+    sseManager: { addClient: vi.fn(), removeClient: vi.fn(), broadcast: vi.fn(), clientCount: vi.fn() },
   } as any;
 }
 

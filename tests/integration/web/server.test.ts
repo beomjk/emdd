@@ -4,14 +4,17 @@ import { fileURLToPath } from 'node:url';
 import { serve } from '@hono/node-server';
 import type { Server } from 'node:http';
 import { createDashboardServer } from '../../../src/web/server.js';
+import type { FileWatcher } from '../../../src/web/watcher.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SAMPLE_GRAPH = path.resolve(__dirname, '../../fixtures/sample-graph');
 
 let servers: Server[] = [];
+let watchers: FileWatcher[] = [];
 
 function startServer(graphDir: string, port: number): Promise<{ server: Server; port: number }> {
-  const { app } = createDashboardServer(graphDir);
+  const { app, watcher } = createDashboardServer(graphDir);
+  watchers.push(watcher);
   return new Promise((resolve, reject) => {
     const server = serve({ fetch: app.fetch, port }) as unknown as Server;
     server.once('error', reject);
@@ -34,17 +37,26 @@ afterEach(async () => {
     await stopServer(s).catch(() => {});
   }
   servers = [];
+  for (const w of watchers) {
+    w.close();
+  }
+  watchers = [];
 });
 
 describe('Server lifecycle', () => {
-  it('createDashboardServer() returns app and cache', () => {
-    const { app, cache } = createDashboardServer(SAMPLE_GRAPH);
-    expect(app).toBeDefined();
-    expect(cache).toBeDefined();
-    expect(typeof cache.load).toBe('function');
-    expect(typeof cache.invalidate).toBe('function');
-    expect(typeof cache.getGraph).toBe('function');
-    expect(typeof cache.getHealth).toBe('function');
+  it('createDashboardServer() returns app, cache, watcher, and sseManager', () => {
+    const result = createDashboardServer(SAMPLE_GRAPH);
+    watchers.push(result.watcher);
+    expect(result.app).toBeDefined();
+    expect(result.cache).toBeDefined();
+    expect(result.watcher).toBeDefined();
+    expect(result.sseManager).toBeDefined();
+    expect(typeof result.cache.load).toBe('function');
+    expect(typeof result.cache.invalidate).toBe('function');
+    expect(typeof result.cache.getGraph).toBe('function');
+    expect(typeof result.cache.getHealth).toBe('function');
+    expect(typeof result.watcher.close).toBe('function');
+    expect(typeof result.sseManager.broadcast).toBe('function');
   });
 
   it('starts and stops cleanly', async () => {
@@ -97,14 +109,16 @@ describe('Server lifecycle', () => {
 
 describe('API routes via server', () => {
   it('GET / serves HTML', async () => {
-    const { app } = createDashboardServer(SAMPLE_GRAPH);
+    const { app, watcher } = createDashboardServer(SAMPLE_GRAPH);
+    watchers.push(watcher);
     const res = await app.request('/');
     // May return 200 or 404 depending on dist/web existence, but should not crash
     expect([200, 404]).toContain(res.status);
   });
 
   it('GET /api/health returns health data', async () => {
-    const { app } = createDashboardServer(SAMPLE_GRAPH);
+    const { app, watcher } = createDashboardServer(SAMPLE_GRAPH);
+    watchers.push(watcher);
     const res = await app.request('/api/health');
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -112,7 +126,8 @@ describe('API routes via server', () => {
   });
 
   it('GET /api/clusters returns cluster data', async () => {
-    const { app } = createDashboardServer(SAMPLE_GRAPH);
+    const { app, watcher } = createDashboardServer(SAMPLE_GRAPH);
+    watchers.push(watcher);
     const res = await app.request('/api/clusters');
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -120,10 +135,26 @@ describe('API routes via server', () => {
   });
 
   it('GET /api/export returns HTML export', async () => {
-    const { app } = createDashboardServer(SAMPLE_GRAPH);
+    const { app, watcher } = createDashboardServer(SAMPLE_GRAPH);
+    watchers.push(watcher);
     const res = await app.request('/api/export');
     expect(res.status).toBe(200);
     const contentType = res.headers.get('content-type') ?? '';
     expect(contentType).toContain('text/html');
+  });
+
+  it('GET /api/graph includes bodyPreview for nodes with body content', async () => {
+    const { app, watcher } = createDashboardServer(SAMPLE_GRAPH);
+    watchers.push(watcher);
+    const res = await app.request('/api/graph');
+    expect(res.status).toBe(200);
+    const graph = await res.json();
+    // At least some nodes in sample-graph should have body content
+    const withPreview = graph.nodes.filter((n: any) => n.bodyPreview);
+    expect(withPreview.length).toBeGreaterThan(0);
+    // bodyPreview should be max ~103 chars (100 + "...")
+    for (const n of withPreview) {
+      expect(n.bodyPreview.length).toBeLessThanOrEqual(103);
+    }
   });
 });

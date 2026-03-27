@@ -32,14 +32,14 @@ function createToggleButton(
   const btn = document.createElement('button');
   btn.className = 'filter-btn';
   btn.textContent = label;
-  btn.dataset.filterColor = color ?? '#555';
+  btn.dataset.filterColor = color ?? 'var(--text-secondary)';
   const applyStyle = (el: HTMLButtonElement, isActive: boolean) => {
-    const c = el.dataset.filterColor ?? '#555';
+    const c = el.dataset.filterColor ?? 'var(--text-secondary)';
     el.style.cssText = `
       padding: 2px 8px; margin: 2px; border-radius: 3px; cursor: pointer;
-      font-size: 11px; border: 1px solid ${color ?? '#ccc'};
-      background: ${isActive ? c : '#fff'};
-      color: ${isActive ? '#fff' : '#555'};
+      font-size: 11px; border: 1px solid ${color ?? 'var(--border-btn)'};
+      background: ${isActive ? c : 'var(--bg-surface)'};
+      color: ${isActive ? '#fff' : 'var(--text-secondary)'};
       opacity: ${isActive ? '1' : '0.5'};
     `;
   };
@@ -145,9 +145,9 @@ export function renderFilters(
   resetBtn.textContent = 'Reset Filters';
   resetBtn.className = 'filter-reset-btn';
   resetBtn.style.cssText = `
-    margin-top: 8px; padding: 4px 12px; border: 1px solid #ccc;
-    border-radius: 4px; background: #fff; cursor: pointer;
-    font-size: 11px; width: 100%;
+    margin-top: 8px; padding: 4px 12px; border: 1px solid var(--border-btn);
+    border-radius: 4px; background: var(--bg-surface); color: var(--text-primary);
+    cursor: pointer; font-size: 11px; width: 100%;
   `;
   resetBtn.addEventListener('click', () => {
     filterState.visibleTypes = new Set(types);

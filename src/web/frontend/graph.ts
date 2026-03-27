@@ -5,11 +5,16 @@ import type { SerializedGraph } from '../types.js';
 import type { NodeType } from '../../graph/types.js';
 import { getClusterStyles } from './clusters.js';
 import { getNodeColor, getStatusBorder } from './constants.js';
+import { showTooltip, hideTooltip } from './tooltip.js';
 
 cytoscape.use(fcose);
 cytoscape.use(dagre);
 
 // ── Visual encoding ──────────────────────────────────────────────────
+
+function getCssVar(name: string): string {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
 
 function truncate(text: string, max: number): string {
   return text.length > max ? text.slice(0, max - 1) + '…' : text;
@@ -41,8 +46,12 @@ export function renderGraph(
       data: {
         id: node.id,
         label: truncate(node.title || node.id, 20),
+        fullTitle: node.title || node.id,
         type: node.type,
         status: node.status,
+        confidence: node.confidence,
+        tags: node.tags,
+        bodyPreview: node.bodyPreview,
         invalid: node.invalid ?? false,
         bgColor: getNodeColor(node.type),
         borderWidth: border.width,
@@ -84,7 +93,7 @@ export function renderGraph(
           'font-size': '10px',
           'text-valign': 'bottom',
           'text-margin-y': 6,
-          color: '#555',
+          color: getCssVar('--cy-node-text'),
           width: 30,
           height: 30,
         },
@@ -102,8 +111,8 @@ export function renderGraph(
         selector: 'edge',
         style: {
           width: 1.5,
-          'line-color': '#ccc',
-          'target-arrow-color': '#ccc',
+          'line-color': getCssVar('--cy-edge-color'),
+          'target-arrow-color': getCssVar('--cy-edge-color'),
           'target-arrow-shape': 'triangle',
           'curve-style': 'bezier',
           'arrow-scale': 0.8,
@@ -114,7 +123,7 @@ export function renderGraph(
         style: {
           label: 'data(relation)',
           'font-size': '9px',
-          color: '#888',
+          color: getCssVar('--cy-edge-label'),
           'text-rotation': 'autorotate',
         },
       },
@@ -141,11 +150,44 @@ export function renderGraph(
     wheelSensitivity: 0.3,
   });
 
+  // Node tooltip on hover
+  let tooltipTimer: ReturnType<typeof setTimeout> | null = null;
+
+  cy.on('mouseover', 'node[!isCluster]', (evt) => {
+    if (tooltipTimer) clearTimeout(tooltipTimer);
+    tooltipTimer = setTimeout(() => {
+      const node = evt.target;
+      const pos = node.renderedPosition();
+      showTooltip(
+        {
+          title: node.data('fullTitle'),
+          type: node.data('type'),
+          status: node.data('status'),
+          confidence: node.data('confidence'),
+          tags: node.data('tags'),
+          bodyPreview: node.data('bodyPreview'),
+        },
+        { x: pos.x, y: pos.y },
+        container,
+      );
+    }, 300);
+  });
+
+  cy.on('mouseout', 'node', () => {
+    if (tooltipTimer) { clearTimeout(tooltipTimer); tooltipTimer = null; }
+    hideTooltip();
+  });
+
+  cy.on('tap', 'node', () => {
+    if (tooltipTimer) { clearTimeout(tooltipTimer); tooltipTimer = null; }
+    hideTooltip();
+  });
+
   // Edge label on hover
   cy.on('mouseover', 'edge', (evt) => {
     evt.target.style('label', evt.target.data('relation'));
     evt.target.style('font-size', '9px');
-    evt.target.style('color', '#888');
+    evt.target.style('color', getCssVar('--cy-edge-label'));
     evt.target.style('text-rotation', 'autorotate');
   });
   cy.on('mouseout', 'edge', (evt) => {

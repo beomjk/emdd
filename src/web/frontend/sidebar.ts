@@ -53,7 +53,7 @@ function renderStatusDistribution(statusDist: Record<string, Record<string, numb
   for (const [type, statuses] of Object.entries(statusDist)) {
     const entries = Object.entries(statuses).filter(([, c]) => c > 0);
     if (entries.length === 0) continue;
-    html += `<div style="margin-bottom:6px;"><span style="font-size:11px;color:#888;">${type}</span><div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:2px;">`;
+    html += `<div style="margin-bottom:6px;"><span style="font-size:11px;color:var(--text-muted);">${type}</span><div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:2px;">`;
     for (const [status, count] of entries) {
       html += `<span class="status-badge">${escapeHtml(status)} <b>${count}</b></span>`;
     }
@@ -107,7 +107,7 @@ function renderPromotionCandidates(candidates: PromoteCandidate[]): string {
   for (const c of candidates) {
     html += `<div class="promo-item">
       <a href="#" class="gap-node-link" data-node-id="${escapeHtml(c.id)}">${escapeHtml(c.id)}</a>
-      <span style="font-size:11px;color:#888;">conf: ${(c.confidence * 100).toFixed(0)}% · ${c.supports} supports · ${escapeHtml(REASON_LABELS[c.reason] ?? c.reason)}</span>
+      <span style="font-size:11px;color:var(--text-muted);">conf: ${(c.confidence * 100).toFixed(0)}% · ${c.supports} supports · ${escapeHtml(REASON_LABELS[c.reason] ?? c.reason)}</span>
     </div>`;
   }
   html += '</div>';
@@ -132,14 +132,14 @@ function renderConsolidation(result: CheckResult): string {
     const links = result.orphanFindings.map((id) =>
       `<a href="#" class="gap-node-link" data-node-id="${escapeHtml(id)}">${escapeHtml(id)}</a>`
     ).join(', ');
-    html += `<div style="margin-top:4px;font-size:11px;"><span style="color:#888;">Orphan findings:</span> ${links}</div>`;
+    html += `<div style="margin-top:4px;font-size:11px;"><span style="color:var(--text-muted);">Orphan findings:</span> ${links}</div>`;
   }
 
   if (hasDeferred) {
     const links = result.deferredItems.map((id) =>
       `<a href="#" class="gap-node-link" data-node-id="${escapeHtml(id)}">${escapeHtml(id)}</a>`
     ).join(', ');
-    html += `<div style="margin-top:4px;font-size:11px;"><span style="color:#888;">Deferred:</span> ${links}</div>`;
+    html += `<div style="margin-top:4px;font-size:11px;"><span style="color:var(--text-muted);">Deferred:</span> ${links}</div>`;
   }
 
   html += '</div>';
@@ -187,7 +187,7 @@ export async function renderHealthSidebar(
     ${renderDeferred(health.deferredItems)}
     ${renderPromotionCandidates(candidates)}
     ${renderConsolidation(consolidation)}
-    <hr style="border:none;border-top:1px solid #eee;margin:12px 0;">
+    <hr style="border:none;border-top:1px solid var(--border-separator);margin:12px 0;">
   </div>`;
 
   // Insert health section at the top of sidebar (before filters)
