@@ -30,12 +30,22 @@ emdd mcp
 
 Then configure your AI tool using one of the sections below.
 
+> **Windows users:** On Windows, wrap the command with `cmd /c` so that `npx` is resolved correctly. Each section below includes both macOS/Linux and Windows examples.
+
 ---
 
 ## Claude Code
 
+**macOS / Linux:**
+
 ```bash
 claude mcp add emdd -- npx @beomjk/emdd mcp
+```
+
+**Windows:**
+
+```bash
+claude mcp add emdd -- cmd /c npx @beomjk/emdd mcp
 ```
 
 This registers the EMDD MCP server with Claude Code. Tools and prompts become available immediately in your next session.
@@ -46,12 +56,27 @@ This registers the EMDD MCP server with Claude Code. Tools and prompts become av
 
 Create `.cursor/mcp.json` in your project root:
 
+**macOS / Linux:**
+
 ```json
 {
   "mcpServers": {
     "emdd": {
       "command": "npx",
       "args": ["@beomjk/emdd", "mcp"]
+    }
+  }
+}
+```
+
+**Windows:**
+
+```json
+{
+  "mcpServers": {
+    "emdd": {
+      "command": "cmd",
+      "args": ["/c", "npx", "@beomjk/emdd", "mcp"]
     }
   }
 }
@@ -66,11 +91,13 @@ Restart Cursor to pick up the new configuration.
 Open Windsurf settings and navigate to the MCP configuration section. Add a new server:
 
 - **Name:** `emdd`
-- **Command:** `npx`
-- **Arguments:** `emdd mcp`
+- **Command:** `npx` (Windows: `cmd`)
+- **Arguments:** `emdd mcp` (Windows: `/c npx @beomjk/emdd mcp`)
 - **Transport:** stdio
 
 Alternatively, if Windsurf supports a config file (e.g., `~/.codeium/windsurf/mcp_config.json`):
+
+**macOS / Linux:**
 
 ```json
 {
@@ -83,17 +110,45 @@ Alternatively, if Windsurf supports a config file (e.g., `~/.codeium/windsurf/mc
 }
 ```
 
+**Windows:**
+
+```json
+{
+  "mcpServers": {
+    "emdd": {
+      "command": "cmd",
+      "args": ["/c", "npx", "@beomjk/emdd", "mcp"]
+    }
+  }
+}
+```
+
 ---
 
 ## Continue IDE
 
 Add to your `.continue/config.yaml`:
 
+**macOS / Linux:**
+
 ```yaml
 mcpServers:
   - name: emdd
     command: npx
     args:
+      - emdd
+      - mcp
+```
+
+**Windows:**
+
+```yaml
+mcpServers:
+  - name: emdd
+    command: cmd
+    args:
+      - /c
+      - npx
       - emdd
       - mcp
 ```
@@ -106,12 +161,27 @@ Restart the Continue extension after saving.
 
 Create `.vscode/mcp.json` in your project root:
 
+**macOS / Linux:**
+
 ```json
 {
   "servers": {
     "emdd": {
       "command": "npx",
       "args": ["@beomjk/emdd", "mcp"]
+    }
+  }
+}
+```
+
+**Windows:**
+
+```json
+{
+  "servers": {
+    "emdd": {
+      "command": "cmd",
+      "args": ["/c", "npx", "@beomjk/emdd", "mcp"]
     }
   }
 }
@@ -221,6 +291,10 @@ node --version   # Should be v18+
 npx --version    # Should be available
 npx @beomjk/emdd --version
 ```
+
+### Windows: MCP server not starting or tools not found
+
+On Windows, `npx` must be invoked through `cmd /c` for MCP clients to resolve it correctly. Use `cmd` as the command and prepend `/c npx` to the arguments. See each tool section above for Windows-specific examples.
 
 ### MCP server does not appear in tool list
 

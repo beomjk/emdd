@@ -68,6 +68,7 @@ npx @beomjk/emdd <command>
 # 1. Initialize and connect
 emdd init my-research --tool claude && cd my-research
 claude mcp add emdd -- npx @beomjk/emdd mcp
+# Windows: claude mcp add emdd -- cmd /c npx @beomjk/emdd mcp
 
 # 2. Ask your AI to start
 # "Load the EMDD context and help me create my first hypothesis."
@@ -100,6 +101,7 @@ EMDD exposes its full graph API via an [MCP server](docs/MCP_SETUP.md) -- 22 too
 
 ```bash
 claude mcp add emdd -- npx @beomjk/emdd mcp
+# Windows: claude mcp add emdd -- cmd /c npx @beomjk/emdd mcp
 ```
 
 **Cursor, Windsurf, VS Code Copilot, Continue** -- see the [MCP Setup Guide](docs/MCP_SETUP.md) for config snippets.
