@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, sep } from 'node:path';
 import { glob } from 'glob';
 import matter from 'gray-matter';
 import { NODE_TYPE_DIRS } from './types.js';
@@ -28,7 +28,8 @@ function parseMarker(raw: string): ItemMarker {
 
 export async function getBacklog(graphDir: string, statusFilter?: string): Promise<BacklogResult> {
   const episodeDir = join(graphDir, NODE_TYPE_DIRS.episode);
-  const pattern = join(episodeDir, '*.md');
+  // Use forward slashes for glob patterns (backslashes are escape chars in glob v10+)
+  const pattern = join(episodeDir, '*.md').split(sep).join('/');
   const files = await glob(pattern, { nodir: true });
   const items: BacklogItem[] = [];
 

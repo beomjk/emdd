@@ -137,7 +137,7 @@ function buildInvalidNode(filePath: string, graphDir: string): Node | null {
 
   // Verify parent directory matches expected type dir
   const relative = path.relative(graphDir, filePath);
-  const parentDir = relative.split(path.sep)[0];
+  const parentDir = relative.split(/[\\/]/)[0];
   const dirType = DIR_TO_TYPE[parentDir];
   // Use dir-based type if available, otherwise fall back to prefix-based
   const resolvedType = dirType ?? type;
@@ -184,13 +184,14 @@ export async function loadGraph(graphDir: string, options?: LoadGraphOptions): P
   const permissive = options?.permissive ?? false;
 
   // Find all .md files in the graph directory and subdirectories
-  const pattern = path.join(graphDir, '**/*.md');
+  // Use forward slashes for glob patterns (backslashes are escape chars in glob v10+)
+  const pattern = path.join(graphDir, '**/*.md').split(path.sep).join('/');
   const files = await glob(pattern, { nodir: true });
 
   for (const file of files.sort()) {
     // Skip files or directories starting with _
     const relative = path.relative(graphDir, file);
-    const parts = relative.split(path.sep);
+    const parts = relative.split(/[\\/]/);
     if (parts.some((p) => p.startsWith('_'))) continue;
 
     const node = await loadNode(file);

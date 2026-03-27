@@ -362,6 +362,31 @@ describe('loadNode artifacts → outputs migration', () => {
   });
 });
 
+describe('path separator handling', () => {
+  it('splits relative paths with forward slashes', () => {
+    // glob returns forward slashes on all platforms
+    const relative = 'hypotheses/hyp-001-test.md';
+    const parts = relative.split(/[\\/]/);
+    expect(parts[0]).toBe('hypotheses');
+    expect(parts[1]).toBe('hyp-001-test.md');
+  });
+
+  it('splits relative paths with backslashes (Windows)', () => {
+    const relative = 'hypotheses\\hyp-001-test.md';
+    const parts = relative.split(/[\\/]/);
+    expect(parts[0]).toBe('hypotheses');
+    expect(parts[1]).toBe('hyp-001-test.md');
+  });
+
+  it('correctly filters underscore dirs with either separator', () => {
+    const forwardSlash = '_drafts/hyp-001-test.md'.split(/[\\/]/);
+    expect(forwardSlash.some((p: string) => p.startsWith('_'))).toBe(true);
+
+    const backSlash = '_drafts\\hyp-001-test.md'.split(/[\\/]/);
+    expect(backSlash.some((p: string) => p.startsWith('_'))).toBe(true);
+  });
+});
+
 describe('resolveGraphDir', () => {
   it('finds graph/ in sample-project fixture', () => {
     const projectDir = path.join(FIXTURES, 'sample-project');
