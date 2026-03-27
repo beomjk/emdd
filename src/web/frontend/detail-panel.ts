@@ -34,8 +34,9 @@ function escapeHtml(text: string): string {
 }
 
 function renderMarkdown(md: string): string {
-  // Basic markdown → HTML: headings, bold, italic, lists, code
-  return md
+  // Escape HTML first to prevent XSS, then apply markdown formatting
+  const escaped = escapeHtml(md);
+  return escaped
     .replace(/^### (.+)$/gm, '<h4>$1</h4>')
     .replace(/^## (.+)$/gm, '<h3>$1</h3>')
     .replace(/^# (.+)$/gm, '<h2>$1</h2>')

@@ -37,6 +37,8 @@ export function renderGraph(
     onBackgroundClick?: () => void;
   } = {},
 ): cytoscape.Core {
+  if (cy) { cy.destroy(); cy = null; }
+
   const elements: cytoscape.ElementDefinition[] = [];
 
   for (const node of graph.nodes) {

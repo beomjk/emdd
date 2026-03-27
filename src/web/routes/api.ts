@@ -117,6 +117,7 @@ export function createApiRoutes(graphDir: string, cache: GraphCache, sseManager?
           await stream.writeSSE({ event: 'heartbeat', data: '' });
         } catch {
           clearInterval(heartbeat);
+          sseManager.removeClient(stream);
         }
       }, 30_000);
 

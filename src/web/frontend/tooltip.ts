@@ -81,6 +81,10 @@ export function showTooltip(
   if (top + tooltipRect.height > rect.height) {
     top = rect.height - tooltipRect.height - 8;
   }
+  // Clamp left
+  if (left < 0) {
+    left = 8;
+  }
   // Clamp top
   if (top < 0) {
     top = 8;
