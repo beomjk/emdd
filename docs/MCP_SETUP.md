@@ -232,7 +232,9 @@ All tools accept a `graphDir` parameter — the path to your EMDD `graph/` direc
 - **`nodeId`** — Node ID in the format `prefix-NNN` (e.g., `hyp-001`, `fnd-003`)
 - **`nodeIds`** — Array of node IDs for batch read (e.g., `["hyp-001", "fnd-003"]`)
 - **`slug`** — URL-friendly slug for new nodes (e.g., `surface-crack-analysis`)
-- **`relation`** — Edge relation type: `supports`, `contradicts`, `produces`, `spawns`, `depends_on`, `tests`, `promotes`, `answers`, `extends`, `relates_to`, `informs`, `part_of`, `context_for`, `revises`, `confirms`
+- **`relation`** — Edge relation type.
+  - *Forward:* `answers`, `confirms`, `context_for`, `contradicts`, `depends_on`, `extends`, `informs`, `part_of`, `produces`, `promotes`, `relates_to`, `resolves`, `revises`, `spawns`, `supports`, `tests`
+  - *Reverse:* `answered_by`, `confirmed_by`, `produced_by`, `resolved_by`, `spawned_from`, `supported_by`, `tested_by`
 - **`lang`** — Language locale: `en` (default) or `ko`
 - **`set`** — Key-value pairs to update (e.g., `{"status": "TESTING", "confidence": "0.8"}`)
 - **`transitionPolicy`** — Status transition validation: `strict` (block invalid), `warn` (allow with warning), `off` (no check)
