@@ -8,6 +8,8 @@ import { renderHealthSidebar } from './sidebar.js';
 import { applyClusters, zoomToCluster } from './clusters.js';
 import { switchLayout } from './graph.js';
 import type { LayoutMode } from './graph.js';
+import { initTheme, toggleTheme } from './theme.js';
+import { connectSSE, setGraphUpdatedHandler } from './live-reload.js';
 
 export interface DashboardState {
   graph: SerializedGraph | null;
@@ -172,6 +174,11 @@ async function init(): Promise<void> {
   // Render legend
   renderLegend();
 
+  // Theme toggle
+  initTheme();
+  const themeBtn = document.getElementById('theme-btn');
+  themeBtn?.addEventListener('click', toggleTheme);
+
   const refreshBtn = document.getElementById('refresh-btn');
   refreshBtn?.addEventListener('click', refresh);
 
@@ -224,6 +231,19 @@ async function init(): Promise<void> {
     });
     layoutSelector.appendChild(select);
   }
+
+  // SSE live reload
+  setGraphUpdatedHandler(async () => {
+    const updatedGraph = await fetchGraph();
+    state.graph = updatedGraph;
+    const previouslySelected = state.selectedNodeId;
+    renderDashboard(updatedGraph);
+    showToast('Graph updated');
+    if (previouslySelected && updatedGraph.nodes.some((n) => n.id === previouslySelected)) {
+      await selectNode(previouslySelected);
+    }
+  });
+  connectSSE();
 }
 
 function renderLegend(): void {

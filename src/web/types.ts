@@ -18,6 +18,7 @@ export interface SerializedNode {
   updated?: string;
   invalid?: boolean;
   parseError?: string;
+  bodyPreview?: string;
 }
 
 export interface SerializedEdge {

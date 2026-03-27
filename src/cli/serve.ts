@@ -44,7 +44,7 @@ async function tryListen(
 
 export async function serveCommand(pathArg: string | undefined, options: ServeOptions): Promise<void> {
   const graphDir = resolveGraphDir(pathArg);
-  const { app, cache } = createDashboardServer(graphDir);
+  const { app, cache, watcher } = createDashboardServer(graphDir);
 
   // Pre-load graph to get stats
   const graph = await cache.load();
@@ -63,4 +63,9 @@ export async function serveCommand(pathArg: string | undefined, options: ServeOp
     const { default: openBrowser } = await import('open');
     await openBrowser(url);
   }
+
+  // Clean up file watcher on process exit
+  const cleanup = () => { watcher.close(); process.exit(0); };
+  process.on('SIGINT', cleanup);
+  process.on('SIGTERM', cleanup);
 }

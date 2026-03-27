@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import matter from 'gray-matter';
 import type { Graph, HealthReport } from '../graph/types.js';
 import { loadGraph } from '../graph/loader.js';
 import { getHealth, detectClusters } from '../graph/operations.js';
@@ -17,6 +19,16 @@ function serializeGraph(graph: Graph): SerializedGraph {
   const edges: SerializedEdge[] = [];
 
   for (const [, node] of graph.nodes) {
+    let bodyPreview: string | undefined;
+    if (!node.meta._invalid) {
+      try {
+        const raw = fs.readFileSync(node.path, 'utf-8');
+        const body = matter(raw).content.trim();
+        if (body) {
+          bodyPreview = body.slice(0, 100) + (body.length > 100 ? '...' : '');
+        }
+      } catch { /* skip if file unreadable */ }
+    }
     nodes.push({
       id: node.id,
       title: node.title,
@@ -28,6 +40,7 @@ function serializeGraph(graph: Graph): SerializedGraph {
       created: node.meta.created ? String(node.meta.created) : undefined,
       updated: node.meta.updated ? String(node.meta.updated) : undefined,
       ...(node.meta._invalid ? { invalid: true, parseError: String(node.meta._parseError ?? '') } : {}),
+      ...(bodyPreview ? { bodyPreview } : {}),
     });
 
     for (const link of node.links) {
