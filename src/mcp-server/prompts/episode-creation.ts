@@ -75,6 +75,7 @@ links:
 - Keep Episodes short — "What I Tried" and "What's Next" are the only mandatory sections.
 - A five-line Episode is better than no Episode.
 - Do not record Consolidation as an Episode — Consolidation is a meta-activity.
+- "What's Next" is for **research and exploration tasks only**. Do NOT include meta-activities (consolidation, health-review, graph maintenance) — these are handled automatically by the session cycle prompts.
 - Write the Episode at the end of each session, not days later.`;
 
       return {
