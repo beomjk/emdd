@@ -6,6 +6,7 @@
  */
 import type { Link, Graph, ImpactScoringState } from './types.js';
 import type { EdgeClassificationEntry } from './derive-constants.js';
+import { EDGE_CLASSIFICATION as _EDGE_CLASSIFICATION, IMPACT_THRESHOLD as _IMPACT_THRESHOLD } from './derive-constants.js';
 export { EDGE_CLASSIFICATION, IMPACT_THRESHOLD } from './derive-constants.js';
 
 // ── Attribute Modifier Maps ─────────────────────────────────────────
@@ -85,72 +86,59 @@ export interface ComputeImpactOptions {
   edgeClassification?: Record<string, EdgeClassificationEntry>;
 }
 
+/** Set of edge relations with reverse direction (impact flows target→source). */
+const REVERSE_DIRECTION_EDGES = new Set(['depends_on']);
+
 /**
  * BFS multi-hop impact scoring from a seed node.
  * Returns a Map of nodeId → ImpactScoringState for all reachable nodes
  * above the threshold.
+ *
+ * Propagation rules:
+ * - Forward-direction edges (most): impact flows source→target (outgoing links)
+ * - Reverse-direction edges (depends_on): impact flows target→source (incoming links)
  */
 export function computeImpactScores(
   graph: Graph,
   seedId: string,
   options?: ComputeImpactOptions,
 ): Map<string, ImpactScoringState> {
-  const { EDGE_CLASSIFICATION, IMPACT_THRESHOLD } = require('./derive-constants.js') as
-    { EDGE_CLASSIFICATION: Record<string, EdgeClassificationEntry>; IMPACT_THRESHOLD: number };
-  const threshold = options?.threshold ?? IMPACT_THRESHOLD;
-  const classification = options?.edgeClassification ?? EDGE_CLASSIFICATION;
+  const threshold = options?.threshold ?? _IMPACT_THRESHOLD;
+  const classification = options?.edgeClassification ?? _EDGE_CLASSIFICATION;
 
   const states = new Map<string, ImpactScoringState>();
 
-  // Build reverse adjacency map for depends_on etc.
+  // Build reverse adjacency: targetId → [{sourceId, link}]
+  // Used for reverse-direction edges (depends_on): A depends_on B (A→B link),
+  // impact flows B→A, so from B we look up incoming depends_on links.
   const reverseAdj = new Map<string, Array<{ sourceId: string; link: Link }>>();
   for (const node of graph.nodes.values()) {
     for (const link of node.links) {
+      if (!REVERSE_DIRECTION_EDGES.has(link.relation)) continue;
       if (!reverseAdj.has(link.target)) reverseAdj.set(link.target, []);
       reverseAdj.get(link.target)!.push({ sourceId: node.id, link });
     }
   }
 
-  // BFS queue: [nodeId, pathScore, path, pathEdges, depth]
   type QueueItem = [string, number, string[], string[], number];
   const queue: QueueItem[] = [];
 
-  // Seed outgoing edges
   const seedNode = graph.nodes.get(seedId);
   if (!seedNode) return states;
 
-  for (const link of seedNode.links) {
-    const factor = computeEdgeFactor(link, classification);
-    if (factor > 0) {
-      queue.push([link.target, factor, [seedId, link.target], [link.relation], 1]);
-    }
-  }
-
-  // Seed as target: incoming edges from other nodes that point to seed — skip
-  // Instead: nodes that have the seed as a target via reverse direction edges
-  const incomingToSeed = reverseAdj.get(seedId) ?? [];
-  for (const { sourceId, link } of incomingToSeed) {
-    // For reverse-direction edges (like depends_on), propagate FROM seed TO source
-    const entry = classification[link.relation];
-    if (!entry) continue;
-    // depends_on: A depends_on B means A→B link, but impact flows B→A
-    // We handle this by checking if the relation has reverse direction semantics
-    // For now, we propagate through incoming links as well (bidirectional BFS)
-    const factor = computeEdgeFactor(link, classification);
-    if (factor > 0) {
-      queue.push([sourceId, factor, [seedId, sourceId], [link.relation], 1]);
-    }
-  }
+  // Enqueue neighbors reachable from seed
+  enqueueNeighbors(seedId, seedNode, 1.0, [seedId], [], 0, queue, graph, reverseAdj, classification, threshold);
 
   while (queue.length > 0) {
     const [nodeId, pathScore, path, pathEdges, depth] = queue.shift()!;
 
-    if (nodeId === seedId) continue; // skip self-loop back to seed
+    if (nodeId === seedId) continue;
     if (pathScore < threshold) continue;
 
     const existing = states.get(nodeId);
+    let shouldPropagate = false;
+
     if (existing) {
-      // Update with Noisy-OR
       const prev = existing.complementProduct;
       const { complementProduct } = aggregateNoisyOr(prev, pathScore);
       existing.complementProduct = complementProduct;
@@ -165,10 +153,10 @@ export function computeImpactScores(
         existing.depth = depth;
       }
 
-      // Relaxation: if aggregate score increased, re-enqueue neighbors
+      // Relaxation: only re-propagate if aggregate meaningfully increased
       const newAggregate = 1 - complementProduct;
       const oldAggregate = 1 - prev;
-      if (newAggregate <= oldAggregate + 1e-10) continue;
+      shouldPropagate = newAggregate > oldAggregate + 1e-10;
     } else {
       const { complementProduct } = aggregateNoisyOr(1.0, pathScore);
       states.set(nodeId, {
@@ -179,44 +167,51 @@ export function computeImpactScores(
         depth,
         pathCount: 1,
       });
+      shouldPropagate = true;
     }
 
-    // Propagate to neighbors
+    if (!shouldPropagate) continue;
+
     const node = graph.nodes.get(nodeId);
     if (!node) continue;
 
-    // Outgoing edges
-    for (const link of node.links) {
-      const factor = computeEdgeFactor(link, classification);
-      if (factor <= 0) continue;
-      const newScore = pathScore * factor;
-      if (newScore < threshold) continue;
-      queue.push([
-        link.target,
-        newScore,
-        [...path, link.target],
-        [...pathEdges, link.relation],
-        depth + 1,
-      ]);
-    }
-
-    // Incoming edges (reverse propagation)
-    const incoming = reverseAdj.get(nodeId) ?? [];
-    for (const { sourceId, link } of incoming) {
-      if (sourceId === seedId) continue;
-      const factor = computeEdgeFactor(link, classification);
-      if (factor <= 0) continue;
-      const newScore = pathScore * factor;
-      if (newScore < threshold) continue;
-      queue.push([
-        sourceId,
-        newScore,
-        [...path, sourceId],
-        [...pathEdges, link.relation],
-        depth + 1,
-      ]);
-    }
+    enqueueNeighbors(nodeId, node, pathScore, path, pathEdges, depth, queue, graph, reverseAdj, classification, threshold);
   }
 
   return states;
+}
+
+function enqueueNeighbors(
+  nodeId: string,
+  node: { links: Link[] },
+  pathScore: number,
+  path: string[],
+  pathEdges: string[],
+  depth: number,
+  queue: [string, number, string[], string[], number][],
+  graph: Graph,
+  reverseAdj: Map<string, Array<{ sourceId: string; link: Link }>>,
+  classification: Record<string, EdgeClassificationEntry>,
+  threshold: number,
+): void {
+  // 1. Outgoing edges with forward direction → targets affected
+  for (const link of node.links) {
+    if (REVERSE_DIRECTION_EDGES.has(link.relation)) continue; // skip reverse-direction outgoing
+    const factor = computeEdgeFactor(link, classification);
+    if (factor <= 0) continue;
+    const newScore = pathScore * factor;
+    if (newScore < threshold) continue;
+    queue.push([link.target, newScore, [...path, link.target], [...pathEdges, link.relation], depth + 1]);
+  }
+
+  // 2. Incoming reverse-direction edges → sources affected
+  //    (e.g., A depends_on X: A→X link; X changing affects A)
+  const incoming = reverseAdj.get(nodeId) ?? [];
+  for (const { sourceId, link } of incoming) {
+    const factor = computeEdgeFactor(link, classification);
+    if (factor <= 0) continue;
+    const newScore = pathScore * factor;
+    if (newScore < threshold) continue;
+    queue.push([sourceId, newScore, [...path, sourceId], [...pathEdges, link.relation], depth + 1]);
+  }
 }

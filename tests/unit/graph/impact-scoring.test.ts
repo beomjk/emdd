@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import type { Graph, Node, Link } from '../../../src/graph/types.js';
 
 // T003: Edge classification constant tests
 describe('EDGE_CLASSIFICATION', () => {
@@ -199,5 +200,130 @@ describe('aggregateNoisyOr', () => {
     }
     const aggregate = 1 - cp;
     expect(aggregate).toBeGreaterThanOrEqual(bestPath);
+  });
+});
+
+// ── T012: computeImpactScores BFS tests ──────────────────────────────
+
+function makeNode(id: string, type: string, status: string, links: Link[] = []): Node {
+  return { id, type: type as Node['type'], title: id, path: '', status, confidence: 0.5, tags: [], links, meta: {} };
+}
+
+function makeGraph(nodes: Node[]): Graph {
+  const map = new Map<string, Node>();
+  for (const n of nodes) map.set(n.id, n);
+  return { nodes: map, errors: [], warnings: [] };
+}
+
+describe('computeImpactScores BFS traversal', () => {
+  it('linear chain A→B→C', async () => {
+    const { computeImpactScores, EDGE_CLASSIFICATION, IMPACT_THRESHOLD } = await import('../../../src/graph/impact-scoring.js');
+    const graph = makeGraph([
+      makeNode('A', 'hypothesis', 'TESTING', [{ target: 'B', relation: 'supports' }]),
+      makeNode('B', 'hypothesis', 'TESTING', [{ target: 'C', relation: 'supports' }]),
+      makeNode('C', 'hypothesis', 'PROPOSED'),
+    ]);
+    const scores = computeImpactScores(graph, 'A', { edgeClassification: EDGE_CLASSIFICATION, threshold: IMPACT_THRESHOLD });
+    expect(scores.has('B')).toBe(true);
+    expect(scores.has('C')).toBe(true);
+    const bState = scores.get('B')!;
+    const cState = scores.get('C')!;
+    // B: direct, factor=0.8
+    expect(1 - bState.complementProduct).toBeCloseTo(0.8);
+    expect(bState.depth).toBe(1);
+    // C: 0.8 * 0.8 = 0.64
+    expect(1 - cState.complementProduct).toBeCloseTo(0.64);
+    expect(cState.depth).toBe(2);
+  });
+
+  it('diamond A→B→D, A→C→D (Noisy-OR aggregation)', async () => {
+    const { computeImpactScores, EDGE_CLASSIFICATION, IMPACT_THRESHOLD } = await import('../../../src/graph/impact-scoring.js');
+    const graph = makeGraph([
+      makeNode('A', 'hypothesis', 'TESTING', [
+        { target: 'B', relation: 'supports' },
+        { target: 'C', relation: 'supports' },
+      ]),
+      makeNode('B', 'hypothesis', 'TESTING', [{ target: 'D', relation: 'supports' }]),
+      makeNode('C', 'hypothesis', 'TESTING', [{ target: 'D', relation: 'supports' }]),
+      makeNode('D', 'hypothesis', 'PROPOSED'),
+    ]);
+    const scores = computeImpactScores(graph, 'A', { edgeClassification: EDGE_CLASSIFICATION, threshold: IMPACT_THRESHOLD });
+    const dState = scores.get('D')!;
+    // Two paths to D, each 0.8*0.8 = 0.64
+    // Noisy-OR: 1 - (1-0.64)(1-0.64) = 1 - 0.36*0.36 = 1 - 0.1296 = 0.8704
+    const aggregate = 1 - dState.complementProduct;
+    expect(aggregate).toBeGreaterThan(0.64); // aggregate > bestPath
+    expect(dState.bestPathScore).toBeCloseTo(0.64);
+    expect(dState.pathCount).toBe(2);
+  });
+
+  it('fan-out A→B,C,D', async () => {
+    const { computeImpactScores, EDGE_CLASSIFICATION, IMPACT_THRESHOLD } = await import('../../../src/graph/impact-scoring.js');
+    const graph = makeGraph([
+      makeNode('A', 'hypothesis', 'TESTING', [
+        { target: 'B', relation: 'supports' },
+        { target: 'C', relation: 'confirms' },
+        { target: 'D', relation: 'informs' },
+      ]),
+      makeNode('B', 'hypothesis', 'TESTING'),
+      makeNode('C', 'hypothesis', 'TESTING'),
+      makeNode('D', 'hypothesis', 'PROPOSED'),
+    ]);
+    const scores = computeImpactScores(graph, 'A', { edgeClassification: EDGE_CLASSIFICATION, threshold: IMPACT_THRESHOLD });
+    expect(scores.has('B')).toBe(true);
+    expect(scores.has('C')).toBe(true);
+    expect(scores.has('D')).toBe(true);
+    expect(1 - scores.get('B')!.complementProduct).toBeCloseTo(0.8); // conducts
+    expect(1 - scores.get('C')!.complementProduct).toBeCloseTo(0.8); // conducts
+    expect(1 - scores.get('D')!.complementProduct).toBeCloseTo(0.4); // attenuates
+  });
+
+  it('cycle A→B→C→A converges', async () => {
+    const { computeImpactScores, EDGE_CLASSIFICATION, IMPACT_THRESHOLD } = await import('../../../src/graph/impact-scoring.js');
+    const graph = makeGraph([
+      makeNode('A', 'hypothesis', 'TESTING', [{ target: 'B', relation: 'supports' }]),
+      makeNode('B', 'hypothesis', 'TESTING', [{ target: 'C', relation: 'supports' }]),
+      makeNode('C', 'hypothesis', 'TESTING', [{ target: 'A', relation: 'supports' }]),
+    ]);
+    // Should not infinite loop; scores should converge
+    const scores = computeImpactScores(graph, 'A', { edgeClassification: EDGE_CLASSIFICATION, threshold: IMPACT_THRESHOLD });
+    expect(scores.has('B')).toBe(true);
+    expect(scores.has('C')).toBe(true);
+    // Seed is excluded from results
+    expect(scores.has('A')).toBe(false);
+  });
+
+  it('blocks edge stops propagation: A→B→(relates_to)→C', async () => {
+    const { computeImpactScores, EDGE_CLASSIFICATION, IMPACT_THRESHOLD } = await import('../../../src/graph/impact-scoring.js');
+    const graph = makeGraph([
+      makeNode('A', 'hypothesis', 'TESTING', [{ target: 'B', relation: 'supports' }]),
+      makeNode('B', 'hypothesis', 'TESTING', [{ target: 'C', relation: 'relates_to' }]),
+      makeNode('C', 'hypothesis', 'PROPOSED'),
+    ]);
+    const scores = computeImpactScores(graph, 'A', { edgeClassification: EDGE_CLASSIFICATION, threshold: IMPACT_THRESHOLD });
+    expect(scores.has('B')).toBe(true);
+    expect(scores.has('C')).toBe(false);
+  });
+
+  it('isolated node: no impact', async () => {
+    const { computeImpactScores, EDGE_CLASSIFICATION, IMPACT_THRESHOLD } = await import('../../../src/graph/impact-scoring.js');
+    const graph = makeGraph([
+      makeNode('A', 'hypothesis', 'TESTING'),
+      makeNode('B', 'hypothesis', 'PROPOSED'),
+    ]);
+    const scores = computeImpactScores(graph, 'A', { edgeClassification: EDGE_CLASSIFICATION, threshold: IMPACT_THRESHOLD });
+    expect(scores.size).toBe(0);
+  });
+
+  it('immutability: graph not modified after BFS', async () => {
+    const { computeImpactScores, EDGE_CLASSIFICATION, IMPACT_THRESHOLD } = await import('../../../src/graph/impact-scoring.js');
+    const graph = makeGraph([
+      makeNode('A', 'hypothesis', 'TESTING', [{ target: 'B', relation: 'supports' }]),
+      makeNode('B', 'hypothesis', 'TESTING'),
+    ]);
+    const nodesBefore = JSON.stringify([...graph.nodes.entries()]);
+    computeImpactScores(graph, 'A', { edgeClassification: EDGE_CLASSIFICATION, threshold: IMPACT_THRESHOLD });
+    const nodesAfter = JSON.stringify([...graph.nodes.entries()]);
+    expect(nodesAfter).toBe(nodesBefore);
   });
 });
