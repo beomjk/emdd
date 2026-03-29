@@ -355,6 +355,25 @@ describe('computeImpactScores BFS traversal', () => {
     expect(scores.has('B')).toBe(true);
   });
 
+  it('reverse-direction edge (depends_on): impact propagates target→source', async () => {
+    const { computeImpactScores, EDGE_CLASSIFICATION, IMPACT_THRESHOLD } = await import('../../../src/graph/impact-scoring.js');
+    // C depends_on A (C→A link), so A changing should affect C (reverse propagation)
+    const graph = makeGraph([
+      makeNode('A', 'hypothesis', 'TESTING', [{ target: 'B', relation: 'supports' }]),
+      makeNode('B', 'hypothesis', 'PROPOSED'),
+      makeNode('C', 'hypothesis', 'PROPOSED', [{ target: 'A', relation: 'depends_on' }]),
+    ]);
+    const scores = computeImpactScores(graph, 'A', { edgeClassification: EDGE_CLASSIFICATION, threshold: IMPACT_THRESHOLD });
+    // B: forward propagation via supports (conducts, factor=0.8)
+    expect(scores.has('B')).toBe(true);
+    expect(1 - scores.get('B')!.complementProduct).toBeCloseTo(0.8);
+    // C: reverse propagation via depends_on (conducts, factor=0.8)
+    expect(scores.has('C')).toBe(true);
+    expect(1 - scores.get('C')!.complementProduct).toBeCloseTo(0.8);
+    expect(scores.get('C')!.bestPath).toEqual(['A', 'C']);
+    expect(scores.get('C')!.bestPathEdges).toEqual(['depends_on']);
+  });
+
   it('immutability: graph not modified after BFS', async () => {
     const { computeImpactScores, EDGE_CLASSIFICATION, IMPACT_THRESHOLD } = await import('../../../src/graph/impact-scoring.js');
     const graph = makeGraph([

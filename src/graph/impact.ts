@@ -8,8 +8,9 @@
 import { loadGraph } from './loader.js';
 import { computeImpactScores } from './impact-scoring.js';
 import { createEmddOrchestrator } from './orchestrator-setup.js';
-import type { ImpactReport, ImpactedNode, Graph, Node, Link, NodeWithStatus } from './types.js';
+import type { ImpactReport, ImpactedNode, Graph, Node, Link } from './types.js';
 import { EDGE_CLASSIFICATION, IMPACT_THRESHOLD, VALID_STATUSES } from './derive-constants.js';
+import { t } from '../i18n/index.js';
 import type { CascadeTrace } from '@beomjk/state-engine/orchestrator';
 
 export interface TraceImpactOptions {
@@ -29,14 +30,14 @@ export async function traceImpact(
   const graph = await loadGraph(graphDir);
   const seedNode = graph.nodes.get(nodeId);
   if (!seedNode) {
-    throw new Error(`Node '${nodeId}' not found`);
+    throw new Error(t('impact.error.node_not_found', { nodeId }));
   }
 
   if (options?.whatIf) {
     // Validate what-if status
     const validStatuses = VALID_STATUSES[seedNode.type];
     if (validStatuses && !validStatuses.includes(options.whatIf)) {
-      throw new Error(`Status '${options.whatIf}' is not valid for type '${seedNode.type}'. Valid: ${validStatuses.join(', ')}`);
+      throw new Error(t('impact.error.invalid_status', { status: options.whatIf, type: seedNode.type }));
     }
     return traceImpactWhatIf(graph, seedNode, options.whatIf);
   }
@@ -134,7 +135,7 @@ async function traceImpactWhatIf(
         autoTransitions.set(step.entityId, {
           from: step.from,
           to: step.to,
-          matchedIds: 'triggeredBy' in step ? (step as any).triggeredBy : [],
+          matchedIds: step.triggeredBy,
         });
       }
     }
@@ -212,7 +213,7 @@ function convertCascadeTrace(trace: CascadeTrace): ImpactReport['cascadeTrace'] 
     unresolved: trace.unresolved.map(u => ({
       entityId: u.entityId,
       entityType: u.entityType,
-      candidates: (u as any).candidates ?? [],
+      candidates: u.conflictingTargets.map(ct => ({ to: ct })),
     })),
     availableManualTransitions: trace.availableManualTransitions.map(m => ({
       entityId: m.entityId,

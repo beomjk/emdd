@@ -131,6 +131,41 @@ describe('traceImpact edge cases', () => {
   });
 });
 
+// T027: buildRelationInstances unit tests
+describe('buildRelationInstances', () => {
+  it('converts graph links to flat relation instances', async () => {
+    const { buildRelationInstances } = await import('../../../src/graph/impact.js');
+    const graph = {
+      nodes: new Map([
+        ['a', { id: 'a', type: 'hypothesis' as const, title: 'A', path: '', status: 'PROPOSED', confidence: 0.5, tags: [], links: [
+          { target: 'b', relation: 'supports' },
+          { target: 'c', relation: 'depends_on', strength: 0.7 },
+        ], meta: {} }],
+        ['b', { id: 'b', type: 'hypothesis' as const, title: 'B', path: '', status: 'TESTING', confidence: 0.5, tags: [], links: [], meta: {} }],
+      ]),
+      errors: [],
+      warnings: [],
+    } as any;
+    const relations = buildRelationInstances(graph);
+    expect(relations).toHaveLength(2);
+    expect(relations[0]).toEqual({ name: 'supports', sourceId: 'a', targetId: 'b', metadata: undefined });
+    expect(relations[1]).toEqual({ name: 'depends_on', sourceId: 'a', targetId: 'c', metadata: { strength: 0.7 } });
+  });
+
+  it('returns empty array for graph with no links', async () => {
+    const { buildRelationInstances } = await import('../../../src/graph/impact.js');
+    const graph = {
+      nodes: new Map([
+        ['a', { id: 'a', type: 'hypothesis' as const, title: 'A', path: '', status: 'PROPOSED', confidence: 0.5, tags: [], links: [], meta: {} }],
+      ]),
+      errors: [],
+      warnings: [],
+    } as any;
+    const relations = buildRelationInstances(graph);
+    expect(relations).toHaveLength(0);
+  });
+});
+
 // T029: format with unresolved conflicts
 describe('impact format', () => {
   it('format handles unresolved conflicts in cascade', async () => {

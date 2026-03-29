@@ -6,7 +6,7 @@
  */
 import type { Link, Graph, ImpactScoringState } from './types.js';
 import type { EdgeClassificationEntry } from './derive-constants.js';
-import { EDGE_CLASSIFICATION as _EDGE_CLASSIFICATION, IMPACT_THRESHOLD as _IMPACT_THRESHOLD } from './derive-constants.js';
+import { EDGE_CLASSIFICATION as _EDGE_CLASSIFICATION, IMPACT_THRESHOLD as _IMPACT_THRESHOLD, RELATION_DEFINITIONS } from './derive-constants.js';
 export { EDGE_CLASSIFICATION, IMPACT_THRESHOLD } from './derive-constants.js';
 
 // ── Attribute Modifier Maps ─────────────────────────────────────────
@@ -86,8 +86,10 @@ export interface ComputeImpactOptions {
   edgeClassification?: Record<string, EdgeClassificationEntry>;
 }
 
-/** Set of edge relations with reverse direction (impact flows target→source). */
-const REVERSE_DIRECTION_EDGES = new Set(['depends_on']);
+/** Set of edge relations with reverse direction (impact flows target→source). Derived from schema. */
+const REVERSE_DIRECTION_EDGES: Set<string> = new Set(
+  RELATION_DEFINITIONS.filter(r => r.direction === 'reverse').map(r => r.name),
+);
 
 /**
  * BFS multi-hop impact scoring from a seed node.
