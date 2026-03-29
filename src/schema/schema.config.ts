@@ -305,6 +305,8 @@ export const impactClassification = {
 
 export const impactThreshold = 0.01;
 
+export const maxCascadeDepth = 10;
+
 // ── Relation Definitions (for Orchestrator) ────────────────────────
 
 /**
@@ -318,9 +320,9 @@ export const relationDefinitions = forwardEdges.map(edge => ({
   target: '*',
   direction: edge === 'depends_on' ? 'reverse' as const : 'default' as const,
   metadata: {
-    classification: impactClassification.conducts.edges.includes(edge as any)
+    classification: (impactClassification.conducts.edges as readonly string[]).includes(edge)
       ? 'conducts'
-      : impactClassification.attenuates.edges.includes(edge as any)
+      : (impactClassification.attenuates.edges as readonly string[]).includes(edge)
         ? 'attenuates'
         : 'blocks',
   },

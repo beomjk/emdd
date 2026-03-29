@@ -272,7 +272,7 @@ export const CEREMONY_TRIGGERS = Object.fromEntries(
 
 // ── Impact Analysis Constants ───────────────────────────────────────
 
-export type PropagationClass = 'conducts' | 'attenuates' | 'blocks';
+export type PropagationClass = keyof typeof impactClassification;
 
 export interface EdgeClassificationEntry {
   classification: PropagationClass;
@@ -290,5 +290,7 @@ for (const [cls, def] of Object.entries(impactClassification)) {
 }
 
 export const IMPACT_THRESHOLD: number = impactThreshold;
+
+export { maxCascadeDepth as MAX_CASCADE_DEPTH } from '../schema/schema.config.js';
 
 export const RELATION_DEFINITIONS = relationDefinitions;

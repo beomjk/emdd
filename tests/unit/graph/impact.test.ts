@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readFileSync } from 'node:fs';
@@ -123,6 +123,56 @@ describe('traceImpact what-if mode', () => {
   });
 });
 
+// C1: orchestrator error path tests
+describe('traceImpact what-if orchestrator errors', () => {
+  it('handles cascade_error with partialTrace gracefully', async () => {
+    vi.resetModules();
+
+    const partialTrace = {
+      trigger: { entityId: 'knw-001', entityType: 'knowledge', from: 'ACTIVE', to: 'RETRACTED' },
+      steps: [],
+      unresolved: [],
+      availableManualTransitions: [],
+      affected: [],
+      finalStates: new Map([['knw-001', 'RETRACTED']]),
+      converged: false,
+      rounds: 10,
+    };
+
+    vi.doMock('../../../src/graph/orchestrator-setup.js', () => ({
+      createEmddOrchestrator: () => ({
+        simulate: () => ({ ok: false, error: 'cascade_error', partialTrace }),
+      }),
+    }));
+
+    const { traceImpact } = await import('../../../src/graph/impact.js');
+    const report = await traceImpact(SAMPLE_GRAPH, 'knw-001', { whatIf: 'RETRACTED' });
+    expect(report.cascadeTrace).toBeDefined();
+    expect(report.cascadeTrace!.converged).toBe(false);
+    expect(report.cascadeTrace!.rounds).toBe(10);
+
+    vi.doUnmock('../../../src/graph/orchestrator-setup.js');
+    vi.resetModules();
+  });
+
+  it('throws on unknown orchestrator error', async () => {
+    vi.resetModules();
+
+    vi.doMock('../../../src/graph/orchestrator-setup.js', () => ({
+      createEmddOrchestrator: () => ({
+        simulate: () => ({ ok: false, error: 'invalid_trigger' }),
+      }),
+    }));
+
+    const { traceImpact } = await import('../../../src/graph/impact.js');
+    await expect(traceImpact(SAMPLE_GRAPH, 'knw-001', { whatIf: 'RETRACTED' }))
+      .rejects.toThrow('invalid_trigger');
+
+    vi.doUnmock('../../../src/graph/orchestrator-setup.js');
+    vi.resetModules();
+  });
+});
+
 // T026: empty graph handling
 describe('traceImpact edge cases', () => {
   it('throws for node not found in empty graph', async () => {
@@ -166,8 +216,34 @@ describe('buildRelationInstances', () => {
   });
 });
 
-// T029: format with unresolved conflicts
+// T029: format tests
 describe('impact format', () => {
+  it('format handles current-status mode with impacted nodes', async () => {
+    const { impactDef } = await import('../../../src/registry/commands/impact.js');
+    const mockReport = {
+      seed: { nodeId: 'knw-001', nodeType: 'knowledge', currentStatus: 'ACTIVE' },
+      impactedNodes: [{
+        nodeId: 'hyp-001',
+        nodeType: 'hypothesis',
+        currentStatus: 'TESTING',
+        aggregateScore: 0.64,
+        bestPathScore: 0.64,
+        depth: 1,
+        bestPath: ['knw-001', 'hyp-001'],
+        bestPathEdges: ['supports'],
+        pathCount: 1,
+      }],
+      summary: { totalAffected: 1, maxScore: 0.64, avgScore: 0.64, affectedByType: { hypothesis: 1 } },
+    };
+    const output = impactDef.format(mockReport);
+    expect(output).toContain('knw-001');
+    expect(output).toContain('ACTIVE');
+    expect(output).toContain('hyp-001');
+    expect(output).toContain('0.64');
+    expect(output).not.toContain('Cascade');
+  });
+
+
   it('format handles unresolved conflicts in cascade', async () => {
     const { impactDef } = await import('../../../src/registry/commands/impact.js');
     const mockReport = {

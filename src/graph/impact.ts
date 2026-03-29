@@ -8,10 +8,12 @@
 import { loadGraph } from './loader.js';
 import { computeImpactScores } from './impact-scoring.js';
 import { createEmddOrchestrator } from './orchestrator-setup.js';
-import type { ImpactReport, ImpactedNode, Graph, Node, Link } from './types.js';
+import type { ImpactReport, ImpactedNode, ImpactScoringState, Graph, Node, Link } from './types.js';
 import { EDGE_CLASSIFICATION, IMPACT_THRESHOLD, VALID_STATUSES } from './derive-constants.js';
 import { t } from '../i18n/index.js';
 import type { CascadeTrace } from '@beomjk/state-engine/orchestrator';
+
+const UNKNOWN_STATUS = 'UNKNOWN';
 
 export interface TraceImpactOptions {
   whatIf?: string;
@@ -30,7 +32,7 @@ export async function traceImpact(
   const graph = await loadGraph(graphDir);
   const seedNode = graph.nodes.get(nodeId);
   if (!seedNode) {
-    throw new Error(t('impact.error.node_not_found', { nodeId }));
+    throw new Error(t('error.node_not_found', { id: nodeId }));
   }
 
   if (options?.whatIf) {
@@ -52,31 +54,13 @@ function buildCurrentStatusReport(graph: Graph, seedNode: Node): ImpactReport {
     threshold: IMPACT_THRESHOLD,
   });
 
-  const impactedNodes: ImpactedNode[] = [];
-  for (const [id, state] of scoringStates) {
-    const node = graph.nodes.get(id);
-    if (!node) continue;
-    const aggregateScore = 1 - state.complementProduct;
-    impactedNodes.push({
-      nodeId: id,
-      nodeType: node.type,
-      currentStatus: node.status ?? 'UNKNOWN',
-      aggregateScore,
-      bestPathScore: state.bestPathScore,
-      depth: state.depth,
-      bestPath: state.bestPath,
-      bestPathEdges: state.bestPathEdges,
-      pathCount: state.pathCount,
-    });
-  }
-
-  impactedNodes.sort((a, b) => b.aggregateScore - a.aggregateScore);
+  const impactedNodes = buildImpactedNodes(graph, scoringStates);
 
   return {
     seed: {
       nodeId: seedNode.id,
       nodeType: seedNode.type,
-      currentStatus: seedNode.status ?? 'UNKNOWN',
+      currentStatus: seedNode.status ?? UNKNOWN_STATUS,
     },
     impactedNodes,
     summary: buildSummary(impactedNodes),
@@ -118,7 +102,7 @@ async function traceImpactWhatIf(
     const trace = result.partialTrace;
     cascadeTrace = convertCascadeTrace(trace);
   } else {
-    throw new Error(`Orchestrator error: ${result.error}`);
+    throw new Error(t('impact.error.orchestrator', { error: result.error }));
   }
 
   // BFS scoring on the graph (same as current-status)
@@ -141,26 +125,7 @@ async function traceImpactWhatIf(
     }
   }
 
-  const impactedNodes: ImpactedNode[] = [];
-  for (const [id, state] of scoringStates) {
-    const node = graph.nodes.get(id);
-    if (!node) continue;
-    const aggregateScore = 1 - state.complementProduct;
-    const impacted: ImpactedNode = {
-      nodeId: id,
-      nodeType: node.type,
-      currentStatus: node.status ?? 'UNKNOWN',
-      aggregateScore,
-      bestPathScore: state.bestPathScore,
-      depth: state.depth,
-      bestPath: state.bestPath,
-      bestPathEdges: state.bestPathEdges,
-      pathCount: state.pathCount,
-    };
-    const auto = autoTransitions.get(id);
-    if (auto) impacted.autoTransition = auto;
-    impactedNodes.push(impacted);
-  }
+  const impactedNodes = buildImpactedNodes(graph, scoringStates, autoTransitions);
 
   // Include orchestrator-affected nodes not in BFS results
   for (const entityId of cascadeTrace?.affected ?? []) {
@@ -171,7 +136,7 @@ async function traceImpactWhatIf(
     const impacted: ImpactedNode = {
       nodeId: entityId,
       nodeType: node.type,
-      currentStatus: node.status ?? 'UNKNOWN',
+      currentStatus: node.status ?? UNKNOWN_STATUS,
       aggregateScore: 0,
       bestPathScore: 0,
       depth: 0,
@@ -190,7 +155,7 @@ async function traceImpactWhatIf(
     seed: {
       nodeId: seedNode.id,
       nodeType: seedNode.type,
-      currentStatus: seedNode.status ?? 'UNKNOWN',
+      currentStatus: seedNode.status ?? UNKNOWN_STATUS,
       whatIfStatus,
     },
     impactedNodes,
@@ -225,6 +190,34 @@ function convertCascadeTrace(trace: CascadeTrace): ImpactReport['cascadeTrace'] 
     converged: trace.converged,
     rounds: trace.rounds,
   };
+}
+
+function buildImpactedNodes(
+  graph: Graph,
+  scoringStates: Map<string, ImpactScoringState>,
+  autoTransitions?: Map<string, { from: string; to: string; matchedIds: string[] }>,
+): ImpactedNode[] {
+  const nodes: ImpactedNode[] = [];
+  for (const [id, state] of scoringStates) {
+    const node = graph.nodes.get(id);
+    if (!node) continue;
+    const impacted: ImpactedNode = {
+      nodeId: id,
+      nodeType: node.type,
+      currentStatus: node.status ?? UNKNOWN_STATUS,
+      aggregateScore: 1 - state.complementProduct,
+      bestPathScore: state.bestPathScore,
+      depth: state.depth,
+      bestPath: state.bestPath,
+      bestPathEdges: state.bestPathEdges,
+      pathCount: state.pathCount,
+    };
+    const auto = autoTransitions?.get(id);
+    if (auto) impacted.autoTransition = auto;
+    nodes.push(impacted);
+  }
+  nodes.sort((a, b) => b.aggregateScore - a.aggregateScore);
+  return nodes;
 }
 
 function buildSummary(nodes: ImpactedNode[]) {

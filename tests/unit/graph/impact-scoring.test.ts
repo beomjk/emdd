@@ -153,6 +153,43 @@ describe('computeEdgeFactor', () => {
     const link = { target: 'b', relation: 'supports' };
     expect(computeEdgeFactor(link, EDGE_CLASSIFICATION)).toBe(0.8);
   });
+
+  it('returns 0 for unknown relation not in classification', async () => {
+    const { computeEdgeFactor, EDGE_CLASSIFICATION } = await import('../../../src/graph/impact-scoring.js');
+    const link = { target: 'b', relation: 'unknown_edge_type' };
+    expect(computeEdgeFactor(link, EDGE_CLASSIFICATION)).toBe(0);
+  });
+
+  it('multiplies multiple attributes simultaneously', async () => {
+    const { computeEdgeFactor, EDGE_CLASSIFICATION } = await import('../../../src/graph/impact-scoring.js');
+    const link = { target: 'b', relation: 'supports', strength: 0.5, severity: 'WEAKENING' as const, completeness: 0.6 };
+    // baseFactor(0.8) * strength(0.5) * severity(0.7) * completeness(0.6)
+    expect(computeEdgeFactor(link, EDGE_CLASSIFICATION)).toBeCloseTo(0.8 * 0.5 * 0.7 * 0.6);
+  });
+
+  it('strength boundary: 0.0 zeros out factor', async () => {
+    const { computeEdgeFactor, EDGE_CLASSIFICATION } = await import('../../../src/graph/impact-scoring.js');
+    const link = { target: 'b', relation: 'supports', strength: 0.0 };
+    expect(computeEdgeFactor(link, EDGE_CLASSIFICATION)).toBe(0);
+  });
+
+  it('strength boundary: 1.0 preserves baseFactor', async () => {
+    const { computeEdgeFactor, EDGE_CLASSIFICATION } = await import('../../../src/graph/impact-scoring.js');
+    const link = { target: 'b', relation: 'supports', strength: 1.0 };
+    expect(computeEdgeFactor(link, EDGE_CLASSIFICATION)).toBeCloseTo(0.8);
+  });
+
+  it('completeness boundary: 0.0 zeros out factor', async () => {
+    const { computeEdgeFactor, EDGE_CLASSIFICATION } = await import('../../../src/graph/impact-scoring.js');
+    const link = { target: 'b', relation: 'answers', completeness: 0.0 };
+    expect(computeEdgeFactor(link, EDGE_CLASSIFICATION)).toBe(0);
+  });
+
+  it('completeness boundary: 1.0 preserves baseFactor', async () => {
+    const { computeEdgeFactor, EDGE_CLASSIFICATION } = await import('../../../src/graph/impact-scoring.js');
+    const link = { target: 'b', relation: 'answers', completeness: 1.0 };
+    expect(computeEdgeFactor(link, EDGE_CLASSIFICATION)).toBeCloseTo(0.4);
+  });
 });
 
 // T005: aggregateNoisyOr() tests
@@ -372,6 +409,16 @@ describe('computeImpactScores BFS traversal', () => {
     expect(1 - scores.get('C')!.complementProduct).toBeCloseTo(0.8);
     expect(scores.get('C')!.bestPath).toEqual(['A', 'C']);
     expect(scores.get('C')!.bestPathEdges).toEqual(['depends_on']);
+  });
+
+  it('returns empty map for non-existent seed node', async () => {
+    const { computeImpactScores, EDGE_CLASSIFICATION, IMPACT_THRESHOLD } = await import('../../../src/graph/impact-scoring.js');
+    const graph = makeGraph([
+      makeNode('A', 'hypothesis', 'TESTING', [{ target: 'B', relation: 'supports' }]),
+      makeNode('B', 'hypothesis', 'TESTING'),
+    ]);
+    const scores = computeImpactScores(graph, 'non-existent', { edgeClassification: EDGE_CLASSIFICATION, threshold: IMPACT_THRESHOLD });
+    expect(scores.size).toBe(0);
   });
 
   it('immutability: graph not modified after BFS', async () => {

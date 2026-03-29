@@ -7,7 +7,7 @@
 import { createOrchestrator } from '@beomjk/state-engine/orchestrator';
 import type { Orchestrator, PropagationStrategy, RelationInstance } from '@beomjk/state-engine/orchestrator';
 import { engine } from './engine-setup.js';
-import { TRANSITION_TABLE, MANUAL_TRANSITIONS, RELATION_DEFINITIONS, EDGE_CLASSIFICATION, NODE_TYPES } from './derive-constants.js';
+import { TRANSITION_TABLE, MANUAL_TRANSITIONS, RELATION_DEFINITIONS, EDGE_CLASSIFICATION, NODE_TYPES, MAX_CASCADE_DEPTH } from './derive-constants.js';
 import type { Graph } from './types.js';
 
 /**
@@ -41,7 +41,7 @@ export function createEmddOrchestrator(): Orchestrator<Graph> {
     machines,
     relations: RELATION_DEFINITIONS,
     propagation,
-    maxCascadeDepth: 10,
+    maxCascadeDepth: MAX_CASCADE_DEPTH,
     contextEnricher: (baseContext, getStatus) => {
       // Create a virtual graph overlay where entity statuses reflect cascade state
       const virtualNodes = new Map(baseContext.nodes);
