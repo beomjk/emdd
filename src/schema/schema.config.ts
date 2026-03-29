@@ -286,6 +286,46 @@ export const ceremonies = {
   },
 } as const;
 
+// ── Impact Analysis ─────────────────────────────────────────────────
+
+export const impactClassification = {
+  conducts: {
+    baseFactor: 0.8,
+    edges: ['supports', 'contradicts', 'confirms', 'depends_on', 'revises', 'tests'] as const,
+  },
+  attenuates: {
+    baseFactor: 0.4,
+    edges: ['informs', 'extends', 'produces', 'spawns', 'answers', 'promotes', 'resolves'] as const,
+  },
+  blocks: {
+    baseFactor: 0,
+    edges: ['relates_to', 'part_of', 'context_for'] as const,
+  },
+} as const;
+
+export const impactThreshold = 0.01;
+
+// ── Relation Definitions (for Orchestrator) ────────────────────────
+
+/**
+ * Relation definitions for state-engine Orchestrator.
+ * Each forward edge becomes a relation; depends_on uses direction: 'reverse'
+ * per FR-019 (edge directionality).
+ */
+export const relationDefinitions = forwardEdges.map(edge => ({
+  name: edge,
+  source: '*',
+  target: '*',
+  direction: edge === 'depends_on' ? 'reverse' as const : 'default' as const,
+  metadata: {
+    classification: impactClassification.conducts.edges.includes(edge as any)
+      ? 'conducts'
+      : impactClassification.attenuates.edges.includes(edge as any)
+        ? 'attenuates'
+        : 'blocks',
+  },
+}));
+
 // ── Edge Attributes ─────────────────────────────────────────────────
 
 export const edgeAttributes = {

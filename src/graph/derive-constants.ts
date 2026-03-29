@@ -19,6 +19,9 @@ import {
   edgeAttributes,
   edgeAttributeAffinity,
   nodeDisplayOrder,
+  impactClassification,
+  impactThreshold,
+  relationDefinitions,
   type NodeTypeName,
 } from '../schema/schema.config.js';
 
@@ -266,3 +269,26 @@ export const CEREMONY_TRIGGERS = Object.fromEntries(
     readonly [T in keyof (typeof ceremonies)[K]['triggers']]: (typeof ceremonies)[K]['triggers'][T]
   }
 } satisfies Record<string, Record<string, number | boolean>>;
+
+// ── Impact Analysis Constants ───────────────────────────────────────
+
+export type PropagationClass = 'conducts' | 'attenuates' | 'blocks';
+
+export interface EdgeClassificationEntry {
+  classification: PropagationClass;
+  baseFactor: number;
+}
+
+export const EDGE_CLASSIFICATION: Record<string, EdgeClassificationEntry> = {};
+for (const [cls, def] of Object.entries(impactClassification)) {
+  for (const edge of def.edges) {
+    EDGE_CLASSIFICATION[edge] = {
+      classification: cls as PropagationClass,
+      baseFactor: def.baseFactor,
+    };
+  }
+}
+
+export const IMPACT_THRESHOLD: number = impactThreshold;
+
+export const RELATION_DEFINITIONS = relationDefinitions;
