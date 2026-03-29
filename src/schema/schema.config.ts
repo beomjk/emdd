@@ -303,6 +303,12 @@ export const impactClassification = {
   },
 } as const;
 
+export const attributeModifiers = {
+  severity: { FATAL: 1.0, WEAKENING: 0.7, TENSION: 0.4 } as const,
+  impact: { DECISIVE: 1.0, SIGNIFICANT: 0.7, MINOR: 0.3 } as const,
+  dependencyType: { LOGICAL: 1.0, PRACTICAL: 0.7, TEMPORAL: 0.5 } as const,
+} as const;
+
 export const impactThreshold = 0.01;
 
 export const maxCascadeDepth = 10;
@@ -320,11 +326,11 @@ export const relationDefinitions = forwardEdges.map(edge => ({
   target: '*',
   direction: edge === 'depends_on' ? 'reverse' as const : 'default' as const,
   metadata: {
-    classification: (impactClassification.conducts.edges as readonly string[]).includes(edge)
+    classification: ((impactClassification.conducts.edges as readonly string[]).includes(edge)
       ? 'conducts'
       : (impactClassification.attenuates.edges as readonly string[]).includes(edge)
         ? 'attenuates'
-        : 'blocks',
+        : 'blocks') as keyof typeof impactClassification,
   },
 }));
 

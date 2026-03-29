@@ -6,22 +6,8 @@
  */
 import type { Link, Graph, ImpactScoringState } from './types.js';
 import type { EdgeClassificationEntry } from './derive-constants.js';
-import { EDGE_CLASSIFICATION as _EDGE_CLASSIFICATION, IMPACT_THRESHOLD as _IMPACT_THRESHOLD, RELATION_DEFINITIONS } from './derive-constants.js';
+import { EDGE_CLASSIFICATION as _EDGE_CLASSIFICATION, IMPACT_THRESHOLD as _IMPACT_THRESHOLD, ATTRIBUTE_MODIFIERS, RELATION_DEFINITIONS } from './derive-constants.js';
 export { EDGE_CLASSIFICATION, IMPACT_THRESHOLD } from './derive-constants.js';
-
-// ── Attribute Modifier Maps ─────────────────────────────────────────
-
-const SEVERITY_MODIFIER: Record<string, number> = {
-  FATAL: 1.0, WEAKENING: 0.7, TENSION: 0.4,
-};
-
-const IMPACT_MODIFIER: Record<string, number> = {
-  DECISIVE: 1.0, SIGNIFICANT: 0.7, MINOR: 0.3,
-};
-
-const DEPENDENCY_TYPE_MODIFIER: Record<string, number> = {
-  LOGICAL: 1.0, PRACTICAL: 0.7, TEMPORAL: 0.5,
-};
 
 // ── computeEdgeFactor ───────────────────────────────────────────────
 
@@ -42,22 +28,22 @@ export function computeEdgeFactor(
     factor *= link.strength;
   }
   if (link.severity !== undefined) {
-    const mod = SEVERITY_MODIFIER[link.severity];
+    const mod = (ATTRIBUTE_MODIFIERS.severity as Record<string, number>)[link.severity];
     if (mod !== undefined) factor *= mod;
   }
   if (link.impact !== undefined) {
-    const mod = IMPACT_MODIFIER[link.impact];
+    const mod = (ATTRIBUTE_MODIFIERS.impact as Record<string, number>)[link.impact];
     if (mod !== undefined) factor *= mod;
   }
   if (link.dependencyType !== undefined) {
-    const mod = DEPENDENCY_TYPE_MODIFIER[link.dependencyType];
+    const mod = (ATTRIBUTE_MODIFIERS.dependencyType as Record<string, number>)[link.dependencyType];
     if (mod !== undefined) factor *= mod;
   }
   if (link.completeness !== undefined) {
     factor *= link.completeness;
   }
 
-  return factor;
+  return Math.max(0, Math.min(1, factor));
 }
 
 // ── aggregateNoisyOr ────────────────────────────────────────────────

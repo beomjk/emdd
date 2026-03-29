@@ -20,6 +20,7 @@ import {
   edgeAttributeAffinity,
   nodeDisplayOrder,
   impactClassification,
+  attributeModifiers,
   impactThreshold,
   relationDefinitions,
   type NodeTypeName,
@@ -288,6 +289,10 @@ for (const [cls, def] of Object.entries(impactClassification)) {
     };
   }
 }
+
+export const ATTRIBUTE_MODIFIERS = attributeModifiers;
+
+export const UNKNOWN_STATUS = 'UNKNOWN' as const;
 
 export const IMPACT_THRESHOLD: number = impactThreshold;
 

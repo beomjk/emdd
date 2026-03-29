@@ -173,6 +173,79 @@ describe('traceImpact what-if orchestrator errors', () => {
   });
 });
 
+// T028: orchestrator-affected-but-not-BFS-reachable path
+describe('traceImpact orchestrator-only affected nodes', () => {
+  it('includes orchestrator-affected nodes not reached by BFS', async () => {
+    vi.resetModules();
+
+    // Mock orchestrator to return an affected node not in BFS results
+    const mockTrace = {
+      trigger: { entityId: 'knw-001', entityType: 'knowledge', from: 'ACTIVE', to: 'RETRACTED' },
+      steps: [{ entityId: 'fnd-002', entityType: 'finding', from: 'PUBLISHED', to: 'DRAFT', round: 1, triggeredBy: ['knw-001'] }],
+      unresolved: [],
+      availableManualTransitions: [],
+      affected: ['fnd-002', 'non-bfs-node-001'],
+      finalStates: new Map([['knw-001', 'RETRACTED'], ['fnd-002', 'DRAFT']]),
+      converged: true,
+      rounds: 1,
+    };
+
+    vi.doMock('../../../src/graph/orchestrator-setup.js', () => ({
+      createEmddOrchestrator: () => ({
+        simulate: () => ({ ok: true, trace: mockTrace }),
+      }),
+    }));
+
+    const { traceImpact } = await import('../../../src/graph/impact.js');
+    const report = await traceImpact(SAMPLE_GRAPH, 'knw-001', { whatIf: 'RETRACTED' });
+
+    // fnd-002 exists in sample-graph and should appear with aggregateScore 0
+    // if it wasn't reached by BFS (or with its BFS score if it was)
+    const fnd002 = report.impactedNodes.find(n => n.nodeId === 'fnd-002');
+    expect(fnd002).toBeDefined();
+
+    // non-bfs-node-001 doesn't exist in sample-graph, so it should be skipped (graph.nodes.get returns undefined)
+    const nonExistent = report.impactedNodes.find(n => n.nodeId === 'non-bfs-node-001');
+    expect(nonExistent).toBeUndefined();
+
+    vi.doUnmock('../../../src/graph/orchestrator-setup.js');
+    vi.resetModules();
+  });
+});
+
+// T030: UNKNOWN_STATUS fallback for status-less nodes
+describe('UNKNOWN_STATUS fallback', () => {
+  it('reports UNKNOWN for nodes without status in current-status mode', async () => {
+    vi.resetModules();
+
+    // Mock loader to return a graph with a status-less node
+    const mockGraph = {
+      nodes: new Map([
+        ['hyp-001', { id: 'hyp-001', type: 'hypothesis', title: 'H1', path: '', status: 'TESTING', confidence: 0.5, tags: [], links: [
+          { target: 'fnd-001', relation: 'supports' },
+        ], meta: {} }],
+        ['fnd-001', { id: 'fnd-001', type: 'finding', title: 'F1', path: '', tags: [], links: [], meta: {} }],
+      ]),
+      errors: [],
+      warnings: [],
+    };
+
+    vi.doMock('../../../src/graph/loader.js', () => ({
+      loadGraph: async () => mockGraph,
+    }));
+
+    const { traceImpact } = await import('../../../src/graph/impact.js');
+    const report = await traceImpact('/fake', 'hyp-001');
+
+    const fnd001 = report.impactedNodes.find(n => n.nodeId === 'fnd-001');
+    expect(fnd001).toBeDefined();
+    expect(fnd001!.currentStatus).toBe('UNKNOWN');
+
+    vi.doUnmock('../../../src/graph/loader.js');
+    vi.resetModules();
+  });
+});
+
 // T026: empty graph handling
 describe('traceImpact edge cases', () => {
   it('throws for node not found in empty graph', async () => {

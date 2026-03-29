@@ -5,6 +5,9 @@ import {
   reverseEdges,
   edgeCategories,
   statusCategories,
+  impactClassification,
+  attributeModifiers,
+  validValues,
 } from '../../../src/schema/schema.config.js';
 
 describe('schema.config referential integrity', () => {
@@ -57,6 +60,30 @@ describe('schema.config referential integrity', () => {
         }
       }
     }
+  });
+
+  it('impactClassification covers all forward edges exactly once', () => {
+    const forwardSet = new Set<string>(forwardEdges);
+    const classifiedEdges = new Set<string>();
+    for (const [cls, def] of Object.entries(impactClassification)) {
+      for (const edge of def.edges) {
+        expect(classifiedEdges.has(edge), `"${edge}" appears in multiple classifications`).toBe(false);
+        expect(forwardSet.has(edge), `${cls}: "${edge}" not in forward edges`).toBe(true);
+        classifiedEdges.add(edge);
+      }
+    }
+    for (const edge of forwardEdges) {
+      expect(classifiedEdges.has(edge), `forward edge "${edge}" not classified`).toBe(true);
+    }
+  });
+
+  it('attributeModifiers keys match validValues enums', () => {
+    expect(Object.keys(attributeModifiers.severity).sort())
+      .toEqual([...validValues.severities].sort());
+    expect(Object.keys(attributeModifiers.impact).sort())
+      .toEqual([...validValues.impacts].sort());
+    expect(Object.keys(attributeModifiers.dependencyType).sort())
+      .toEqual([...validValues.dependencyTypes].sort());
   });
 
   it('edge categories only contain forward edges', () => {

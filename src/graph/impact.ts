@@ -9,11 +9,9 @@ import { loadGraph } from './loader.js';
 import { computeImpactScores } from './impact-scoring.js';
 import { createEmddOrchestrator } from './orchestrator-setup.js';
 import type { ImpactReport, ImpactedNode, ImpactScoringState, Graph, Node, Link } from './types.js';
-import { EDGE_CLASSIFICATION, IMPACT_THRESHOLD, VALID_STATUSES } from './derive-constants.js';
+import { EDGE_CLASSIFICATION, IMPACT_THRESHOLD, VALID_STATUSES, UNKNOWN_STATUS } from './derive-constants.js';
 import { t } from '../i18n/index.js';
 import type { CascadeTrace } from '@beomjk/state-engine/orchestrator';
-
-const UNKNOWN_STATUS = 'UNKNOWN';
 
 export interface TraceImpactOptions {
   whatIf?: string;
@@ -55,6 +53,7 @@ function buildCurrentStatusReport(graph: Graph, seedNode: Node): ImpactReport {
   });
 
   const impactedNodes = buildImpactedNodes(graph, scoringStates);
+  impactedNodes.sort((a, b) => b.aggregateScore - a.aggregateScore);
 
   return {
     seed: {
@@ -115,13 +114,12 @@ async function traceImpactWhatIf(
   const autoTransitions = new Map<string, { from: string; to: string; matchedIds: string[] }>();
   if (cascadeTrace) {
     for (const step of cascadeTrace.steps) {
-      if (!autoTransitions.has(step.entityId)) {
-        autoTransitions.set(step.entityId, {
-          from: step.from,
-          to: step.to,
-          matchedIds: step.triggeredBy,
-        });
-      }
+      const existing = autoTransitions.get(step.entityId);
+      autoTransitions.set(step.entityId, {
+        from: existing?.from ?? step.from,
+        to: step.to,
+        matchedIds: step.triggeredBy,
+      });
     }
   }
 
@@ -216,7 +214,6 @@ function buildImpactedNodes(
     if (auto) impacted.autoTransition = auto;
     nodes.push(impacted);
   }
-  nodes.sort((a, b) => b.aggregateScore - a.aggregateScore);
   return nodes;
 }
 
