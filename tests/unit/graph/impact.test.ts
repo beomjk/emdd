@@ -121,6 +121,29 @@ describe('traceImpact what-if mode', () => {
     expect(report.cascadeTrace).toBeDefined();
     expect(report.cascadeTrace!.steps.length).toBe(0);
   });
+
+  it('what-if cascade produces correct trigger and finalStates', async () => {
+    const { traceImpact } = await import('../../../src/graph/impact.js');
+    const report = await traceImpact(SAMPLE_GRAPH, 'knw-001', { whatIf: 'RETRACTED' });
+    const ct = report.cascadeTrace!;
+    // Trigger should reflect the what-if transition
+    expect(ct.trigger.entityId).toBe('knw-001');
+    expect(ct.trigger.to).toBe('RETRACTED');
+    // finalStates should include the seed's new status
+    expect(ct.finalStates['knw-001']).toBe('RETRACTED');
+    // rounds is 0+ (0 means trigger only, no cascade propagation)
+    expect(ct.rounds).toBeGreaterThanOrEqual(0);
+    // converged should be a boolean
+    expect(typeof ct.converged).toBe('boolean');
+    // If any auto-transitions occurred, verify they have valid structure
+    for (const step of ct.steps) {
+      expect(step.entityId).toBeTruthy();
+      expect(step.from).toBeTruthy();
+      expect(step.to).toBeTruthy();
+      expect(step.round).toBeGreaterThanOrEqual(1);
+      expect(step.triggeredBy.length).toBeGreaterThan(0);
+    }
+  });
 });
 
 // C1: orchestrator error path tests

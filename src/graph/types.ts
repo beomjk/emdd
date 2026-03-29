@@ -157,7 +157,7 @@ export interface ImpactReport {
     trigger: { entityId: string; entityType: string; from: string; to: string };
     steps: Array<{ entityId: string; entityType: string; from: string; to: string; round: number; triggeredBy: string[] }>;
     unresolved: Array<{ entityId: string; entityType: string; candidates: Array<{ to: string }> }>;
-    availableManualTransitions: Array<{ entityId: string; entityType: string; to: string }>;
+    availableManualTransitions: Array<{ entityId: string; entityType: string; from: string; to: string }>;
     affected: string[];
     finalStates: Record<string, string>;
     converged: boolean;

@@ -76,8 +76,4 @@ export const impactDef: CommandDef<typeof schema, ImpactReport> = {
 
     return lines.join('\n');
   },
-
-  shouldFail(report) {
-    return false;
-  },
 };

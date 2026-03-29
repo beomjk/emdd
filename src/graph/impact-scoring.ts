@@ -4,10 +4,15 @@
  * Contains edge factor computation, Noisy-OR aggregation, and BFS
  * impact traversal. No I/O — operates on in-memory Graph data.
  */
-import type { Link, Graph, ImpactScoringState } from './types.js';
-import type { EdgeClassificationEntry } from './derive-constants.js';
-import { EDGE_CLASSIFICATION as _EDGE_CLASSIFICATION, IMPACT_THRESHOLD as _IMPACT_THRESHOLD, ATTRIBUTE_MODIFIERS, RELATION_DEFINITIONS } from './derive-constants.js';
-export { EDGE_CLASSIFICATION, IMPACT_THRESHOLD } from './derive-constants.js';
+import type { Link, Graph, ImpactScoringState, EdgeClassificationEntry } from './types.js';
+import { ATTRIBUTE_MODIFIERS, REVERSE_DIRECTION_EDGES, MAX_CASCADE_DEPTH } from './types.js';
+export { EDGE_CLASSIFICATION, IMPACT_THRESHOLD } from './types.js';
+import { EDGE_CLASSIFICATION, IMPACT_THRESHOLD } from './types.js';
+
+function lookupModifier(category: keyof typeof ATTRIBUTE_MODIFIERS, value: string): number {
+  const mod = (ATTRIBUTE_MODIFIERS[category] as Record<string, number>)[value];
+  return mod ?? 1;
+}
 
 // ── computeEdgeFactor ───────────────────────────────────────────────
 
@@ -28,16 +33,13 @@ export function computeEdgeFactor(
     factor *= link.strength;
   }
   if (link.severity !== undefined) {
-    const mod = (ATTRIBUTE_MODIFIERS.severity as Record<string, number>)[link.severity];
-    if (mod !== undefined) factor *= mod;
+    factor *= lookupModifier('severity', link.severity);
   }
   if (link.impact !== undefined) {
-    const mod = (ATTRIBUTE_MODIFIERS.impact as Record<string, number>)[link.impact];
-    if (mod !== undefined) factor *= mod;
+    factor *= lookupModifier('impact', link.impact);
   }
   if (link.dependencyType !== undefined) {
-    const mod = (ATTRIBUTE_MODIFIERS.dependencyType as Record<string, number>)[link.dependencyType];
-    if (mod !== undefined) factor *= mod;
+    factor *= lookupModifier('dependencyType', link.dependencyType);
   }
   if (link.completeness !== undefined) {
     factor *= link.completeness;
@@ -70,12 +72,8 @@ export function aggregateNoisyOr(
 export interface ComputeImpactOptions {
   threshold?: number;
   edgeClassification?: Record<string, EdgeClassificationEntry>;
+  maxDepth?: number;
 }
-
-/** Set of edge relations with reverse direction (impact flows target→source). Derived from schema. */
-const REVERSE_DIRECTION_EDGES: Set<string> = new Set(
-  RELATION_DEFINITIONS.filter(r => r.direction === 'reverse').map(r => r.name),
-);
 
 /**
  * BFS multi-hop impact scoring from a seed node.
@@ -91,8 +89,9 @@ export function computeImpactScores(
   seedId: string,
   options?: ComputeImpactOptions,
 ): Map<string, ImpactScoringState> {
-  const threshold = options?.threshold ?? _IMPACT_THRESHOLD;
-  const classification = options?.edgeClassification ?? _EDGE_CLASSIFICATION;
+  const threshold = options?.threshold ?? IMPACT_THRESHOLD;
+  const classification = options?.edgeClassification ?? EDGE_CLASSIFICATION;
+  const maxDepth = options?.maxDepth ?? MAX_CASCADE_DEPTH;
 
   const states = new Map<string, ImpactScoringState>();
 
@@ -122,6 +121,7 @@ export function computeImpactScores(
 
     if (nodeId === seedId) continue;
     if (pathScore < threshold) continue;
+    if (depth > maxDepth) continue;
 
     const existing = states.get(nodeId);
     let shouldPropagate = false;

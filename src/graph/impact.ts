@@ -9,7 +9,7 @@ import { loadGraph } from './loader.js';
 import { computeImpactScores } from './impact-scoring.js';
 import { createEmddOrchestrator } from './orchestrator-setup.js';
 import type { ImpactReport, ImpactedNode, ImpactScoringState, Graph, Node, Link } from './types.js';
-import { EDGE_CLASSIFICATION, IMPACT_THRESHOLD, VALID_STATUSES, UNKNOWN_STATUS } from './derive-constants.js';
+import { EDGE_CLASSIFICATION, IMPACT_THRESHOLD, VALID_STATUSES, UNKNOWN_STATUS } from './types.js';
 import { t } from '../i18n/index.js';
 import type { CascadeTrace } from '@beomjk/state-engine/orchestrator';
 
@@ -118,7 +118,9 @@ async function traceImpactWhatIf(
       autoTransitions.set(step.entityId, {
         from: existing?.from ?? step.from,
         to: step.to,
-        matchedIds: step.triggeredBy,
+        matchedIds: existing
+          ? [...new Set([...existing.matchedIds, ...step.triggeredBy])]
+          : step.triggeredBy,
       });
     }
   }
@@ -131,13 +133,14 @@ async function traceImpactWhatIf(
     if (scoringStates.has(entityId)) continue;
     const node = graph.nodes.get(entityId);
     if (!node) continue;
+    // Orchestrator-only: not reached by BFS, depth -1 signals cascade-only impact
     const impacted: ImpactedNode = {
       nodeId: entityId,
       nodeType: node.type,
       currentStatus: node.status ?? UNKNOWN_STATUS,
       aggregateScore: 0,
       bestPathScore: 0,
-      depth: 0,
+      depth: -1,
       bestPath: [],
       bestPathEdges: [],
       pathCount: 0,
@@ -181,6 +184,7 @@ function convertCascadeTrace(trace: CascadeTrace): ImpactReport['cascadeTrace'] 
     availableManualTransitions: trace.availableManualTransitions.map(m => ({
       entityId: m.entityId,
       entityType: m.entityType,
+      from: m.from,
       to: m.to,
     })),
     affected: trace.affected,

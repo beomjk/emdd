@@ -190,6 +190,19 @@ describe('computeEdgeFactor', () => {
     const link = { target: 'b', relation: 'answers', completeness: 1.0 };
     expect(computeEdgeFactor(link, EDGE_CLASSIFICATION)).toBeCloseTo(0.4);
   });
+
+  it('clamps result to 1.0 when custom baseFactor exceeds 1', async () => {
+    const { computeEdgeFactor } = await import('../../../src/graph/impact-scoring.js');
+    const customClassification = { supports: { classification: 'conducts' as const, baseFactor: 1.5 } };
+    const link = { target: 'b', relation: 'supports' };
+    expect(computeEdgeFactor(link, customClassification)).toBe(1.0);
+  });
+
+  it('clamps result to 0 when strength is negative', async () => {
+    const { computeEdgeFactor, EDGE_CLASSIFICATION } = await import('../../../src/graph/impact-scoring.js');
+    const link = { target: 'b', relation: 'supports', strength: -0.5 };
+    expect(computeEdgeFactor(link, EDGE_CLASSIFICATION)).toBe(0);
+  });
 });
 
 // T005: aggregateNoisyOr() tests

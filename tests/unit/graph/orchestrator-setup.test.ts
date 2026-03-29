@@ -54,8 +54,8 @@ describe('propagation strategy', () => {
       targetStatus: 'TESTING',
     });
 
-    // The result should succeed (or cascade_error) but hyp-002 should not
-    // have been cascaded through the blocks edge
+    // The simulation should succeed; hyp-002 should not be cascaded through blocks edge
+    expect(result.ok).toBe(true);
     if (result.ok) {
       const trace = result.trace;
       const hyp002Steps = trace.steps.filter(s => s.entityId === 'hyp-002');
@@ -101,8 +101,15 @@ describe('contextEnricher', () => {
       targetStatus: 'SUPPORTED',
     });
 
-    // Verify the simulation completed without throwing
+    // The simulation should complete without throwing; verify result structure
     expect(result).toBeDefined();
-    expect('ok' in result || 'error' in result).toBe(true);
+    if (result.ok) {
+      // Verify finalStates includes the trigger's new status
+      expect(result.trace.finalStates.get('hyp-001')).toBe('SUPPORTED');
+      expect(typeof result.trace.converged).toBe('boolean');
+    } else {
+      // Even on error, verify the error type is known
+      expect(['cascade_error', 'invalid_trigger', 'no_machine']).toContain(result.error);
+    }
   });
 });

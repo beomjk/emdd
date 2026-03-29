@@ -313,6 +313,8 @@ export const impactThreshold = 0.01;
 
 export const maxCascadeDepth = 10;
 
+export const unknownStatus = 'UNKNOWN' as const;
+
 // ── Relation Definitions (for Orchestrator) ────────────────────────
 
 /**

@@ -5,9 +5,9 @@
  * graph presets, and edge classification for propagation strategy.
  */
 import { createOrchestrator } from '@beomjk/state-engine/orchestrator';
-import type { Orchestrator, PropagationStrategy, RelationInstance } from '@beomjk/state-engine/orchestrator';
+import type { Orchestrator, PropagationStrategy } from '@beomjk/state-engine/orchestrator';
 import { engine } from './engine-setup.js';
-import { TRANSITION_TABLE, MANUAL_TRANSITIONS, RELATION_DEFINITIONS, EDGE_CLASSIFICATION, NODE_TYPES, MAX_CASCADE_DEPTH } from './derive-constants.js';
+import { TRANSITION_TABLE, MANUAL_TRANSITIONS, RELATION_DEFINITIONS, EDGE_CLASSIFICATION, NODE_TYPES, MAX_CASCADE_DEPTH } from './types.js';
 import type { Graph } from './types.js';
 
 /**

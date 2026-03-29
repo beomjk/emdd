@@ -23,6 +23,7 @@ import {
   attributeModifiers,
   impactThreshold,
   relationDefinitions,
+  unknownStatus,
   type NodeTypeName,
 } from '../schema/schema.config.js';
 
@@ -292,10 +293,15 @@ for (const [cls, def] of Object.entries(impactClassification)) {
 
 export const ATTRIBUTE_MODIFIERS = attributeModifiers;
 
-export const UNKNOWN_STATUS = 'UNKNOWN' as const;
+export const UNKNOWN_STATUS = unknownStatus;
 
 export const IMPACT_THRESHOLD: number = impactThreshold;
 
 export { maxCascadeDepth as MAX_CASCADE_DEPTH } from '../schema/schema.config.js';
 
 export const RELATION_DEFINITIONS = relationDefinitions;
+
+/** Edge relations with reverse direction (impact flows target→source). */
+export const REVERSE_DIRECTION_EDGES: Set<string> = new Set(
+  relationDefinitions.filter(r => r.direction === 'reverse').map(r => r.name),
+);
