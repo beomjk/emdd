@@ -128,4 +128,13 @@ export const messages: Record<string, string> = {
   // Check messages (checkConsolidation)
   'check.all_questions_resolved': 'All questions resolved — consider generating new ones',
   'check.experiment_overload': 'Experiment {id} has {count} findings attached (threshold: {threshold}) — consider splitting',
+
+  // Impact analysis
+  'impact.title': 'Impact Analysis: {nodeId} ({currentStatus})',
+  'impact.title_whatif': 'Impact Analysis: {nodeId} ({currentStatus} → {whatIfStatus})',
+  'impact.no_affected': 'No nodes affected.',
+  'impact.summary': 'Summary: {total} nodes affected | Max score: {max} | Avg: {avg}',
+  'impact.cascade': 'Cascade: {autoTransitions} auto-transition(s), {unresolved} unresolved conflict(s)',
+  'impact.error.node_not_found': "Node '{nodeId}' not found",
+  'impact.error.invalid_status': "Status '{status}' is not valid for type '{type}'",
 };

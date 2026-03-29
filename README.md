@@ -229,6 +229,7 @@ Graph commands accept `--graphDir <path>`, `--lang <en|ko>`, and `--json`. Utili
 | `emdd backlog` | Show project backlog (open items, deferred, checklists) (`--status pending\|done\|deferred\|superseded\|all`) |
 | `emdd analyze-refutation` | Analyze refutation patterns in the graph |
 | `emdd mark-consolidated` | Record a consolidation date to reset episode counting (`--date`) |
+| `emdd impact <nodeId>` | Analyze cascade impact from a node state change (`--whatIf`) |
 <!-- /AUTO:readme-cli-analysis -->
 
 </details>

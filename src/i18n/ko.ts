@@ -128,4 +128,13 @@ export const messages: Record<string, string> = {
   // 통합 확인 메시지 (checkConsolidation)
   'check.all_questions_resolved': '모든 질문이 해결됨 — 새로운 질문 생성을 고려하세요',
   'check.experiment_overload': '실험 {id}에 {count}개 발견사항 연결됨 (임계값: {threshold}) — 분할을 고려하세요',
+
+  // 영향 분석
+  'impact.title': '영향 분석: {nodeId} ({currentStatus})',
+  'impact.title_whatif': '영향 분석: {nodeId} ({currentStatus} → {whatIfStatus})',
+  'impact.no_affected': '영향 받는 노드가 없습니다.',
+  'impact.summary': '요약: {total}개 노드 영향 | 최대 점수: {max} | 평균: {avg}',
+  'impact.cascade': '캐스케이드: {autoTransitions}개 자동 전이, {unresolved}개 미해결 충돌',
+  'impact.error.node_not_found': "노드 '{nodeId}'을(를) 찾을 수 없습니다",
+  'impact.error.invalid_status': "타입 '{type}'에 대해 상태 '{status}'은(는) 유효하지 않습니다",
 };

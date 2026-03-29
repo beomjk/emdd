@@ -30,6 +30,7 @@ import { deleteEdgeDef } from '../../../src/registry/commands/delete-edge.js';
 import { markDoneDef } from '../../../src/registry/commands/mark-done.js';
 import { markConsolidatedDef } from '../../../src/registry/commands/mark-consolidated.js';
 import { indexGraphDef } from '../../../src/registry/commands/index-graph.js';
+import { impactDef } from '../../../src/registry/commands/impact.js';
 
 function setupProject(): string {
   const dir = mkdtempSync(join(tmpdir(), 'emdd-exec-'));
@@ -273,5 +274,31 @@ describe('command execute() wiring — write commands', () => {
 
     const result = await indexGraphDef.execute({ graphDir });
     expect(result.nodeCount).toBe(1);
+  });
+
+  // T020: impact command execute() tests
+  it('impact returns current-status ImpactReport', async () => {
+    const result = await impactDef.execute({ graphDir: SAMPLE_GRAPH, nodeId: 'knw-001' });
+    expect(result.seed.nodeId).toBe('knw-001');
+    expect(result.seed.nodeType).toBe('knowledge');
+    expect(result.impactedNodes).toBeInstanceOf(Array);
+    expect(result.summary).toBeDefined();
+    expect(result.cascadeTrace).toBeUndefined();
+  });
+
+  it('impact returns what-if ImpactReport', async () => {
+    const result = await impactDef.execute({ graphDir: SAMPLE_GRAPH, nodeId: 'knw-001', whatIf: 'RETRACTED' });
+    expect(result.seed.whatIfStatus).toBe('RETRACTED');
+    expect(result.cascadeTrace).toBeDefined();
+  });
+
+  it('impact shouldFail for non-existent node', async () => {
+    await expect(impactDef.execute({ graphDir: SAMPLE_GRAPH, nodeId: 'xyz-999' }))
+      .rejects.toThrow();
+  });
+
+  it('impact shouldFail for invalid what-if status', async () => {
+    await expect(impactDef.execute({ graphDir: SAMPLE_GRAPH, nodeId: 'knw-001', whatIf: 'INVALID' }))
+      .rejects.toThrow();
   });
 });

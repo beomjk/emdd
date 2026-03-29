@@ -379,4 +379,35 @@ describe('MCP Server — tools', () => {
       expect(Array.isArray(result.retractedKnowledgeIds)).toBe(true);
     });
   });
+
+  // T021: impact-analysis MCP tool integration test
+  describe('impact-analysis', () => {
+    it('returns current-status impact report via MCP', async () => {
+      const result = await callTool(client, 'impact-analysis', {
+        graphDir: SAMPLE_GRAPH,
+        nodeId: 'knw-001',
+      }) as { seed: { nodeId: string }; impactedNodes: unknown[]; summary: { totalAffected: number } };
+      expect(result.seed.nodeId).toBe('knw-001');
+      expect(Array.isArray(result.impactedNodes)).toBe(true);
+      expect(typeof result.summary.totalAffected).toBe('number');
+    });
+
+    it('returns what-if impact report via MCP', async () => {
+      const result = await callTool(client, 'impact-analysis', {
+        graphDir: SAMPLE_GRAPH,
+        nodeId: 'knw-001',
+        whatIf: 'RETRACTED',
+      }) as { seed: { whatIfStatus: string }; cascadeTrace: unknown };
+      expect(result.seed.whatIfStatus).toBe('RETRACTED');
+      expect(result.cascadeTrace).toBeDefined();
+    });
+
+    it('returns error for non-existent node via MCP', async () => {
+      const errText = await callToolError(client, 'impact-analysis', {
+        graphDir: SAMPLE_GRAPH,
+        nodeId: 'xyz-999',
+      });
+      expect(errText).toContain('xyz-999');
+    });
+  });
 });

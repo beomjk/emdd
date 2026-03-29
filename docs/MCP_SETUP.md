@@ -8,7 +8,7 @@ The EMDD MCP server exposes the knowledge graph to any MCP-compatible AI coding 
 
 <!-- AUTO:mcp-tool-count -->
 <!-- Generated from command registry — DO NOT EDIT -->
-- **22 tools** for reading, creating, updating, and analyzing graph nodes and edges
+- **23 tools** for reading, creating, updating, and analyzing graph nodes and edges
 - **4 prompts** for guided workflows (context loading, episode creation, consolidation, health review)
 <!-- /AUTO:mcp-tool-count -->
 
@@ -221,6 +221,7 @@ All tools accept a `graphDir` parameter — the path to your EMDD `graph/` direc
 | `backlog` | Show project backlog (open items, deferred, checklists) | `graphDir`, `status?` |
 | `analyze-refutation` | Analyze refutation patterns in the graph | `graphDir` |
 | `mark-consolidated` | Record a consolidation date to reset episode counting | `graphDir`, `date?` |
+| `impact-analysis` | Analyze cascade impact from a node state change | `graphDir`, `nodeId`, `whatIf?` |
 <!-- /AUTO:mcp-tool-table -->
 
 ### Parameter Details

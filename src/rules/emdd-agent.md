@@ -84,6 +84,7 @@ Every session follows this prompt cycle:
 - `backlog` — Show project backlog (open items, deferred, checklists)
 - `analyze-refutation` — Analyze refutation patterns in the graph
 - `mark-consolidated` — Record a consolidation date to reset episode counting
+- `impact-analysis` — Analyze cascade impact from a node state change
 
 **Prompts:**
 - `context-loading` — [Cycle 1/4 · Session Start] Load EMDD graph context — provides a summary of nodes, edges, health, and structural gaps
