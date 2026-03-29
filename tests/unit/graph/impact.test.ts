@@ -7,6 +7,7 @@ import { Glob } from 'glob';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SAMPLE_GRAPH = resolve(__dirname, '../../fixtures/sample-graph');
+const EMPTY_GRAPH = resolve(__dirname, '../../fixtures/empty-graph');
 
 // T013: traceImpact current-status mode tests
 describe('traceImpact current-status mode', () => {
@@ -119,5 +120,64 @@ describe('traceImpact what-if mode', () => {
     // Current status is ACTIVE, what-if is also ACTIVE — no trigger change
     expect(report.cascadeTrace).toBeDefined();
     expect(report.cascadeTrace!.steps.length).toBe(0);
+  });
+});
+
+// T026: empty graph handling
+describe('traceImpact edge cases', () => {
+  it('throws for node not found in empty graph', async () => {
+    const { traceImpact } = await import('../../../src/graph/impact.js');
+    await expect(traceImpact(EMPTY_GRAPH, 'knw-001')).rejects.toThrow("not found");
+  });
+});
+
+// T029: format with unresolved conflicts
+describe('impact format', () => {
+  it('format handles unresolved conflicts in cascade', async () => {
+    const { impactDef } = await import('../../../src/registry/commands/impact.js');
+    const mockReport = {
+      seed: { nodeId: 'knw-001', nodeType: 'knowledge', currentStatus: 'ACTIVE', whatIfStatus: 'RETRACTED' },
+      impactedNodes: [{
+        nodeId: 'hyp-001',
+        nodeType: 'hypothesis',
+        currentStatus: 'TESTING',
+        aggregateScore: 0.8,
+        bestPathScore: 0.8,
+        depth: 1,
+        bestPath: ['knw-001', 'hyp-001'],
+        bestPathEdges: ['supports'],
+        pathCount: 1,
+        autoTransition: { from: 'TESTING', to: 'CONTESTED', matchedIds: ['knw-001'] },
+      }],
+      cascadeTrace: {
+        trigger: { entityId: 'knw-001', entityType: 'knowledge', from: 'ACTIVE', to: 'RETRACTED' },
+        steps: [{ entityId: 'hyp-001', entityType: 'hypothesis', from: 'TESTING', to: 'CONTESTED', round: 1, triggeredBy: ['knw-001'] }],
+        unresolved: [{ entityId: 'fnd-001', entityType: 'finding', candidates: [{ to: 'DRAFT' }, { to: 'RETRACTED' }] }],
+        availableManualTransitions: [],
+        affected: ['hyp-001'],
+        finalStates: { 'knw-001': 'RETRACTED', 'hyp-001': 'CONTESTED' },
+        converged: true,
+        rounds: 1,
+      },
+      summary: { totalAffected: 1, maxScore: 0.8, avgScore: 0.8, affectedByType: { hypothesis: 1 } },
+    };
+    const output = impactDef.format(mockReport);
+    expect(output).toContain('knw-001');
+    expect(output).toContain('RETRACTED');
+    expect(output).toContain('hyp-001');
+    expect(output).toContain('TESTING → CONTESTED');
+    expect(output).toContain('1 auto-transition');
+    expect(output).toContain('1 unresolved');
+  });
+
+  it('format handles empty results', async () => {
+    const { impactDef } = await import('../../../src/registry/commands/impact.js');
+    const mockReport = {
+      seed: { nodeId: 'knw-001', nodeType: 'knowledge', currentStatus: 'ACTIVE' },
+      impactedNodes: [],
+      summary: { totalAffected: 0, maxScore: 0, avgScore: 0, affectedByType: {} },
+    };
+    const output = impactDef.format(mockReport);
+    expect(output).toContain('No nodes affected');
   });
 });

@@ -315,6 +315,46 @@ describe('computeImpactScores BFS traversal', () => {
     expect(scores.size).toBe(0);
   });
 
+  it('self-loop: seed node links to itself', async () => {
+    const { computeImpactScores, EDGE_CLASSIFICATION, IMPACT_THRESHOLD } = await import('../../../src/graph/impact-scoring.js');
+    const graph = makeGraph([
+      makeNode('A', 'hypothesis', 'TESTING', [
+        { target: 'A', relation: 'supports' }, // self-loop
+        { target: 'B', relation: 'supports' },
+      ]),
+      makeNode('B', 'hypothesis', 'PROPOSED'),
+    ]);
+    const scores = computeImpactScores(graph, 'A', { edgeClassification: EDGE_CLASSIFICATION, threshold: IMPACT_THRESHOLD });
+    expect(scores.has('A')).toBe(false); // seed excluded
+    expect(scores.has('B')).toBe(true);
+  });
+
+  it('non-seed self-loop does not cause infinite loop', async () => {
+    const { computeImpactScores, EDGE_CLASSIFICATION, IMPACT_THRESHOLD } = await import('../../../src/graph/impact-scoring.js');
+    const graph = makeGraph([
+      makeNode('A', 'hypothesis', 'TESTING', [{ target: 'B', relation: 'supports' }]),
+      makeNode('B', 'hypothesis', 'TESTING', [
+        { target: 'B', relation: 'supports' }, // self-loop on B
+        { target: 'C', relation: 'supports' },
+      ]),
+      makeNode('C', 'hypothesis', 'PROPOSED'),
+    ]);
+    const scores = computeImpactScores(graph, 'A', { edgeClassification: EDGE_CLASSIFICATION, threshold: IMPACT_THRESHOLD });
+    expect(scores.has('B')).toBe(true);
+    expect(scores.has('C')).toBe(true);
+  });
+
+  it('nodes without status field are included in scoring', async () => {
+    const { computeImpactScores, EDGE_CLASSIFICATION, IMPACT_THRESHOLD } = await import('../../../src/graph/impact-scoring.js');
+    const noStatusNode = { id: 'B', type: 'hypothesis' as const, title: 'B', path: '', tags: [], links: [] as Link[], meta: {} } as Node;
+    const graph = makeGraph([
+      makeNode('A', 'hypothesis', 'TESTING', [{ target: 'B', relation: 'supports' }]),
+      noStatusNode,
+    ]);
+    const scores = computeImpactScores(graph, 'A', { edgeClassification: EDGE_CLASSIFICATION, threshold: IMPACT_THRESHOLD });
+    expect(scores.has('B')).toBe(true);
+  });
+
   it('immutability: graph not modified after BFS', async () => {
     const { computeImpactScores, EDGE_CLASSIFICATION, IMPACT_THRESHOLD } = await import('../../../src/graph/impact-scoring.js');
     const graph = makeGraph([
