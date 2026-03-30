@@ -177,6 +177,7 @@ export interface ImpactedNode {
   currentStatus: string;
   aggregateScore: number;
   bestPathScore: number;
+  /** BFS hop count from seed. -1 indicates cascade-only impact (orchestrator-affected, not BFS-reachable). */
   depth: number;
   bestPath: string[];
   bestPathEdges: string[];

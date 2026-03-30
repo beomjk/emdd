@@ -47,7 +47,7 @@ export const impactDef: CommandDef<typeof schema, ImpactReport> = {
     }
 
     // Table header
-    lines.push(` ${'Node'.padEnd(10)} ${'Type'.padEnd(12)} ${'Status'.padEnd(12)} ${'Score'.padEnd(7)} ${'Best'.padEnd(7)} ${'Hops'.padEnd(5)} Auto-Transition`);
+    lines.push(` ${t('impact.col.node').padEnd(10)} ${t('impact.col.type').padEnd(12)} ${t('impact.col.status').padEnd(12)} ${t('impact.col.score').padEnd(7)} ${t('impact.col.best').padEnd(7)} ${t('impact.col.hops').padEnd(5)} ${t('impact.col.auto_transition')}`);
     lines.push(` ${'─'.repeat(10)} ${'─'.repeat(12)} ${'─'.repeat(12)} ${'─'.repeat(7)} ${'─'.repeat(7)} ${'─'.repeat(5)} ${'─'.repeat(15)}`);
 
     for (const node of report.impactedNodes) {

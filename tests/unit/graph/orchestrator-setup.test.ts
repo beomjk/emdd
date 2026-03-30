@@ -101,15 +101,20 @@ describe('contextEnricher', () => {
       targetStatus: 'SUPPORTED',
     });
 
-    // The simulation should complete without throwing; verify result structure
+    // The simulation should complete without throwing
     expect(result).toBeDefined();
+    // Verify the enricher works: finalStates must include the trigger's new status
     if (result.ok) {
-      // Verify finalStates includes the trigger's new status
       expect(result.trace.finalStates.get('hyp-001')).toBe('SUPPORTED');
       expect(typeof result.trace.converged).toBe('boolean');
+      // Original graph must not be mutated by the virtual overlay
+      expect(graph.nodes.get('hyp-001')!.status).toBe('TESTING');
     } else {
-      // Even on error, verify the error type is known
+      // cascade_error still has a partialTrace; invalid_trigger/no_machine are config issues
       expect(['cascade_error', 'invalid_trigger', 'no_machine']).toContain(result.error);
+      if (result.error === 'cascade_error') {
+        expect(result.partialTrace.finalStates.get('hyp-001')).toBe('SUPPORTED');
+      }
     }
   });
 });

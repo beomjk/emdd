@@ -196,6 +196,52 @@ describe('traceImpact what-if orchestrator errors', () => {
   });
 });
 
+// M3: autoTransition multi-step cascade merging
+describe('traceImpact autoTransition merge logic', () => {
+  it('merges multiple cascade steps for the same entity correctly', async () => {
+    vi.resetModules();
+
+    // Mock with two cascade steps for fnd-002: round 1 and round 2
+    const mockTrace = {
+      trigger: { entityId: 'knw-001', entityType: 'knowledge', from: 'ACTIVE', to: 'RETRACTED' },
+      steps: [
+        { entityId: 'fnd-002', entityType: 'finding', from: 'PUBLISHED', to: 'DRAFT', round: 1, triggeredBy: ['knw-001'] },
+        { entityId: 'fnd-002', entityType: 'finding', from: 'DRAFT', to: 'RETRACTED', round: 2, triggeredBy: ['hyp-001'] },
+      ],
+      unresolved: [],
+      availableManualTransitions: [],
+      affected: ['fnd-002'],
+      finalStates: new Map([['knw-001', 'RETRACTED'], ['fnd-002', 'RETRACTED']]),
+      converged: true,
+      rounds: 2,
+    };
+
+    vi.doMock('../../../src/graph/orchestrator-setup.js', () => ({
+      createEmddOrchestrator: () => ({
+        simulate: () => ({ ok: true, trace: mockTrace }),
+      }),
+    }));
+
+    const { traceImpact } = await import('../../../src/graph/impact.js');
+    const report = await traceImpact(SAMPLE_GRAPH, 'knw-001', { whatIf: 'RETRACTED' });
+
+    const fnd002 = report.impactedNodes.find(n => n.nodeId === 'fnd-002');
+    expect(fnd002).toBeDefined();
+    expect(fnd002!.autoTransition).toBeDefined();
+    // 'from' should be preserved from the first step
+    expect(fnd002!.autoTransition!.from).toBe('PUBLISHED');
+    // 'to' should be overwritten with the last step
+    expect(fnd002!.autoTransition!.to).toBe('RETRACTED');
+    // matchedIds should be deduplicated union of all triggeredBy
+    expect(fnd002!.autoTransition!.matchedIds).toContain('knw-001');
+    expect(fnd002!.autoTransition!.matchedIds).toContain('hyp-001');
+    expect(new Set(fnd002!.autoTransition!.matchedIds).size).toBe(fnd002!.autoTransition!.matchedIds.length);
+
+    vi.doUnmock('../../../src/graph/orchestrator-setup.js');
+    vi.resetModules();
+  });
+});
+
 // T028: orchestrator-affected-but-not-BFS-reachable path
 describe('traceImpact orchestrator-only affected nodes', () => {
   it('includes orchestrator-affected nodes not reached by BFS', async () => {
@@ -296,6 +342,81 @@ describe('buildRelationInstances', () => {
     expect(relations).toHaveLength(2);
     expect(relations[0]).toEqual({ name: 'supports', sourceId: 'a', targetId: 'b', metadata: undefined });
     expect(relations[1]).toEqual({ name: 'depends_on', sourceId: 'a', targetId: 'c', metadata: { strength: 0.7 } });
+  });
+
+  it('includes severity attribute in metadata', async () => {
+    const { buildRelationInstances } = await import('../../../src/graph/impact.js');
+    const graph = {
+      nodes: new Map([
+        ['a', { id: 'a', type: 'hypothesis' as const, title: 'A', path: '', status: 'TESTING', confidence: 0.5, tags: [], links: [
+          { target: 'b', relation: 'contradicts', severity: 'FATAL' },
+        ], meta: {} }],
+      ]),
+      errors: [],
+      warnings: [],
+    } as any;
+    const relations = buildRelationInstances(graph);
+    expect(relations[0].metadata).toEqual({ severity: 'FATAL' });
+  });
+
+  it('includes impact attribute in metadata', async () => {
+    const { buildRelationInstances } = await import('../../../src/graph/impact.js');
+    const graph = {
+      nodes: new Map([
+        ['a', { id: 'a', type: 'hypothesis' as const, title: 'A', path: '', status: 'TESTING', confidence: 0.5, tags: [], links: [
+          { target: 'b', relation: 'informs', impact: 'DECISIVE' },
+        ], meta: {} }],
+      ]),
+      errors: [],
+      warnings: [],
+    } as any;
+    const relations = buildRelationInstances(graph);
+    expect(relations[0].metadata).toEqual({ impact: 'DECISIVE' });
+  });
+
+  it('includes dependencyType attribute in metadata', async () => {
+    const { buildRelationInstances } = await import('../../../src/graph/impact.js');
+    const graph = {
+      nodes: new Map([
+        ['a', { id: 'a', type: 'hypothesis' as const, title: 'A', path: '', status: 'TESTING', confidence: 0.5, tags: [], links: [
+          { target: 'b', relation: 'depends_on', dependencyType: 'LOGICAL' },
+        ], meta: {} }],
+      ]),
+      errors: [],
+      warnings: [],
+    } as any;
+    const relations = buildRelationInstances(graph);
+    expect(relations[0].metadata).toEqual({ dependencyType: 'LOGICAL' });
+  });
+
+  it('includes completeness attribute in metadata', async () => {
+    const { buildRelationInstances } = await import('../../../src/graph/impact.js');
+    const graph = {
+      nodes: new Map([
+        ['a', { id: 'a', type: 'hypothesis' as const, title: 'A', path: '', status: 'TESTING', confidence: 0.5, tags: [], links: [
+          { target: 'b', relation: 'answers', completeness: 0.9 },
+        ], meta: {} }],
+      ]),
+      errors: [],
+      warnings: [],
+    } as any;
+    const relations = buildRelationInstances(graph);
+    expect(relations[0].metadata).toEqual({ completeness: 0.9 });
+  });
+
+  it('includes multiple attributes in metadata', async () => {
+    const { buildRelationInstances } = await import('../../../src/graph/impact.js');
+    const graph = {
+      nodes: new Map([
+        ['a', { id: 'a', type: 'hypothesis' as const, title: 'A', path: '', status: 'TESTING', confidence: 0.5, tags: [], links: [
+          { target: 'b', relation: 'contradicts', severity: 'WEAKENING', strength: 0.5 },
+        ], meta: {} }],
+      ]),
+      errors: [],
+      warnings: [],
+    } as any;
+    const relations = buildRelationInstances(graph);
+    expect(relations[0].metadata).toEqual({ severity: 'WEAKENING', strength: 0.5 });
   });
 
   it('returns empty array for graph with no links', async () => {

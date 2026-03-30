@@ -135,6 +135,13 @@ export const messages: Record<string, string> = {
   'impact.no_affected': 'No nodes affected.',
   'impact.summary': 'Summary: {total} nodes affected | Max score: {max} | Avg: {avg}',
   'impact.cascade': 'Cascade: {autoTransitions} auto-transition(s), {unresolved} unresolved conflict(s)',
+  'impact.col.node': 'Node',
+  'impact.col.type': 'Type',
+  'impact.col.status': 'Status',
+  'impact.col.score': 'Score',
+  'impact.col.best': 'Best',
+  'impact.col.hops': 'Hops',
+  'impact.col.auto_transition': 'Auto-Transition',
   'impact.error.invalid_status': "Status '{status}' is not valid for type '{type}'",
   'impact.error.orchestrator': "Orchestrator error: {error}",
 };

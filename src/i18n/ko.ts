@@ -135,6 +135,13 @@ export const messages: Record<string, string> = {
   'impact.no_affected': '영향 받는 노드가 없습니다.',
   'impact.summary': '요약: {total}개 노드 영향 | 최대 점수: {max} | 평균: {avg}',
   'impact.cascade': '캐스케이드: {autoTransitions}개 자동 전이, {unresolved}개 미해결 충돌',
+  'impact.col.node': '노드',
+  'impact.col.type': '타입',
+  'impact.col.status': '상태',
+  'impact.col.score': '점수',
+  'impact.col.best': '최고',
+  'impact.col.hops': '홉',
+  'impact.col.auto_transition': '자동전이',
   'impact.error.invalid_status': "타입 '{type}'에 대해 상태 '{status}'은(는) 유효하지 않습니다",
   'impact.error.orchestrator': "오케스트레이터 오류: {error}",
 };
