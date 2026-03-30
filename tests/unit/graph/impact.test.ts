@@ -449,45 +449,27 @@ describe('traceImpact edge cases', () => {
   });
 });
 
-// T031: convertCascadeTrace with non-trivial data
+// T031: convertCascadeTrace — direct unit test (no mocking needed)
 describe('convertCascadeTrace with real data', () => {
   it('maps availableManualTransitions and unresolved.conflictingTargets', async () => {
-    vi.resetModules();
-    const mockGraph = {
-      nodes: new Map([
-        ['hyp-001', { id: 'hyp-001', type: 'hypothesis', title: 'H1', path: '', status: 'TESTING', confidence: 0.5, tags: [], links: [], meta: {} }],
-        ['fnd-001', { id: 'fnd-001', type: 'finding', title: 'F1', path: '', status: 'DRAFT', tags: [], links: [], meta: {} }],
-      ]),
-      errors: [],
-      warnings: [],
-    };
-    vi.doMock('../../../src/graph/loader.js', () => ({ loadGraph: async () => mockGraph }));
-    vi.doMock('../../../src/graph/orchestrator-setup.js', () => ({
-      createEmddOrchestrator: () => ({
-        simulate: () => ({
-          ok: true,
-          trace: {
-            trigger: { entityId: 'hyp-001', entityType: 'hypothesis', from: 'TESTING', to: 'SUPPORTED' },
-            steps: [],
-            unresolved: [
-              { entityId: 'fnd-001', entityType: 'finding', conflictingTargets: ['VALIDATED', 'RETRACTED'] },
-            ],
-            availableManualTransitions: [
-              { entityId: 'fnd-001', entityType: 'finding', from: 'DRAFT', to: 'VALIDATED' },
-              { entityId: 'fnd-001', entityType: 'finding', from: 'DRAFT', to: 'RETRACTED' },
-            ],
-            affected: [],
-            finalStates: new Map([['hyp-001', 'SUPPORTED']]),
-            converged: true,
-            rounds: 1,
-          },
-        }),
-      }),
-    }));
+    const { convertCascadeTrace } = await import('../../../src/graph/impact.js');
+    const trace = {
+      trigger: { entityId: 'hyp-001', entityType: 'hypothesis', from: 'TESTING', to: 'SUPPORTED' },
+      steps: [],
+      unresolved: [
+        { entityId: 'fnd-001', entityType: 'finding', conflictingTargets: ['VALIDATED', 'RETRACTED'] },
+      ],
+      availableManualTransitions: [
+        { entityId: 'fnd-001', entityType: 'finding', from: 'DRAFT', to: 'VALIDATED' },
+        { entityId: 'fnd-001', entityType: 'finding', from: 'DRAFT', to: 'RETRACTED' },
+      ],
+      affected: [],
+      finalStates: new Map([['hyp-001', 'SUPPORTED']]),
+      converged: true,
+      rounds: 1,
+    } as any;
 
-    const { traceImpact } = await import('../../../src/graph/impact.js');
-    const report = await traceImpact('/fake', 'hyp-001', { whatIf: 'SUPPORTED' });
-    const ct = report.cascadeTrace!;
+    const ct = convertCascadeTrace(trace)!;
 
     // Verify unresolved.conflictingTargets → candidates[{to}]
     expect(ct.unresolved).toHaveLength(1);
@@ -502,10 +484,6 @@ describe('convertCascadeTrace with real data', () => {
     expect(ct.availableManualTransitions[1]).toEqual({
       entityId: 'fnd-001', entityType: 'finding', from: 'DRAFT', to: 'RETRACTED',
     });
-
-    vi.doUnmock('../../../src/graph/loader.js');
-    vi.doUnmock('../../../src/graph/orchestrator-setup.js');
-    vi.resetModules();
   });
 });
 

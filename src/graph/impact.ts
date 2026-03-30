@@ -169,7 +169,7 @@ async function traceImpactWhatIf(
   };
 }
 
-function convertCascadeTrace(trace: CascadeTrace): ImpactReport['cascadeTrace'] {
+export function convertCascadeTrace(trace: CascadeTrace): ImpactReport['cascadeTrace'] {
   return {
     trigger: trace.trigger,
     steps: trace.steps.map(s => ({
