@@ -128,4 +128,20 @@ export const messages: Record<string, string> = {
   // Check messages (checkConsolidation)
   'check.all_questions_resolved': 'All questions resolved — consider generating new ones',
   'check.experiment_overload': 'Experiment {id} has {count} findings attached (threshold: {threshold}) — consider splitting',
+
+  // Impact analysis
+  'impact.title': 'Impact Analysis: {nodeId} ({currentStatus})',
+  'impact.title_whatif': 'Impact Analysis: {nodeId} ({currentStatus} → {whatIfStatus})',
+  'impact.no_affected': 'No nodes affected.',
+  'impact.summary': 'Summary: {total} nodes affected | Max score: {max} | Avg: {avg}',
+  'impact.cascade': 'Cascade: {autoTransitions} auto-transition(s), {unresolved} unresolved conflict(s)',
+  'impact.col.node': 'Node',
+  'impact.col.type': 'Type',
+  'impact.col.status': 'Status',
+  'impact.col.score': 'Score',
+  'impact.col.best': 'Best',
+  'impact.col.hops': 'Hops',
+  'impact.col.auto_transition': 'Auto-Transition',
+  'impact.error.no_status': "Node '{id}' has no status — cannot simulate what-if",
+  'impact.error.orchestrator': "Orchestrator error: {error}",
 };

@@ -19,6 +19,11 @@ import {
   edgeAttributes,
   edgeAttributeAffinity,
   nodeDisplayOrder,
+  impactClassification,
+  attributeModifiers,
+  impactThreshold,
+  reverseDirectionEdges,
+  unknownStatus,
   type NodeTypeName,
 } from '../schema/schema.config.js';
 
@@ -266,3 +271,51 @@ export const CEREMONY_TRIGGERS = Object.fromEntries(
     readonly [T in keyof (typeof ceremonies)[K]['triggers']]: (typeof ceremonies)[K]['triggers'][T]
   }
 } satisfies Record<string, Record<string, number | boolean>>;
+
+// ── Impact Analysis Constants ───────────────────────────────────────
+
+export type PropagationClass = keyof typeof impactClassification;
+
+export interface EdgeClassificationEntry {
+  classification: PropagationClass;
+  baseFactor: number;
+}
+
+export const EDGE_CLASSIFICATION: Record<string, EdgeClassificationEntry> = {};
+for (const [cls, def] of Object.entries(impactClassification)) {
+  for (const edge of def.edges) {
+    EDGE_CLASSIFICATION[edge] = {
+      classification: cls as PropagationClass,
+      baseFactor: def.baseFactor,
+    };
+  }
+}
+
+export const ATTRIBUTE_MODIFIERS = attributeModifiers;
+
+export const UNKNOWN_STATUS = unknownStatus;
+
+export const IMPACT_THRESHOLD: number = impactThreshold;
+
+export { maxCascadeDepth as MAX_CASCADE_DEPTH } from '../schema/schema.config.js';
+
+/**
+ * Relation definitions for state-engine Orchestrator.
+ * Each forward edge becomes a relation; reverseDirectionEdges use direction: 'reverse'.
+ */
+const reverseSet = new Set<string>(reverseDirectionEdges);
+
+export const RELATION_DEFINITIONS = forwardEdges.map(edge => ({
+  name: edge,
+  source: '*' as const,
+  target: '*' as const,
+  direction: reverseSet.has(edge) ? 'reverse' as const : 'default' as const,
+  metadata: {
+    classification: EDGE_CLASSIFICATION[edge].classification,
+  },
+}));
+
+/** Edge relations with reverse direction (impact flows target→source). */
+export const REVERSE_DIRECTION_EDGES: Set<string> = new Set(
+  RELATION_DEFINITIONS.filter(r => r.direction === 'reverse').map(r => r.name),
+);

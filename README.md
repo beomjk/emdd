@@ -95,7 +95,7 @@ See the [5-minute tutorial](docs/TUTORIAL.md) for a full walkthrough, or the [Qu
 
 ## Using with AI Assistants
 
-EMDD exposes its full graph API via an [MCP server](docs/MCP_SETUP.md) -- 22 tools + 4 guided prompts that form a **session cycle**: `context-loading` (start) → work → `episode-creation` (end) → `consolidation` (maintenance) → `health-review` (review).
+EMDD exposes its full graph API via an [MCP server](docs/MCP_SETUP.md) -- 23 tools + 4 guided prompts that form a **session cycle**: `context-loading` (start) → work → `episode-creation` (end) → `consolidation` (maintenance) → `health-review` (review).
 
 **Claude Code** (one-line setup):
 
@@ -189,6 +189,12 @@ graph LR
 
 Hypotheses move through `PROPOSED -> TESTING -> SUPPORTED / REFUTED / REVISED`. Findings accumulate evidence. When a Finding has sufficient independent support, it is promoted to Knowledge. Refuted hypotheses are preserved -- the knowledge of *why* something failed is itself knowledge.
 
+### Impact Analysis
+
+Before changing a node's status, you can ask: *"If this hypothesis is retracted, what else breaks?"*
+
+`emdd impact hyp-001 --whatIf RETRACTED` traces cascade effects through the graph -- scoring each reachable node by propagation strength (Noisy-OR aggregation across multi-hop paths) and predicting which automatic status transitions would fire. Edges are classified as **conducts** (0.8), **attenuates** (0.4), or **blocks** (0.0), with edge attributes (strength, severity, etc.) further modifying the score. See [Impact Analysis](docs/IMPACT_ANALYSIS.md) for details.
+
 ## CLI Commands
 
 Graph commands accept `--graphDir <path>`, `--lang <en|ko>`, and `--json`. Utility commands (`init`, `graph`, `serve`, `export-html`, `mcp`) accept only their own options as listed below.
@@ -210,7 +216,7 @@ Graph commands accept `--graphDir <path>`, `--lang <en|ko>`, and `--json`. Utili
 <!-- /AUTO:readme-cli-core -->
 
 <details>
-<summary><b>Analysis</b> (13 commands)</summary>
+<summary><b>Analysis</b> (14 commands)</summary>
 
 <!-- AUTO:readme-cli-analysis -->
 <!-- Generated from command registry — DO NOT EDIT -->
@@ -229,6 +235,7 @@ Graph commands accept `--graphDir <path>`, `--lang <en|ko>`, and `--json`. Utili
 | `emdd backlog` | Show project backlog (open items, deferred, checklists) (`--status pending\|done\|deferred\|superseded\|all`) |
 | `emdd analyze-refutation` | Analyze refutation patterns in the graph |
 | `emdd mark-consolidated` | Record a consolidation date to reset episode counting (`--date`) |
+| `emdd impact <nodeId>` | Analyze cascade impact from a node state change (`--whatIf`) |
 <!-- /AUTO:readme-cli-analysis -->
 
 </details>
@@ -271,6 +278,7 @@ See [section 11 of the specification](docs/spec/SPEC_EN.md#11-phased-adoption-gu
 - [Operations](docs/OPERATIONS.md) -- research loops, ceremonies, adoption
 - [Tool Comparison](docs/COMPARISON.md) -- EMDD vs. Obsidian, Zettelkasten, DDP, HDD, nbdev, and more
 - [Glossary](docs/GLOSSARY.md) -- definitions of all EMDD terms
+- [Impact Analysis](docs/IMPACT_ANALYSIS.md) -- cascade impact tracing and what-if simulation
 - [한국어 스펙](docs/spec/SPEC_KO.md) -- Korean specification
 
 <details>

@@ -140,3 +140,60 @@ export type FileOp = WriteFileOp | MkdirOp;
 
 export interface CreateNodePlan { id: string; type: NodeType; path: string; ops: FileOp[]; }
 export interface CreateEdgePlan { source: string; target: string; relation: string; ops: FileOp[]; skipped?: boolean; }
+
+// ── Impact Analysis Types ──────────────────────────────────────────
+
+export type { PropagationClass, EdgeClassificationEntry } from './derive-constants.js';
+
+export interface ImpactReport {
+  seed: {
+    nodeId: string;
+    nodeType: NodeType;
+    currentStatus: string;
+    whatIfStatus?: string;
+  };
+  impactedNodes: ImpactedNode[];
+  cascadeTrace?: {
+    trigger: { entityId: string; entityType: string; from: string; to: string };
+    steps: Array<{ entityId: string; entityType: string; from: string; to: string; round: number; triggeredBy: string[] }>;
+    unresolved: Array<{ entityId: string; entityType: string; candidates: Array<{ to: string }> }>;
+    availableManualTransitions: Array<{ entityId: string; entityType: string; from: string; to: string }>;
+    affected: string[];
+    finalStates: Record<string, string>;
+    converged: boolean;
+    rounds: number;
+  };
+  summary: {
+    totalAffected: number;
+    maxScore: number;
+    avgScore: number;
+    affectedByType: Record<string, number>;
+  };
+}
+
+export interface ImpactedNode {
+  nodeId: string;
+  nodeType: NodeType;
+  currentStatus: string;
+  aggregateScore: number;
+  bestPathScore: number;
+  /** BFS hop count from seed. -1 indicates cascade-only impact (orchestrator-affected, not BFS-reachable). */
+  depth: number;
+  bestPath: string[];
+  bestPathEdges: string[];
+  pathCount: number;
+  autoTransition?: {
+    from: string;
+    to: string;
+    matchedIds: string[];
+  };
+}
+
+export interface ImpactScoringState {
+  complementProduct: number;
+  bestPathScore: number;
+  bestPath: string[];
+  bestPathEdges: string[];
+  depth: number;
+  pathCount: number;
+}

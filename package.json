@@ -43,7 +43,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@beomjk/state-engine": "^0.1.2",
+    "@beomjk/state-engine": "^0.1.4",
     "@hono/node-server": "^1.19.11",
     "@modelcontextprotocol/sdk": "^1.27.1",
     "chalk": "^5.6.2",

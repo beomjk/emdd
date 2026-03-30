@@ -50,6 +50,7 @@ export { detectTransitions } from './transitions.js';
 export { propagateConfidence } from './confidence.js';
 export { checkKillCriteria } from './kill-criterion.js';
 export { listBranchGroups } from './branch-groups.js';
+export { traceImpact } from './impact.js';
 export { generateIndex } from './index-generator.js';
 export { getBacklog } from './backlog.js';
 import { generateIndex as _generateIndex } from './index-generator.js';

@@ -30,9 +30,9 @@ describe('MCP Server — server metadata', () => {
     expect(info?.version).toBe(VERSION);
   });
 
-  it('lists 22 tools', async () => {
+  it('lists 23 tools', async () => {
     const result = await client.listTools();
-    expect(result.tools).toHaveLength(22);
+    expect(result.tools).toHaveLength(23);
     const names = result.tools.map(t => t.name).sort();
     expect(names).toEqual([
       'analyze-refutation',
@@ -46,6 +46,7 @@ describe('MCP Server — server metadata', () => {
       'graph-gaps',
       'graph-neighbors',
       'health',
+      'impact-analysis',
       'index-graph',
       'kill-check',
       'lint',

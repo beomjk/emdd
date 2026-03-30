@@ -27,6 +27,7 @@ import { lintDef } from './commands/lint.js';
 import { backlogDef } from './commands/backlog.js';
 import { analyzeRefutationDef } from './commands/analyze-refutation.js';
 import { markConsolidatedDef } from './commands/mark-consolidated.js';
+import { impactDef } from './commands/impact.js';
 
 export function createDefaultRegistry(): CommandRegistry {
   const registry = new CommandRegistry();
@@ -58,6 +59,7 @@ export function createDefaultRegistry(): CommandRegistry {
   registry.register(backlogDef);
   registry.register(analyzeRefutationDef);
   registry.register(markConsolidatedDef);
+  registry.register(impactDef);
 
   return registry;
 }
