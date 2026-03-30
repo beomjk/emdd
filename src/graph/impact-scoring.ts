@@ -6,8 +6,8 @@
  */
 import type { Link, Graph, ImpactScoringState, EdgeClassificationEntry } from './types.js';
 import { ATTRIBUTE_MODIFIERS, REVERSE_DIRECTION_EDGES, MAX_CASCADE_DEPTH } from './types.js';
-export { EDGE_CLASSIFICATION, IMPACT_THRESHOLD } from './types.js';
 import { EDGE_CLASSIFICATION, IMPACT_THRESHOLD } from './types.js';
+export { EDGE_CLASSIFICATION, IMPACT_THRESHOLD };
 
 function lookupModifier(category: keyof typeof ATTRIBUTE_MODIFIERS, value: string): number {
   const mod = (ATTRIBUTE_MODIFIERS[category] as Record<string, number>)[value];

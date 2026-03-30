@@ -449,6 +449,66 @@ describe('traceImpact edge cases', () => {
   });
 });
 
+// T031: convertCascadeTrace with non-trivial data
+describe('convertCascadeTrace with real data', () => {
+  it('maps availableManualTransitions and unresolved.conflictingTargets', async () => {
+    vi.resetModules();
+    const mockGraph = {
+      nodes: new Map([
+        ['hyp-001', { id: 'hyp-001', type: 'hypothesis', title: 'H1', path: '', status: 'TESTING', confidence: 0.5, tags: [], links: [], meta: {} }],
+        ['fnd-001', { id: 'fnd-001', type: 'finding', title: 'F1', path: '', status: 'DRAFT', tags: [], links: [], meta: {} }],
+      ]),
+      errors: [],
+      warnings: [],
+    };
+    vi.doMock('../../../src/graph/loader.js', () => ({ loadGraph: async () => mockGraph }));
+    vi.doMock('../../../src/graph/orchestrator-setup.js', () => ({
+      createEmddOrchestrator: () => ({
+        simulate: () => ({
+          ok: true,
+          trace: {
+            trigger: { entityId: 'hyp-001', entityType: 'hypothesis', from: 'TESTING', to: 'SUPPORTED' },
+            steps: [],
+            unresolved: [
+              { entityId: 'fnd-001', entityType: 'finding', conflictingTargets: ['VALIDATED', 'RETRACTED'] },
+            ],
+            availableManualTransitions: [
+              { entityId: 'fnd-001', entityType: 'finding', from: 'DRAFT', to: 'VALIDATED' },
+              { entityId: 'fnd-001', entityType: 'finding', from: 'DRAFT', to: 'RETRACTED' },
+            ],
+            affected: [],
+            finalStates: new Map([['hyp-001', 'SUPPORTED']]),
+            converged: true,
+            rounds: 1,
+          },
+        }),
+      }),
+    }));
+
+    const { traceImpact } = await import('../../../src/graph/impact.js');
+    const report = await traceImpact('/fake', 'hyp-001', { whatIf: 'SUPPORTED' });
+    const ct = report.cascadeTrace!;
+
+    // Verify unresolved.conflictingTargets → candidates[{to}]
+    expect(ct.unresolved).toHaveLength(1);
+    expect(ct.unresolved[0].entityId).toBe('fnd-001');
+    expect(ct.unresolved[0].candidates).toEqual([{ to: 'VALIDATED' }, { to: 'RETRACTED' }]);
+
+    // Verify availableManualTransitions mapping
+    expect(ct.availableManualTransitions).toHaveLength(2);
+    expect(ct.availableManualTransitions[0]).toEqual({
+      entityId: 'fnd-001', entityType: 'finding', from: 'DRAFT', to: 'VALIDATED',
+    });
+    expect(ct.availableManualTransitions[1]).toEqual({
+      entityId: 'fnd-001', entityType: 'finding', from: 'DRAFT', to: 'RETRACTED',
+    });
+
+    vi.doUnmock('../../../src/graph/loader.js');
+    vi.doUnmock('../../../src/graph/orchestrator-setup.js');
+    vi.resetModules();
+  });
+});
+
 // T027: buildRelationInstances unit tests
 describe('buildRelationInstances', () => {
   it('converts graph links to flat relation instances', async () => {
@@ -628,26 +688,49 @@ describe('impact format', () => {
     const { impactDef } = await import('../../../src/registry/commands/impact.js');
     const mockReport = {
       seed: { nodeId: 'knw-001', nodeType: 'knowledge', currentStatus: 'ACTIVE' },
-      impactedNodes: [{
-        nodeId: 'hyp-001',
-        nodeType: 'hypothesis',
-        currentStatus: 'TESTING',
-        aggregateScore: 0.80,
-        bestPathScore: 0.80,
-        depth: 1,
-        bestPath: ['knw-001', 'hyp-001'],
-        bestPathEdges: ['supports'],
-        pathCount: 1,
-      }],
-      summary: { totalAffected: 1, maxScore: 0.80, avgScore: 0.80, affectedByType: { hypothesis: 1 } },
+      impactedNodes: [
+        {
+          nodeId: 'hyp-001',
+          nodeType: 'hypothesis',
+          currentStatus: 'TESTING',
+          aggregateScore: 0.80,
+          bestPathScore: 0.80,
+          depth: 1,
+          bestPath: ['knw-001', 'hyp-001'],
+          bestPathEdges: ['supports'],
+          pathCount: 1,
+        },
+        {
+          nodeId: 'knw-002',
+          nodeType: 'knowledge',
+          currentStatus: 'ACTIVE',
+          aggregateScore: 0.40,
+          bestPathScore: 0.40,
+          depth: 2,
+          bestPath: ['knw-001', 'hyp-001', 'knw-002'],
+          bestPathEdges: ['supports', 'informs'],
+          pathCount: 1,
+        },
+      ],
+      summary: { totalAffected: 2, maxScore: 0.80, avgScore: 0.60, affectedByType: { hypothesis: 1, knowledge: 1 } },
     };
-    // Should not throw and should produce valid output regardless of locale
-    const output = impactDef.format(mockReport);
+    // Set Korean locale to exercise CJK column headers (노드, 유형, 상태, etc.)
+    const origLang = process.env.EMDD_LANG;
+    process.env.EMDD_LANG = 'ko';
+    // Re-import to pick up locale
+    vi.resetModules();
+    const { impactDef: impactDefKo } = await import('../../../src/registry/commands/impact.js');
+    const output = impactDefKo.format(mockReport);
+    process.env.EMDD_LANG = origLang;
+    vi.resetModules();
+
     expect(output).toContain('hyp-001');
-    // Verify each row has consistent structure (no misaligned columns)
-    const lines = output.split('\n').filter(l => l.includes('hyp-001'));
-    expect(lines.length).toBe(1);
-    expect(lines[0]).toContain('0.80');
+    expect(output).toContain('knw-002');
+    // Verify each data row has consistent structure
+    const dataLines = output.split('\n').filter(l => l.includes('hyp-001') || l.includes('knw-002'));
+    expect(dataLines.length).toBe(2);
+    expect(dataLines[0]).toContain('0.80');
+    expect(dataLines[1]).toContain('0.40');
   });
 
   it('format handles empty results', async () => {

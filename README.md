@@ -95,7 +95,7 @@ See the [5-minute tutorial](docs/TUTORIAL.md) for a full walkthrough, or the [Qu
 
 ## Using with AI Assistants
 
-EMDD exposes its full graph API via an [MCP server](docs/MCP_SETUP.md) -- 22 tools + 4 guided prompts that form a **session cycle**: `context-loading` (start) → work → `episode-creation` (end) → `consolidation` (maintenance) → `health-review` (review).
+EMDD exposes its full graph API via an [MCP server](docs/MCP_SETUP.md) -- 23 tools + 4 guided prompts that form a **session cycle**: `context-loading` (start) → work → `episode-creation` (end) → `consolidation` (maintenance) → `health-review` (review).
 
 **Claude Code** (one-line setup):
 
@@ -210,7 +210,7 @@ Graph commands accept `--graphDir <path>`, `--lang <en|ko>`, and `--json`. Utili
 <!-- /AUTO:readme-cli-core -->
 
 <details>
-<summary><b>Analysis</b> (13 commands)</summary>
+<summary><b>Analysis</b> (14 commands)</summary>
 
 <!-- AUTO:readme-cli-analysis -->
 <!-- Generated from command registry — DO NOT EDIT -->

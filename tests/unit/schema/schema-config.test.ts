@@ -8,6 +8,7 @@ import {
   impactClassification,
   attributeModifiers,
   validValues,
+  reverseDirectionEdges,
 } from '../../../src/schema/schema.config.js';
 
 describe('schema.config referential integrity', () => {
@@ -84,6 +85,13 @@ describe('schema.config referential integrity', () => {
       .toEqual([...validValues.impacts].sort());
     expect(Object.keys(attributeModifiers.dependencyType).sort())
       .toEqual([...validValues.dependencyTypes].sort());
+  });
+
+  it('reverseDirectionEdges are a subset of forwardEdges', () => {
+    const forwardSet = new Set<string>(forwardEdges);
+    for (const edge of reverseDirectionEdges) {
+      expect(forwardSet.has(edge), `reverseDirectionEdge "${edge}" not in forward edges`).toBe(true);
+    }
   });
 
   it('edge categories only contain forward edges', () => {
