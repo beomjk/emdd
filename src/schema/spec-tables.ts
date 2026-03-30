@@ -12,6 +12,11 @@ import {
   reverseEdges,
   thresholds,
   transitionPolicy,
+  impactClassification,
+  attributeModifiers,
+  impactThreshold,
+  maxCascadeDepth,
+  reverseDirectionEdges,
   type NodeTypeName,
 } from './schema.config.js';
 import { ALL_PRESET_FNS } from './preset-names.js';
@@ -41,6 +46,9 @@ const GENERATORS: Record<string, () => string> = {
   'transition-rules': generateTransitionRulesTable,
   // manual-transitions: generator ready; add <!-- AUTO:manual-transitions --> marker to SPEC docs to activate
   'manual-transitions': generateManualTransitionsTable,
+  'impact-edge-classification': generateImpactEdgeClassificationTable,
+  'impact-attribute-modifiers': generateImpactAttributeModifiersTable,
+  'impact-config': generateImpactConfigTable,
 };
 
 function generateNodeTypesTable(): string {
@@ -123,6 +131,55 @@ function generateTransitionRulesTable(): string {
 function generateManualTransitionsTable(): string {
   const docs = generateDocs(schemaDef, { tables: ['manual-transitions'] });
   return `<!-- Generated via @beomjk/state-engine — DO NOT EDIT -->\n${docs['manual-transitions']}`;
+}
+
+// ── Impact Analysis Tables ──────────────────────────────────────────
+
+function generateImpactEdgeClassificationTable(): string {
+  const lines = [
+    '<!-- Generated from schema.config.ts — DO NOT EDIT -->',
+    '| Class | Base Factor | Edges | Meaning |',
+    '|-------|------------|-------|---------|',
+  ];
+  const meanings: Record<string, string> = {
+    conducts: 'Strong causal/evidential link — impact passes through readily',
+    attenuates: 'Weaker or indirect link — impact is dampened',
+    blocks: 'Structural/organizational link — impact does not propagate',
+  };
+  for (const [cls, def] of Object.entries(impactClassification)) {
+    const edges = [...def.edges].map(e => `\`${e}\``).join(', ');
+    lines.push(`| **${cls}** | ${def.baseFactor} | ${edges} | ${meanings[cls] ?? ''} |`);
+  }
+  return lines.join('\n');
+}
+
+function generateImpactAttributeModifiersTable(): string {
+  const lines = [
+    '<!-- Generated from schema.config.ts — DO NOT EDIT -->',
+    '| Attribute | Values | Multiplier |',
+    '|-----------|--------|-----------|',
+    '| **strength** | 0.0 – 1.0 | Direct multiplier |',
+    '| **completeness** | 0.0 – 1.0 | Direct multiplier |',
+  ];
+  for (const [attr, values] of Object.entries(attributeModifiers)) {
+    const parts = Object.entries(values).map(([k, v]) => `${k} (${v})`).join(', ');
+    lines.push(`| **${attr}** | ${parts} | |`);
+  }
+  return lines.join('\n');
+}
+
+function generateImpactConfigTable(): string {
+  const lines = [
+    '<!-- Generated from schema.config.ts — DO NOT EDIT -->',
+    '| Constant | Default | Purpose |',
+    '|----------|---------|---------|',
+    `| \`impactClassification\` | see above | Edge-to-propagation-class mapping |`,
+    `| \`attributeModifiers\` | see above | Attribute value multipliers |`,
+    `| \`impactThreshold\` | ${impactThreshold} | Minimum score to continue propagation |`,
+    `| \`maxCascadeDepth\` | ${maxCascadeDepth} | Maximum BFS hops |`,
+    `| \`reverseDirectionEdges\` | \`${JSON.stringify([...reverseDirectionEdges])}\` | Edges where impact flows target→source |`,
+  ];
+  return lines.join('\n');
 }
 
 // ── Public API ──────────────────────────────────────────────────────
@@ -230,6 +287,7 @@ export async function runAutoMarkerCli(
 const SPEC_FILES = [
   'docs/spec/SPEC_EN.md',
   'docs/spec/SPEC_KO.md',
+  'docs/IMPACT_ANALYSIS.md',
 ];
 
 async function main(): Promise<void> {

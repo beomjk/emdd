@@ -56,23 +56,29 @@ Nodes with `Hops: N/A` are affected only by cascade transitions (not reachable v
 
 Every forward edge is classified into one of three propagation categories:
 
+<!-- AUTO:impact-edge-classification -->
+<!-- Generated from schema.config.ts — DO NOT EDIT -->
 | Class | Base Factor | Edges | Meaning |
 |-------|------------|-------|---------|
 | **conducts** | 0.8 | `supports`, `contradicts`, `confirms`, `depends_on`, `revises`, `tests` | Strong causal/evidential link — impact passes through readily |
 | **attenuates** | 0.4 | `informs`, `extends`, `produces`, `spawns`, `answers`, `promotes`, `resolves` | Weaker or indirect link — impact is dampened |
-| **blocks** | 0.0 | `relates_to`, `part_of`, `context_for` | Structural/organizational link — impact does not propagate |
+| **blocks** | 0 | `relates_to`, `part_of`, `context_for` | Structural/organizational link — impact does not propagate |
+<!-- /AUTO:impact-edge-classification -->
 
 ### Attribute Modifiers
 
 Edge attributes further modify the base factor:
 
+<!-- AUTO:impact-attribute-modifiers -->
+<!-- Generated from schema.config.ts — DO NOT EDIT -->
 | Attribute | Values | Multiplier |
 |-----------|--------|-----------|
 | **strength** | 0.0 – 1.0 | Direct multiplier |
 | **completeness** | 0.0 – 1.0 | Direct multiplier |
-| **severity** | FATAL (1.0), WEAKENING (0.7), TENSION (0.4) | |
-| **impact** | DECISIVE (1.0), SIGNIFICANT (0.7), MINOR (0.3) | |
-| **dependencyType** | LOGICAL (1.0), PRACTICAL (0.7), TEMPORAL (0.5) | |
+| **severity** | FATAL (1), WEAKENING (0.7), TENSION (0.4) | |
+| **impact** | DECISIVE (1), SIGNIFICANT (0.7), MINOR (0.3) | |
+| **dependencyType** | LOGICAL (1), PRACTICAL (0.7), TEMPORAL (0.5) | |
+<!-- /AUTO:impact-attribute-modifiers -->
 
 The effective edge factor is: `baseFactor × strength × severity × impact × dependencyType × completeness`, clamped to [0, 1].
 
@@ -113,12 +119,15 @@ The tool returns a structured JSON response with `seed`, `impactedNodes`, `casca
 
 All impact analysis constants are defined in `src/schema/schema.config.ts`:
 
+<!-- AUTO:impact-config -->
+<!-- Generated from schema.config.ts — DO NOT EDIT -->
 | Constant | Default | Purpose |
 |----------|---------|---------|
 | `impactClassification` | see above | Edge-to-propagation-class mapping |
 | `attributeModifiers` | see above | Attribute value multipliers |
 | `impactThreshold` | 0.01 | Minimum score to continue propagation |
 | `maxCascadeDepth` | 10 | Maximum BFS hops |
-| `reverseDirectionEdges` | `['depends_on']` | Edges where impact flows target→source |
+| `reverseDirectionEdges` | `["depends_on"]` | Edges where impact flows target→source |
+<!-- /AUTO:impact-config -->
 
 To customize, edit `schema.config.ts` and run `npm run build`.

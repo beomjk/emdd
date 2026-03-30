@@ -54,8 +54,37 @@ describe('generateTable', () => {
     expect(table).toContain('| ANY | DEFERRED |');
   });
 
+  it('generates impact-edge-classification table', () => {
+    const table = generateTable('impact-edge-classification');
+    expect(table).toContain('| Class | Base Factor | Edges | Meaning |');
+    expect(table).toContain('**conducts**');
+    expect(table).toContain('`supports`');
+    expect(table).toContain('**attenuates**');
+    expect(table).toContain('`informs`');
+    expect(table).toContain('**blocks**');
+    expect(table).toContain('`relates_to`');
+  });
+
+  it('generates impact-attribute-modifiers table', () => {
+    const table = generateTable('impact-attribute-modifiers');
+    expect(table).toContain('| Attribute | Values | Multiplier |');
+    expect(table).toContain('**severity**');
+    expect(table).toContain('FATAL');
+    expect(table).toContain('**dependencyType**');
+    expect(table).toContain('LOGICAL');
+  });
+
+  it('generates impact-config table', () => {
+    const table = generateTable('impact-config');
+    expect(table).toContain('| Constant | Default | Purpose |');
+    expect(table).toContain('`impactThreshold`');
+    expect(table).toContain('`maxCascadeDepth`');
+    expect(table).toContain('`reverseDirectionEdges`');
+    expect(table).toContain('depends_on');
+  });
+
   it('includes auto-generation attribution comment (FR-008)', () => {
-    for (const marker of ['node-types', 'statuses', 'edge-types', 'reverse-labels', 'thresholds']) {
+    for (const marker of ['node-types', 'statuses', 'edge-types', 'reverse-labels', 'thresholds', 'impact-edge-classification', 'impact-attribute-modifiers', 'impact-config']) {
       const table = generateTable(marker);
       expect(table).toContain('<!-- Generated from schema.config.ts — DO NOT EDIT -->');
     }
