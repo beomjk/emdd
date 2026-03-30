@@ -75,7 +75,8 @@ export const impactDef: CommandDef<typeof schema, ImpactReport> = {
       const auto = node.autoTransition
         ? `${node.autoTransition.from} → ${node.autoTransition.to}`
         : '—';
-      lines.push(` ${padCJK(node.nodeId, 10)} ${padCJK(node.nodeType, 12)} ${padCJK(node.currentStatus, 12)} ${node.aggregateScore.toFixed(2).padEnd(7)} ${node.bestPathScore.toFixed(2).padEnd(7)} ${String(node.depth).padEnd(5)} ${auto}`);
+      const hops = node.depth === -1 ? 'N/A' : String(node.depth);
+      lines.push(` ${padCJK(node.nodeId, 10)} ${padCJK(node.nodeType, 12)} ${padCJK(node.currentStatus, 12)} ${node.aggregateScore.toFixed(2).padEnd(7)} ${node.bestPathScore.toFixed(2).padEnd(7)} ${hops.padEnd(5)} ${auto}`);
     }
 
     lines.push('');

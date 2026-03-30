@@ -28,6 +28,14 @@ describe('computeEdgeFactor NaN handling', () => {
     expect(Number.isFinite(factor)).toBe(true);
   });
 
+  it('returns 0 for NaN completeness (defensive guard)', async () => {
+    const { computeEdgeFactor, EDGE_CLASSIFICATION } = await import('../../../src/graph/impact-scoring.js');
+    const link = { target: 'b', relation: 'supports', completeness: NaN };
+    const factor = computeEdgeFactor(link, EDGE_CLASSIFICATION);
+    expect(factor).toBe(0);
+    expect(Number.isFinite(factor)).toBe(true);
+  });
+
   it('does not pollute BFS results with NaN scores', async () => {
     const { computeImpactScores, EDGE_CLASSIFICATION, IMPACT_THRESHOLD } = await import('../../../src/graph/impact-scoring.js');
     const graph = makeGraph([
