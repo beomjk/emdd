@@ -487,6 +487,34 @@ describe('convertCascadeTrace with real data', () => {
   });
 });
 
+// T032: buildImpactedNodes skips graph-absent nodes from BFS scoring
+describe('traceImpact excludes dangling link targets', () => {
+  it('BFS-scored node absent from graph is excluded from impactedNodes', async () => {
+    vi.resetModules();
+    // Graph where A→missing (dangling) and A→B (valid)
+    const mockGraph = {
+      nodes: new Map([
+        ['A', { id: 'A', type: 'hypothesis', title: 'A', path: '', status: 'TESTING', confidence: 0.5, tags: [], links: [
+          { target: 'missing-node', relation: 'supports' },
+          { target: 'B', relation: 'supports' },
+        ], meta: {} }],
+        ['B', { id: 'B', type: 'hypothesis', title: 'B', path: '', status: 'PROPOSED', confidence: 0.5, tags: [], links: [], meta: {} }],
+      ]),
+      errors: [],
+      warnings: [],
+    };
+    vi.doMock('../../../src/graph/loader.js', () => ({ loadGraph: async () => mockGraph }));
+    const { traceImpact } = await import('../../../src/graph/impact.js');
+    const report = await traceImpact('/fake', 'A');
+    // missing-node gets a BFS scoring entry but should be excluded from impactedNodes
+    const ids = report.impactedNodes.map(n => n.nodeId);
+    expect(ids).toContain('B');
+    expect(ids).not.toContain('missing-node');
+    vi.doUnmock('../../../src/graph/loader.js');
+    vi.resetModules();
+  });
+});
+
 // T027: buildRelationInstances unit tests
 describe('buildRelationInstances', () => {
   it('converts graph links to flat relation instances', async () => {

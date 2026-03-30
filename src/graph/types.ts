@@ -148,7 +148,7 @@ export type { PropagationClass, EdgeClassificationEntry } from './derive-constan
 export interface ImpactReport {
   seed: {
     nodeId: string;
-    nodeType: string;
+    nodeType: NodeType;
     currentStatus: string;
     whatIfStatus?: string;
   };
@@ -173,7 +173,7 @@ export interface ImpactReport {
 
 export interface ImpactedNode {
   nodeId: string;
-  nodeType: string;
+  nodeType: NodeType;
   currentStatus: string;
   aggregateScore: number;
   bestPathScore: number;
