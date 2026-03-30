@@ -45,7 +45,7 @@ export function computeEdgeFactor(
     factor *= link.completeness;
   }
 
-  return Math.max(0, Math.min(1, factor));
+  return Number.isFinite(factor) ? Math.max(0, Math.min(1, factor)) : 0;
 }
 
 // ── aggregateNoisyOr ────────────────────────────────────────────────
