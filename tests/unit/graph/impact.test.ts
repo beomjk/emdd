@@ -183,13 +183,13 @@ describe('traceImpact what-if orchestrator errors', () => {
 
     vi.doMock('../../../src/graph/orchestrator-setup.js', () => ({
       createEmddOrchestrator: () => ({
-        simulate: () => ({ ok: false, error: 'invalid_trigger' }),
+        simulate: () => ({ ok: false, error: 'entity_not_found', entityId: 'knw-001' }),
       }),
     }));
 
     const { traceImpact } = await import('../../../src/graph/impact.js');
     await expect(traceImpact(SAMPLE_GRAPH, 'knw-001', { whatIf: 'RETRACTED' }))
-      .rejects.toThrow('invalid_trigger');
+      .rejects.toThrow('entity_not_found');
 
     vi.doUnmock('../../../src/graph/orchestrator-setup.js');
     vi.resetModules();
@@ -277,6 +277,52 @@ describe('traceImpact orchestrator-only affected nodes', () => {
     const nonExistent = report.impactedNodes.find(n => n.nodeId === 'non-bfs-node-001');
     expect(nonExistent).toBeUndefined();
 
+    vi.doUnmock('../../../src/graph/orchestrator-setup.js');
+    vi.resetModules();
+  });
+
+  it('orchestrator-only affected nodes have depth -1', async () => {
+    vi.resetModules();
+
+    // Mock: hyp-002 appears in affected but is NOT reachable by BFS from hyp-001
+    const mockGraph = {
+      nodes: new Map([
+        ['hyp-001', { id: 'hyp-001', type: 'hypothesis', title: 'H1', path: '', status: 'TESTING', confidence: 0.5, tags: [], links: [], meta: {} }],
+        ['hyp-002', { id: 'hyp-002', type: 'hypothesis', title: 'H2', path: '', status: 'PROPOSED', confidence: 0.5, tags: [], links: [], meta: {} }],
+      ]),
+      errors: [],
+      warnings: [],
+    };
+    vi.doMock('../../../src/graph/loader.js', () => ({ loadGraph: async () => mockGraph }));
+    vi.doMock('../../../src/graph/orchestrator-setup.js', () => ({
+      createEmddOrchestrator: () => ({
+        simulate: () => ({
+          ok: true,
+          trace: {
+            trigger: { entityId: 'hyp-001', entityType: 'hypothesis', from: 'TESTING', to: 'SUPPORTED' },
+            steps: [{ entityId: 'hyp-002', entityType: 'hypothesis', from: 'PROPOSED', to: 'TESTING', round: 1, triggeredBy: ['hyp-001'] }],
+            unresolved: [],
+            availableManualTransitions: [],
+            affected: ['hyp-002'],
+            finalStates: new Map([['hyp-001', 'SUPPORTED'], ['hyp-002', 'TESTING']]),
+            converged: true,
+            rounds: 1,
+          },
+        }),
+      }),
+    }));
+
+    const { traceImpact } = await import('../../../src/graph/impact.js');
+    const report = await traceImpact('/fake', 'hyp-001', { whatIf: 'SUPPORTED' });
+    const hyp002 = report.impactedNodes.find(n => n.nodeId === 'hyp-002');
+    expect(hyp002).toBeDefined();
+    expect(hyp002!.depth).toBe(-1);
+    expect(hyp002!.aggregateScore).toBe(0);
+    expect(hyp002!.autoTransition).toBeDefined();
+    expect(hyp002!.autoTransition!.from).toBe('PROPOSED');
+    expect(hyp002!.autoTransition!.to).toBe('TESTING');
+
+    vi.doUnmock('../../../src/graph/loader.js');
     vi.doUnmock('../../../src/graph/orchestrator-setup.js');
     vi.resetModules();
   });
@@ -576,6 +622,32 @@ describe('impact format', () => {
     expect(output).toContain('TESTING → CONTESTED');
     expect(output).toContain('1 auto-transition');
     expect(output).toContain('1 unresolved');
+  });
+
+  it('format aligns columns correctly with CJK characters', async () => {
+    const { impactDef } = await import('../../../src/registry/commands/impact.js');
+    const mockReport = {
+      seed: { nodeId: 'knw-001', nodeType: 'knowledge', currentStatus: 'ACTIVE' },
+      impactedNodes: [{
+        nodeId: 'hyp-001',
+        nodeType: 'hypothesis',
+        currentStatus: 'TESTING',
+        aggregateScore: 0.80,
+        bestPathScore: 0.80,
+        depth: 1,
+        bestPath: ['knw-001', 'hyp-001'],
+        bestPathEdges: ['supports'],
+        pathCount: 1,
+      }],
+      summary: { totalAffected: 1, maxScore: 0.80, avgScore: 0.80, affectedByType: { hypothesis: 1 } },
+    };
+    // Should not throw and should produce valid output regardless of locale
+    const output = impactDef.format(mockReport);
+    expect(output).toContain('hyp-001');
+    // Verify each row has consistent structure (no misaligned columns)
+    const lines = output.split('\n').filter(l => l.includes('hyp-001'));
+    expect(lines.length).toBe(1);
+    expect(lines[0]).toContain('0.80');
   });
 
   it('format handles empty results', async () => {

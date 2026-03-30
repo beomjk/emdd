@@ -41,7 +41,7 @@ export async function traceImpact(
     // Validate what-if status
     const validStatuses = VALID_STATUSES[seedNode.type];
     if (validStatuses && !validStatuses.includes(options.whatIf)) {
-      throw new Error(t('impact.error.invalid_status', { value: options.whatIf, type: seedNode.type, valid: validStatuses.join(', ') }));
+      throw new Error(t('error.invalid_status', { value: options.whatIf, type: seedNode.type, valid: validStatuses.join(', ') }));
     }
     return traceImpactWhatIf(graph, seedNode, options.whatIf);
   }

@@ -311,11 +311,7 @@ export const RELATION_DEFINITIONS = forwardEdges.map(edge => ({
   target: '*' as const,
   direction: reverseSet.has(edge) ? 'reverse' as const : 'default' as const,
   metadata: {
-    classification: ((impactClassification.conducts.edges as readonly string[]).includes(edge)
-      ? 'conducts'
-      : (impactClassification.attenuates.edges as readonly string[]).includes(edge)
-        ? 'attenuates'
-        : 'blocks') as keyof typeof impactClassification,
+    classification: EDGE_CLASSIFICATION[edge].classification,
   },
 }));
 
