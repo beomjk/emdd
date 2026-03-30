@@ -142,6 +142,7 @@ export const messages: Record<string, string> = {
   'impact.col.best': '최고',
   'impact.col.hops': '홉',
   'impact.col.auto_transition': '자동전이',
-  'impact.error.invalid_status': "타입 '{type}'에 대해 상태 '{status}'은(는) 유효하지 않습니다",
+  'impact.error.invalid_status': '타입 {type}에 대한 잘못된 상태 "{value}". 유효한 값: {valid}',
+  'impact.error.no_status': "노드 '{id}'에 상태가 없어 what-if 시뮬레이션이 불가합니다",
   'impact.error.orchestrator': "오케스트레이터 오류: {error}",
 };

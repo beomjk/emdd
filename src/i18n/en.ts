@@ -142,6 +142,7 @@ export const messages: Record<string, string> = {
   'impact.col.best': 'Best',
   'impact.col.hops': 'Hops',
   'impact.col.auto_transition': 'Auto-Transition',
-  'impact.error.invalid_status': "Status '{status}' is not valid for type '{type}'",
+  'impact.error.invalid_status': 'Invalid status "{value}" for {type}. Valid: {valid}',
+  'impact.error.no_status': "Node '{id}' has no status — cannot simulate what-if",
   'impact.error.orchestrator': "Orchestrator error: {error}",
 };

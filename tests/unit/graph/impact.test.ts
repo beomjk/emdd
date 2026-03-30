@@ -321,6 +321,86 @@ describe('traceImpact edge cases', () => {
     const { traceImpact } = await import('../../../src/graph/impact.js');
     await expect(traceImpact(EMPTY_GRAPH, 'knw-001')).rejects.toThrow("not found");
   });
+
+  it('throws distinct error for what-if on status-less seed node', async () => {
+    vi.resetModules();
+    const mockGraph = {
+      nodes: new Map([
+        ['hyp-001', { id: 'hyp-001', type: 'hypothesis', title: 'H1', path: '', tags: [], links: [], meta: {} }],
+      ]),
+      errors: [],
+      warnings: [],
+    };
+    vi.doMock('../../../src/graph/loader.js', () => ({ loadGraph: async () => mockGraph }));
+    const { traceImpact } = await import('../../../src/graph/impact.js');
+    await expect(traceImpact('/fake', 'hyp-001', { whatIf: 'TESTING' }))
+      .rejects.toThrow('no status');
+    vi.doUnmock('../../../src/graph/loader.js');
+    vi.resetModules();
+  });
+
+  it('what-if invalid status error includes valid list', async () => {
+    vi.resetModules();
+    const mockGraph = {
+      nodes: new Map([
+        ['hyp-001', { id: 'hyp-001', type: 'hypothesis', title: 'H1', path: '', status: 'PROPOSED', tags: [], links: [], meta: {} }],
+      ]),
+      errors: [],
+      warnings: [],
+    };
+    vi.doMock('../../../src/graph/loader.js', () => ({ loadGraph: async () => mockGraph }));
+    const { traceImpact } = await import('../../../src/graph/impact.js');
+    await expect(traceImpact('/fake', 'hyp-001', { whatIf: 'BOGUS' }))
+      .rejects.toThrow('Valid:');
+    vi.doUnmock('../../../src/graph/loader.js');
+    vi.resetModules();
+  });
+
+  it('status-less nodes excluded from what-if entities map', async () => {
+    vi.resetModules();
+    const mockGraph = {
+      nodes: new Map([
+        ['hyp-001', { id: 'hyp-001', type: 'hypothesis', title: 'H1', path: '', status: 'TESTING', confidence: 0.5, tags: [], links: [
+          { target: 'fnd-001', relation: 'supports' },
+        ], meta: {} }],
+        ['fnd-001', { id: 'fnd-001', type: 'finding', title: 'F1', path: '', tags: [], links: [], meta: {} }],
+      ]),
+      errors: [],
+      warnings: [],
+    };
+    vi.doMock('../../../src/graph/loader.js', () => ({ loadGraph: async () => mockGraph }));
+    // Mock orchestrator to capture entities
+    let capturedEntities: Map<string, unknown> | undefined;
+    vi.doMock('../../../src/graph/orchestrator-setup.js', () => ({
+      createEmddOrchestrator: () => ({
+        simulate: (entities: Map<string, unknown>) => {
+          capturedEntities = entities;
+          return {
+            ok: true,
+            trace: {
+              trigger: { entityId: 'hyp-001', entityType: 'hypothesis', from: 'TESTING', to: 'PROPOSED' },
+              steps: [],
+              unresolved: [],
+              availableManualTransitions: [],
+              affected: [],
+              finalStates: new Map([['hyp-001', 'PROPOSED']]),
+              converged: true,
+              rounds: 0,
+            },
+          };
+        },
+      }),
+    }));
+    const { traceImpact } = await import('../../../src/graph/impact.js');
+    await traceImpact('/fake', 'hyp-001', { whatIf: 'PROPOSED' });
+    // fnd-001 has no status, should be excluded from entities
+    expect(capturedEntities).toBeDefined();
+    expect(capturedEntities!.has('hyp-001')).toBe(true);
+    expect(capturedEntities!.has('fnd-001')).toBe(false);
+    vi.doUnmock('../../../src/graph/loader.js');
+    vi.doUnmock('../../../src/graph/orchestrator-setup.js');
+    vi.resetModules();
+  });
 });
 
 // T027: buildRelationInstances unit tests

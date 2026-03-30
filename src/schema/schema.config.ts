@@ -318,23 +318,10 @@ export const unknownStatus = 'UNKNOWN' as const;
 // ── Relation Definitions (for Orchestrator) ────────────────────────
 
 /**
- * Relation definitions for state-engine Orchestrator.
- * Each forward edge becomes a relation; depends_on uses direction: 'reverse'
- * per FR-019 (edge directionality).
+ * Edges that use reverse direction for impact propagation.
+ * (impact flows target→source instead of source→target)
  */
-export const relationDefinitions = forwardEdges.map(edge => ({
-  name: edge,
-  source: '*',
-  target: '*',
-  direction: edge === 'depends_on' ? 'reverse' as const : 'default' as const,
-  metadata: {
-    classification: ((impactClassification.conducts.edges as readonly string[]).includes(edge)
-      ? 'conducts'
-      : (impactClassification.attenuates.edges as readonly string[]).includes(edge)
-        ? 'attenuates'
-        : 'blocks') as keyof typeof impactClassification,
-  },
-}));
+export const reverseDirectionEdges = ['depends_on'] as const;
 
 // ── Edge Attributes ─────────────────────────────────────────────────
 

@@ -22,7 +22,7 @@ import {
   impactClassification,
   attributeModifiers,
   impactThreshold,
-  relationDefinitions,
+  reverseDirectionEdges,
   unknownStatus,
   type NodeTypeName,
 } from '../schema/schema.config.js';
@@ -299,9 +299,27 @@ export const IMPACT_THRESHOLD: number = impactThreshold;
 
 export { maxCascadeDepth as MAX_CASCADE_DEPTH } from '../schema/schema.config.js';
 
-export const RELATION_DEFINITIONS = relationDefinitions;
+/**
+ * Relation definitions for state-engine Orchestrator.
+ * Each forward edge becomes a relation; reverseDirectionEdges use direction: 'reverse'.
+ */
+const reverseSet = new Set<string>(reverseDirectionEdges);
+
+export const RELATION_DEFINITIONS = forwardEdges.map(edge => ({
+  name: edge,
+  source: '*' as const,
+  target: '*' as const,
+  direction: reverseSet.has(edge) ? 'reverse' as const : 'default' as const,
+  metadata: {
+    classification: ((impactClassification.conducts.edges as readonly string[]).includes(edge)
+      ? 'conducts'
+      : (impactClassification.attenuates.edges as readonly string[]).includes(edge)
+        ? 'attenuates'
+        : 'blocks') as keyof typeof impactClassification,
+  },
+}));
 
 /** Edge relations with reverse direction (impact flows target→source). */
 export const REVERSE_DIRECTION_EDGES: Set<string> = new Set(
-  relationDefinitions.filter(r => r.direction === 'reverse').map(r => r.name),
+  RELATION_DEFINITIONS.filter(r => r.direction === 'reverse').map(r => r.name),
 );

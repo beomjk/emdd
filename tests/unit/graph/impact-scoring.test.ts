@@ -203,6 +203,14 @@ describe('computeEdgeFactor', () => {
     const link = { target: 'b', relation: 'supports', strength: -0.5 };
     expect(computeEdgeFactor(link, EDGE_CLASSIFICATION)).toBe(0);
   });
+
+  it('unknown attribute modifier value falls back to 1.0 (no attenuation)', async () => {
+    const { computeEdgeFactor, EDGE_CLASSIFICATION } = await import('../../../src/graph/impact-scoring.js');
+    // 'UNKNOWN_SEVERITY' is not in ATTRIBUTE_MODIFIERS.severity → fallback 1.0
+    const link = { target: 'b', relation: 'supports', severity: 'UNKNOWN_SEVERITY' as any };
+    // baseFactor(0.8) × lookupModifier('severity', 'UNKNOWN_SEVERITY') = 0.8 × 1.0
+    expect(computeEdgeFactor(link, EDGE_CLASSIFICATION)).toBeCloseTo(0.8);
+  });
 });
 
 // T005: aggregateNoisyOr() tests
@@ -432,6 +440,25 @@ describe('computeImpactScores BFS traversal', () => {
     ]);
     const scores = computeImpactScores(graph, 'non-existent', { edgeClassification: EDGE_CLASSIFICATION, threshold: IMPACT_THRESHOLD });
     expect(scores.size).toBe(0);
+  });
+
+  it('dangling link target: link to non-existent node does not propagate further', async () => {
+    const { computeImpactScores, EDGE_CLASSIFICATION, IMPACT_THRESHOLD } = await import('../../../src/graph/impact-scoring.js');
+    // A→missing (dangling) and A→B (valid)
+    const graph = makeGraph([
+      makeNode('A', 'hypothesis', 'TESTING', [
+        { target: 'missing-node', relation: 'supports' },
+        { target: 'B', relation: 'supports' },
+      ]),
+      makeNode('B', 'hypothesis', 'TESTING', [{ target: 'C', relation: 'supports' }]),
+      makeNode('C', 'hypothesis', 'PROPOSED'),
+    ]);
+    const scores = computeImpactScores(graph, 'A', { edgeClassification: EDGE_CLASSIFICATION, threshold: IMPACT_THRESHOLD });
+    // missing-node gets a scoring entry but cannot propagate (graph.nodes.get returns undefined)
+    expect(scores.has('missing-node')).toBe(true);
+    // Valid path A→B→C still works
+    expect(scores.has('B')).toBe(true);
+    expect(scores.has('C')).toBe(true);
   });
 
   it('maxDepth: stops propagation at specified depth', async () => {

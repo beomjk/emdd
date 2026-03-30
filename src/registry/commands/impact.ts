@@ -4,6 +4,27 @@ import type { ImpactReport } from '../../graph/types.js';
 import { t } from '../../i18n/index.js';
 import type { CommandDef } from '../types.js';
 
+/** Compute visible width accounting for CJK double-width characters. */
+function displayWidth(str: string): number {
+  let w = 0;
+  for (const ch of str) {
+    const cp = ch.codePointAt(0)!;
+    // CJK Unified Ideographs, Hangul Syllables, common fullwidth ranges
+    w += (cp >= 0x1100 && cp <= 0x115F) || (cp >= 0x2E80 && cp <= 0x303E) ||
+         (cp >= 0x3040 && cp <= 0x9FFF) || (cp >= 0xAC00 && cp <= 0xD7AF) ||
+         (cp >= 0xF900 && cp <= 0xFAFF) || (cp >= 0xFE30 && cp <= 0xFE6F) ||
+         (cp >= 0xFF01 && cp <= 0xFF60) || (cp >= 0xFFE0 && cp <= 0xFFE6) ||
+         (cp >= 0x20000 && cp <= 0x2FFFF) ? 2 : 1;
+  }
+  return w;
+}
+
+/** padEnd that respects CJK double-width characters. */
+function padCJK(str: string, width: number): string {
+  const diff = width - displayWidth(str);
+  return diff > 0 ? str + ' '.repeat(diff) : str;
+}
+
 const schema = z.object({
   nodeId: z.string().describe('Seed node ID for impact analysis'),
   whatIf: z.string().optional().describe('Hypothetical status for what-if simulation'),
@@ -47,14 +68,14 @@ export const impactDef: CommandDef<typeof schema, ImpactReport> = {
     }
 
     // Table header
-    lines.push(` ${t('impact.col.node').padEnd(10)} ${t('impact.col.type').padEnd(12)} ${t('impact.col.status').padEnd(12)} ${t('impact.col.score').padEnd(7)} ${t('impact.col.best').padEnd(7)} ${t('impact.col.hops').padEnd(5)} ${t('impact.col.auto_transition')}`);
+    lines.push(` ${padCJK(t('impact.col.node'), 10)} ${padCJK(t('impact.col.type'), 12)} ${padCJK(t('impact.col.status'), 12)} ${padCJK(t('impact.col.score'), 7)} ${padCJK(t('impact.col.best'), 7)} ${padCJK(t('impact.col.hops'), 5)} ${t('impact.col.auto_transition')}`);
     lines.push(` ${'─'.repeat(10)} ${'─'.repeat(12)} ${'─'.repeat(12)} ${'─'.repeat(7)} ${'─'.repeat(7)} ${'─'.repeat(5)} ${'─'.repeat(15)}`);
 
     for (const node of report.impactedNodes) {
       const auto = node.autoTransition
         ? `${node.autoTransition.from} → ${node.autoTransition.to}`
         : '—';
-      lines.push(` ${node.nodeId.padEnd(10)} ${node.nodeType.padEnd(12)} ${node.currentStatus.padEnd(12)} ${node.aggregateScore.toFixed(2).padEnd(7)} ${node.bestPathScore.toFixed(2).padEnd(7)} ${String(node.depth).padEnd(5)} ${auto}`);
+      lines.push(` ${padCJK(node.nodeId, 10)} ${padCJK(node.nodeType, 12)} ${padCJK(node.currentStatus, 12)} ${node.aggregateScore.toFixed(2).padEnd(7)} ${node.bestPathScore.toFixed(2).padEnd(7)} ${String(node.depth).padEnd(5)} ${auto}`);
     }
 
     lines.push('');
