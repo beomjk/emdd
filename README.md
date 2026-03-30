@@ -189,6 +189,12 @@ graph LR
 
 Hypotheses move through `PROPOSED -> TESTING -> SUPPORTED / REFUTED / REVISED`. Findings accumulate evidence. When a Finding has sufficient independent support, it is promoted to Knowledge. Refuted hypotheses are preserved -- the knowledge of *why* something failed is itself knowledge.
 
+### Impact Analysis
+
+Before changing a node's status, you can ask: *"If this hypothesis is retracted, what else breaks?"*
+
+`emdd impact hyp-001 --whatIf RETRACTED` traces cascade effects through the graph -- scoring each reachable node by propagation strength (Noisy-OR aggregation across multi-hop paths) and predicting which automatic status transitions would fire. Edges are classified as **conducts** (0.8), **attenuates** (0.4), or **blocks** (0.0), with edge attributes (strength, severity, etc.) further modifying the score. See [Impact Analysis](docs/IMPACT_ANALYSIS.md) for details.
+
 ## CLI Commands
 
 Graph commands accept `--graphDir <path>`, `--lang <en|ko>`, and `--json`. Utility commands (`init`, `graph`, `serve`, `export-html`, `mcp`) accept only their own options as listed below.
@@ -272,6 +278,7 @@ See [section 11 of the specification](docs/spec/SPEC_EN.md#11-phased-adoption-gu
 - [Operations](docs/OPERATIONS.md) -- research loops, ceremonies, adoption
 - [Tool Comparison](docs/COMPARISON.md) -- EMDD vs. Obsidian, Zettelkasten, DDP, HDD, nbdev, and more
 - [Glossary](docs/GLOSSARY.md) -- definitions of all EMDD terms
+- [Impact Analysis](docs/IMPACT_ANALYSIS.md) -- cascade impact tracing and what-if simulation
 - [한국어 스펙](docs/spec/SPEC_KO.md) -- Korean specification
 
 <details>
