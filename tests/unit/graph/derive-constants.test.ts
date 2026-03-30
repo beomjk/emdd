@@ -23,24 +23,26 @@ import {
 } from '../../../src/graph/types.js';
 
 describe('TRANSITION_TABLE', () => {
-  it('hypothesis has 9 transition rules', () => {
-    expect(TRANSITION_TABLE.hypothesis).toHaveLength(9);
+  it('hypothesis has 10 transition rules', () => {
+    expect(TRANSITION_TABLE.hypothesis).toHaveLength(10);
   });
 
   it('knowledge has 4 transition rules', () => {
     expect(TRANSITION_TABLE.knowledge).toHaveLength(4);
   });
 
-  it('hypothesis PROPOSED->TESTING requires linked experiment with status RUNNING', () => {
-    const rule = TRANSITION_TABLE.hypothesis!.find(
+  it('hypothesis PROPOSED->TESTING requires linked experiment with status RUNNING or COMPLETED', () => {
+    const rules = TRANSITION_TABLE.hypothesis!.filter(
       r => r.from === 'PROPOSED' && r.to === 'TESTING',
     );
-    expect(rule).toBeDefined();
-    expect(rule!.conditions).toHaveLength(1);
-    expect(rule!.conditions[0].fn).toBe('has_linked');
-    expect(rule!.conditions[0].args).toMatchObject({
+    expect(rules).toHaveLength(2);
+    expect(rules[0].conditions[0].args).toMatchObject({
       type: 'experiment',
       status: 'RUNNING',
+    });
+    expect(rules[1].conditions[0].args).toMatchObject({
+      type: 'experiment',
+      status: 'COMPLETED',
     });
   });
 

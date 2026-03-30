@@ -28,6 +28,12 @@ export const hypothesisEntity = define.entity({
       ],
     },
     {
+      from: 'PROPOSED', to: 'TESTING',
+      conditions: [
+        { fn: 'has_linked' as const, args: { type: 'experiment', status: 'COMPLETED', direction: 'any' } },
+      ],
+    },
+    {
       from: 'PROPOSED', to: 'SUPPORTED',
       conditions: [
         { fn: 'has_linked' as const, args: { relation: 'supports', min_strength: 0.7, direction: 'incoming' } },

@@ -387,6 +387,7 @@ During Consolidation, if 3 or more `[deferred]` items have accumulated, conduct 
 | From | To | Conditions |
 |------|----|------------|
 | PROPOSED | TESTING | has_linked(type=experiment, status=RUNNING, direction=any) |
+| PROPOSED | TESTING | has_linked(type=experiment, status=COMPLETED, direction=any) |
 | PROPOSED | SUPPORTED | has_linked(relation=supports, min_strength=0.7, direction=incoming) |
 | TESTING | CONTESTED | has_linked(type=decision, status=CONTESTED, direction=incoming) |
 | TESTING | REVISED | has_linked(relation=revises, direction=incoming) |
@@ -423,7 +424,7 @@ During Consolidation, if 3 or more `[deferred]` items have accumulated, conduct 
 <!-- /AUTO:manual-transitions -->
 
 ```
-PROPOSED -> TESTING       : connected Experiment is RUNNING
+PROPOSED -> TESTING       : connected Experiment is RUNNING or COMPLETED
 PROPOSED -> SUPPORTED     : SUPPORTS edge (strength >= 0.7), no experiment needed
 TESTING  -> SUPPORTED     : SUPPORTS edge (strength >= 0.7)
 TESTING  -> REFUTED       : CONTRADICTS edge exists

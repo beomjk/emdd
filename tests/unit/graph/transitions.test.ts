@@ -42,6 +42,21 @@ describe('detectTransitions', () => {
       expect(results.some(r => r.nodeId === 'hyp-001' && r.recommendedStatus === 'TESTING')).toBe(true);
     });
 
+    it('PROPOSED→TESTING: connected experiment is COMPLETED (parallel agent scenario)', async () => {
+      writeNode('hypotheses', 'hyp-001-test.md', {
+        id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'PROPOSED',
+        confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [],
+        links: [{ target: 'exp-001', relation: 'tests' }],
+      });
+      writeNode('experiments', 'exp-001-test.md', {
+        id: 'exp-001', type: 'experiment', title: 'E1', status: 'COMPLETED',
+        created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+      });
+
+      const results = await detectTransitions(graphDir);
+      expect(results.some(r => r.nodeId === 'hyp-001' && r.recommendedStatus === 'TESTING')).toBe(true);
+    });
+
     // @spec §6.5.4
     it('TESTING→SUPPORTED: incoming SUPPORTS with strength≥0.7', async () => {
       writeNode('hypotheses', 'hyp-001-test.md', {
@@ -112,6 +127,28 @@ describe('detectTransitions', () => {
       });
       writeNode('experiments', 'exp-001-test.md', {
         id: 'exp-001', type: 'experiment', title: 'E1', status: 'RUNNING',
+        created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
+      });
+      writeNode('findings', 'fnd-001-test.md', {
+        id: 'fnd-001', type: 'finding', title: 'F1', status: 'VALIDATED',
+        confidence: 0.9, created: '2026-01-01', updated: '2026-01-01', tags: [],
+        links: [{ target: 'hyp-001', relation: 'supports', strength: 0.8 }],
+      });
+
+      const results = await detectTransitions(graphDir);
+      const hyp = results.find(r => r.nodeId === 'hyp-001');
+      expect(hyp).toBeDefined();
+      expect(hyp!.recommendedStatus).toBe('TESTING');
+    });
+
+    it('PROPOSED→TESTING takes priority over PROPOSED→SUPPORTED when experiment is COMPLETED', async () => {
+      writeNode('hypotheses', 'hyp-001-test.md', {
+        id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'PROPOSED',
+        confidence: 0.5, created: '2026-01-01', updated: '2026-01-01', tags: [],
+        links: [{ target: 'exp-001', relation: 'tests' }],
+      });
+      writeNode('experiments', 'exp-001-test.md', {
+        id: 'exp-001', type: 'experiment', title: 'E1', status: 'COMPLETED',
         created: '2026-01-01', updated: '2026-01-01', tags: [], links: [],
       });
       writeNode('findings', 'fnd-001-test.md', {

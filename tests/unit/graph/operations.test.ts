@@ -2106,6 +2106,24 @@ describe('updateNode — transition policy', () => {
     expect(result.warnings).toBeUndefined();
   });
 
+  it('strict: allows valid transition (PROPOSED→TESTING with COMPLETED experiment)', async () => {
+    writeNode(tmpDir, 'hypotheses', 'hyp-002-test.md', {
+      id: 'hyp-002', type: 'hypothesis', title: 'Test',
+      status: 'PROPOSED', confidence: 0.5,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [{ target: 'exp-002', relation: 'tests' }],
+    });
+    writeNode(tmpDir, 'experiments', 'exp-002-test.md', {
+      id: 'exp-002', type: 'experiment', title: 'Exp',
+      status: 'COMPLETED',
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [{ target: 'hyp-002', relation: 'tests' }],
+    });
+    const result = await updateNode(join(tmpDir, 'graph'), 'hyp-002', { status: 'TESTING' }, { transitionPolicy: 'strict' });
+    expect(result.updatedFields).toContain('status');
+    expect(result.warnings).toBeUndefined();
+  });
+
   it('strict: rejects when no transition rule exists (PROPOSED→SUPPORTED)', async () => {
     setupValidTransition();
     await expect(
