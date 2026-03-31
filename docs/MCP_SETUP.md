@@ -210,7 +210,7 @@ All tools accept a `graphDir` parameter — the path to your EMDD `graph/` direc
 | `update-node` | Update frontmatter fields on a node | `graphDir`, `nodeId`, `set`, `transitionPolicy?` |
 | `mark-done` | Mark a checklist item as done in an episode | `graphDir`, `episodeId`, `item`, `marker?` |
 | `index-graph` | Generate the _index.md file | `graphDir` |
-| `health` | Show health dashboard | `graphDir` |
+| `health` | Show health dashboard | `graphDir`, `all?` |
 | `check` | Check consolidation readiness | `graphDir` |
 | `promote` | Show promotion candidates | `graphDir` |
 | `confidence-propagate` | Propagate confidence scores through the graph | `graphDir` |

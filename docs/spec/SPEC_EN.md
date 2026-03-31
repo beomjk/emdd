@@ -1466,6 +1466,7 @@ mkdir -p scratchpad
 #   lint() -> validate schema and link integrity
 #   backlog(status?) -> list incomplete items across episodes
 #   analyze-refutation() -> analyze refutation impact
+#   impact-analysis(nodeId, whatIf?) -> cascade impact from a node state change
 ```
 
 ### Week 4+: Cytoscape.js visualization, time slider, autonomous analysis

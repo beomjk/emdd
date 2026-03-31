@@ -224,7 +224,7 @@ Graph commands accept `--graphDir <path>`, `--lang <en|ko>`, and `--json`. Utili
 |---------|-------------|
 | `emdd neighbors <nodeId>` | List neighbor nodes within BFS depth (`--depth`) |
 | `emdd gaps` | Show structural gaps in the graph |
-| `emdd health` | Show health dashboard |
+| `emdd health` | Show health dashboard (`--all`) |
 | `emdd check` | Check consolidation readiness |
 | `emdd promote` | Show promotion candidates |
 | `emdd confidence` | Propagate confidence scores through the graph |

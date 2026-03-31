@@ -56,6 +56,11 @@ export async function listBranchGroups(graphDir: string): Promise<BranchGroup[]>
       warnings.push(`More than ${THRESHOLDS.branch_max_active} active branch groups`);
     }
 
+    // Min candidates (spec §6.10)
+    if (candidates.length < 2) {
+      warnings.push(`Branch group ${groupId} has fewer than 2 candidates (found ${candidates.length})`);
+    }
+
     // Max candidates
     if (candidates.length > THRESHOLDS.branch_max_candidates) {
       warnings.push(`More than ${THRESHOLDS.branch_max_candidates} candidates in group ${groupId}`);

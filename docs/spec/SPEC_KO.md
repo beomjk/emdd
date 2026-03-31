@@ -1392,6 +1392,7 @@ mkdir -p scratchpad
 #   lint() → 스키마 및 링크 무결성 검증
 #   backlog(status?) → 에피소드 간 미완료 항목 목록
 #   analyze-refutation() → 반증 영향 분석
+#   impact-analysis(nodeId, whatIf?) → 노드 상태 변경의 연쇄 영향 분석
 ```
 
 ### Week 4+: Cytoscape.js 시각화, 시간 슬라이더, 자율 분석

@@ -110,6 +110,7 @@ export interface HealthReport {
   gapDetails: GapDetail[];
   deferredItems: string[];
   affinityViolations: string[];
+  showAll?: boolean;
 }
 
 export interface CheckTrigger {

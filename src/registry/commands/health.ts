@@ -5,7 +5,12 @@ import type { HealthReport } from '../../graph/types.js';
 import { t } from '../../i18n/index.js';
 import type { CommandDef } from '../types.js';
 
-const schema = z.object({});
+const schema = z.object({
+  all: z.boolean().optional().describe('Show full detail including experiments, findings, and episodes'),
+});
+
+/** Core graph types per spec §13C */
+const CORE_TYPES = new Set(['knowledge', 'decision', 'hypothesis', 'question']);
 
 export const healthDef: CommandDef<typeof schema, HealthReport> = {
   name: 'health',
@@ -13,20 +18,24 @@ export const healthDef: CommandDef<typeof schema, HealthReport> = {
   category: 'analysis',
   schema,
   async execute(input) {
-    return getHealth(input.graphDir);
+    const report = await getHealth(input.graphDir);
+    report.showAll = input.all ?? false;
+    return report;
   },
 
   format(report) {
     const lines: string[] = [];
     const avgConf = report.avgConfidence !== null ? report.avgConfidence.toFixed(2) : 'N/A';
+    const showAll = report.showAll ?? false;
 
     lines.push('');
     lines.push(`=== ${t('health.title')} ===`);
     lines.push('');
     lines.push(`${t('health.total_nodes')}: ${report.totalNodes}`);
     lines.push('');
-    lines.push(`${t('health.by_type')}:`);
+    lines.push(`${t('health.by_type')}${showAll ? '' : ' (core)'}:`);
     for (const nodeType of NODE_DISPLAY_ORDER) {
+      if (!showAll && !CORE_TYPES.has(nodeType)) continue;
       const count = report.byType[nodeType] ?? 0;
       if (count > 0) lines.push(`  ${nodeType}: ${count}`);
     }
