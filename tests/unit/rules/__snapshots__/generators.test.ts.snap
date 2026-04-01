@@ -114,7 +114,7 @@ Every session follows this prompt cycle:
        Review             Maintenance (if triggered)
 \`\`\`
 
-1. **Session Start** → Run the \`context-loading\` prompt. Review graph state, check gaps, read latest Episode's "What's Next".
+1. **Session Start** → Run the \`context-loading\` prompt. It provides graph state, episode arc, backlog, transition-ready nodes, and open questions. Follow the Episode Directive to read specific episodes for deeper context.
 2. **During Work** — Execute experiments, write code, take notes. Mark surprises with [!].
 3. **Session End** → Run the \`episode-creation\` prompt. Record what was tried, create Findings, list next steps with prerequisite node IDs.
 4. **Maintenance** → Run the \`consolidation\` prompt when triggers fire. Promote findings, split experiments, update confidence.
@@ -312,7 +312,7 @@ Every session follows this prompt cycle:
        Review             Maintenance (if triggered)
 \`\`\`
 
-1. **Session Start** → Run the \`context-loading\` prompt. Review graph state, check gaps, read latest Episode's "What's Next".
+1. **Session Start** → Run the \`context-loading\` prompt. It provides graph state, episode arc, backlog, transition-ready nodes, and open questions. Follow the Episode Directive to read specific episodes for deeper context.
 2. **During Work** — Execute experiments, write code, take notes. Mark surprises with [!].
 3. **Session End** → Run the \`episode-creation\` prompt. Record what was tried, create Findings, list next steps with prerequisite node IDs.
 4. **Maintenance** → Run the \`consolidation\` prompt when triggers fire. Promote findings, split experiments, update confidence.
@@ -510,7 +510,7 @@ Every session follows this prompt cycle:
        Review             Maintenance (if triggered)
 \`\`\`
 
-1. **Session Start** → Run the \`context-loading\` prompt. Review graph state, check gaps, read latest Episode's "What's Next".
+1. **Session Start** → Run the \`context-loading\` prompt. It provides graph state, episode arc, backlog, transition-ready nodes, and open questions. Follow the Episode Directive to read specific episodes for deeper context.
 2. **During Work** — Execute experiments, write code, take notes. Mark surprises with [!].
 3. **Session End** → Run the \`episode-creation\` prompt. Record what was tried, create Findings, list next steps with prerequisite node IDs.
 4. **Maintenance** → Run the \`consolidation\` prompt when triggers fire. Promote findings, split experiments, update confidence.
@@ -712,7 +712,7 @@ Every session follows this prompt cycle:
        Review             Maintenance (if triggered)
 \`\`\`
 
-1. **Session Start** → Run the \`context-loading\` prompt. Review graph state, check gaps, read latest Episode's "What's Next".
+1. **Session Start** → Run the \`context-loading\` prompt. It provides graph state, episode arc, backlog, transition-ready nodes, and open questions. Follow the Episode Directive to read specific episodes for deeper context.
 2. **During Work** — Execute experiments, write code, take notes. Mark surprises with [!].
 3. **Session End** → Run the \`episode-creation\` prompt. Record what was tried, create Findings, list next steps with prerequisite node IDs.
 4. **Maintenance** → Run the \`consolidation\` prompt when triggers fire. Promote findings, split experiments, update confidence.
@@ -910,7 +910,7 @@ Every session follows this prompt cycle:
        Review             Maintenance (if triggered)
 \`\`\`
 
-1. **Session Start** → Run the \`context-loading\` prompt. Review graph state, check gaps, read latest Episode's "What's Next".
+1. **Session Start** → Run the \`context-loading\` prompt. It provides graph state, episode arc, backlog, transition-ready nodes, and open questions. Follow the Episode Directive to read specific episodes for deeper context.
 2. **During Work** — Execute experiments, write code, take notes. Mark surprises with [!].
 3. **Session End** → Run the \`episode-creation\` prompt. Record what was tried, create Findings, list next steps with prerequisite node IDs.
 4. **Maintenance** → Run the \`consolidation\` prompt when triggers fire. Promote findings, split experiments, update confidence.
