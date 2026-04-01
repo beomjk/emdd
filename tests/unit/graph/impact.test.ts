@@ -147,7 +147,14 @@ describe('traceImpact what-if mode', () => {
 });
 
 // C1: orchestrator error path tests
+// Each test isolates its mock via beforeEach/afterEach to avoid
+// module-cache race conditions between vi.doMock and dynamic import.
 describe('traceImpact what-if orchestrator errors', () => {
+  afterEach(() => {
+    vi.doUnmock('../../../src/graph/orchestrator-setup.js');
+    vi.resetModules();
+  });
+
   it('handles cascade_error with partialTrace gracefully', async () => {
     vi.resetModules();
 
@@ -173,9 +180,6 @@ describe('traceImpact what-if orchestrator errors', () => {
     expect(report.cascadeTrace).toBeDefined();
     expect(report.cascadeTrace!.converged).toBe(false);
     expect(report.cascadeTrace!.rounds).toBe(10);
-
-    vi.doUnmock('../../../src/graph/orchestrator-setup.js');
-    vi.resetModules();
   });
 
   it('throws on unknown orchestrator error', async () => {
@@ -190,9 +194,6 @@ describe('traceImpact what-if orchestrator errors', () => {
     const { traceImpact } = await import('../../../src/graph/impact.js');
     await expect(traceImpact(SAMPLE_GRAPH, 'knw-001', { whatIf: 'RETRACTED' }))
       .rejects.toThrow('entity_not_found');
-
-    vi.doUnmock('../../../src/graph/orchestrator-setup.js');
-    vi.resetModules();
   });
 });
 
