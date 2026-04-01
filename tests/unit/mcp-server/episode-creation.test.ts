@@ -184,6 +184,40 @@ describe('episode-creation prompt (unit)', () => {
     expect(text).not.toMatch(/\[(new|updated)\].*epi-003/);
   });
 
+  it('returns error message when listNodes throws', async () => {
+    (nextId as unknown as Mock).mockReturnValue('epi-001');
+    (listNodes as Mock).mockRejectedValue(new Error('graph dir not found'));
+
+    const result = await client.getPrompt({
+      name: 'episode-creation',
+      arguments: { graphDir: '/nonexistent' },
+    });
+
+    const text = getPromptText(result);
+    expect(text).toContain('Error');
+    expect(text).toContain('graph dir not found');
+  });
+
+  it('includes nodes with exact same date as last episode (>= boundary)', async () => {
+    (nextId as unknown as Mock).mockReturnValue('epi-003');
+    (listNodes as Mock).mockResolvedValue([
+      makeNode({ id: 'epi-002', type: 'episode', title: 'Last Ep', status: 'COMPLETED', meta: { created: '2026-03-15', updated: '2026-03-15' } }),
+      makeNode({ id: 'hyp-001', type: 'hypothesis', title: 'Same Day Hyp', status: 'PROPOSED', meta: { created: '2026-03-15', updated: '2026-03-15' } }),
+      makeNode({ id: 'hyp-002', type: 'hypothesis', title: 'Older Hyp', status: 'PROPOSED', meta: { created: '2026-03-10', updated: '2026-03-10' } }),
+    ]);
+
+    const result = await client.getPrompt({
+      name: 'episode-creation',
+      arguments: { graphDir: '/any' },
+    });
+
+    const text = getPromptText(result);
+    // Same-day node should be included (>= comparison)
+    expect(text).toContain('hyp-001');
+    // Older node should NOT be included
+    expect(text).not.toContain('hyp-002');
+  });
+
   it('still contains static guide content', async () => {
     (nextId as unknown as Mock).mockReturnValue('epi-001');
     (listNodes as Mock).mockResolvedValue([]);

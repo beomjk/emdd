@@ -8,6 +8,9 @@ import { PROMPT_LIMITS } from './prompt-limits.js';
 import { PROMPT_META } from './meta.js';
 import type { Node } from '../../graph/types.js';
 
+// NOTE: Prompt text is intentionally NOT localized via t().
+// MCP prompts are consumed by AI agents, not displayed to human users.
+// setLocale() is called so downstream operations respect the user's locale.
 const meta = PROMPT_META.find(p => p.name === 'episode-creation')!;
 
 // ── Dynamic context builder ──────────────────────────────────────────
@@ -149,48 +152,57 @@ export function registerEpisodeCreation(server: McpServer): void {
       const locale = getLocale(lang);
       setLocale(locale);
 
-      // Get all nodes and find episodes
-      const allNodes = await listNodes(graphDir);
-      const episodes = allNodes
-        .filter(n => n.type === 'episode')
-        .sort((a, b) => {
-          const da = nodeDate(a);
-          const db = nodeDate(b);
-          if (!da && !db) return 0;
-          if (!da) return -1;
-          if (!db) return 1;
-          return da.getTime() - db.getTime();
-        });
-
-      const lastEpisode = episodes.length > 0 ? episodes[episodes.length - 1] : null;
-      const nextEpisodeIdStr = nextId(graphDir, 'episode');
-
-      // Filter recently changed non-episode nodes since last episode
-      let recentNodes: Node[];
-      if (lastEpisode) {
-        const lastDate = nodeDate(lastEpisode);
-        recentNodes = allNodes
-          .filter(n => n.type !== 'episode')
-          .filter(n => {
-            if (!lastDate) return true;
-            const d = nodeDate(n);
-            return d !== null && d >= lastDate;
+      try {
+        // Get all nodes and find episodes
+        const allNodes = await listNodes(graphDir);
+        const episodes = allNodes
+          .filter(n => n.type === 'episode')
+          .sort((a, b) => {
+            const da = nodeDate(a);
+            const db = nodeDate(b);
+            if (!da && !db) return 0;
+            if (!da) return -1;
+            if (!db) return 1;
+            return da.getTime() - db.getTime();
           });
-      } else {
-        // First episode: list all non-episode nodes
-        recentNodes = allNodes.filter(n => n.type !== 'episode');
+
+        const lastEpisode = episodes.length > 0 ? episodes[episodes.length - 1] : null;
+        const nextEpisodeIdStr = nextId(graphDir, 'episode');
+
+        // Filter recently changed non-episode nodes since last episode
+        let recentNodes: Node[];
+        if (lastEpisode) {
+          const lastDate = nodeDate(lastEpisode);
+          recentNodes = allNodes
+            .filter(n => n.type !== 'episode')
+            .filter(n => {
+              if (!lastDate) return true;
+              const d = nodeDate(n);
+              return d !== null && d >= lastDate;
+            });
+        } else {
+          // First episode: list all non-episode nodes
+          recentNodes = allNodes.filter(n => n.type !== 'episode');
+        }
+
+        // Cap to limit
+        recentNodes = recentNodes.slice(0, PROMPT_LIMITS.recentNodes);
+
+        const dynamicSection = buildDynamicEpisodeGuide(nextEpisodeIdStr, lastEpisode, recentNodes);
+        const staticSection = buildStaticGuide();
+        const text = dynamicSection + staticSection;
+
+        return {
+          messages: [{ role: 'user' as const, content: { type: 'text' as const, text } }],
+        };
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return {
+          messages: [{ role: 'user' as const, content: { type: 'text' as const, text: `Error in ${meta.name}: ${msg}` } }],
+        };
+      } finally {
+        setLocale(getLocale()); // restore to env default
       }
-
-      // Cap to limit
-      recentNodes = recentNodes.slice(0, PROMPT_LIMITS.recentNodes);
-
-      const dynamicSection = buildDynamicEpisodeGuide(nextEpisodeIdStr, lastEpisode, recentNodes);
-      const staticSection = buildStaticGuide();
-      const text = dynamicSection + staticSection;
-
-      return {
-        messages: [{ role: 'user' as const, content: { type: 'text' as const, text } }],
-      };
     },
   );
 }
