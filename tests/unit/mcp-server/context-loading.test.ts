@@ -413,5 +413,122 @@ describe('context-loading prompt (unit)', () => {
 
       expect(text).toMatch(/BLOCKING/);
     });
+
+    it('adaptive instructions mention transitions when available', async () => {
+      setupDefaultMocks();
+      (detectTransitions as Mock).mockResolvedValue([
+        { nodeId: 'hyp-001', currentStatus: 'PROPOSED', recommendedStatus: 'TESTING', reason: 'has_linked met', evidenceIds: ['exp-001'] },
+        { nodeId: 'hyp-002', currentStatus: 'TESTING', recommendedStatus: 'SUPPORTED', reason: 'confidence met', evidenceIds: ['fnd-001'] },
+      ]);
+
+      const result = await client.getPrompt({ name: 'context-loading', arguments: { graphDir: '/any' } });
+      const text = getPromptText(result);
+      expect(text).toContain('ready for status transitions');
+    });
+
+    it('adaptive instructions mention pending backlog', async () => {
+      setupDefaultMocks();
+      (getBacklog as Mock).mockResolvedValue({
+        items: [
+          { text: 'Run experiment', episodeId: 'epi-001', marker: 'pending' },
+          { text: 'Write findings', episodeId: 'epi-002', marker: 'pending' },
+          { text: 'Review hypothesis', episodeId: 'epi-003', marker: 'pending' },
+        ],
+      });
+
+      const result = await client.getPrompt({ name: 'context-loading', arguments: { graphDir: '/any' } });
+      const text = getPromptText(result);
+      expect(text).toContain('pending backlog');
+    });
+
+    it('adaptive instructions warn about blocked sessions', async () => {
+      (getHealth as Mock).mockResolvedValue(makeHealth());
+      (listNodes as Mock).mockResolvedValue([
+        makeEpisodeNode('epi-003', { created: '2026-03-20', updated: '2026-03-20', meta: { outcome: 'blocked' } }),
+        makeEpisodeNode('epi-002', { created: '2026-03-18', updated: '2026-03-18', meta: { outcome: 'blocked' } }),
+        makeEpisodeNode('epi-001', { created: '2026-03-16', updated: '2026-03-16', meta: { outcome: 'blocked' } }),
+      ]);
+      (checkConsolidation as Mock).mockResolvedValue({ triggers: [], promotionCandidates: [], orphanFindings: [], deferredItems: [] });
+      (getBacklog as Mock).mockResolvedValue({ items: [] });
+      (detectTransitions as Mock).mockResolvedValue([]);
+
+      const result = await client.getPrompt({ name: 'context-loading', arguments: { graphDir: '/any' } });
+      const text = getPromptText(result);
+      expect(text).toContain('blocked');
+      expect(text).toMatch(/change approach|breaking the problem/i);
+    });
+
+    it('adaptive instructions show default message when no issues', async () => {
+      setupDefaultMocks();
+      // setupDefaultMocks gives: no triggers, no backlog, no transitions, no episodes, no questions
+
+      const result = await client.getPrompt({ name: 'context-loading', arguments: { graphDir: '/any' } });
+      const text = getPromptText(result);
+      expect(text).toContain('good shape');
+    });
+
+    it('adaptive instructions reference latest episode', async () => {
+      (getHealth as Mock).mockResolvedValue(makeHealth());
+      (listNodes as Mock).mockResolvedValue([
+        makeEpisodeNode('epi-003', { created: '2026-03-20', updated: '2026-03-20', meta: { outcome: 'success' } }),
+      ]);
+      (checkConsolidation as Mock).mockResolvedValue({ triggers: [], promotionCandidates: [], orphanFindings: [], deferredItems: [] });
+      (getBacklog as Mock).mockResolvedValue({ items: [] });
+      (detectTransitions as Mock).mockResolvedValue([]);
+
+      const result = await client.getPrompt({ name: 'context-loading', arguments: { graphDir: '/any' } });
+      const text = getPromptText(result);
+      expect(text).toContain('Read latest episode');
+      expect(text).toContain('epi-003');
+    });
+  });
+
+  // ── Error Handling ───────────────────────────────────────────────
+
+  describe('Error Handling', () => {
+    it('returns error message when getHealth throws', async () => {
+      (getHealth as Mock).mockRejectedValue(new Error('disk read failed'));
+      (listNodes as Mock).mockResolvedValue([]);
+      (checkConsolidation as Mock).mockResolvedValue({ triggers: [], promotionCandidates: [], orphanFindings: [], deferredItems: [] });
+      (getBacklog as Mock).mockResolvedValue({ items: [] });
+      (detectTransitions as Mock).mockResolvedValue([]);
+
+      const result = await client.getPrompt({ name: 'context-loading', arguments: { graphDir: '/any' } });
+      const text = getPromptText(result);
+      expect(text).toContain('Error');
+      expect(text).toContain('disk read failed');
+    });
+  });
+
+  // ── Episode Arc Truncation ─────────────────────────────────────
+
+  describe('Episode Arc Truncation', () => {
+    it('episode arc table truncates to PROMPT_LIMITS.episodeArc', async () => {
+      (getHealth as Mock).mockResolvedValue(makeHealth());
+      // Create 7 episodes (limit is 5)
+      // nodeDate() reads from meta.updated/meta.created, so dates must be in meta
+      const episodes = Array.from({ length: 7 }, (_, i) => {
+        const num = String(i + 1).padStart(3, '0');
+        const day = String(10 + i).padStart(2, '0');
+        return makeEpisodeNode(`epi-${num}`, {
+          created: `2026-03-${day}`, updated: `2026-03-${day}`,
+          meta: { trigger: `test ${i}`, outcome: 'success', created: `2026-03-${day}`, updated: `2026-03-${day}` },
+        });
+      });
+      (listNodes as Mock).mockResolvedValue(episodes);
+      (checkConsolidation as Mock).mockResolvedValue({ triggers: [], promotionCandidates: [], orphanFindings: [], deferredItems: [] });
+      (getBacklog as Mock).mockResolvedValue({ items: [] });
+      (detectTransitions as Mock).mockResolvedValue([]);
+
+      const result = await client.getPrompt({ name: 'context-loading', arguments: { graphDir: '/any' } });
+      const text = getPromptText(result);
+
+      // Should show "last 5" not "last 7"
+      expect(text).toContain('last 5');
+      // Episodes sorted descending by date: epi-007 (Mar 16) first, epi-003 (Mar 12) is 5th
+      // epi-001 (Mar 10) and epi-002 (Mar 11) should be truncated
+      expect(text).not.toContain('epi-001');
+      expect(text).not.toContain('epi-002');
+    });
   });
 });

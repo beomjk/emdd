@@ -10,6 +10,9 @@ import type { HealthReport, CheckResult, Node } from '../../graph/types.js';
 import type { BacklogItem } from '../../graph/backlog.js';
 import type { TransitionRecommendation } from '../../graph/transitions.js';
 
+// NOTE: Prompt text is intentionally NOT localized via t().
+// MCP prompts are consumed by AI agents, not displayed to human users.
+// setLocale() is called so downstream operations respect the user's locale.
 const meta = PROMPT_META.find(p => p.name === 'context-loading')!;
 
 /** Urgency sort order derived from schema (BLOCKING=0, HIGH=1, MEDIUM=2, LOW=3) */
@@ -311,41 +314,50 @@ export function registerContextLoading(server: McpServer): void {
     async ({ graphDir, lang }) => {
       const locale = getLocale(lang);
       setLocale(locale);
-      const health = await getHealth(graphDir);
+      try {
+        const health = await getHealth(graphDir);
 
-      let text: string;
-      if (health.totalNodes === 0) {
-        text = buildFirstSessionGuide();
-      } else {
-        const [nodes, consolidation, backlogResult, transitions] = await Promise.all([
-          listNodes(graphDir),
-          checkConsolidation(graphDir),
-          getBacklog(graphDir, 'pending'),
-          detectTransitions(graphDir),
-        ]);
+        let text: string;
+        if (health.totalNodes === 0) {
+          text = buildFirstSessionGuide();
+        } else {
+          const [nodes, consolidation, backlogResult, transitions] = await Promise.all([
+            listNodes(graphDir),
+            checkConsolidation(graphDir),
+            getBacklog(graphDir, 'pending'),
+            detectTransitions(graphDir),
+          ]);
 
-        const episodes = nodes
-          .filter(n => n.type === 'episode')
-          .sort((a, b) => (nodeDate(b)?.getTime() ?? 0) - (nodeDate(a)?.getTime() ?? 0));
+          const episodes = nodes
+            .filter(n => n.type === 'episode')
+            .sort((a, b) => (nodeDate(b)?.getTime() ?? 0) - (nodeDate(a)?.getTime() ?? 0));
 
-        const openQuestions = nodes
-          .filter(n => n.type === 'question' && n.status === 'OPEN')
-          .sort((a, b) => (URGENCY_ORDER[String(a.meta?.urgency)] ?? 99) - (URGENCY_ORDER[String(b.meta?.urgency)] ?? 99));
+          const openQuestions = nodes
+            .filter(n => n.type === 'question' && n.status === 'OPEN')
+            .sort((a, b) => (URGENCY_ORDER[String(a.meta?.urgency)] ?? 99) - (URGENCY_ORDER[String(b.meta?.urgency)] ?? 99));
 
-        text = buildSessionContext({
-          health,
-          nodes,
-          consolidation,
-          episodes,
-          backlogItems: backlogResult.items,
-          transitions,
-          openQuestions,
-        });
+          text = buildSessionContext({
+            health,
+            nodes,
+            consolidation,
+            episodes,
+            backlogItems: backlogResult.items,
+            transitions,
+            openQuestions,
+          });
+        }
+
+        return {
+          messages: [{ role: 'user' as const, content: { type: 'text' as const, text } }],
+        };
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return {
+          messages: [{ role: 'user' as const, content: { type: 'text' as const, text: `Error in ${meta.name}: ${msg}` } }],
+        };
+      } finally {
+        setLocale(getLocale()); // restore to env default
       }
-
-      return {
-        messages: [{ role: 'user' as const, content: { type: 'text' as const, text } }],
-      };
     },
   );
 }
