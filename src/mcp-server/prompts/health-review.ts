@@ -79,6 +79,16 @@ export function registerHealthReview(server: McpServer): void {
 
       const recommendationsSection = recommendations.map(r => `  - ${r}`).join('\n');
 
+      // Build dynamic next steps with cross-references to other session cycle prompts
+      const nextSteps: string[] = [];
+
+      if (health.gaps.length > 0 || recommendations.some(r => r.includes('[ACTION]'))) {
+        nextSteps.push('Run `context-loading` to begin a focused session addressing the issues above.');
+      }
+
+      nextSteps.push('Run the `consolidation` prompt to check triggers and promote validated findings.');
+      nextSteps.push('Use `episode-creation` to record this review session.');
+
       const text = `# EMDD Health Review
 
 ## Summary
@@ -101,10 +111,7 @@ ${gapsSection}
 ${recommendationsSection}
 
 ## Next Steps
-1. Address any [ACTION] items in the recommendations above.
-2. If consolidation triggers are active, run the \`consolidation\` prompt for a guided procedure.
-3. Use the \`check\` tool to verify consolidation trigger status.
-4. Schedule a Weekly Graph Review if one has not been done in the past 7 days.`;
+${nextSteps.map((s, i) => `${i + 1}. ${s}`).join('\n')}`;
 
       return {
         messages: [{ role: 'user' as const, content: { type: 'text' as const, text } }],

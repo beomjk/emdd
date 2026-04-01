@@ -186,6 +186,60 @@ describe('health-review prompt (unit)', () => {
     expect(text).toContain('No episode nodes');
   });
 
+  it('footer references context-loading when ACTION items exist', async () => {
+    (getHealth as Mock).mockResolvedValue(
+      makeHealth({ gaps: ['Hypothesis hyp-001 has no linked experiments'] }),
+    );
+
+    const result = await client.getPrompt({
+      name: 'health-review',
+      arguments: { graphDir: '/any' },
+    });
+
+    const text = getPromptText(result);
+    const nextStepsSection = text.split('## Next Steps')[1] ?? '';
+    expect(nextStepsSection).toContain('context-loading');
+  });
+
+  it('footer does not reference context-loading when no ACTION items', async () => {
+    (getHealth as Mock).mockResolvedValue(makeHealth());
+
+    const result = await client.getPrompt({
+      name: 'health-review',
+      arguments: { graphDir: '/any' },
+    });
+
+    const text = getPromptText(result);
+    const nextStepsSection = text.split('## Next Steps')[1] ?? '';
+    expect(nextStepsSection).not.toContain('context-loading');
+  });
+
+  it('footer always references consolidation', async () => {
+    (getHealth as Mock).mockResolvedValue(makeHealth());
+
+    const result = await client.getPrompt({
+      name: 'health-review',
+      arguments: { graphDir: '/any' },
+    });
+
+    const text = getPromptText(result);
+    const nextStepsSection = text.split('## Next Steps')[1] ?? '';
+    expect(nextStepsSection).toContain('consolidation');
+  });
+
+  it('footer always references episode-creation', async () => {
+    (getHealth as Mock).mockResolvedValue(makeHealth());
+
+    const result = await client.getPrompt({
+      name: 'health-review',
+      arguments: { graphDir: '/any' },
+    });
+
+    const text = getPromptText(result);
+    const nextStepsSection = text.split('## Next Steps')[1] ?? '';
+    expect(nextStepsSection).toContain('episode-creation');
+  });
+
   it('multiple recommendations fire — has multiple [ACTION], no "looks good"', async () => {
     (getHealth as Mock).mockResolvedValue(
       makeHealth({
