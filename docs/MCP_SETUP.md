@@ -258,7 +258,7 @@ All tools accept a `graphDir` parameter — the path to your EMDD `graph/` direc
 | Prompt | Parameters | Description |
 |--------|-----------|-------------|
 | `context-loading` | `graphDir` (required), `lang?` | [Cycle 1/4 · Session Start] Load EMDD graph context — provides a summary of nodes, edges, health, and structural gaps |
-| `episode-creation` | (none) | [Cycle 2/4 · Session End] Step-by-step guide for writing an EMDD Episode node — includes frontmatter template, mandatory sections, and linking instructions |
+| `episode-creation` | `graphDir` (required), `lang?` | [Cycle 2/4 · Session End] Step-by-step guide for writing an EMDD Episode node — includes frontmatter template, mandatory sections, and linking instructions |
 | `consolidation` | `graphDir` (required), `lang?` | [Cycle 3/4 · Maintenance] Consolidation execution guide — checks triggers and provides a step-by-step procedure for promoting findings, generating questions, and updating hypotheses |
 | `health-review` | `graphDir` (required), `lang?` | [Cycle 4/4 · Review] Full health dashboard with actionable recommendations — analyzes node distribution, structural gaps, and link density |
 <!-- /AUTO:mcp-prompt-table -->

@@ -25,8 +25,8 @@ export const PROMPT_META: PromptMeta[] = [
   {
     name: 'episode-creation',
     description: '[Cycle 2/4 · Session End] Step-by-step guide for writing an EMDD Episode node — includes frontmatter template, mandatory sections, and linking instructions',
-    hasGraphDir: false,
-    hasLang: false,
+    hasGraphDir: true,
+    hasLang: true,
     group: 'session-cycle',
     order: 2,
   },
