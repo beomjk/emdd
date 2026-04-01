@@ -7,6 +7,9 @@ import { loadConfig } from '../../graph/config.js';
 import { getLocale, setLocale } from '../../i18n/index.js';
 import { PROMPT_META } from './meta.js';
 
+// NOTE: Prompt text is intentionally NOT localized via t().
+// MCP prompts are consumed by AI agents, not displayed to human users.
+// setLocale() is called so downstream operations respect the user's locale.
 const meta = PROMPT_META.find(p => p.name === 'consolidation')!;
 
 export function registerConsolidation(server: McpServer): void {
@@ -17,49 +20,50 @@ export function registerConsolidation(server: McpServer): void {
     async ({ graphDir, lang }) => {
       const locale = getLocale(lang);
       setLocale(locale);
-      const checkResult = await checkConsolidation(graphDir);
-      const health = await getHealth(graphDir);
-      const ct = CEREMONY_TRIGGERS.consolidation;
-      const config = loadConfig(graphDir);
-      const sinceDate = config.last_consolidation_date ?? null;
-      let deltaNodes: Node[] = [];
-      if (sinceDate) {
-        deltaNodes = await listNodes(graphDir, { since: sinceDate });
-      }
-
-      const triggersSection = checkResult.triggers.length > 0
-        ? checkResult.triggers.map(t => `  - [TRIGGERED] ${t.message}`).join('\n')
-        : '  No triggers active — consolidation is optional but you may still run it proactively.';
-
-      // Promotion Candidates table
-      const promotionSection = checkResult.promotionCandidates.length > 0
-        ? `### Promotion Candidates\n| Finding | Confidence | Supports | Reason |\n|---------|-----------|----------|--------|\n${checkResult.promotionCandidates.map(c => `| ${c.id} | ${c.confidence.toFixed(2)} | ${c.supports} | ${c.reason} |`).join('\n')}`
-        : '### Promotion Candidates\nNo findings currently meet promotion criteria.';
-
-      // Orphan Findings list
-      const orphanSection = checkResult.orphanFindings.length > 0
-        ? `### Orphan Findings (no forward edges)\n${checkResult.orphanFindings.map(id => `- ${id}`).join('\n')}`
-        : '';
-
-      // Deferred Items list
-      const deferredSection = checkResult.deferredItems.length > 0
-        ? `### Deferred Items\n${checkResult.deferredItems.map(id => `- ${id}`).join('\n')}`
-        : '';
-
-      // Delta Since Last Consolidation
-      let deltaSection: string;
-      if (sinceDate) {
-        const typeCounts = new Map<string, number>();
-        for (const n of deltaNodes) {
-          typeCounts.set(n.type, (typeCounts.get(n.type) ?? 0) + 1);
+      try {
+        const checkResult = await checkConsolidation(graphDir);
+        const health = await getHealth(graphDir);
+        const ct = CEREMONY_TRIGGERS.consolidation;
+        const config = loadConfig(graphDir);
+        const sinceDate = config.last_consolidation_date ?? null;
+        let deltaNodes: Node[] = [];
+        if (sinceDate) {
+          deltaNodes = await listNodes(graphDir, { since: sinceDate });
         }
-        const typeList = [...typeCounts.entries()].map(([t, c]) => `${c} ${t}`).join(', ');
-        deltaSection = `## Delta Since Last Consolidation (${sinceDate})\n- ${deltaNodes.length} nodes created/modified${typeList ? `\n- Types: ${typeList}` : ''}`;
-      } else {
-        deltaSection = '## Delta Since Last Consolidation\nNo consolidation anchor found — showing full graph state.';
-      }
 
-      const text = `# EMDD Consolidation Guide
+        const triggersSection = checkResult.triggers.length > 0
+          ? checkResult.triggers.map(t => `  - [TRIGGERED] ${t.message}`).join('\n')
+          : '  No triggers active — consolidation is optional but you may still run it proactively.';
+
+        // Promotion Candidates table
+        const promotionSection = checkResult.promotionCandidates.length > 0
+          ? `### Promotion Candidates\n| Finding | Confidence | Supports | Reason |\n|---------|-----------|----------|--------|\n${checkResult.promotionCandidates.map(c => `| ${c.id} | ${c.confidence.toFixed(2)} | ${c.supports} | ${c.reason} |`).join('\n')}`
+          : '### Promotion Candidates\nNo findings currently meet promotion criteria.';
+
+        // Orphan Findings list
+        const orphanSection = checkResult.orphanFindings.length > 0
+          ? `### Orphan Findings (no forward edges)\n${checkResult.orphanFindings.map(id => `- ${id}`).join('\n')}`
+          : '';
+
+        // Deferred Items list
+        const deferredSection = checkResult.deferredItems.length > 0
+          ? `### Deferred Items\n${checkResult.deferredItems.map(id => `- ${id}`).join('\n')}`
+          : '';
+
+        // Delta Since Last Consolidation
+        let deltaSection: string;
+        if (sinceDate) {
+          const typeCounts = new Map<string, number>();
+          for (const n of deltaNodes) {
+            typeCounts.set(n.type, (typeCounts.get(n.type) ?? 0) + 1);
+          }
+          const typeList = [...typeCounts.entries()].map(([t, c]) => `${c} ${t}`).join(', ');
+          deltaSection = `## Delta Since Last Consolidation (${sinceDate})\n- ${deltaNodes.length} nodes created/modified${typeList ? `\n- Types: ${typeList}` : ''}`;
+        } else {
+          deltaSection = '## Delta Since Last Consolidation\nNo consolidation anchor found — showing full graph state.';
+        }
+
+        const text = `# EMDD Consolidation Guide
 
 ## Current Trigger Status
 ${triggersSection}
@@ -122,9 +126,17 @@ ${deferredSection ? '\n' + deferredSection : ''}
 - Do not record Consolidation itself as an Episode — it is a meta-activity.
 - Do not start new exploration during Consolidation — this is garden tending, not planting.`;
 
-      return {
-        messages: [{ role: 'user' as const, content: { type: 'text' as const, text } }],
-      };
+        return {
+          messages: [{ role: 'user' as const, content: { type: 'text' as const, text } }],
+        };
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return {
+          messages: [{ role: 'user' as const, content: { type: 'text' as const, text: `Error in ${meta.name}: ${msg}` } }],
+        };
+      } finally {
+        setLocale(getLocale()); // restore to env default
+      }
     },
   );
 }

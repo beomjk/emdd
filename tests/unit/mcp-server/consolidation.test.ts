@@ -269,6 +269,45 @@ describe('consolidation prompt (unit)', () => {
 
   // --- Existing trigger display preserved ---
 
+  // --- Error handling ---
+
+  it('returns error message when checkConsolidation throws', async () => {
+    (checkConsolidation as Mock).mockRejectedValue(new Error('corrupted graph'));
+    (getHealth as Mock).mockResolvedValue(makeHealth());
+    (loadConfig as Mock).mockReturnValue({ lang: 'en', version: '1.0', gaps: {} });
+    (listNodes as Mock).mockResolvedValue([]);
+
+    const result = await client.getPrompt({
+      name: 'consolidation',
+      arguments: { graphDir: '/any' },
+    });
+
+    const text = getPromptText(result);
+    expect(text).toContain('Error');
+    expect(text).toContain('corrupted graph');
+  });
+
+  // --- listNodes filter ---
+
+  it('passes since filter to listNodes when last_consolidation_date exists', async () => {
+    setupMocks(
+      makeCheckResult(),
+      makeHealth(),
+      { last_consolidation_date: '2026-03-15' },
+      [makeNode({ id: 'fnd-010', type: 'finding' })],
+    );
+    (listNodes as Mock).mockClear();
+
+    await client.getPrompt({
+      name: 'consolidation',
+      arguments: { graphDir: '/any' },
+    });
+
+    expect(listNodes).toHaveBeenCalledWith('/any', { since: '2026-03-15' });
+  });
+
+  // --- Existing trigger display preserved ---
+
   it('preserves existing trigger display', async () => {
     setupMocks(
       makeCheckResult({
