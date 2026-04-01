@@ -74,6 +74,7 @@ describe('MCP Prompts via SDK Client', () => {
     it('returns episode template prompt', async () => {
       const result = await client.getPrompt({
         name: 'episode-creation',
+        arguments: { graphDir: SAMPLE_GRAPH },
       });
       expect(result.messages).toHaveLength(1);
       expect(result.messages[0].role).toBe('user');
@@ -85,6 +86,7 @@ describe('MCP Prompts via SDK Client', () => {
     it('includes checklist items', async () => {
       const result = await client.getPrompt({
         name: 'episode-creation',
+        arguments: { graphDir: SAMPLE_GRAPH },
       });
       const text = (result.messages[0].content as { type: string; text: string }).text;
       expect(text).toMatch(/what.*(tried|i tried)/i);
