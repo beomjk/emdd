@@ -240,6 +240,38 @@ describe('health-review prompt (unit)', () => {
     expect(nextStepsSection).toContain('episode-creation');
   });
 
+  it('returns error message when getHealth throws', async () => {
+    (getHealth as Mock).mockRejectedValue(new Error('invalid graph dir'));
+
+    const result = await client.getPrompt({
+      name: 'health-review',
+      arguments: { graphDir: '/nonexistent' },
+    });
+
+    const text = getPromptText(result);
+    expect(text).toContain('Error');
+    expect(text).toContain('invalid graph dir');
+  });
+
+  it('footer references context-loading when no gaps but ACTION recommendations exist', async () => {
+    (getHealth as Mock).mockResolvedValue(
+      makeHealth({ gaps: [], linkDensity: 0.5 }),
+    );
+
+    const result = await client.getPrompt({
+      name: 'health-review',
+      arguments: { graphDir: '/any' },
+    });
+
+    const text = getPromptText(result);
+    // [ACTION] Low link density should fire
+    expect(text).toContain('[ACTION]');
+    expect(text).toContain('Low link density');
+    // Next Steps should reference context-loading
+    const nextStepsSection = text.split('## Next Steps')[1] ?? '';
+    expect(nextStepsSection).toContain('context-loading');
+  });
+
   it('multiple recommendations fire — has multiple [ACTION], no "looks good"', async () => {
     (getHealth as Mock).mockResolvedValue(
       makeHealth({
