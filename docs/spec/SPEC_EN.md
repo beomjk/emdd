@@ -551,7 +551,7 @@ def update_hypothesis_confidence(hypothesis):
     prior = hypothesis.initial_confidence
     for edge in hypothesis.incoming_evidential_edges:
         if edge.type == "SUPPORTS":
-            impact = edge.source.confidence * edge.strength
+            impact = edge.source.confidence * edge.strength  # defaults to 0.5 if unset
             prior = prior + (1 - prior) * impact * 0.3
         elif edge.type == "CONTRADICTS":
             impact = edge.source.confidence * severity_weight(edge.severity)
@@ -567,7 +567,7 @@ def update_hypothesis_confidence(hypothesis):
 | `WEAKENING` | 0.6 | Partial contradiction — significant but recoverable |
 | `TENSION` | 0.3 | Interpretive difference — warrants investigation |
 
-> Note: These weights represent the *impact magnitude* of contradictory evidence in the confidence formula. They are distinct from the *penalty multipliers* in Section 6.6 (DISPUTED transition), which are applied directly to dependent hypotheses' confidence values.
+> Note: These weights represent the *impact magnitude* of contradictory evidence in the confidence formula. They are distinct from the *penalty multipliers* in Section 6.6 (DISPUTED transition), which are applied directly to dependent hypotheses' confidence values. A separate set of severity multipliers (FATAL=1.0, WEAKENING=0.7, TENSION=0.4) is used for impact analysis edge-factor computation — see [IMPACT_ANALYSIS.md](IMPACT_ANALYSIS.md) for details.
 
 **Design rationale for constants:**
 - `0.3` (SUPPORTS coefficient): Conservative update — a single piece of supporting evidence should not shift confidence by more than 30%. This prevents premature convergence on early positive results.
@@ -711,7 +711,7 @@ branch_role: candidate    # candidate | control | baseline
 - `control` — a known-good baseline used for comparison (optional)
 - `baseline` — the current state of affairs against which candidates are measured (optional)
 
-A branch group must have at least two `candidate` members. The `control` and `baseline` roles are optional and do not count toward the minimum.
+A branch group should have at least two `candidate` members. The `control` and `baseline` roles are optional and do not count toward the minimum.
 
 **Branch group lifecycle:**
 ```
@@ -1446,7 +1446,7 @@ mkdir -p scratchpad
 #   read-node(id) -> single node details
 #   read-nodes(nodeIds[]) -> batch read multiple nodes (MCP only)
 #   create-node(type, slug, title?, body?, lang?) -> create a new node
-#   create-edge(source, target, relation) -> add an edge
+#   create-edge(source, target, relation, strength?, severity?, completeness?, dependencyType?, impact?) -> add an edge
 #   health(graphDir) -> graph health dashboard (replaces graph_stats)
 #   check(graphDir) -> consolidation triggers
 #   promote(graphDir) -> promotion candidates
@@ -1467,6 +1467,7 @@ mkdir -p scratchpad
 #   backlog(status?) -> list incomplete items across episodes
 #   analyze-refutation() -> analyze refutation impact
 #   impact-analysis(nodeId, whatIf?) -> cascade impact from a node state change
+#     See IMPACT_ANALYSIS.md for scoring algorithm details.
 ```
 
 ### Week 4+: Cytoscape.js visualization, time slider, autonomous analysis

@@ -29,7 +29,7 @@ Every session follows this prompt cycle:
 ## Authority Scope
 
 **No approval needed:**
-- Recording experiment metrics as Finding/Result nodes → `create-node`, `create-edge`
+- Recording experiment metrics as Finding nodes → `create-node`, `create-edge`
 - Updating Experiment status (PLANNED -> RUNNING -> COMPLETED) → `update-node`
 - Time-based attribute updates (updated field) → `update-node`
 

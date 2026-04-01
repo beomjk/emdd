@@ -531,7 +531,7 @@ def update_hypothesis_confidence(hypothesis):
     prior = hypothesis.initial_confidence
     for edge in hypothesis.incoming_evidential_edges:
         if edge.type == "SUPPORTS":
-            impact = edge.source.confidence * edge.strength
+            impact = edge.source.confidence * edge.strength  # 미설정 시 기본값 0.5
             prior = prior + (1 - prior) * impact * 0.3
         elif edge.type == "CONTRADICTS":
             impact = edge.source.confidence * severity_weight(edge.severity)
@@ -547,7 +547,7 @@ def update_hypothesis_confidence(hypothesis):
 | `WEAKENING` | 0.6 | 부분적 모순 — 심각하지만 회복 가능 |
 | `TENSION` | 0.3 | 해석적 차이 — 조사가 필요함 |
 
-> 참고: 이 가중치는 confidence 공식에서 모순 증거의 *영향 크기*를 나타낸다. §6.6(DISPUTED 전이)의 *페널티 승수*와는 다른 값이다 — 페널티 승수는 의존 가설의 confidence에 직접 적용된다.
+> 참고: 이 가중치는 confidence 공식에서 모순 증거의 *영향 크기*를 나타낸다. §6.6(DISPUTED 전이)의 *페널티 승수*와는 다른 값이다 — 페널티 승수는 의존 가설의 confidence에 직접 적용된다. 영향도 분석에는 별도의 severity 승수(FATAL=1.0, WEAKENING=0.7, TENSION=0.4)가 사용된다 — 상세 내용은 [IMPACT_ANALYSIS.md](IMPACT_ANALYSIS.md) 참조.
 
 **상수 설계 근거:**
 - `0.3` (SUPPORTS 계수): 보수적 업데이트 — 지지 증거 하나가 confidence를 30% 이상 이동시키지 않는다. 초기 긍정 결과에 대한 조기 수렴을 방지한다.
@@ -665,7 +665,7 @@ branch_role: candidate    # candidate | control | baseline
 - `control` — 비교를 위한 알려진 기준선 (선택적)
 - `baseline` — 후보들을 측정하는 현재 상태 (선택적)
 
-Branch group은 최소 2개의 `candidate` 멤버가 있어야 한다. `control`과 `baseline` 역할은 선택적이며 최소 요건에 포함되지 않는다.
+Branch group은 최소 2개의 `candidate` 멤버가 있는 것이 권장된다. `control`과 `baseline` 역할은 선택적이며 최소 요건에 포함되지 않는다.
 
 **Branch group 생명주기:**
 ```
@@ -1372,7 +1372,7 @@ mkdir -p scratchpad
 #   read-node(id) → 단일 노드 상세
 #   read-nodes(nodeIds[]) → 복수 노드 일괄 읽기 (MCP 전용)
 #   create-node(type, slug, title?, body?, lang?) → 새 노드 생성
-#   create-edge(source, target, relation) → 에지 추가
+#   create-edge(source, target, relation, strength?, severity?, completeness?, dependencyType?, impact?) → 에지 추가
 #   health(graphDir) → 그래프 건강 대시보드 (graph_stats 대체)
 #   check(graphDir) → 통합 트리거
 #   promote(graphDir) → 승격 후보
@@ -1393,6 +1393,7 @@ mkdir -p scratchpad
 #   backlog(status?) → 에피소드 간 미완료 항목 목록
 #   analyze-refutation() → 반증 영향 분석
 #   impact-analysis(nodeId, whatIf?) → 노드 상태 변경의 연쇄 영향 분석
+#     채점 알고리즘 상세는 IMPACT_ANALYSIS.md 참조.
 ```
 
 ### Week 4+: Cytoscape.js 시각화, 시간 슬라이더, 자율 분석
