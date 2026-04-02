@@ -150,7 +150,7 @@ The AI agent is a **gardener** of the graph, not an architect:
 |------|-------|---------|----------------|
 | **Knowledge** | Blue | Confirmed facts, literature, domain rules | `knowledge_type`, `source`, `confidence` |
 | **Hypothesis** | Orange | Testable claim | `confidence`, `risk_level`, `priority`, `status`, `kill_criterion` |
-| **Experiment** | Green | Unit of work to validate a hypothesis | `config`, `status`, `results`, `artifacts` |
+| **Experiment** | Green | Unit of work to validate a hypothesis | `config`, `status`, `results`, `inputs`, `outputs` |
 | **Finding** | Teal | Fact or pattern discovered from experiments/analysis | `finding_type`, `confidence`, `sources` |
 | **Question** | Yellow | Open research question | `question_type`, `urgency`, `answer_summary` |
 | **Decision** | Black | Recorded decision with rationale | `alternatives_considered`, `rationale`, `reversibility` |
@@ -299,7 +299,7 @@ During Consolidation, if 3 or more `[deferred]` items have accumulated, conduct 
    ```
 
 <!-- v0.3: Frontmatter lowercase mapping note + CONFIRMS added for 14 total -->
-<!-- ASSERT §6.5.1: there are exactly 16 edge types -->
+<!-- ASSERT §6.4.1: there are exactly 16 edge types -->
 ### 6.4 Edge Types (16)
 
 <!-- AUTO:edge-types -->
@@ -339,7 +339,7 @@ During Consolidation, if 3 or more `[deferred]` items have accumulated, conduct 
 
 **Frontmatter notation convention:** The `relation:` field in YAML frontmatter uses lowercase present tense (e.g., `relation: produces`). This maps to the canonical type `PRODUCES`. The uppercase names in the table below are canonical types; frontmatter uses lowercase snake_case.
 
-<!-- ASSERT §6.5.2: reverse labels map confirmed_by→confirms, supported_by→supports, answered_by→answers, spawned_from→spawns, produced_by→produces, tested_by→tests, resolved_by→resolves -->
+<!-- ASSERT §6.4.2: reverse labels map confirmed_by→confirms, supported_by→supports, answered_by→answers, spawned_from→spawns, produced_by→produces, tested_by→tests, resolved_by→resolves -->
 **Reverse labels allowed:** When recording a link from node A to target B, there are cases where you need to express the relationship in the B-to-A direction. In these cases, use reverse labels with `_by` or `_from` suffixes: `confirmed_by`, `supported_by`, `answered_by`, `spawned_from`, `produced_by`, `tested_by`, `resolved_by`. These are the reverses of `CONFIRMS`, `SUPPORTS`, `ANSWERS`, `SPAWNS`, `PRODUCES`, `TESTS`, and `RESOLVES` respectively. Do not duplicate the canonical-direction link in the other file.
 
 **Evidential edges:**
@@ -1446,7 +1446,7 @@ mkdir -p scratchpad
 #   read-node(id) -> single node details
 #   read-nodes(nodeIds[]) -> batch read multiple nodes (MCP only)
 #   create-node(type, slug, title?, body?, lang?) -> create a new node
-#   create-edge(source, target, relation, strength?, severity?, completeness?, dependencyType?, impact?) -> add an edge
+#   create-edge(source, target, relation, strength?, severity?, completeness?, dependencyType?, impact?, force?) -> add an edge
 #   health(graphDir) -> graph health dashboard (replaces graph_stats)
 #   check(graphDir) -> consolidation triggers
 #   promote(graphDir) -> promotion candidates
@@ -1459,8 +1459,8 @@ mkdir -p scratchpad
 #
 # v0.4 additions:
 #   delete-edge(source, target, relation?) -> remove a link
-#   update-node(nodeId, set) -> update frontmatter fields
-#   mark-done(episodeId, marker) -> mark episode checklist item
+#   update-node(nodeId, set, transitionPolicy?) -> update frontmatter fields
+#   mark-done(episodeId, item, marker?) -> mark episode checklist item
 #   mark-consolidated(date?) -> record consolidation date
 #   index-graph() -> generate _index.md
 #   lint() -> validate schema and link integrity

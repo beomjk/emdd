@@ -256,6 +256,9 @@ Graph commands accept `--graphDir <path>`, `--lang <en|ko>`, and `--json`. Utili
 
 </details>
 
+> **Note:** Four commands use different names when accessed via MCP:
+> `neighbors` → `graph-neighbors`, `gaps` → `graph-gaps`, `transitions` → `status-transitions`, `impact` → `impact-analysis`.
+
 ## Phased Adoption
 
 You do not need to adopt everything at once. Start lite and add structure as you need it.
