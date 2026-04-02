@@ -147,9 +147,9 @@ describe('traceImpact what-if mode', () => {
 });
 
 // C1: orchestrator error path tests
-// Each test isolates its mock via beforeEach/afterEach to avoid
-// module-cache race conditions between vi.doMock and dynamic import.
-describe('traceImpact what-if orchestrator errors', () => {
+// Each describe block isolates its own mock to avoid ESM module-cache
+// non-determinism when re-mocking within the same describe block.
+describe('traceImpact what-if cascade_error handling', () => {
   afterEach(() => {
     vi.doUnmock('../../../src/graph/orchestrator-setup.js');
     vi.resetModules();
@@ -180,6 +180,13 @@ describe('traceImpact what-if orchestrator errors', () => {
     expect(report.cascadeTrace).toBeDefined();
     expect(report.cascadeTrace!.converged).toBe(false);
     expect(report.cascadeTrace!.rounds).toBe(10);
+  });
+});
+
+describe('traceImpact what-if unknown orchestrator error', () => {
+  afterEach(() => {
+    vi.doUnmock('../../../src/graph/orchestrator-setup.js');
+    vi.resetModules();
   });
 
   it('throws on unknown orchestrator error', async () => {
