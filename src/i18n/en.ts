@@ -1,4 +1,4 @@
-export const messages: Record<string, string> = {
+export const messages = {
   // Health dashboard
   'health.title': 'EMDD Health Dashboard',
   'health.total_nodes': 'Total Nodes',
@@ -145,4 +145,6 @@ export const messages: Record<string, string> = {
   'impact.col.auto_transition': 'Auto-Transition',
   'impact.error.no_status': "Node '{id}' has no status — cannot simulate what-if",
   'impact.error.orchestrator': "Orchestrator error: {error}",
-};
+} as const satisfies Record<string, string>;
+
+export type MessageKey = keyof typeof messages;

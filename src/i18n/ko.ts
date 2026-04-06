@@ -1,4 +1,6 @@
-export const messages: Record<string, string> = {
+import type { MessageKey } from './en.js';
+
+export const messages: Record<MessageKey, string> = {
   // 건강 대시보드
   'health.title': 'EMDD 건강 대시보드',
   'health.total_nodes': '전체 노드 수',
