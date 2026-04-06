@@ -1,7 +1,7 @@
 import type { Node, Graph, NodeType } from './types.js';
 import {
   VALID_STATUSES, REQUIRED_FIELDS, ALL_VALID_RELATIONS,
-  VALID_FINDING_TYPES, VALID_URGENCIES, VALID_RISK_LEVELS, VALID_REVERSIBILITIES,
+  ENUM_FIELD_VALIDATORS,
   EDGE_ATTRIBUTE_RANGES, EDGE_ATTRIBUTE_ENUM_VALUES,
 } from './types.js';
 import { checkEdgeAffinity, getPresentAttrKeys } from './edge-attrs.js';
@@ -162,44 +162,17 @@ export function lintNode(node: Node): LintError[] {
     }
   }
 
-  // Type-specific meta validation
-  if (nodeType === 'finding' && node.meta.finding_type !== undefined) {
-    if (!(VALID_FINDING_TYPES as readonly string[]).includes(String(node.meta.finding_type))) {
-      errors.push({
-        nodeId: id, field: 'finding_type',
-        message: t('error.invalid_finding_type', { value: String(node.meta.finding_type), valid: VALID_FINDING_TYPES.join(', ') }),
-        severity: 'warning',
-      });
-    }
-  }
-
-  if (nodeType === 'question' && node.meta.urgency !== undefined) {
-    if (!(VALID_URGENCIES as readonly string[]).includes(String(node.meta.urgency))) {
-      errors.push({
-        nodeId: id, field: 'urgency',
-        message: t('error.invalid_urgency', { value: String(node.meta.urgency), valid: VALID_URGENCIES.join(', ') }),
-        severity: 'warning',
-      });
-    }
-  }
-
-  if (nodeType === 'hypothesis' && node.meta.risk_level !== undefined) {
-    if (!(VALID_RISK_LEVELS as readonly string[]).includes(String(node.meta.risk_level))) {
-      errors.push({
-        nodeId: id, field: 'risk_level',
-        message: t('error.invalid_risk_level', { value: String(node.meta.risk_level), valid: VALID_RISK_LEVELS.join(', ') }),
-        severity: 'warning',
-      });
-    }
-  }
-
-  if (nodeType === 'decision' && node.meta.reversibility !== undefined) {
-    if (!(VALID_REVERSIBILITIES as readonly string[]).includes(String(node.meta.reversibility))) {
-      errors.push({
-        nodeId: id, field: 'reversibility',
-        message: t('error.invalid_reversibility', { value: String(node.meta.reversibility), valid: VALID_REVERSIBILITIES.join(', ') }),
-        severity: 'warning',
-      });
+  // Type-specific meta validation (enum fields)
+  for (const [fieldName, validValues] of Object.entries(ENUM_FIELD_VALIDATORS)) {
+    const metaValue = node.meta[fieldName];
+    if (metaValue !== undefined) {
+      if (!(validValues as readonly string[]).includes(String(metaValue))) {
+        errors.push({
+          nodeId: id, field: fieldName,
+          message: t('error.invalid_enum_value', { field: fieldName, value: String(metaValue), valid: validValues.join(', ') }),
+          severity: 'warning',
+        });
+      }
     }
   }
 

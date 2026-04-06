@@ -3,7 +3,7 @@ import path from 'node:path';
 import matter from 'gray-matter';
 import { loadGraph } from './loader.js';
 import { nextId, renderTemplate, nodePath, sanitizeSlug } from './templates.js';
-import { NODE_TYPES, NODE_TYPE_DIRS, ALL_VALID_RELATIONS, REVERSE_LABELS, THRESHOLDS, VALID_STATUSES, VALID_FINDING_TYPES, VALID_URGENCIES, VALID_RISK_LEVELS, VALID_REVERSIBILITIES, EDGE_ATTRIBUTE_NAMES, EDGE_ATTRIBUTE_RANGES, EDGE_ATTRIBUTE_ENUM_VALUES, TRANSITION_POLICY_DEFAULT, TRANSITION_TABLE, MANUAL_TRANSITIONS, CEREMONY_TRIGGERS, URGENCY, VALUE_PRODUCING_EDGES, EDGE, STATUS } from './types.js';
+import { NODE_TYPES, NODE_TYPE_DIRS, ALL_VALID_RELATIONS, REVERSE_LABELS, THRESHOLDS, VALID_STATUSES, ENUM_FIELD_VALIDATORS, EDGE_ATTRIBUTE_NAMES, EDGE_ATTRIBUTE_RANGES, EDGE_ATTRIBUTE_ENUM_VALUES, TRANSITION_POLICY_DEFAULT, TRANSITION_TABLE, MANUAL_TRANSITIONS, CEREMONY_TRIGGERS, URGENCY, VALUE_PRODUCING_EDGES, EDGE, STATUS } from './types.js';
 import { checkEdgeAffinity, getPresentAttrKeys } from './edge-attrs.js';
 import { engine } from './engine-setup.js';
 import { collectDeferredIds, buildNodeToComponent, getConnectedComponents } from './utils.js';
@@ -1017,24 +1017,10 @@ export async function updateNode(
       }
 
       data[key] = value;
-    } else if (key === 'finding_type') {
-      if (!(VALID_FINDING_TYPES as readonly string[]).includes(value)) {
-        throw new Error(t('error.invalid_finding_type', { value, valid: VALID_FINDING_TYPES.join(', ') }));
-      }
-      data[key] = value;
-    } else if (key === 'urgency') {
-      if (!(VALID_URGENCIES as readonly string[]).includes(value)) {
-        throw new Error(t('error.invalid_urgency', { value, valid: VALID_URGENCIES.join(', ') }));
-      }
-      data[key] = value;
-    } else if (key === 'risk_level') {
-      if (!(VALID_RISK_LEVELS as readonly string[]).includes(value)) {
-        throw new Error(t('error.invalid_risk_level', { value, valid: VALID_RISK_LEVELS.join(', ') }));
-      }
-      data[key] = value;
-    } else if (key === 'reversibility') {
-      if (!(VALID_REVERSIBILITIES as readonly string[]).includes(value)) {
-        throw new Error(t('error.invalid_reversibility', { value, valid: VALID_REVERSIBILITIES.join(', ') }));
+    } else if (key in ENUM_FIELD_VALIDATORS) {
+      const validValues = ENUM_FIELD_VALIDATORS[key];
+      if (!(validValues as readonly string[]).includes(value)) {
+        throw new Error(t('error.invalid_enum_value', { field: key, value, valid: validValues.join(', ') }));
       }
       data[key] = value;
     } else if ((value.startsWith('[') || value.startsWith('{')) && value.length > 1) {
