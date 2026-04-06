@@ -61,6 +61,8 @@ export type {
   ImpactReport,
 } from './graph/types.js';
 
+export type { NeighborNode } from './graph/query.js';
+
 // i18n
 export { t, setLocale, getLocale } from './i18n/index.js';
 export type { MessageKey } from './i18n/en.js';

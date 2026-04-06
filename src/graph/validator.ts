@@ -1,7 +1,7 @@
 import type { Node, Graph, NodeType } from './types.js';
 import {
   VALID_STATUSES, REQUIRED_FIELDS, ALL_VALID_RELATIONS,
-  ENUM_FIELD_VALIDATORS,
+  ENUM_FIELD_VALIDATORS, ENUM_FIELD_OWNER_TYPE,
   EDGE_ATTRIBUTE_RANGES, EDGE_ATTRIBUTE_ENUM_VALUES,
 } from './types.js';
 import { checkEdgeAffinity, getPresentAttrKeys } from './edge-attrs.js';
@@ -163,8 +163,10 @@ export function lintNode(node: Node): LintError[] {
     }
   }
 
-  // Type-specific meta validation (enum fields)
+  // Type-specific meta validation (enum fields, gated by owner node type)
   for (const [fieldName, validValues] of Object.entries(ENUM_FIELD_VALIDATORS)) {
+    const ownerType = ENUM_FIELD_OWNER_TYPE[fieldName];
+    if (ownerType && nodeType !== ownerType) continue;
     const metaValue = node.meta[fieldName];
     if (metaValue !== undefined) {
       if (!(validValues as readonly string[]).includes(String(metaValue))) {

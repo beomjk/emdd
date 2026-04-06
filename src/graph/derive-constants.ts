@@ -183,6 +183,14 @@ export const ENUM_FIELD_VALIDATORS: Record<string, readonly string[]> = {
   reversibility: VALID_REVERSIBILITIES,
 };
 
+/** Maps enum field names to the node type that owns them (for lint gating). */
+export const ENUM_FIELD_OWNER_TYPE: Record<string, string> = {
+  finding_type: 'finding',
+  urgency: 'question',
+  risk_level: 'hypothesis',
+  reversibility: 'decision',
+};
+
 // ── Valid Value Enums ────────────────────────────────────────────────
 
 export const DEPENDENCY_TYPE = Object.fromEntries(

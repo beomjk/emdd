@@ -1845,6 +1845,19 @@ describe('updateNode', () => {
     ).rejects.toThrow(/Invalid reversibility "impossible"/);
   });
 
+  it('suggests close match for typo in finding_type', async () => {
+    writeNode(tmpDir, 'findings', 'fnd-002-suggest.md', {
+      id: 'fnd-002', type: 'finding', title: 'Suggest test',
+      status: 'DRAFT', confidence: 0.5,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+
+    await expect(
+      updateNode(join(tmpDir, 'graph'), 'fnd-002', { finding_type: 'observaton' })
+    ).rejects.toThrow(/Did you mean "observation"/);
+  });
+
   it('parses JSON array values', async () => {
     writeNode(tmpDir, 'hypotheses', 'hyp-003-json.md', {
       id: 'hyp-003', type: 'hypothesis', title: 'JSON test',
