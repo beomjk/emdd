@@ -59,9 +59,8 @@ export type {
   CheckTrigger,
   PromoteCandidate,
   ImpactReport,
+  NeighborNode,
 } from './graph/types.js';
-
-export type { NeighborNode } from './graph/query.js';
 
 // i18n
 export { t, setLocale, getLocale } from './i18n/index.js';

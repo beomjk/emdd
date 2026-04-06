@@ -3,7 +3,7 @@ import matter from 'gray-matter';
 import { loadGraph } from './loader.js';
 import { toGraphologyGraph } from './graphology-bridge.js';
 import { nodeDate } from './date-utils.js';
-import type { Node, NodeFilter, NodeDetail } from './types.js';
+import type { Node, NodeFilter, NodeDetail, NeighborNode } from './types.js';
 import { t } from '../i18n/index.js';
 
 // ── listNodes ───────────────────────────────────────────────────────
@@ -80,15 +80,8 @@ export async function readNodes(graphDir: string, nodeIds: string[]): Promise<No
 
 // ── getNeighbors ───────────────────────────────────────────────────
 
-export interface NeighborNode {
-  id: string;
-  type: string;
-  title: string;
-  status?: string;
-  relation: string;
-  direction: 'outgoing' | 'incoming';
-  depth: number;
-}
+// NeighborNode is defined in types.ts for consistency with other interfaces
+export type { NeighborNode } from './types.js';
 
 /**
  * Get neighbors of a node up to a given depth using BFS.

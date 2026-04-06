@@ -13,6 +13,16 @@ import type {
   FileOp,
   DeleteEdgeResult,
 } from './types.js';
+
+function validateRelation(relation: string): void {
+  if (!ALL_VALID_RELATIONS.has(relation)) {
+    const validArr = [...ALL_VALID_RELATIONS].sort();
+    let msg = t('error.invalid_relation', { relation, valid: validArr.join(', ') });
+    const s = suggest(relation, validArr);
+    if (s) msg += t('error.did_you_mean', { suggestion: s });
+    throw new Error(msg);
+  }
+}
 import { t } from '../i18n/index.js';
 
 // ── Edge validation helpers ────────────────────────────────────────
@@ -59,14 +69,7 @@ export async function planCreateEdge(
   attrs?: EdgeAttributes,
   options?: { force?: boolean },
 ): Promise<CreateEdgePlan> {
-  // Validate relation
-  if (!ALL_VALID_RELATIONS.has(relation)) {
-    const validArr = [...ALL_VALID_RELATIONS].sort();
-    let msg = t('error.invalid_relation', { relation, valid: validArr.join(', ') });
-    const s = suggest(relation, validArr);
-    if (s) msg += t('error.did_you_mean', { suggestion: s });
-    throw new Error(msg);
-  }
+  validateRelation(relation);
 
   // Normalize reverse labels
   const canonical = REVERSE_LABELS[relation] ?? relation;
@@ -166,13 +169,7 @@ export async function deleteEdge(
 ): Promise<DeleteEdgeResult> {
   let canonical: string | undefined;
   if (relation) {
-    if (!ALL_VALID_RELATIONS.has(relation)) {
-      const validArr = [...ALL_VALID_RELATIONS].sort();
-      let msg = t('error.invalid_relation', { relation, valid: validArr.join(', ') });
-      const s = suggest(relation, validArr);
-      if (s) msg += t('error.did_you_mean', { suggestion: s });
-      throw new Error(msg);
-    }
+    validateRelation(relation);
     canonical = REVERSE_LABELS[relation] ?? relation;
   }
 

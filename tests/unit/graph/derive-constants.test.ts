@@ -21,6 +21,7 @@ import {
   TERMINAL_STATUSES,
   NODE_DISPLAY_ORDER,
   ENUM_FIELD_VALIDATORS,
+  ENUM_FIELD_OWNER_TYPE,
   VALID_FINDING_TYPES,
   VALID_URGENCIES,
   VALID_RISK_LEVELS,
@@ -288,6 +289,18 @@ describe('ENUM_FIELD_VALIDATORS', () => {
 
   it('reversibility maps to VALID_REVERSIBILITIES', () => {
     expect(ENUM_FIELD_VALIDATORS['reversibility']).toEqual(VALID_REVERSIBILITIES);
+  });
+
+  it('every ENUM_FIELD_VALIDATORS key has an ENUM_FIELD_OWNER_TYPE entry', () => {
+    for (const key of Object.keys(ENUM_FIELD_VALIDATORS)) {
+      expect(ENUM_FIELD_OWNER_TYPE).toHaveProperty(key);
+    }
+  });
+
+  it('every ENUM_FIELD_OWNER_TYPE key exists in ENUM_FIELD_VALIDATORS', () => {
+    for (const key of Object.keys(ENUM_FIELD_OWNER_TYPE)) {
+      expect(ENUM_FIELD_VALIDATORS).toHaveProperty(key);
+    }
   });
 });
 

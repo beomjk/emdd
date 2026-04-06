@@ -31,4 +31,11 @@ describe('suggest', () => {
   it('returns null for empty candidates', () => {
     expect(suggest('test', [])).toBeNull();
   });
+
+  it('respects custom threshold', () => {
+    // 'obsrvation' is distance 1 from 'observation'
+    expect(suggest('obsrvation', candidates, 1)).toBe('observation');
+    // 'obxyz' is distance > 1, so null with threshold 1
+    expect(suggest('obxyz', candidates, 1)).toBeNull();
+  });
 });
