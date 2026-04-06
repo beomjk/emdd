@@ -13,6 +13,7 @@ import type {
   FileOp,
   DeleteEdgeResult,
 } from './types.js';
+import { t } from '../i18n/index.js';
 
 function validateRelation(relation: string): void {
   if (!ALL_VALID_RELATIONS.has(relation)) {
@@ -23,7 +24,6 @@ function validateRelation(relation: string): void {
     throw new Error(msg);
   }
 }
-import { t } from '../i18n/index.js';
 
 // ── Edge validation helpers ────────────────────────────────────────
 

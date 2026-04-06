@@ -203,6 +203,12 @@ describe('createNode', () => {
       createNode(join(tmpDir, 'graph'), 'invalid_type' as any, 'test')
     ).rejects.toThrow();
   });
+
+  it('suggests close match for typo in node type', async () => {
+    await expect(
+      createNode(join(tmpDir, 'graph'), 'hypothesi' as any, 'test')
+    ).rejects.toThrow(/Did you mean "hypothesis"/);
+  });
 });
 
 describe('createEdge', () => {
@@ -261,6 +267,19 @@ describe('createEdge', () => {
     await expect(
       createEdge(join(tmpDir, 'graph'), 'hyp-001', 'nonexistent-001', 'supports')
     ).rejects.toThrow();
+  });
+
+  it('suggests close match for typo in relation', async () => {
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-suggest.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'Test',
+      status: 'PROPOSED', confidence: 0.5,
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+
+    await expect(
+      createEdge(join(tmpDir, 'graph'), 'hyp-001', 'hyp-001', 'support')
+    ).rejects.toThrow(/Did you mean "supports"/);
   });
 
   it('fails on invalid relation type', async () => {

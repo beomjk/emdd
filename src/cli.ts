@@ -9,6 +9,7 @@ import { startMcpServer } from './mcp-server/index.js';
 import { VERSION } from './version.js';
 import { CliAdapter } from './registry/cli-adapter.js';
 import { createDefaultRegistry } from './registry/all-commands.js';
+import { t, getLocale, setLocale } from './i18n/index.js';
 
 function withCliErrorHandling<T extends unknown[]>(
   fn: (...args: T) => Promise<void>,
@@ -89,31 +90,33 @@ program
 program
   .command('workflow')
   .description('Show the EMDD research session cycle')
-  .action(() => {
-    const h = (text: string) => chalk.bold.cyan(text);
+  .option('--lang <locale>', 'Language (en|ko)', 'en')
+  .action((options) => {
+    setLocale(getLocale(options.lang));
+
     const cmd = (text: string) => chalk.yellow(text);
     const mcp = (text: string) => chalk.gray(text);
 
     console.log();
-    console.log(h('EMDD Research Session Cycle'));
+    console.log(chalk.bold.cyan(t('workflow.title')));
     console.log();
-    console.log(`  ${chalk.bold('1. Context Loading')}  ${mcp('[MCP: context-loading]')}`);
-    console.log(`     Load graph state and identify gaps`);
+    console.log(`  ${chalk.bold(t('workflow.phase1'))}  ${mcp('[MCP: context-loading]')}`);
+    console.log(`     ${t('workflow.phase1.desc')}`);
     console.log(`     ${cmd('emdd list')}  ${cmd('emdd read <id>')}  ${cmd('emdd health')}`);
     console.log();
-    console.log(`  ${chalk.bold('2. Exploration')}  ${mcp('[MCP: use tools]')}`);
-    console.log(`     Create nodes, link evidence, update status`);
+    console.log(`  ${chalk.bold(t('workflow.phase2'))}  ${mcp('[MCP: use tools]')}`);
+    console.log(`     ${t('workflow.phase2.desc')}`);
     console.log(`     ${cmd('emdd create-node')}  ${cmd('emdd create-edge')}  ${cmd('emdd update-node')}`);
     console.log();
-    console.log(`  ${chalk.bold('3. Episode Creation')}  ${mcp('[MCP: episode-creation]')}`);
-    console.log(`     Record session findings as an Episode node`);
+    console.log(`  ${chalk.bold(t('workflow.phase3'))}  ${mcp('[MCP: episode-creation]')}`);
+    console.log(`     ${t('workflow.phase3.desc')}`);
     console.log(`     ${cmd('emdd create-node episode <slug>')}`);
     console.log();
-    console.log(`  ${chalk.bold('4. Maintenance')}  ${mcp('[MCP: consolidation, health-review]')}`);
-    console.log(`     Promote findings, resolve questions, check health`);
+    console.log(`  ${chalk.bold(t('workflow.phase4'))}  ${mcp('[MCP: consolidation, health-review]')}`);
+    console.log(`     ${t('workflow.phase4.desc')}`);
     console.log(`     ${cmd('emdd check')}  ${cmd('emdd promote')}  ${cmd('emdd health')}`);
     console.log();
-    console.log(chalk.gray('  Run any command with --help for details.'));
+    console.log(chalk.gray(`  ${t('workflow.help')}`));
     console.log();
   });
 

@@ -80,7 +80,6 @@ export async function readNodes(graphDir: string, nodeIds: string[]): Promise<No
 
 // ── getNeighbors ───────────────────────────────────────────────────
 
-// NeighborNode is defined in types.ts for consistency with other interfaces
 export type { NeighborNode } from './types.js';
 
 /**

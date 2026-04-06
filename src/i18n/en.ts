@@ -97,10 +97,6 @@ export const messages = {
   'error.target_not_found': 'Target node not found: {id}',
   'error.invalid_confidence': 'Invalid confidence value: "{value}" (must be 0-1)',
   'error.invalid_status': 'Invalid status "{value}" for {type}. Valid: {valid}',
-  'error.invalid_finding_type': 'Invalid finding_type "{value}". Valid: {valid}',
-  'error.invalid_urgency': 'Invalid urgency "{value}". Valid: {valid}',
-  'error.invalid_risk_level': 'Invalid risk_level "{value}". Valid: {valid}',
-  'error.invalid_reversibility': 'Invalid reversibility "{value}". Valid: {valid}',
   'error.invalid_enum_value': 'Invalid {field} "{value}". Valid: {valid}',
   'error.did_you_mean': ' Did you mean "{suggestion}"?',
   'error.cli_malformed_record': 'Warning: ignored malformed --{key} entry "{pair}" (expected key=value)',
@@ -146,6 +142,17 @@ export const messages = {
   'impact.col.auto_transition': 'Auto-Transition',
   'impact.error.no_status': "Node '{id}' has no status — cannot simulate what-if",
   'impact.error.orchestrator': "Orchestrator error: {error}",
+  // workflow command
+  'workflow.title': 'EMDD Research Session Cycle',
+  'workflow.phase1': '1. Context Loading',
+  'workflow.phase1.desc': 'Load graph state and identify gaps',
+  'workflow.phase2': '2. Exploration',
+  'workflow.phase2.desc': 'Create nodes, link evidence, update status',
+  'workflow.phase3': '3. Episode Creation',
+  'workflow.phase3.desc': 'Record session findings as an Episode node',
+  'workflow.phase4': '4. Maintenance',
+  'workflow.phase4.desc': 'Promote findings, resolve questions, check health',
+  'workflow.help': 'Run any command with --help for details.',
 } as const satisfies Record<string, string>;
 
 export type MessageKey = keyof typeof messages;

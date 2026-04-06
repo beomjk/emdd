@@ -24,6 +24,8 @@ export function suggest(
   candidates: readonly string[],
   threshold = DEFAULT_THRESHOLD,
 ): string | null {
+  if (!input || candidates.length === 0) return null;
+
   const lower = input.toLowerCase();
 
   if (candidates.some(c => c.toLowerCase() === lower)) return null;

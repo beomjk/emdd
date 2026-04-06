@@ -56,7 +56,8 @@ describe('setLocale / t()', () => {
   });
 
   it('returns key name for missing key (no crash)', () => {
-    expect(t('nonexistent.key')).toBe('nonexistent.key');
+    // Cast to test runtime fallback behavior for unknown keys
+    expect(t('nonexistent.key' as MessageKey)).toBe('nonexistent.key');
   });
 
   it('accesses nested keys', () => {
