@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
+import chalk from 'chalk';
 import { initCommand } from './cli/init.js';
 import { graphCommand } from './cli/graph.js';
 import { serveCommand } from './cli/serve.js';
@@ -8,6 +9,7 @@ import { startMcpServer } from './mcp-server/index.js';
 import { VERSION } from './version.js';
 import { CliAdapter } from './registry/cli-adapter.js';
 import { createDefaultRegistry } from './registry/all-commands.js';
+import { t, getLocale, setLocale } from './i18n/index.js';
 
 function withCliErrorHandling<T extends unknown[]>(
   fn: (...args: T) => Promise<void>,
@@ -84,5 +86,38 @@ program
   .action(withCliErrorHandling(async () => {
     await startMcpServer();
   }));
+
+program
+  .command('workflow')
+  .description('Show the EMDD research session cycle')
+  .option('--lang <locale>', 'Language (en|ko)', 'en')
+  .action((options) => {
+    setLocale(getLocale(options.lang));
+
+    const cmd = (text: string) => chalk.yellow(text);
+    const mcp = (text: string) => chalk.gray(text);
+
+    console.log();
+    console.log(chalk.bold.cyan(t('workflow.title')));
+    console.log();
+    console.log(`  ${chalk.bold(t('workflow.phase1'))}  ${mcp('[MCP: context-loading]')}`);
+    console.log(`     ${t('workflow.phase1.desc')}`);
+    console.log(`     ${cmd('emdd list')}  ${cmd('emdd read <id>')}  ${cmd('emdd health')}`);
+    console.log();
+    console.log(`  ${chalk.bold(t('workflow.phase2'))}  ${mcp('[MCP: use tools]')}`);
+    console.log(`     ${t('workflow.phase2.desc')}`);
+    console.log(`     ${cmd('emdd create-node')}  ${cmd('emdd create-edge')}  ${cmd('emdd update-node')}`);
+    console.log();
+    console.log(`  ${chalk.bold(t('workflow.phase3'))}  ${mcp('[MCP: episode-creation]')}`);
+    console.log(`     ${t('workflow.phase3.desc')}`);
+    console.log(`     ${cmd('emdd create-node episode <slug>')}`);
+    console.log();
+    console.log(`  ${chalk.bold(t('workflow.phase4'))}  ${mcp('[MCP: consolidation, health-review]')}`);
+    console.log(`     ${t('workflow.phase4.desc')}`);
+    console.log(`     ${cmd('emdd check')}  ${cmd('emdd promote')}  ${cmd('emdd health')}`);
+    console.log();
+    console.log(chalk.gray(`  ${t('workflow.help')}`));
+    console.log();
+  });
 
 program.parse();

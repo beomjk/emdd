@@ -20,6 +20,12 @@ import {
   POSITIVE_STATUSES,
   TERMINAL_STATUSES,
   NODE_DISPLAY_ORDER,
+  ENUM_FIELD_VALIDATORS,
+  ENUM_FIELD_OWNER_TYPE,
+  VALID_FINDING_TYPES,
+  VALID_URGENCIES,
+  VALID_RISK_LEVELS,
+  VALID_REVERSIBILITIES,
 } from '../../../src/graph/types.js';
 
 describe('TRANSITION_TABLE', () => {
@@ -259,6 +265,42 @@ describe('Status category sets', () => {
     expect([...TERMINAL_STATUSES].sort()).toEqual(
       ['DEFERRED', 'RESOLVED', 'REVISED', 'SUPERSEDED'].sort(),
     );
+  });
+});
+
+describe('ENUM_FIELD_VALIDATORS', () => {
+  it('maps all 4 enum fields to their valid value arrays', () => {
+    expect(Object.keys(ENUM_FIELD_VALIDATORS).sort()).toEqual(
+      ['finding_type', 'reversibility', 'risk_level', 'urgency'],
+    );
+  });
+
+  it('finding_type maps to VALID_FINDING_TYPES', () => {
+    expect(ENUM_FIELD_VALIDATORS['finding_type']).toEqual(VALID_FINDING_TYPES);
+  });
+
+  it('urgency maps to VALID_URGENCIES', () => {
+    expect(ENUM_FIELD_VALIDATORS['urgency']).toEqual(VALID_URGENCIES);
+  });
+
+  it('risk_level maps to VALID_RISK_LEVELS', () => {
+    expect(ENUM_FIELD_VALIDATORS['risk_level']).toEqual(VALID_RISK_LEVELS);
+  });
+
+  it('reversibility maps to VALID_REVERSIBILITIES', () => {
+    expect(ENUM_FIELD_VALIDATORS['reversibility']).toEqual(VALID_REVERSIBILITIES);
+  });
+
+  it('every ENUM_FIELD_VALIDATORS key has an ENUM_FIELD_OWNER_TYPE entry', () => {
+    for (const key of Object.keys(ENUM_FIELD_VALIDATORS)) {
+      expect(ENUM_FIELD_OWNER_TYPE).toHaveProperty(key);
+    }
+  });
+
+  it('every ENUM_FIELD_OWNER_TYPE key exists in ENUM_FIELD_VALIDATORS', () => {
+    for (const key of Object.keys(ENUM_FIELD_OWNER_TYPE)) {
+      expect(ENUM_FIELD_VALIDATORS).toHaveProperty(key);
+    }
   });
 });
 

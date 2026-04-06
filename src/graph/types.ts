@@ -198,3 +198,13 @@ export interface ImpactScoringState {
   depth: number;
   pathCount: number;
 }
+
+export interface NeighborNode {
+  id: string;
+  type: string;
+  title: string;
+  status?: string;
+  relation: string;
+  direction: 'outgoing' | 'incoming';
+  depth: number;
+}

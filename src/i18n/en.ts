@@ -1,4 +1,4 @@
-export const messages: Record<string, string> = {
+export const messages = {
   // Health dashboard
   'health.title': 'EMDD Health Dashboard',
   'health.total_nodes': 'Total Nodes',
@@ -84,11 +84,6 @@ export const messages: Record<string, string> = {
   'error.transition_no_rule': 'No transition rule from {from}→{to} (valid paths: {validPaths})',
   'error.transition_conditions_unmet': 'Transition {from}→{to} conditions not met: {conditions}',
   'error.invalid_range': '{attr} must be between {min} and {max}, got {value}',
-  'error.invalid_strength': 'strength must be a number between 0.0 and 1.0, got {value}',
-  'error.invalid_severity': 'Invalid severity "{value}". Valid: {valid}',
-  'error.invalid_completeness': 'completeness must be a number between 0.0 and 1.0, got {value}',
-  'error.invalid_dependency_type': 'Invalid dependencyType "{value}". Valid: {valid}',
-  'error.invalid_impact': 'Invalid impact "{value}". Valid: {valid}',
   'error.invalid_enum_attr': 'Invalid {attr} "{value}". Valid values: {valid}',
   'error.edge_affinity_invalid_attr': 'Edge affinity violation: "{relation}" allows [{allowed}], but got disallowed attribute(s): [{invalid}]',
   'error.edge_affinity_no_attrs': 'Edge affinity violation: "{relation}" does not allow any attributes, but got: [{invalid}]',
@@ -97,13 +92,10 @@ export const messages: Record<string, string> = {
   'error.target_not_found': 'Target node not found: {id}',
   'error.invalid_confidence': 'Invalid confidence value: "{value}" (must be 0-1)',
   'error.invalid_status': 'Invalid status "{value}" for {type}. Valid: {valid}',
-  'error.invalid_finding_type': 'Invalid finding_type "{value}". Valid: {valid}',
-  'error.invalid_urgency': 'Invalid urgency "{value}". Valid: {valid}',
-  'error.invalid_risk_level': 'Invalid risk_level "{value}". Valid: {valid}',
-  'error.invalid_reversibility': 'Invalid reversibility "{value}". Valid: {valid}',
+  'error.invalid_enum_value': 'Invalid {field} "{value}". Valid: {valid}',
+  'error.did_you_mean': ' Did you mean "{suggestion}"?',
   'error.cli_malformed_record': 'Warning: ignored malformed --{key} entry "{pair}" (expected key=value)',
   'error.cli_validation_failed': 'Input validation failed:',
-  'error.duplicate_edge': 'Duplicate edge: {source} → {target} [{relation}] already exists. Use force: true to allow duplicates.',
   'error.no_matching_link': 'No matching link from {source} to {target}{relation}',
   'error.invalid_marker': 'Invalid marker: {marker}. Valid markers: {valid}',
   'error.item_already_marked': 'Item already marked in {id}: {item}',
@@ -144,4 +136,17 @@ export const messages: Record<string, string> = {
   'impact.col.auto_transition': 'Auto-Transition',
   'impact.error.no_status': "Node '{id}' has no status — cannot simulate what-if",
   'impact.error.orchestrator': "Orchestrator error: {error}",
-};
+  // workflow command
+  'workflow.title': 'EMDD Research Session Cycle',
+  'workflow.phase1': '1. Context Loading',
+  'workflow.phase1.desc': 'Load graph state and identify gaps',
+  'workflow.phase2': '2. Exploration',
+  'workflow.phase2.desc': 'Create nodes, link evidence, update status',
+  'workflow.phase3': '3. Episode Creation',
+  'workflow.phase3.desc': 'Record session findings as an Episode node',
+  'workflow.phase4': '4. Maintenance',
+  'workflow.phase4.desc': 'Promote findings, resolve questions, check health',
+  'workflow.help': 'Run any command with --help for details.',
+} as const satisfies Record<string, string>;
+
+export type MessageKey = keyof typeof messages;

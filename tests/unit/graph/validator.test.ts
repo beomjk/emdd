@@ -336,6 +336,45 @@ describe('lintGraph', () => {
   });
 });
 
+// ── Enum field type gating ──
+
+describe('lintNode — enum field type gating', () => {
+  it('does not warn about finding_type on non-finding nodes', () => {
+    const hyp = {
+      id: 'hyp-999', type: 'hypothesis' as const, title: 'Test', path: 'test.md',
+      status: 'PROPOSED', confidence: 0.5, tags: [], links: [],
+      meta: { finding_type: 'bogus' },
+    };
+    const errors = lintNode(hyp);
+    const enumErrors = errors.filter(e => e.field === 'finding_type');
+    expect(enumErrors).toEqual([]);
+  });
+
+  it('warns about invalid finding_type on finding nodes', () => {
+    const fnd = {
+      id: 'fnd-999', type: 'finding' as const, title: 'Test', path: 'test.md',
+      status: 'DRAFT', confidence: 0.5, tags: [], links: [],
+      meta: { finding_type: 'bogus' },
+    };
+    const errors = lintNode(fnd);
+    const enumErrors = errors.filter(e => e.field === 'finding_type');
+    expect(enumErrors).toHaveLength(1);
+    expect(enumErrors[0].message).toContain('Invalid finding_type');
+  });
+
+  it('includes "Did you mean?" suggestion for close typo in finding_type', () => {
+    const fnd = {
+      id: 'fnd-998', type: 'finding' as const, title: 'Test', path: 'test.md',
+      status: 'DRAFT', confidence: 0.5, tags: [], links: [],
+      meta: { finding_type: 'observaton' },
+    };
+    const errors = lintNode(fnd);
+    const enumErrors = errors.filter(e => e.field === 'finding_type');
+    expect(enumErrors).toHaveLength(1);
+    expect(enumErrors[0].message).toContain('Did you mean "observation"');
+  });
+});
+
 // ── Affinity validation in lintNode/lintGraph (T022) ──
 
 describe('lintNode — edge attribute affinity', () => {

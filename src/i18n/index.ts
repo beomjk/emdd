@@ -1,9 +1,11 @@
 import { messages as en } from './en.js';
 import { messages as ko } from './ko.js';
+import type { MessageKey } from './en.js';
 
+export type { MessageKey };
 export type Locale = 'en' | 'ko';
 
-const MESSAGES: Record<Locale, Record<string, string>> = { en, ko };
+const MESSAGES: Record<Locale, Record<MessageKey, string>> = { en, ko };
 const VALID_LOCALES = new Set<string>(['en', 'ko']);
 
 let currentLocale: Locale = 'en';
@@ -20,7 +22,7 @@ export function setLocale(locale: Locale): void {
   currentLocale = locale;
 }
 
-export function t(key: string, vars?: Record<string, string>): string {
+export function t(key: MessageKey, vars?: Record<string, string>): string {
   const msg = MESSAGES[currentLocale]?.[key];
   if (!msg) return key; // fallback: return key itself
   if (!vars) return msg;

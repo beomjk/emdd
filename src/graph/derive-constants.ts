@@ -175,6 +175,22 @@ export const VALID_RISK_LEVELS = validValues.riskLevels;
 export const VALID_SEVERITIES = validValues.severities;
 export const VALID_URGENCIES = validValues.urgencies;
 
+// ── Enum Field Validators (field_name → valid values) ───────────────
+export const ENUM_FIELD_VALIDATORS: Record<string, readonly string[]> = {
+  finding_type: VALID_FINDING_TYPES,
+  urgency: VALID_URGENCIES,
+  risk_level: VALID_RISK_LEVELS,
+  reversibility: VALID_REVERSIBILITIES,
+};
+
+/** Maps enum field names to the node type that owns them (for lint gating). */
+export const ENUM_FIELD_OWNER_TYPE: Record<string, string> = {
+  finding_type: 'finding',
+  urgency: 'question',
+  risk_level: 'hypothesis',
+  reversibility: 'decision',
+};
+
 // ── Valid Value Enums ────────────────────────────────────────────────
 
 export const DEPENDENCY_TYPE = Object.fromEntries(

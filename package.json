@@ -14,6 +14,17 @@
     "LICENSE"
   ],
   "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./schema": {
+      "import": "./dist/schema/schema.config.js",
+      "types": "./dist/schema/schema.config.d.ts"
+    }
+  },
   "scripts": {
     "gen:spec-tables": "tsx src/schema/spec-tables.ts",
     "gen:doc-tables": "tsx src/schema/doc-tables.ts",

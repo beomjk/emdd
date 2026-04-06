@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { getLocale, setLocale, t } from '../../../src/i18n/index.js';
+import type { MessageKey } from '../../../src/i18n/en.js';
 import { messages as enMessages } from '../../../src/i18n/en.js';
 import { messages as koMessages } from '../../../src/i18n/ko.js';
 
@@ -55,7 +56,8 @@ describe('setLocale / t()', () => {
   });
 
   it('returns key name for missing key (no crash)', () => {
-    expect(t('nonexistent.key')).toBe('nonexistent.key');
+    // Cast to test runtime fallback behavior for unknown keys
+    expect(t('nonexistent.key' as MessageKey)).toBe('nonexistent.key');
   });
 
   it('accesses nested keys', () => {
@@ -68,6 +70,18 @@ describe('setLocale / t()', () => {
     expect(t('health.title')).toBe('EMDD Health Dashboard');
     setLocale('ko');
     expect(t('health.title')).toBe('EMDD 건강 대시보드');
+  });
+});
+
+describe('MessageKey type safety', () => {
+  it('MessageKey type includes known keys', () => {
+    const key: MessageKey = 'health.title';
+    expect(t(key)).toBeTruthy();
+  });
+
+  it('t() accepts MessageKey and returns correct value', () => {
+    const key: MessageKey = 'error.invalid_enum_value';
+    expect(t(key, { field: 'test', value: 'x', valid: 'a, b' })).toContain('test');
   });
 });
 

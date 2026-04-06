@@ -1,4 +1,6 @@
-export const messages: Record<string, string> = {
+import type { MessageKey } from './en.js';
+
+export const messages: Record<MessageKey, string> = {
   // 건강 대시보드
   'health.title': 'EMDD 건강 대시보드',
   'health.total_nodes': '전체 노드 수',
@@ -84,11 +86,6 @@ export const messages: Record<string, string> = {
   'error.transition_no_rule': '{from}→{to}에 대한 전이 규칙이 없습니다 (유효 경로: {validPaths})',
   'error.transition_conditions_unmet': '전이 {from}→{to} 조건 미충족: {conditions}',
   'error.invalid_range': '{attr}은(는) {min}에서 {max} 사이여야 합니다. 입력값: {value}',
-  'error.invalid_strength': 'strength는 0.0에서 1.0 사이의 숫자여야 합니다. 입력값: {value}',
-  'error.invalid_severity': '잘못된 severity "{value}". 유효한 값: {valid}',
-  'error.invalid_completeness': 'completeness는 0.0에서 1.0 사이의 숫자여야 합니다. 입력값: {value}',
-  'error.invalid_dependency_type': '잘못된 dependencyType "{value}". 유효한 값: {valid}',
-  'error.invalid_impact': '잘못된 impact "{value}". 유효한 값: {valid}',
   'error.invalid_enum_attr': '유효하지 않은 {attr} "{value}". 유효한 값: {valid}',
   'error.edge_affinity_invalid_attr': '에지 어피니티 위반: "{relation}"은(는) [{allowed}]만 허용하지만, 허용되지 않는 속성이 있습니다: [{invalid}]',
   'error.edge_affinity_no_attrs': '에지 어피니티 위반: "{relation}"은(는) 속성을 허용하지 않지만, 속성이 있습니다: [{invalid}]',
@@ -97,13 +94,10 @@ export const messages: Record<string, string> = {
   'error.target_not_found': '대상 노드를 찾을 수 없습니다: {id}',
   'error.invalid_confidence': '잘못된 신뢰도 값: "{value}" (0-1 사이여야 합니다)',
   'error.invalid_status': '타입 {type}에 대한 잘못된 상태 "{value}". 유효한 값: {valid}',
-  'error.invalid_finding_type': '잘못된 finding_type "{value}". 유효한 값: {valid}',
-  'error.invalid_urgency': '잘못된 urgency "{value}". 유효한 값: {valid}',
-  'error.invalid_risk_level': '잘못된 risk_level "{value}". 유효한 값: {valid}',
-  'error.invalid_reversibility': '잘못된 reversibility "{value}". 유효한 값: {valid}',
+  'error.invalid_enum_value': '잘못된 {field} "{value}". 유효한 값: {valid}',
+  'error.did_you_mean': ' "{suggestion}"을(를) 의미하셨나요?',
   'error.cli_malformed_record': '경고: 잘못된 --{key} 항목 "{pair}" 무시됨 (key=value 형식 필요)',
   'error.cli_validation_failed': '입력 검증 실패:',
-  'error.duplicate_edge': '중복 에지: {source} → {target} [{relation}]이(가) 이미 존재합니다. force: true로 중복을 허용할 수 있습니다.',
   'error.no_matching_link': '{source}에서 {target}으로의 일치하는 링크가 없습니다{relation}',
   'error.invalid_marker': '잘못된 마커: {marker}. 유효한 마커: {valid}',
   'error.item_already_marked': '{id}에서 이미 표시된 항목입니다: {item}',
@@ -144,4 +138,15 @@ export const messages: Record<string, string> = {
   'impact.col.auto_transition': '자동전이',
   'impact.error.no_status': "노드 '{id}'에 상태가 없어 what-if 시뮬레이션이 불가합니다",
   'impact.error.orchestrator': "오케스트레이터 오류: {error}",
+  // workflow command
+  'workflow.title': 'EMDD 연구 세션 사이클',
+  'workflow.phase1': '1. 컨텍스트 로딩',
+  'workflow.phase1.desc': '그래프 상태를 로드하고 갭을 파악합니다',
+  'workflow.phase2': '2. 탐색',
+  'workflow.phase2.desc': '노드를 생성하고, 증거를 연결하고, 상태를 업데이트합니다',
+  'workflow.phase3': '3. 에피소드 생성',
+  'workflow.phase3.desc': '세션 결과를 에피소드 노드로 기록합니다',
+  'workflow.phase4': '4. 유지보수',
+  'workflow.phase4.desc': '발견 승격, 질문 해소, 건강 점검',
+  'workflow.help': '각 명령어에 --help를 붙이면 상세 도움말을 볼 수 있습니다.',
 };
