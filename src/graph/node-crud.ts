@@ -9,7 +9,7 @@ import { normalizeDateFields } from './date-utils.js';
 import { suggest } from '../utils/suggest.js';
 import { executeOps } from './file-ops.js';
 import { generateIndex as _generateIndex } from './index-generator.js';
-import { loadConfig, saveConfig } from './config.js';
+import { saveConfig } from './config.js';
 import type {
   NodeType,
   NodeWithStatus,

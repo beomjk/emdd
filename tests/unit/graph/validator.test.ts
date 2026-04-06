@@ -361,6 +361,18 @@ describe('lintNode — enum field type gating', () => {
     expect(enumErrors).toHaveLength(1);
     expect(enumErrors[0].message).toContain('Invalid finding_type');
   });
+
+  it('includes "Did you mean?" suggestion for close typo in finding_type', () => {
+    const fnd = {
+      id: 'fnd-998', type: 'finding' as const, title: 'Test', path: 'test.md',
+      status: 'DRAFT', confidence: 0.5, tags: [], links: [],
+      meta: { finding_type: 'observaton' },
+    };
+    const errors = lintNode(fnd);
+    const enumErrors = errors.filter(e => e.field === 'finding_type');
+    expect(enumErrors).toHaveLength(1);
+    expect(enumErrors[0].message).toContain('Did you mean "observation"');
+  });
 });
 
 // ── Affinity validation in lintNode/lintGraph (T022) ──

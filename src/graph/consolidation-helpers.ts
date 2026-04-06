@@ -17,7 +17,7 @@ export function countEpisodesSince(graph: Graph, sinceDate: Date): number {
 /**
  * Determine the anchor date for "since last consolidation" counting.
  * Priority: (a) last_consolidation_date from .emdd.yml
- *           (d) newest created date among Knowledge nodes with promotes edges
+ *           (b) newest created date among Knowledge nodes with promotes edges
  *           null if no consolidation evidence exists
  */
 export function resolveConsolidationAnchor(config: EmddConfig, graph: Graph): Date | null {

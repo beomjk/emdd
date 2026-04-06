@@ -22,6 +22,18 @@ describe('Public API exports (src/index.ts)', () => {
     expect(typeof api.lintGraph).toBe('function');
   });
 
+  it('exports remaining graph functions', async () => {
+    const api = await import('../../src/index.js');
+    expect(typeof api.markDone).toBe('function');
+    expect(typeof api.markConsolidated).toBe('function');
+    expect(typeof api.lintNode).toBe('function');
+    expect(typeof api.detectClusters).toBe('function');
+    expect(typeof api.getBacklog).toBe('function');
+    expect(typeof api.checkKillCriteria).toBe('function');
+    expect(typeof api.listBranchGroups).toBe('function');
+    expect(typeof api.analyzeRefutation).toBe('function');
+  });
+
   it('exports plan/execute functions', async () => {
     const api = await import('../../src/index.js');
     expect(typeof api.planCreateNode).toBe('function');
