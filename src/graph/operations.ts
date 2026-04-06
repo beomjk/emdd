@@ -9,6 +9,7 @@ import { engine } from './engine-setup.js';
 import { collectDeferredIds, buildNodeToComponent, getConnectedComponents } from './utils.js';
 import { toGraphologyGraph } from './graphology-bridge.js';
 import { normalizeDateFields, nodeDate } from './date-utils.js';
+import { suggest } from '../utils/suggest.js';
 import type {
   Node,
   NodeType,
@@ -163,7 +164,10 @@ export function planCreateNode(
   body?: string,
 ): CreateNodePlan {
   if (!NODE_TYPES.includes(type as NodeType)) {
-    throw new Error(t('error.invalid_node_type', { type, valid: NODE_TYPES.join(', ') }));
+    let msg = t('error.invalid_node_type', { type, valid: NODE_TYPES.join(', ') });
+    const s = suggest(type, NODE_TYPES);
+    if (s) msg += t('error.did_you_mean', { suggestion: s });
+    throw new Error(msg);
   }
 
   const nodeType = type as NodeType;
@@ -247,8 +251,11 @@ export async function planCreateEdge(
 ): Promise<CreateEdgePlan> {
   // Validate relation
   if (!ALL_VALID_RELATIONS.has(relation)) {
-    const valid = [...ALL_VALID_RELATIONS].sort().join(', ');
-    throw new Error(t('error.invalid_relation', { relation, valid }));
+    const validArr = [...ALL_VALID_RELATIONS].sort();
+    let msg = t('error.invalid_relation', { relation, valid: validArr.join(', ') });
+    const s = suggest(relation, validArr);
+    if (s) msg += t('error.did_you_mean', { suggestion: s });
+    throw new Error(msg);
   }
 
   // Normalize reverse labels
@@ -976,7 +983,10 @@ export async function updateNode(
     } else if (key === 'status') {
       const validStatuses = VALID_STATUSES[node.type];
       if (!validStatuses.includes(value)) {
-        throw new Error(t('error.invalid_status', { value, type: node.type, valid: validStatuses.join(', ') }));
+        let msg = t('error.invalid_status', { value, type: node.type, valid: validStatuses.join(', ') });
+        const s = suggest(value, validStatuses as string[]);
+        if (s) msg += t('error.did_you_mean', { suggestion: s });
+        throw new Error(msg);
       }
 
       // Transition policy enforcement
@@ -1020,7 +1030,10 @@ export async function updateNode(
     } else if (key in ENUM_FIELD_VALIDATORS) {
       const validValues = ENUM_FIELD_VALIDATORS[key];
       if (!(validValues as readonly string[]).includes(value)) {
-        throw new Error(t('error.invalid_enum_value', { field: key, value, valid: validValues.join(', ') }));
+        let msg = t('error.invalid_enum_value', { field: key, value, valid: validValues.join(', ') });
+        const s = suggest(value, validValues);
+        if (s) msg += t('error.did_you_mean', { suggestion: s });
+        throw new Error(msg);
       }
       data[key] = value;
     } else if ((value.startsWith('[') || value.startsWith('{')) && value.length > 1) {
@@ -1062,8 +1075,11 @@ export async function deleteEdge(
   let canonical: string | undefined;
   if (relation) {
     if (!ALL_VALID_RELATIONS.has(relation)) {
-      const valid = [...ALL_VALID_RELATIONS].sort().join(', ');
-      throw new Error(t('error.invalid_relation', { relation, valid }));
+      const validArr = [...ALL_VALID_RELATIONS].sort();
+      let msg = t('error.invalid_relation', { relation, valid: validArr.join(', ') });
+      const s = suggest(relation, validArr);
+      if (s) msg += t('error.did_you_mean', { suggestion: s });
+      throw new Error(msg);
     }
     canonical = REVERSE_LABELS[relation] ?? relation;
   }

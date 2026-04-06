@@ -6,6 +6,7 @@ import {
 } from './types.js';
 import { checkEdgeAffinity, getPresentAttrKeys } from './edge-attrs.js';
 import { t } from '../i18n/index.js';
+import { suggest } from '../utils/suggest.js';
 
 export interface LintError {
   nodeId: string;
@@ -167,9 +168,12 @@ export function lintNode(node: Node): LintError[] {
     const metaValue = node.meta[fieldName];
     if (metaValue !== undefined) {
       if (!(validValues as readonly string[]).includes(String(metaValue))) {
+        let msg = t('error.invalid_enum_value', { field: fieldName, value: String(metaValue), valid: validValues.join(', ') });
+        const s = suggest(String(metaValue), validValues);
+        if (s) msg += t('error.did_you_mean', { suggestion: s });
         errors.push({
           nodeId: id, field: fieldName,
-          message: t('error.invalid_enum_value', { field: fieldName, value: String(metaValue), valid: validValues.join(', ') }),
+          message: msg,
           severity: 'warning',
         });
       }

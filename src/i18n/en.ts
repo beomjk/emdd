@@ -102,6 +102,7 @@ export const messages = {
   'error.invalid_risk_level': 'Invalid risk_level "{value}". Valid: {valid}',
   'error.invalid_reversibility': 'Invalid reversibility "{value}". Valid: {valid}',
   'error.invalid_enum_value': 'Invalid {field} "{value}". Valid: {valid}',
+  'error.did_you_mean': ' Did you mean "{suggestion}"?',
   'error.cli_malformed_record': 'Warning: ignored malformed --{key} entry "{pair}" (expected key=value)',
   'error.cli_validation_failed': 'Input validation failed:',
   'error.duplicate_edge': 'Duplicate edge: {source} → {target} [{relation}] already exists. Use force: true to allow duplicates.',

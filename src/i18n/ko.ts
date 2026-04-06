@@ -104,6 +104,7 @@ export const messages: Record<MessageKey, string> = {
   'error.invalid_risk_level': '잘못된 risk_level "{value}". 유효한 값: {valid}',
   'error.invalid_reversibility': '잘못된 reversibility "{value}". 유효한 값: {valid}',
   'error.invalid_enum_value': '잘못된 {field} "{value}". 유효한 값: {valid}',
+  'error.did_you_mean': ' "{suggestion}"을(를) 의미하셨나요?',
   'error.cli_malformed_record': '경고: 잘못된 --{key} 항목 "{pair}" 무시됨 (key=value 형식 필요)',
   'error.cli_validation_failed': '입력 검증 실패:',
   'error.duplicate_edge': '중복 에지: {source} → {target} [{relation}]이(가) 이미 존재합니다. force: true로 중복을 허용할 수 있습니다.',
