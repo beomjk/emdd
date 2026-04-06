@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
+import chalk from 'chalk';
 import { initCommand } from './cli/init.js';
 import { graphCommand } from './cli/graph.js';
 import { serveCommand } from './cli/serve.js';
@@ -84,5 +85,36 @@ program
   .action(withCliErrorHandling(async () => {
     await startMcpServer();
   }));
+
+program
+  .command('workflow')
+  .description('Show the EMDD research session cycle')
+  .action(() => {
+    const h = (text: string) => chalk.bold.cyan(text);
+    const cmd = (text: string) => chalk.yellow(text);
+    const mcp = (text: string) => chalk.gray(text);
+
+    console.log();
+    console.log(h('EMDD Research Session Cycle'));
+    console.log();
+    console.log(`  ${chalk.bold('1. Context Loading')}  ${mcp('[MCP: context-loading]')}`);
+    console.log(`     Load graph state and identify gaps`);
+    console.log(`     ${cmd('emdd list')}  ${cmd('emdd read <id>')}  ${cmd('emdd health')}`);
+    console.log();
+    console.log(`  ${chalk.bold('2. Exploration')}  ${mcp('[MCP: use tools]')}`);
+    console.log(`     Create nodes, link evidence, update status`);
+    console.log(`     ${cmd('emdd create-node')}  ${cmd('emdd create-edge')}  ${cmd('emdd update-node')}`);
+    console.log();
+    console.log(`  ${chalk.bold('3. Episode Creation')}  ${mcp('[MCP: episode-creation]')}`);
+    console.log(`     Record session findings as an Episode node`);
+    console.log(`     ${cmd('emdd create-node episode <slug>')}`);
+    console.log();
+    console.log(`  ${chalk.bold('4. Maintenance')}  ${mcp('[MCP: consolidation, health-review]')}`);
+    console.log(`     Promote findings, resolve questions, check health`);
+    console.log(`     ${cmd('emdd check')}  ${cmd('emdd promote')}  ${cmd('emdd health')}`);
+    console.log();
+    console.log(chalk.gray('  Run any command with --help for details.'));
+    console.log();
+  });
 
 program.parse();
