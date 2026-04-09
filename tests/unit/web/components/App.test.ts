@@ -167,4 +167,72 @@ describe('App', () => {
       expect(screen.queryByPlaceholderText('Search nodes...')).not.toBeInTheDocument();
     });
   });
+
+  describe('layout selector', () => {
+    it('renders layout select when graph is loaded', async () => {
+      const graph = makeGraph([makeNode()], []);
+      mockFetchGraph.mockResolvedValue(graph);
+      render(App);
+      await waitFor(() => {
+        const select = screen.getByRole('combobox', { name: /layout/i });
+        expect(select).toBeInTheDocument();
+      });
+    });
+
+    it('has force and hierarchical options', async () => {
+      const graph = makeGraph([makeNode()], []);
+      mockFetchGraph.mockResolvedValue(graph);
+      render(App);
+      await waitFor(() => {
+        const select = screen.getByRole('combobox', { name: /layout/i });
+        const options = select.querySelectorAll('option');
+        expect(options).toHaveLength(2);
+        expect(options[0]).toHaveValue('force');
+        expect(options[1]).toHaveValue('hierarchical');
+      });
+    });
+
+    it('defaults to force layout', async () => {
+      dashboardState.layout = 'force';
+      const graph = makeGraph([makeNode()], []);
+      mockFetchGraph.mockResolvedValue(graph);
+      render(App);
+      await waitFor(() => {
+        const select = screen.getByRole('combobox', { name: /layout/i }) as HTMLSelectElement;
+        expect(select.value).toBe('force');
+      });
+    });
+
+    it('updates dashboardState.layout on change', async () => {
+      dashboardState.layout = 'force';
+      const graph = makeGraph([makeNode()], []);
+      mockFetchGraph.mockResolvedValue(graph);
+      render(App);
+      await waitFor(() => {
+        screen.getByRole('combobox', { name: /layout/i });
+      });
+      const select = screen.getByRole('combobox', { name: /layout/i }) as HTMLSelectElement;
+      // Simulate change
+      select.value = 'hierarchical';
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      await waitFor(() => {
+        expect(dashboardState.layout).toBe('hierarchical');
+      });
+    });
+
+    it('does not render layout select during loading', () => {
+      mockFetchGraph.mockReturnValue(new Promise(() => {}));
+      render(App);
+      expect(screen.queryByRole('combobox', { name: /layout/i })).not.toBeInTheDocument();
+    });
+
+    it('does not render layout select for empty graph', async () => {
+      mockFetchGraph.mockResolvedValue(makeGraph([], []));
+      render(App);
+      await waitFor(() => {
+        expect(screen.getByText('No nodes found in the graph.')).toBeInTheDocument();
+      });
+      expect(screen.queryByRole('combobox', { name: /layout/i })).not.toBeInTheDocument();
+    });
+  });
 });

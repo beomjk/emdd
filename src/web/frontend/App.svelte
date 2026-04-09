@@ -73,6 +73,17 @@
   <header class="toolbar">
     <div class="toolbar-title">EMDD Dashboard</div>
     {#if dashboardState.graph && dashboardState.graph.nodes.length > 0}
+      <label class="layout-selector">
+        <span class="sr-only">Layout</span>
+        <select
+          aria-label="Layout"
+          value={dashboardState.layout}
+          onchange={(e) => dashboardState.setLayout((e.target as HTMLSelectElement).value as 'force' | 'hierarchical')}
+        >
+          <option value="force">Force</option>
+          <option value="hierarchical">Hierarchical</option>
+        </select>
+      </label>
       <Filters
         types={filterState.allTypes}
         statuses={filterState.allStatuses}
@@ -177,6 +188,29 @@
     background: var(--bg-code);
     padding: 1px 4px;
     border-radius: 2px;
+  }
+  .layout-selector {
+    display: flex;
+    align-items: center;
+  }
+  .layout-selector select {
+    padding: 4px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
   }
   .toast {
     position: fixed;
