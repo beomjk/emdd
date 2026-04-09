@@ -1,9 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import type { SerializedGraph, SerializedNode, SerializedEdge } from './types.js';
-import type { LayoutMode } from './frontend/graph.js';
-import { NODE_COLORS, getNodeColor, getStatusBorder } from './frontend/constants.js';
+import type { SerializedGraph, SerializedNode, SerializedEdge, LayoutMode } from './types.js';
+import { NODE_COLORS, getNodeColor, getStatusBorder } from './constants.js';
 
 export interface ExportOptions {
   layout?: LayoutMode;

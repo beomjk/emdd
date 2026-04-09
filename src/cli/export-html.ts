@@ -4,7 +4,7 @@ import chalk from 'chalk';
 import { resolveGraphDir } from '../graph/loader.js';
 import { createGraphCache } from '../web/cache.js';
 import { generateExportHtml } from '../web/export.js';
-import type { LayoutMode } from '../web/frontend/graph.js';
+import type { LayoutMode } from '../web/types.js';
 
 interface ExportHtmlOptions {
   layout: string;

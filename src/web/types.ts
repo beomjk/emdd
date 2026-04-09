@@ -27,6 +27,10 @@ export interface SerializedEdge {
   relation: string;
 }
 
+// ── Layout mode ─────────────────────────────────────────────────────
+
+export type LayoutMode = 'force' | 'hierarchical';
+
 // ── Cluster types ────────────────────────────────────────────────────
 
 export interface VisualCluster {
