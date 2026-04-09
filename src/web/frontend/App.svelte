@@ -3,7 +3,7 @@
   import { dashboardState } from './state/dashboard.svelte.js';
   import { filterState } from './state/filters.svelte.js';
   import { sseState } from './state/sse.svelte.js';
-  import { fetchGraph, fetchNeighbors } from './lib/api.js';
+  import { fetchGraph, fetchNeighbors, fetchExportHtml } from './lib/api.js';
   import CytoscapeGraph from './components/CytoscapeGraph.svelte';
   import DetailPanel from './components/DetailPanel.svelte';
   import Filters from './components/Filters.svelte';
@@ -66,6 +66,23 @@
   function handleSearchNavigate(id: string): void {
     graphRef?.panToNode(id);
     graphRef?.pulseNode(id);
+  }
+
+  async function handleExport(): Promise<void> {
+    try {
+      const types = [...filterState.visibleTypes];
+      const statuses = [...filterState.visibleStatuses];
+      const html = await fetchExportHtml(dashboardState.layout, types, statuses);
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'emdd-graph.html';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // Error handled by api.ts
+    }
   }
 
   function showToast(msg: string): void {
@@ -137,6 +154,7 @@
         visibleStatuses={filterState.visibleStatuses}
         onNavigate={handleSearchNavigate}
       />
+      <button class="export-btn" aria-label="Export" onclick={handleExport}>Export</button>
     {/if}
   </header>
 
@@ -246,6 +264,18 @@
     color: var(--text-primary);
     font-size: 12px;
     cursor: pointer;
+  }
+  .export-btn {
+    padding: 4px 10px;
+    border: 1px solid var(--border-btn);
+    border-radius: 4px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .export-btn:hover {
+    background: var(--bg-hover);
   }
   .sr-only {
     position: absolute;

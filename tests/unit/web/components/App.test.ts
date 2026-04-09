@@ -6,6 +6,7 @@ vi.mock('../../../../src/web/frontend/lib/api.js', () => ({
   fetchGraph: vi.fn(),
   fetchNeighbors: vi.fn(),
   fetchNodeDetail: vi.fn(),
+  fetchExportHtml: vi.fn(),
 }));
 
 vi.mock('../../../../src/web/frontend/state/sse.svelte.js', () => ({
@@ -39,12 +40,13 @@ vi.mock('../../../../src/web/frontend/components/HealthSidebar.svelte', () => ({
 }));
 
 import App from '../../../../src/web/frontend/App.svelte';
-import { fetchGraph, fetchNeighbors } from '../../../../src/web/frontend/lib/api.js';
+import { fetchGraph, fetchNeighbors, fetchExportHtml } from '../../../../src/web/frontend/lib/api.js';
 import { dashboardState } from '../../../../src/web/frontend/state/dashboard.svelte.js';
 import { sseState } from '../../../../src/web/frontend/state/sse.svelte.js';
 
 const mockFetchGraph = vi.mocked(fetchGraph);
 const mockFetchNeighbors = vi.mocked(fetchNeighbors);
+const mockFetchExportHtml = vi.mocked(fetchExportHtml);
 const mockSseState = vi.mocked(sseState);
 
 describe('App', () => {
@@ -295,6 +297,61 @@ describe('App', () => {
       await waitFor(() => {
         expect(screen.getByText('Something went wrong')).toBeInTheDocument();
       });
+    });
+  });
+
+  describe('export button', () => {
+    it('renders export button when graph is loaded', async () => {
+      const graph = makeGraph([makeNode()], []);
+      mockFetchGraph.mockResolvedValue(graph);
+      render(App);
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /export/i })).toBeInTheDocument();
+      });
+    });
+
+    it('does not render export button during loading', () => {
+      mockFetchGraph.mockReturnValue(new Promise(() => {}));
+      render(App);
+      expect(screen.queryByRole('button', { name: /export/i })).not.toBeInTheDocument();
+    });
+
+    it('does not render export button for empty graph', async () => {
+      mockFetchGraph.mockResolvedValue(makeGraph([], []));
+      render(App);
+      await waitFor(() => {
+        expect(screen.getByText('No nodes found in the graph.')).toBeInTheDocument();
+      });
+      expect(screen.queryByRole('button', { name: /export/i })).not.toBeInTheDocument();
+    });
+
+    it('calls fetchExportHtml with layout and filter params on click', async () => {
+      const graph = makeGraph([makeNode()], []);
+      mockFetchGraph.mockResolvedValue(graph);
+      mockFetchExportHtml.mockResolvedValue('<html></html>');
+
+      // Mock URL.createObjectURL and link click
+      const createObjectURL = vi.fn().mockReturnValue('blob:test');
+      const revokeObjectURL = vi.fn();
+      vi.stubGlobal('URL', { createObjectURL, revokeObjectURL });
+
+      render(App);
+      await waitFor(() => {
+        screen.getByRole('button', { name: /export/i });
+      });
+
+      const btn = screen.getByRole('button', { name: /export/i });
+      await btn.click();
+
+      await waitFor(() => {
+        expect(mockFetchExportHtml).toHaveBeenCalledWith(
+          dashboardState.layout,
+          expect.any(Array),
+          expect.any(Array),
+        );
+      });
+
+      vi.unstubAllGlobals();
     });
   });
 });
