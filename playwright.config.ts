@@ -18,7 +18,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'node dist/cli.js serve --no-open --graph tests/fixtures/sample-graph',
+    command: 'node dist/cli.js serve tests/fixtures/sample-project --no-open -p 3927',
     url: 'http://localhost:3927',
     reuseExistingServer: !process.env.CI,
     timeout: 10000,
