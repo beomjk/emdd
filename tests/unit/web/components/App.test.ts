@@ -24,6 +24,10 @@ vi.mock('../../../../src/web/frontend/components/CytoscapeGraph.svelte', () => (
   default: createStubComponent('cytoscape-stub'),
 }));
 
+vi.mock('../../../../src/web/frontend/components/HealthSidebar.svelte', () => ({
+  default: createStubComponent('health-sidebar-stub'),
+}));
+
 import App from '../../../../src/web/frontend/App.svelte';
 import { fetchGraph, fetchNeighbors } from '../../../../src/web/frontend/lib/api.js';
 import { dashboardState } from '../../../../src/web/frontend/state/dashboard.svelte.js';
@@ -86,6 +90,32 @@ describe('App', () => {
         expect(screen.queryByText('Loading graph...')).not.toBeInTheDocument();
         expect(screen.queryByText('No nodes found in the graph.')).not.toBeInTheDocument();
       });
+    });
+  });
+
+  describe('sidebar', () => {
+    it('renders HealthSidebar when graph is loaded', async () => {
+      const graph = makeGraph([makeNode()], []);
+      mockFetchGraph.mockResolvedValue(graph);
+      render(App);
+      await waitFor(() => {
+        expect(screen.getByTestId('health-sidebar-stub')).toBeInTheDocument();
+      });
+    });
+
+    it('does not render HealthSidebar during loading', () => {
+      mockFetchGraph.mockReturnValue(new Promise(() => {}));
+      render(App);
+      expect(screen.queryByTestId('health-sidebar-stub')).not.toBeInTheDocument();
+    });
+
+    it('does not render HealthSidebar for empty graph', async () => {
+      mockFetchGraph.mockResolvedValue(makeGraph([], []));
+      render(App);
+      await waitFor(() => {
+        expect(screen.getByText('No nodes found in the graph.')).toBeInTheDocument();
+      });
+      expect(screen.queryByTestId('health-sidebar-stub')).not.toBeInTheDocument();
     });
   });
 

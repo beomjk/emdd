@@ -7,6 +7,7 @@
   import DetailPanel from './components/DetailPanel.svelte';
   import Filters from './components/Filters.svelte';
   import SearchBar from './components/SearchBar.svelte';
+  import HealthSidebar from './components/HealthSidebar.svelte';
 
   let graphRef: CytoscapeGraph | undefined = $state();
   let hopDepth = $state(2);
@@ -98,6 +99,8 @@
         <p class="empty-hint">Create some nodes with <code>emdd add</code> to get started.</p>
       </div>
     {:else}
+      <HealthSidebar onNodeClick={selectNode} />
+
       <CytoscapeGraph
         bind:this={graphRef}
         graph={dashboardState.graph}
