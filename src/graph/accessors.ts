@@ -17,6 +17,7 @@ export interface QuestionMeta {
   question_type?: string;
   urgency?: string;
   answer_summary?: string;
+  spawns_branch_group?: string;
 }
 
 export interface EpisodeMeta {
@@ -67,7 +68,7 @@ export function getFindingMeta(node: Node): FindingMeta | null {
 }
 
 export function getQuestionMeta(node: Node): QuestionMeta | null {
-  return extract<QuestionMeta>(node, 'question', ['question_type', 'urgency', 'answer_summary']);
+  return extract<QuestionMeta>(node, 'question', ['question_type', 'urgency', 'answer_summary', 'spawns_branch_group']);
 }
 
 export function getEpisodeMeta(node: Node): EpisodeMeta | null {

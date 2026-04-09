@@ -117,11 +117,11 @@ program
     console.log();
     console.log(`  ${chalk.bold(t('workflow.phase2'))}  ${mcp('[MCP: use tools]')}`);
     console.log(`     ${t('workflow.phase2.desc')}`);
-    console.log(`     ${cmd('emdd create-node')}  ${cmd('emdd create-edge')}  ${cmd('emdd update-node')}`);
+    console.log(`     ${cmd('emdd new')}  ${cmd('emdd link')}  ${cmd('emdd update')}`);
     console.log();
     console.log(`  ${chalk.bold(t('workflow.phase3'))}  ${mcp('[MCP: episode-creation]')}`);
     console.log(`     ${t('workflow.phase3.desc')}`);
-    console.log(`     ${cmd('emdd create-node episode <slug>')}`);
+    console.log(`     ${cmd('emdd new episode <slug>')}`);
     console.log();
     console.log(`  ${chalk.bold(t('workflow.phase4'))}  ${mcp('[MCP: consolidation, health-review]')}`);
     console.log(`     ${t('workflow.phase4.desc')}`);

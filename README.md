@@ -214,6 +214,7 @@ Graph commands accept `--graphDir <path>`, `--lang <en|ko>`, and `--json`. Utili
 | `emdd update <nodeId>` | Update frontmatter fields on a node (`--set`, `--transitionPolicy strict\|warn\|off`) |
 | `emdd done <episodeId> <item>` | Mark a checklist item as done in an episode (`--marker done\|deferred\|superseded`) |
 | `emdd doctor` | Diagnose EMDD environment (`--lang en\|ko`) |
+| `emdd workflow` | Show the EMDD research session cycle (`--lang en\|ko`) |
 <!-- /AUTO:readme-cli-core -->
 
 <details>
