@@ -24,6 +24,7 @@ const NON_REGISTRY_COMMANDS: NonRegistryCommand[] = [
   { cliName: 'export-html', description: 'Export graph as standalone HTML file', positional: '[output]', options: '`--layout force\\|hierarchical`, `--types`, `--statuses`' },
   { cliName: 'graph', description: 'Generate `_graph.mmd` (Mermaid diagram)', positional: '[path]', options: '' },
   { cliName: 'mcp', description: 'Start MCP server (stdio transport)', options: '' },
+  { cliName: 'doctor', description: 'Diagnose EMDD environment', options: '`--lang en\\|ko`' },
 ];
 
 // ── Prompt Metadata (derived from PROMPT_META SSOT) ────────────────
@@ -51,6 +52,7 @@ const NON_REGISTRY_GROUP: Record<string, DocGroup> = {
   'export-html': 'export',
   'graph': 'export',
   'mcp': 'export',
+  'doctor': 'core',
 };
 
 function getDocGroup(def: CommandDef): DocGroup {
@@ -153,12 +155,11 @@ function generateReadmeCliTable(group: DocGroup): string {
     rows.push(buildCliRow(def));
   }
 
-  if (group === 'export') {
-    // Add non-registry export commands
-    for (const cmd of NON_REGISTRY_COMMANDS) {
-      if (NON_REGISTRY_GROUP[cmd.cliName] === 'export') {
-        rows.push(buildNonRegistryRow(cmd));
-      }
+  // Add non-registry commands for this group (excluding init which is already added above)
+  for (const cmd of NON_REGISTRY_COMMANDS) {
+    if (cmd.cliName === 'init') continue; // already added
+    if (NON_REGISTRY_GROUP[cmd.cliName] === group) {
+      rows.push(buildNonRegistryRow(cmd));
     }
   }
 

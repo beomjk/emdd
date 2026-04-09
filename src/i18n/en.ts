@@ -147,6 +147,25 @@ export const messages = {
   'workflow.phase4': '4. Maintenance',
   'workflow.phase4.desc': 'Promote findings, resolve questions, check health',
   'workflow.help': 'Run any command with --help for details.',
+
+  // doctor command
+  'doctor.title': 'EMDD Doctor v{version}',
+  'doctor.node_version': 'Node.js {version} (>= {required} required)',
+  'doctor.graph_found': 'graph/ directory found ({count} nodes)',
+  'doctor.graph_not_found': 'No graph/ directory found',
+  'doctor.parse_ok': 'All nodes parse successfully',
+  'doctor.parse_errors': '{count} node(s) failed to parse',
+  'doctor.lint_clean': 'Lint: no errors',
+  'doctor.lint_warnings': 'Lint: {warnings} warning(s)',
+  'doctor.lint_errors': 'Lint: {errors} error(s), {warnings} warning(s)',
+  'doctor.config_custom': '.emdd.yml loaded (custom config)',
+  'doctor.config_default': '.emdd.yml not found (using defaults)',
+  'doctor.tool_rules': 'AI tool rules: {found}',
+  'doctor.tool_none': 'No AI tool rules found',
+  'doctor.version': 'emdd v{version}',
+  'doctor.summary_pass': 'All checks passed',
+  'doctor.summary_warn': '{count} warning(s)',
+  'doctor.summary_fail': '{count} issue(s) found',
 } as const satisfies Record<string, string>;
 
 export type MessageKey = keyof typeof messages;

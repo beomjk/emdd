@@ -213,6 +213,7 @@ Graph commands accept `--graphDir <path>`, `--lang <en|ko>`, and `--json`. Utili
 | `emdd unlink <source> <target>` | Remove a link between nodes (`--relation answers\|confirms\|context_for\|contradicts\|depends_on\|extends\|informs\|part_of\|produces\|promotes\|relates_to\|resolves\|revises\|spawns\|supports\|tests\|answered_by\|confirmed_by\|produced_by\|resolved_by\|spawned_from\|supported_by\|tested_by`) |
 | `emdd update <nodeId>` | Update frontmatter fields on a node (`--set`, `--transitionPolicy strict\|warn\|off`) |
 | `emdd done <episodeId> <item>` | Mark a checklist item as done in an episode (`--marker done\|deferred\|superseded`) |
+| `emdd doctor` | Diagnose EMDD environment (`--lang en\|ko`) |
 <!-- /AUTO:readme-cli-core -->
 
 <details>

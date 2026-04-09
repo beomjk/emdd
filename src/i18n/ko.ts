@@ -149,4 +149,23 @@ export const messages: Record<MessageKey, string> = {
   'workflow.phase4': '4. 유지보수',
   'workflow.phase4.desc': '발견 승격, 질문 해소, 건강 점검',
   'workflow.help': '각 명령어에 --help를 붙이면 상세 도움말을 볼 수 있습니다.',
+
+  // doctor command
+  'doctor.title': 'EMDD Doctor v{version}',
+  'doctor.node_version': 'Node.js {version} (>= {required} 필요)',
+  'doctor.graph_found': 'graph/ 디렉토리 발견 ({count}개 노드)',
+  'doctor.graph_not_found': 'graph/ 디렉토리를 찾을 수 없습니다',
+  'doctor.parse_ok': '모든 노드가 정상적으로 파싱됨',
+  'doctor.parse_errors': '{count}개 노드 파싱 실패',
+  'doctor.lint_clean': 'Lint: 오류 없음',
+  'doctor.lint_warnings': 'Lint: {warnings}개 경고',
+  'doctor.lint_errors': 'Lint: {errors}개 오류, {warnings}개 경고',
+  'doctor.config_custom': '.emdd.yml 로드됨 (사용자 설정)',
+  'doctor.config_default': '.emdd.yml 없음 (기본값 사용)',
+  'doctor.tool_rules': 'AI 도구 규칙: {found}',
+  'doctor.tool_none': 'AI 도구 규칙 파일 없음',
+  'doctor.version': 'emdd v{version}',
+  'doctor.summary_pass': '모든 점검 통과',
+  'doctor.summary_warn': '{count}개 경고',
+  'doctor.summary_fail': '{count}개 문제 발견',
 };
