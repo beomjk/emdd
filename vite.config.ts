@@ -10,10 +10,10 @@ export default defineConfig({
     cssCodeSplit: false,
     rollupOptions: {
       output: {
-        inlineDynamicImports: true,
         entryFileNames: 'bundle.js',
         assetFileNames: '[name].[ext]',
       },
     },
+    codeSplitting: false,
   },
 });

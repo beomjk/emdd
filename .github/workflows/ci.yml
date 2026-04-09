@@ -30,3 +30,7 @@ jobs:
       - name: Coverage Report
         if: always() && github.event_name == 'pull_request'
         uses: davelosert/vitest-coverage-report-action@v2
+      - run: npm run build
+      - run: npm run svelte-check
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e

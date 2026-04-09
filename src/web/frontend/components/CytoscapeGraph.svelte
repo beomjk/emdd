@@ -4,6 +4,7 @@
   import { getNodeColor, getStatusBorder } from '../lib/constants.js';
   import { getLayoutConfig } from '../lib/cytoscape-setup.js';
   import { fetchClusters } from '../lib/api.js';
+  import { diffGraph } from '../lib/graph-diff.js';
   import Tooltip from './Tooltip.svelte';
   import Legend from './Legend.svelte';
 
@@ -99,49 +100,6 @@
 
   function findNode(id: string): SerializedNode | undefined {
     return graph.nodes.find((n) => n.id === id);
-  }
-
-  function buildElements(): cytoscape.ElementDefinition[] {
-    const elements: cytoscape.ElementDefinition[] = [];
-    const nodeIdSet = new Set(graph.nodes.map((n) => n.id));
-
-    for (const node of graph.nodes) {
-      const border = getStatusBorder(node);
-      elements.push({
-        group: 'nodes',
-        data: {
-          id: node.id,
-          label: truncate(node.title || node.id, 20),
-          fullTitle: node.title || node.id,
-          type: node.type,
-          status: node.status,
-          confidence: node.confidence,
-          tags: node.tags,
-          bodyPreview: node.bodyPreview,
-          invalid: node.invalid ?? false,
-          bgColor: getNodeColor(node.type),
-          borderWidth: border.width,
-          borderStyle: border.style,
-          borderColor: border.color,
-        },
-      });
-    }
-
-    for (const edge of graph.edges) {
-      if (nodeIdSet.has(edge.source) && nodeIdSet.has(edge.target)) {
-        elements.push({
-          group: 'edges',
-          data: {
-            id: `${edge.source}-${edge.relation}-${edge.target}`,
-            source: edge.source,
-            target: edge.target,
-            relation: edge.relation,
-          },
-        });
-      }
-    }
-
-    return elements;
   }
 
   function getCyStyles(): cytoscape.StylesheetStyle[] {
@@ -250,9 +208,10 @@
   }
 
   // ── Cluster application ─────────────────────────────────────────────
-  async function applyClustersToGraph(cyInst: cytoscape.Core): Promise<void> {
+  async function applyClustersToGraph(cyInst: cytoscape.Core, signal?: AbortSignal): Promise<void> {
     try {
       const { clusters } = await fetchClusters();
+      if (signal?.aborted) return;
       if (!clusters || clusters.length === 0) return;
 
       cyInst.nodes('[?isCluster]').remove();
@@ -285,22 +244,47 @@
     }
   }
 
-  // ── Main effect: init/destroy Cytoscape ─────────────────────────────
+  // ── Previous graph reference for incremental updates ────────────────
+  let prevGraph: SerializedGraph | null = null;
+  let clusterAbort: AbortController | null = null;
+
+  // Node data builder for diffGraph (reuses buildElements logic for single node)
+  function buildNodeDataForDiff(node: SerializedNode) {
+    const border = getStatusBorder(node);
+    return {
+      id: node.id,
+      label: truncate(node.title || node.id, 20),
+      fullTitle: node.title || node.id,
+      type: node.type,
+      status: node.status,
+      confidence: node.confidence,
+      tags: node.tags,
+      bodyPreview: node.bodyPreview,
+      invalid: node.invalid ?? false,
+      bgColor: getNodeColor(node.type),
+      borderWidth: border.width,
+      borderStyle: border.style,
+      borderColor: border.color,
+    };
+  }
+
+  function buildEdgeDataForDiff(edge: { source: string; target: string; relation: string }, validNodeIds: Set<string>) {
+    if (!validNodeIds.has(edge.source) || !validNodeIds.has(edge.target)) return null;
+    return {
+      id: `${edge.source}-${edge.relation}-${edge.target}`,
+      source: edge.source,
+      target: edge.target,
+      relation: edge.relation,
+    };
+  }
+
+  // ── Init effect: create Cytoscape instance once ────────────────────
   $effect(() => {
-    // Read graph to track dependency
-    const _g = graph;
-    if (!container || !_g) return;
+    if (!container) return;
 
-    // Destroy previous instance
-    cy?.destroy();
-    pinnedPositions.clear();
-
-    const elements = buildElements();
     const inst = cytoscape({
       container,
-      elements,
       style: getCyStyles(),
-      layout: getLayoutConfig(layout) as any,
       wheelSensitivity: 0.3,
     });
     cy = inst;
@@ -351,24 +335,64 @@
       evt.target.scratch('_manuallyPositioned', true);
     });
 
+    return () => {
+      clusterAbort?.abort();
+      if (tooltipTimer) clearTimeout(tooltipTimer);
+      prevGraph = null;
+      inst.destroy();
+      cy = undefined;
+    };
+  });
+
+  // ── Data sync effect: incremental graph updates ────────────────────
+  $effect(() => {
+    const _g = graph;
+    if (!cy || !_g) return;
+
+    const delta = diffGraph(prevGraph, _g, buildNodeDataForDiff, buildEdgeDataForDiff);
+    const isInitial = prevGraph === null;
+    prevGraph = _g;
+
+    cy.batch(() => {
+      // Remove elements
+      for (const id of delta.removedEdgeIds) {
+        cy!.getElementById(id).remove();
+      }
+      for (const id of delta.removedNodeIds) {
+        cy!.getElementById(id).remove();
+      }
+
+      // Add elements
+      for (const nodeData of delta.addedNodes) {
+        cy!.add({ group: 'nodes', data: nodeData });
+      }
+      for (const edgeData of delta.addedEdges) {
+        cy!.add({ group: 'edges', data: edgeData });
+      }
+
+      // Update existing element data
+      for (const { id, data } of delta.updatedNodes) {
+        cy!.getElementById(id).data(data);
+      }
+    });
+
+    // Run layout only when topology changed
+    if (delta.topologyChanged) {
+      const layoutConfig = getLayoutConfig(layout, !isInitial, isInitial) as any;
+      cy.layout(layoutConfig).run();
+    }
+
     // Viewport culling for large graphs
-    let cleanupCulling: (() => void) | undefined;
     if (_g.nodes.length >= 500) {
-      cleanupCulling = setupViewportCulling(inst);
       showPerfHint = true;
     } else {
       showPerfHint = false;
     }
 
-    // Apply clusters (async, non-blocking)
-    applyClustersToGraph(inst);
-
-    return () => {
-      cleanupCulling?.();
-      if (tooltipTimer) clearTimeout(tooltipTimer);
-      inst.destroy();
-      cy = undefined;
-    };
+    // Apply clusters (async, guarded)
+    clusterAbort?.abort();
+    clusterAbort = new AbortController();
+    applyClustersToGraph(cy, clusterAbort.signal);
   });
 
   // ── Effect: layout switching ────────────────────────────────────────
@@ -389,8 +413,7 @@
       }
     });
 
-    const layoutObj = cy.layout(getLayoutConfig(_l, true) as any);
-    layoutObj.run();
+    const layoutObj = cy.layout(getLayoutConfig(_l, true, false) as any);
 
     if (pinned.size > 0) {
       layoutObj.on('layoutstop', () => {
@@ -402,6 +425,8 @@
         });
       });
     }
+
+    layoutObj.run();
   });
 
   // ── Effect: filter visibility ───────────────────────────────────────
@@ -411,25 +436,27 @@
     const _vs = visibleStatuses;
     const _ve = visibleEdgeTypes;
 
-    cy.nodes('[!isCluster]').forEach((node) => {
-      const type = node.data('type');
-      const status = node.data('status') ?? '';
-      const show = _vt.has(type) && (_vs.has(status) || !status);
-      node.style('display', show ? 'element' : 'none');
-    });
+    cy.batch(() => {
+      cy!.nodes('[!isCluster]').forEach((node) => {
+        const type = node.data('type');
+        const status = node.data('status') ?? '';
+        const show = _vt.has(type) && (_vs.has(status) || !status);
+        node.style('display', show ? 'element' : 'none');
+      });
 
-    cy.edges().forEach((edge) => {
-      const rel = edge.data('relation');
-      const srcVisible = edge.source().style('display') !== 'none';
-      const tgtVisible = edge.target().style('display') !== 'none';
-      edge.style('display', _ve.has(rel) && srcVisible && tgtVisible ? 'element' : 'none');
-    });
+      cy!.edges().forEach((edge) => {
+        const rel = edge.data('relation');
+        const srcVisible = edge.source().style('display') !== 'none';
+        const tgtVisible = edge.target().style('display') !== 'none';
+        edge.style('display', _ve.has(rel) && srcVisible && tgtVisible ? 'element' : 'none');
+      });
 
-    // Hide cluster compound nodes when all children hidden
-    cy.nodes('[?isCluster]').forEach((cluster) => {
-      const children = cluster.children();
-      const anyVisible = children.some((c) => c.style('display') !== 'none');
-      cluster.style('display', anyVisible ? 'element' : 'none');
+      // Hide cluster compound nodes when all children hidden
+      cy!.nodes('[?isCluster]').forEach((cluster) => {
+        const children = cluster.children();
+        const anyVisible = children.some((c) => c.style('display') !== 'none');
+        cluster.style('display', anyVisible ? 'element' : 'none');
+      });
     });
   });
 
@@ -439,27 +466,29 @@
     const _sel = selectedNodeId;
     const _neigh = neighborIds;
 
-    if (!_sel || _neigh.length === 0) {
-      cy.elements().removeClass('dimmed').removeClass('highlighted');
-      return;
-    }
+    cy.batch(() => {
+      if (!_sel || _neigh.length === 0) {
+        cy!.elements().removeClass('dimmed').removeClass('highlighted');
+        return;
+      }
 
-    const keepSet = new Set([_sel, ..._neigh]);
-    cy.nodes().forEach((node) => {
-      if (keepSet.has(node.id())) {
-        node.removeClass('dimmed').addClass('highlighted');
-      } else {
-        node.addClass('dimmed').removeClass('highlighted');
-      }
-    });
-    cy.edges().forEach((edge) => {
-      const s = edge.source().id();
-      const t = edge.target().id();
-      if (keepSet.has(s) && keepSet.has(t)) {
-        edge.removeClass('dimmed').addClass('highlighted');
-      } else {
-        edge.addClass('dimmed').removeClass('highlighted');
-      }
+      const keepSet = new Set([_sel, ..._neigh]);
+      cy!.nodes().forEach((node) => {
+        if (keepSet.has(node.id())) {
+          node.removeClass('dimmed').addClass('highlighted');
+        } else {
+          node.addClass('dimmed').removeClass('highlighted');
+        }
+      });
+      cy!.edges().forEach((edge) => {
+        const s = edge.source().id();
+        const t = edge.target().id();
+        if (keepSet.has(s) && keepSet.has(t)) {
+          edge.removeClass('dimmed').addClass('highlighted');
+        } else {
+          edge.addClass('dimmed').removeClass('highlighted');
+        }
+      });
     });
   });
 </script>

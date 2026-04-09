@@ -74,8 +74,9 @@ export const sel = {
   // Layout selector
   layoutSelector: '.layout-selector select',
 
-  // Export
+  // Export & Refresh
   exportBtn: '.export-btn',
+  refreshBtn: '.refresh-btn',
 
   // Toast
   toast: '.toast',

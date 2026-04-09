@@ -18,12 +18,12 @@ const TYPE_TIER: Record<NodeType, number> = {
   decision: 3,
 };
 
-export function getForceLayout(animate = false) {
+export function getForceLayout(animate = false, initial = true) {
   return {
     name: 'fcose' as const,
     animate,
     animationDuration: animate ? 500 : 0,
-    quality: 'proof' as const,
+    quality: (initial ? 'proof' : 'default') as 'proof' | 'default',
     nodeDimensionsIncludeLabels: true,
   };
 }
@@ -45,8 +45,8 @@ export function getHierarchicalLayout(animate = false) {
   };
 }
 
-export function getLayoutConfig(mode: 'force' | 'hierarchical', animate = false) {
+export function getLayoutConfig(mode: 'force' | 'hierarchical', animate = false, initial = true) {
   return mode === 'hierarchical'
     ? getHierarchicalLayout(animate)
-    : getForceLayout(animate);
+    : getForceLayout(animate, initial);
 }

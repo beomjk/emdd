@@ -60,4 +60,41 @@ export const filterState = {
     _visibleStatuses = new Set(graph.nodes.map((n) => n.status));
     _visibleEdgeTypes = new Set(graph.edges.map((e) => e.relation));
   },
+  mergeFromGraph(graph: SerializedGraph) {
+    const prevKnownTypes = new Set(_allTypes);
+    const prevKnownStatuses = new Set(_allStatuses);
+    const prevKnownEdges = new Set(_allEdgeTypes);
+
+    const incomingTypes = new Set(graph.nodes.map((n) => n.type));
+    const incomingStatuses = new Set(graph.nodes.map((n) => n.status));
+    const incomingEdges = new Set(graph.edges.map((e) => e.relation));
+
+    // Add newly discovered values to visible sets, preserve user deselections
+    const nextTypes = new Set(_visibleTypes);
+    for (const t of incomingTypes) {
+      if (!prevKnownTypes.has(t)) nextTypes.add(t);
+    }
+    for (const t of nextTypes) {
+      if (!incomingTypes.has(t)) nextTypes.delete(t);
+    }
+    _visibleTypes = nextTypes;
+
+    const nextStatuses = new Set(_visibleStatuses);
+    for (const s of incomingStatuses) {
+      if (!prevKnownStatuses.has(s)) nextStatuses.add(s);
+    }
+    for (const s of nextStatuses) {
+      if (!incomingStatuses.has(s)) nextStatuses.delete(s);
+    }
+    _visibleStatuses = nextStatuses;
+
+    const nextEdges = new Set(_visibleEdgeTypes);
+    for (const e of incomingEdges) {
+      if (!prevKnownEdges.has(e)) nextEdges.add(e);
+    }
+    for (const e of nextEdges) {
+      if (!incomingEdges.has(e)) nextEdges.delete(e);
+    }
+    _visibleEdgeTypes = nextEdges;
+  },
 };

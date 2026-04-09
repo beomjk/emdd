@@ -11,11 +11,19 @@
   let { nodes, visibleTypes, visibleStatuses, onNavigate }: Props = $props();
 
   let query = $state('');
+  let debouncedQuery = $state('');
   let currentIndex = $state(0);
   let hasNavigated = $state(false);
 
+  // Debounce search query (300ms)
+  $effect(() => {
+    const q = query;
+    const timer = setTimeout(() => { debouncedQuery = q; }, 300);
+    return () => clearTimeout(timer);
+  });
+
   const matches = $derived.by(() => {
-    const q = query.trim().toLowerCase();
+    const q = debouncedQuery.trim().toLowerCase();
     if (!q) return [];
     return nodes.filter((n) => {
       if (!visibleTypes.has(n.type)) return false;
@@ -24,11 +32,11 @@
     });
   });
 
-  const hasResults = $derived(query.trim().length > 0);
+  const hasResults = $derived(debouncedQuery.trim().length > 0);
 
-  // Reset navigation state when query changes
+  // Reset navigation state when debounced query changes
   $effect(() => {
-    query; // track
+    debouncedQuery; // track
     currentIndex = 0;
     hasNavigated = false;
   });

@@ -67,12 +67,12 @@ describe('App', () => {
   });
 
   describe('error state', () => {
-    it('shows error when fetchGraph fails and no graph is loaded', async () => {
+    it('shows error message when fetchGraph fails and no graph is loaded', async () => {
       mockFetchGraph.mockRejectedValue(new Error('Network error'));
       render(App);
       await waitFor(() => {
-        // Loading should disappear
         expect(screen.queryByText('Loading graph...')).not.toBeInTheDocument();
+        expect(screen.getByText('Network error')).toBeInTheDocument();
       });
     });
   });

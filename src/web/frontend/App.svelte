@@ -3,7 +3,7 @@
   import { dashboardState } from './state/dashboard.svelte.js';
   import { filterState } from './state/filters.svelte.js';
   import { sseState } from './state/sse.svelte.js';
-  import { fetchGraph, fetchNeighbors, fetchExportHtml } from './lib/api.js';
+  import { fetchGraph, fetchNeighbors, fetchExportHtml, triggerRefresh } from './lib/api.js';
   import CytoscapeGraph from './components/CytoscapeGraph.svelte';
   import DetailPanel from './components/DetailPanel.svelte';
   import Filters from './components/Filters.svelte';
@@ -21,12 +21,13 @@
   let toastTimer: ReturnType<typeof setTimeout> | null = null;
 
   async function loadGraph(): Promise<void> {
+    dashboardState.error = null;
     try {
       const graph = await fetchGraph();
       dashboardState.setGraph(graph);
       filterState.initFromGraph(graph);
-    } catch {
-      // Error is set by api.ts
+    } catch (e) {
+      dashboardState.error = e instanceof Error ? e.message : 'Failed to load graph';
     } finally {
       loading = false;
     }
@@ -80,8 +81,20 @@
       a.download = 'emdd-graph.html';
       a.click();
       URL.revokeObjectURL(url);
-    } catch {
-      // Error handled by api.ts
+    } catch (e) {
+      dashboardState.error = e instanceof Error ? e.message : 'Failed to export';
+    }
+  }
+
+  async function handleRefresh(): Promise<void> {
+    try {
+      await triggerRefresh();
+      const graph = await fetchGraph();
+      dashboardState.setGraph(graph);
+      filterState.initFromGraph(graph);
+      showToast('Graph refreshed');
+    } catch (e) {
+      dashboardState.error = e instanceof Error ? e.message : 'Failed to refresh';
     }
   }
 
@@ -96,8 +109,8 @@
     try {
       const prevSelectedId = dashboardState.selectedNodeId;
       const graph = await fetchGraph();
+      filterState.mergeFromGraph(graph);
       dashboardState.setGraph(graph);
-      filterState.initFromGraph(graph);
       // Re-select previous node if still exists
       if (prevSelectedId) {
         const stillExists = graph.nodes.some((n) => n.id === prevSelectedId);
@@ -109,8 +122,8 @@
         }
       }
       showToast('Graph updated');
-    } catch {
-      // Error handled by api.ts
+    } catch (e) {
+      dashboardState.error = e instanceof Error ? e.message : 'Failed to update graph';
     }
   }
 
@@ -155,6 +168,7 @@
         onNavigate={handleSearchNavigate}
       />
       <button class="export-btn" aria-label="Export" onclick={handleExport}>Export</button>
+      <button class="refresh-btn" aria-label="Refresh" onclick={handleRefresh}>Refresh</button>
     {/if}
   </header>
 
@@ -274,8 +288,18 @@
     font-size: 12px;
     cursor: pointer;
   }
-  .export-btn:hover {
+  .export-btn:hover,
+  .refresh-btn:hover {
     background: var(--bg-hover);
+  }
+  .refresh-btn {
+    padding: 4px 10px;
+    border: 1px solid var(--border-btn);
+    border-radius: 4px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 12px;
+    cursor: pointer;
   }
   .sr-only {
     position: absolute;

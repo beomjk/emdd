@@ -5,9 +5,8 @@ import type {
   PromoteCandidate,
   CheckResult,
 } from '../../types.js';
-import { dashboardState } from '../state/dashboard.svelte.js';
 
-interface NodeDetailResponse {
+export interface NodeDetailResponse {
   id: string;
   title: string;
   type: string;
@@ -23,16 +22,9 @@ interface NodeDetailResponse {
 }
 
 async function apiFetch<T>(url: string, init?: RequestInit): Promise<T> {
-  dashboardState.error = null;
-  try {
-    const res = await fetch(url, init);
-    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-    return await res.json() as T;
-  } catch (e) {
-    const message = e instanceof Error ? e.message : 'Unknown error';
-    dashboardState.error = `Failed to fetch ${url}: ${message}`;
-    throw e;
-  }
+  const res = await fetch(url, init);
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  return await res.json() as T;
 }
 
 export async function fetchGraph(): Promise<SerializedGraph> {
@@ -79,14 +71,7 @@ export async function fetchExportHtml(
   if (types?.length) params.set('types', types.join(','));
   if (statuses?.length) params.set('statuses', statuses.join(','));
 
-  dashboardState.error = null;
-  try {
-    const res = await fetch(`/api/export?${params}`);
-    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-    return await res.text();
-  } catch (e) {
-    const message = e instanceof Error ? e.message : 'Unknown error';
-    dashboardState.error = `Failed to export: ${message}`;
-    throw e;
-  }
+  const res = await fetch(`/api/export?${params}`);
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  return await res.text();
 }
