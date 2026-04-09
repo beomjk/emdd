@@ -1,7 +1,8 @@
 <script lang="ts">
-  import type { HealthReport, PromoteCandidate, CheckResult } from '../../../web/types.js';
+  import type { HealthReport, PromoteCandidate, CheckResult } from '../../types.js';
   import { fetchHealth, fetchPromotionCandidates, fetchConsolidation } from '../lib/api.js';
   import { getNodeColor } from '../lib/constants.js';
+  import { dashboardState } from '../state/dashboard.svelte.js';
 
   interface Props {
     onNodeClick: (id: string) => void;
@@ -61,7 +62,8 @@
   );
 
   $effect(() => {
-    loadData();
+    const _g = dashboardState.graph;
+    if (_g) loadData();
   });
 
   async function loadData(): Promise<void> {

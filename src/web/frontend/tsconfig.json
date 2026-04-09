@@ -1,0 +1,12 @@
+{
+  "extends": "../../../tsconfig.json",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2015",
+    "moduleResolution": "bundler",
+    "verbatimModuleSyntax": true,
+    "types": ["svelte"]
+  },
+  "include": ["**/*.ts", "**/*.svelte"],
+  "exclude": []
+}

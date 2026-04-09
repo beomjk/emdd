@@ -4,3 +4,5 @@ dist/
 coverage/
 *.cast
 .npmrc
+playwright-report/
+test-results/

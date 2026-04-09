@@ -44,6 +44,8 @@
   --toast-bg: #333;
   --toast-color: #fff;
   --legend-bg: rgba(255, 255, 255, 0.95);
+  --bg-warning: #fff3e0;
+  --text-warning-strong: #e65100;
   --perf-hint-bg: #fff3cd;
   --perf-hint-border: #ffc107;
   --perf-hint-color: #856404;
@@ -74,6 +76,8 @@
   --toast-bg: #e0e0e0;
   --toast-color: #1a1a2e;
   --legend-bg: rgba(22, 33, 62, 0.95);
+  --bg-warning: #2a2218;
+  --text-warning-strong: #f0a050;
   --perf-hint-bg: #2a2818;
   --perf-hint-border: #665a20;
   --perf-hint-color: #d4c060;

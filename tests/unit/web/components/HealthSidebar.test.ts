@@ -8,6 +8,13 @@ vi.mock('../../../../src/web/frontend/lib/api.js', () => ({
   fetchConsolidation: vi.fn(),
 }));
 
+// Mock dashboard state — HealthSidebar's $effect depends on dashboardState.graph
+vi.mock('../../../../src/web/frontend/state/dashboard.svelte.js', () => ({
+  dashboardState: {
+    graph: { nodes: [], edges: [], loadedAt: '2026-01-01T00:00:00Z' },
+  },
+}));
+
 import {
   fetchHealth,
   fetchPromotionCandidates,

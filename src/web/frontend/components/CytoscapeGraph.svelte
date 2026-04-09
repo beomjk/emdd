@@ -4,6 +4,7 @@
   import { getNodeColor, getStatusBorder } from '../lib/constants.js';
   import { getLayoutConfig } from '../lib/cytoscape-setup.js';
   import { fetchClusters } from '../lib/api.js';
+  import { dashboardState } from '../state/dashboard.svelte.js';
   import { diffGraph } from '../lib/graph-diff.js';
   import Tooltip from './Tooltip.svelte';
   import Legend from './Legend.svelte';
@@ -166,7 +167,7 @@
           'text-valign': 'top',
           'text-halign': 'center',
           'text-margin-y': -8,
-          color: '#666',
+          color: getCssVar('--cy-node-text'),
           'font-weight': 'bold',
           padding: '16px' as any,
           'min-width': '80px' as any,
@@ -389,10 +390,12 @@
       showPerfHint = false;
     }
 
-    // Apply clusters (async, guarded)
-    clusterAbort?.abort();
-    clusterAbort = new AbortController();
-    applyClustersToGraph(cy, clusterAbort.signal);
+    // Apply clusters only when topology changes (async, guarded)
+    if (delta.topologyChanged || isInitial) {
+      clusterAbort?.abort();
+      clusterAbort = new AbortController();
+      applyClustersToGraph(cy, clusterAbort.signal);
+    }
   });
 
   // ── Effect: layout switching ────────────────────────────────────────
@@ -490,6 +493,17 @@
         }
       });
     });
+  });
+
+  // ── Effect: theme change → refresh Cytoscape styles ────────────────
+  let prevTheme: string | null = null;
+  $effect(() => {
+    const _t = dashboardState.theme;
+    if (!cy) return;
+    if (prevTheme === null) { prevTheme = _t; return; }
+    if (_t === prevTheme) return;
+    prevTheme = _t;
+    cy.style().fromJson(getCyStyles()).update();
   });
 </script>
 

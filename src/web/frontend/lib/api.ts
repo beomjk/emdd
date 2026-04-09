@@ -31,8 +31,8 @@ export async function fetchGraph(): Promise<SerializedGraph> {
   return apiFetch<SerializedGraph>('/api/graph');
 }
 
-export async function fetchNodeDetail(id: string): Promise<NodeDetailResponse> {
-  return apiFetch<NodeDetailResponse>(`/api/node/${encodeURIComponent(id)}`);
+export async function fetchNodeDetail(id: string, init?: RequestInit): Promise<NodeDetailResponse> {
+  return apiFetch<NodeDetailResponse>(`/api/node/${encodeURIComponent(id)}`, init);
 }
 
 export async function fetchNeighbors(

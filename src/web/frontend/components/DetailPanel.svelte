@@ -35,6 +35,7 @@
   let detail = $state<NodeDetail | null>(null);
   let loading = $state(false);
   let error = $state<string | null>(null);
+  let fetchAbort: AbortController | null = null;
 
   const hopDepths = [1, 2, 3];
 
@@ -45,12 +46,17 @@
       detail = null;
       return;
     }
+    fetchAbort?.abort();
+    fetchAbort = new AbortController();
+    const signal = fetchAbort.signal;
     loading = true;
     error = null;
-    fetchNodeDetail(_n.id)
-      .then((d) => { detail = d; })
-      .catch(() => { error = `Node not found: ${_n.id}`; })
-      .finally(() => { loading = false; });
+    fetchNodeDetail(_n.id, { signal })
+      .then((d) => { if (!signal.aborted) detail = d; })
+      .catch((e) => { if (!signal.aborted) error = `Node not found: ${_n.id}`; })
+      .finally(() => { if (!signal.aborted) loading = false; });
+
+    return () => { fetchAbort?.abort(); };
   });
 
   function renderMarkdown(md: string): string {
@@ -351,13 +357,13 @@
   }
   .invalid-warning {
     padding: 12px;
-    background: #fff3e0;
-    border: 1px solid #FF9800;
+    background: var(--bg-warning, #fff3e0);
+    border: 1px solid var(--border-invalid, #FF9800);
     border-radius: 4px;
     margin-top: 12px;
   }
   .invalid-label {
-    color: #e65100;
+    color: var(--text-warning-strong, #e65100);
   }
   .invalid-error {
     margin-top: 4px;
