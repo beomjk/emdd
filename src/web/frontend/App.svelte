@@ -2,17 +2,23 @@
   import type { SerializedGraph } from '../types.js';
   import { dashboardState } from './state/dashboard.svelte.js';
   import { filterState } from './state/filters.svelte.js';
+  import { sseState } from './state/sse.svelte.js';
   import { fetchGraph, fetchNeighbors } from './lib/api.js';
   import CytoscapeGraph from './components/CytoscapeGraph.svelte';
   import DetailPanel from './components/DetailPanel.svelte';
   import Filters from './components/Filters.svelte';
   import SearchBar from './components/SearchBar.svelte';
   import HealthSidebar from './components/HealthSidebar.svelte';
+  import ThemeToggle from './components/ThemeToggle.svelte';
+  import Toast from './components/Toast.svelte';
 
   let graphRef: CytoscapeGraph | undefined = $state();
   let hopDepth = $state(2);
   let neighborIds = $state<string[]>([]);
   let loading = $state(true);
+  let toastMessage = $state('');
+  let toastVisible = $state(false);
+  let toastTimer: ReturnType<typeof setTimeout> | null = null;
 
   async function loadGraph(): Promise<void> {
     try {
@@ -62,9 +68,44 @@
     graphRef?.pulseNode(id);
   }
 
-  // Load graph on mount
+  function showToast(msg: string): void {
+    toastMessage = msg;
+    toastVisible = true;
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { toastVisible = false; }, 3000);
+  }
+
+  async function handleGraphUpdated(): Promise<void> {
+    try {
+      const prevSelectedId = dashboardState.selectedNodeId;
+      const graph = await fetchGraph();
+      dashboardState.setGraph(graph);
+      filterState.initFromGraph(graph);
+      // Re-select previous node if still exists
+      if (prevSelectedId) {
+        const stillExists = graph.nodes.some((n) => n.id === prevSelectedId);
+        if (stillExists) {
+          dashboardState.selectNode(prevSelectedId);
+        } else {
+          dashboardState.deselectNode();
+          neighborIds = [];
+        }
+      }
+      showToast('Graph updated');
+    } catch {
+      // Error handled by api.ts
+    }
+  }
+
+  // Load graph on mount + set up SSE
   $effect(() => {
     loadGraph();
+    sseState.onGraphUpdated(handleGraphUpdated);
+    sseState.connect();
+    return () => {
+      sseState.disconnect();
+      if (toastTimer) clearTimeout(toastTimer);
+    };
   });
 </script>
 
@@ -72,6 +113,7 @@
   <!-- Toolbar -->
   <header class="toolbar">
     <div class="toolbar-title">EMDD Dashboard</div>
+    <ThemeToggle />
     {#if dashboardState.graph && dashboardState.graph.nodes.length > 0}
       <label class="layout-selector">
         <span class="sr-only">Layout</span>
@@ -137,8 +179,11 @@
 
   <!-- Error toast -->
   {#if dashboardState.error && dashboardState.graph}
-    <div class="toast show">{dashboardState.error}</div>
+    <div class="error-toast">{dashboardState.error}</div>
   {/if}
+
+  <!-- SSE update toast -->
+  <Toast message={toastMessage} visible={toastVisible} />
 </div>
 
 <style>
@@ -212,7 +257,7 @@
     clip: rect(0, 0, 0, 0);
     border: 0;
   }
-  .toast {
+  .error-toast {
     position: fixed;
     bottom: 20px;
     right: 20px;

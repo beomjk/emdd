@@ -8,6 +8,16 @@ vi.mock('../../../../src/web/frontend/lib/api.js', () => ({
   fetchNodeDetail: vi.fn(),
 }));
 
+vi.mock('../../../../src/web/frontend/state/sse.svelte.js', () => ({
+  sseState: {
+    connected: false,
+    lastUpdate: null,
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+    onGraphUpdated: vi.fn(),
+  },
+}));
+
 // Stub child components that depend on browser APIs
 function createStubComponent(testId: string) {
   const component = function ($$anchor: any, _$$props: any) {
@@ -31,9 +41,11 @@ vi.mock('../../../../src/web/frontend/components/HealthSidebar.svelte', () => ({
 import App from '../../../../src/web/frontend/App.svelte';
 import { fetchGraph, fetchNeighbors } from '../../../../src/web/frontend/lib/api.js';
 import { dashboardState } from '../../../../src/web/frontend/state/dashboard.svelte.js';
+import { sseState } from '../../../../src/web/frontend/state/sse.svelte.js';
 
 const mockFetchGraph = vi.mocked(fetchGraph);
 const mockFetchNeighbors = vi.mocked(fetchNeighbors);
+const mockSseState = vi.mocked(sseState);
 
 describe('App', () => {
   beforeEach(() => {
@@ -233,6 +245,56 @@ describe('App', () => {
         expect(screen.getByText('No nodes found in the graph.')).toBeInTheDocument();
       });
       expect(screen.queryByRole('combobox', { name: /layout/i })).not.toBeInTheDocument();
+    });
+  });
+
+  describe('theme toggle', () => {
+    it('renders ThemeToggle button in toolbar', async () => {
+      const graph = makeGraph([makeNode()], []);
+      mockFetchGraph.mockResolvedValue(graph);
+      render(App);
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /theme/i })).toBeInTheDocument();
+      });
+    });
+
+    it('renders ThemeToggle even during loading', () => {
+      mockFetchGraph.mockReturnValue(new Promise(() => {}));
+      render(App);
+      expect(screen.getByRole('button', { name: /theme/i })).toBeInTheDocument();
+    });
+  });
+
+  describe('SSE integration', () => {
+    it('calls sseState.connect on mount', async () => {
+      mockFetchGraph.mockResolvedValue(makeGraph([makeNode()], []));
+      render(App);
+      await waitFor(() => {
+        expect(mockSseState.connect).toHaveBeenCalled();
+      });
+    });
+
+    it('registers onGraphUpdated handler', async () => {
+      mockFetchGraph.mockResolvedValue(makeGraph([makeNode()], []));
+      render(App);
+      await waitFor(() => {
+        expect(mockSseState.onGraphUpdated).toHaveBeenCalledWith(expect.any(Function));
+      });
+    });
+  });
+
+  describe('toast', () => {
+    it('shows error toast when error exists with loaded graph', async () => {
+      const graph = makeGraph([makeNode()], []);
+      mockFetchGraph.mockResolvedValue(graph);
+      render(App);
+      await waitFor(() => {
+        expect(screen.getByTestId('cytoscape-stub')).toBeInTheDocument();
+      });
+      dashboardState.error = 'Something went wrong';
+      await waitFor(() => {
+        expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+      });
     });
   });
 });
