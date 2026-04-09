@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readFileSync } from 'node:fs';
@@ -8,6 +8,42 @@ import { Glob } from 'glob';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SAMPLE_GRAPH = resolve(__dirname, '../../fixtures/sample-graph');
 const EMPTY_GRAPH = resolve(__dirname, '../../fixtures/empty-graph');
+
+// Hoisted mocks — survive vi.resetModules(), eliminating ESM flakiness.
+// When the mock fn is null, the real implementation is used.
+const { _mockLoadGraph, _mockOrchestrator } = vi.hoisted(() => {
+  const mkSlot = () => {
+    const s = { fn: null as ((...args: unknown[]) => unknown) | null };
+    return {
+      set(fn: (...args: unknown[]) => unknown) { s.fn = fn; },
+      clear() { s.fn = null; },
+      get current() { return s.fn; },
+    };
+  };
+  return { _mockLoadGraph: mkSlot(), _mockOrchestrator: mkSlot() };
+});
+
+vi.mock('../../../src/graph/loader.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../src/graph/loader.js')>();
+  return {
+    ...actual,
+    loadGraph: async (...args: unknown[]) => {
+      if (_mockLoadGraph.current) return _mockLoadGraph.current(...args);
+      return actual.loadGraph(...(args as Parameters<typeof actual.loadGraph>));
+    },
+  };
+});
+
+vi.mock('../../../src/graph/orchestrator-setup.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../src/graph/orchestrator-setup.js')>();
+  return {
+    ...actual,
+    createEmddOrchestrator: (...args: unknown[]) => {
+      if (_mockOrchestrator.current) return _mockOrchestrator.current(...args);
+      return actual.createEmddOrchestrator(...(args as Parameters<typeof actual.createEmddOrchestrator>));
+    },
+  };
+});
 
 // T013: traceImpact current-status mode tests
 describe('traceImpact current-status mode', () => {
@@ -151,13 +187,10 @@ describe('traceImpact what-if mode', () => {
 // non-determinism when re-mocking within the same describe block.
 describe('traceImpact what-if cascade_error handling', () => {
   afterEach(() => {
-    vi.doUnmock('../../../src/graph/orchestrator-setup.js');
-    vi.resetModules();
+    _mockOrchestrator.clear();
   });
 
   it('handles cascade_error with partialTrace gracefully', async () => {
-    vi.resetModules();
-
     const partialTrace = {
       trigger: { entityId: 'knw-001', entityType: 'knowledge', from: 'ACTIVE', to: 'RETRACTED' },
       steps: [],
@@ -169,10 +202,8 @@ describe('traceImpact what-if cascade_error handling', () => {
       rounds: 10,
     };
 
-    vi.doMock('../../../src/graph/orchestrator-setup.js', () => ({
-      createEmddOrchestrator: () => ({
-        simulate: () => ({ ok: false, error: 'cascade_error', partialTrace }),
-      }),
+    _mockOrchestrator.set(() => ({
+      simulate: () => ({ ok: false, error: 'cascade_error', partialTrace }),
     }));
 
     const { traceImpact } = await import('../../../src/graph/impact.js');
@@ -185,17 +216,12 @@ describe('traceImpact what-if cascade_error handling', () => {
 
 describe('traceImpact what-if unknown orchestrator error', () => {
   afterEach(() => {
-    vi.doUnmock('../../../src/graph/orchestrator-setup.js');
-    vi.resetModules();
+    _mockOrchestrator.clear();
   });
 
   it('throws on unknown orchestrator error', async () => {
-    vi.resetModules();
-
-    vi.doMock('../../../src/graph/orchestrator-setup.js', () => ({
-      createEmddOrchestrator: () => ({
-        simulate: () => ({ ok: false, error: 'entity_not_found', entityId: 'knw-001' }),
-      }),
+    _mockOrchestrator.set(() => ({
+      simulate: () => ({ ok: false, error: 'entity_not_found', entityId: 'knw-001' }),
     }));
 
     const { traceImpact } = await import('../../../src/graph/impact.js');
@@ -207,8 +233,6 @@ describe('traceImpact what-if unknown orchestrator error', () => {
 // M3: autoTransition multi-step cascade merging
 describe('traceImpact autoTransition merge logic', () => {
   it('merges multiple cascade steps for the same entity correctly', async () => {
-    vi.resetModules();
-
     // Mock with two cascade steps for fnd-002: round 1 and round 2
     const mockTrace = {
       trigger: { entityId: 'knw-001', entityType: 'knowledge', from: 'ACTIVE', to: 'RETRACTED' },
@@ -224,10 +248,8 @@ describe('traceImpact autoTransition merge logic', () => {
       rounds: 2,
     };
 
-    vi.doMock('../../../src/graph/orchestrator-setup.js', () => ({
-      createEmddOrchestrator: () => ({
-        simulate: () => ({ ok: true, trace: mockTrace }),
-      }),
+    _mockOrchestrator.set(() => ({
+      simulate: () => ({ ok: true, trace: mockTrace }),
     }));
 
     const { traceImpact } = await import('../../../src/graph/impact.js');
@@ -245,16 +267,13 @@ describe('traceImpact autoTransition merge logic', () => {
     expect(fnd002!.autoTransition!.matchedIds).toContain('hyp-001');
     expect(new Set(fnd002!.autoTransition!.matchedIds).size).toBe(fnd002!.autoTransition!.matchedIds.length);
 
-    vi.doUnmock('../../../src/graph/orchestrator-setup.js');
-    vi.resetModules();
+    _mockOrchestrator.clear();
   });
 });
 
 // T028: orchestrator-affected-but-not-BFS-reachable path
 describe('traceImpact orchestrator-only affected nodes', () => {
   it('includes orchestrator-affected nodes not reached by BFS', async () => {
-    vi.resetModules();
-
     // Mock orchestrator to return an affected node not in BFS results
     const mockTrace = {
       trigger: { entityId: 'knw-001', entityType: 'knowledge', from: 'ACTIVE', to: 'RETRACTED' },
@@ -267,10 +286,8 @@ describe('traceImpact orchestrator-only affected nodes', () => {
       rounds: 1,
     };
 
-    vi.doMock('../../../src/graph/orchestrator-setup.js', () => ({
-      createEmddOrchestrator: () => ({
-        simulate: () => ({ ok: true, trace: mockTrace }),
-      }),
+    _mockOrchestrator.set(() => ({
+      simulate: () => ({ ok: true, trace: mockTrace }),
     }));
 
     const { traceImpact } = await import('../../../src/graph/impact.js');
@@ -285,13 +302,10 @@ describe('traceImpact orchestrator-only affected nodes', () => {
     const nonExistent = report.impactedNodes.find(n => n.nodeId === 'non-bfs-node-001');
     expect(nonExistent).toBeUndefined();
 
-    vi.doUnmock('../../../src/graph/orchestrator-setup.js');
-    vi.resetModules();
+    _mockOrchestrator.clear();
   });
 
   it('orchestrator-only affected nodes have depth -1', async () => {
-    vi.resetModules();
-
     // Mock: hyp-002 appears in affected but is NOT reachable by BFS from hyp-001
     const mockGraph = {
       nodes: new Map([
@@ -301,22 +315,20 @@ describe('traceImpact orchestrator-only affected nodes', () => {
       errors: [],
       warnings: [],
     };
-    vi.doMock('../../../src/graph/loader.js', () => ({ loadGraph: async () => mockGraph }));
-    vi.doMock('../../../src/graph/orchestrator-setup.js', () => ({
-      createEmddOrchestrator: () => ({
-        simulate: () => ({
-          ok: true,
-          trace: {
-            trigger: { entityId: 'hyp-001', entityType: 'hypothesis', from: 'TESTING', to: 'SUPPORTED' },
-            steps: [{ entityId: 'hyp-002', entityType: 'hypothesis', from: 'PROPOSED', to: 'TESTING', round: 1, triggeredBy: ['hyp-001'] }],
-            unresolved: [],
-            availableManualTransitions: [],
-            affected: ['hyp-002'],
-            finalStates: new Map([['hyp-001', 'SUPPORTED'], ['hyp-002', 'TESTING']]),
-            converged: true,
-            rounds: 1,
-          },
-        }),
+    _mockLoadGraph.set(async () => mockGraph);
+    _mockOrchestrator.set(() => ({
+      simulate: () => ({
+        ok: true,
+        trace: {
+          trigger: { entityId: 'hyp-001', entityType: 'hypothesis', from: 'TESTING', to: 'SUPPORTED' },
+          steps: [{ entityId: 'hyp-002', entityType: 'hypothesis', from: 'PROPOSED', to: 'TESTING', round: 1, triggeredBy: ['hyp-001'] }],
+          unresolved: [],
+          availableManualTransitions: [],
+          affected: ['hyp-002'],
+          finalStates: new Map([['hyp-001', 'SUPPORTED'], ['hyp-002', 'TESTING']]),
+          converged: true,
+          rounds: 1,
+        },
       }),
     }));
 
@@ -330,17 +342,14 @@ describe('traceImpact orchestrator-only affected nodes', () => {
     expect(hyp002!.autoTransition!.from).toBe('PROPOSED');
     expect(hyp002!.autoTransition!.to).toBe('TESTING');
 
-    vi.doUnmock('../../../src/graph/loader.js');
-    vi.doUnmock('../../../src/graph/orchestrator-setup.js');
-    vi.resetModules();
+    _mockLoadGraph.clear();
+    _mockOrchestrator.clear();
   });
 });
 
 // T030: UNKNOWN_STATUS fallback for status-less nodes
 describe('UNKNOWN_STATUS fallback', () => {
   it('reports UNKNOWN for nodes without status in current-status mode', async () => {
-    vi.resetModules();
-
     // Mock loader to return a graph with a status-less node
     const mockGraph = {
       nodes: new Map([
@@ -353,9 +362,7 @@ describe('UNKNOWN_STATUS fallback', () => {
       warnings: [],
     };
 
-    vi.doMock('../../../src/graph/loader.js', () => ({
-      loadGraph: async () => mockGraph,
-    }));
+    _mockLoadGraph.set(async () => mockGraph);
 
     const { traceImpact } = await import('../../../src/graph/impact.js');
     const report = await traceImpact('/fake', 'hyp-001');
@@ -364,20 +371,23 @@ describe('UNKNOWN_STATUS fallback', () => {
     expect(fnd001).toBeDefined();
     expect(fnd001!.currentStatus).toBe('UNKNOWN');
 
-    vi.doUnmock('../../../src/graph/loader.js');
-    vi.resetModules();
+    _mockLoadGraph.clear();
   });
 });
 
 // T026: empty graph handling
 describe('traceImpact edge cases', () => {
+  afterEach(() => {
+    _mockLoadGraph.clear();
+    _mockOrchestrator.clear();
+  });
+
   it('throws for node not found in empty graph', async () => {
     const { traceImpact } = await import('../../../src/graph/impact.js');
     await expect(traceImpact(EMPTY_GRAPH, 'knw-001')).rejects.toThrow("not found");
   });
 
   it('throws distinct error for what-if on status-less seed node', async () => {
-    vi.resetModules();
     const mockGraph = {
       nodes: new Map([
         ['hyp-001', { id: 'hyp-001', type: 'hypothesis', title: 'H1', path: '', tags: [], links: [], meta: {} }],
@@ -385,16 +395,14 @@ describe('traceImpact edge cases', () => {
       errors: [],
       warnings: [],
     };
-    vi.doMock('../../../src/graph/loader.js', () => ({ loadGraph: async () => mockGraph }));
+    _mockLoadGraph.set(async () => mockGraph);
     const { traceImpact } = await import('../../../src/graph/impact.js');
     await expect(traceImpact('/fake', 'hyp-001', { whatIf: 'TESTING' }))
       .rejects.toThrow('no status');
-    vi.doUnmock('../../../src/graph/loader.js');
-    vi.resetModules();
+    _mockLoadGraph.clear();
   });
 
   it('what-if invalid status error includes valid list', async () => {
-    vi.resetModules();
     const mockGraph = {
       nodes: new Map([
         ['hyp-001', { id: 'hyp-001', type: 'hypothesis', title: 'H1', path: '', status: 'PROPOSED', tags: [], links: [], meta: {} }],
@@ -402,16 +410,14 @@ describe('traceImpact edge cases', () => {
       errors: [],
       warnings: [],
     };
-    vi.doMock('../../../src/graph/loader.js', () => ({ loadGraph: async () => mockGraph }));
+    _mockLoadGraph.set(async () => mockGraph);
     const { traceImpact } = await import('../../../src/graph/impact.js');
     await expect(traceImpact('/fake', 'hyp-001', { whatIf: 'BOGUS' }))
       .rejects.toThrow('Valid:');
-    vi.doUnmock('../../../src/graph/loader.js');
-    vi.resetModules();
+    _mockLoadGraph.clear();
   });
 
   it('status-less nodes excluded from what-if entities map', async () => {
-    vi.resetModules();
     const mockGraph = {
       nodes: new Map([
         ['hyp-001', { id: 'hyp-001', type: 'hypothesis', title: 'H1', path: '', status: 'TESTING', confidence: 0.5, tags: [], links: [
@@ -422,28 +428,26 @@ describe('traceImpact edge cases', () => {
       errors: [],
       warnings: [],
     };
-    vi.doMock('../../../src/graph/loader.js', () => ({ loadGraph: async () => mockGraph }));
+    _mockLoadGraph.set(async () => mockGraph);
     // Mock orchestrator to capture entities
     let capturedEntities: Map<string, unknown> | undefined;
-    vi.doMock('../../../src/graph/orchestrator-setup.js', () => ({
-      createEmddOrchestrator: () => ({
-        simulate: (entities: Map<string, unknown>) => {
-          capturedEntities = entities;
-          return {
-            ok: true,
-            trace: {
-              trigger: { entityId: 'hyp-001', entityType: 'hypothesis', from: 'TESTING', to: 'PROPOSED' },
-              steps: [],
-              unresolved: [],
-              availableManualTransitions: [],
-              affected: [],
-              finalStates: new Map([['hyp-001', 'PROPOSED']]),
-              converged: true,
-              rounds: 0,
-            },
-          };
-        },
-      }),
+    _mockOrchestrator.set(() => ({
+      simulate: (entities: Map<string, unknown>) => {
+        capturedEntities = entities;
+        return {
+          ok: true,
+          trace: {
+            trigger: { entityId: 'hyp-001', entityType: 'hypothesis', from: 'TESTING', to: 'PROPOSED' },
+            steps: [],
+            unresolved: [],
+            availableManualTransitions: [],
+            affected: [],
+            finalStates: new Map([['hyp-001', 'PROPOSED']]),
+            converged: true,
+            rounds: 0,
+          },
+        };
+      },
     }));
     const { traceImpact } = await import('../../../src/graph/impact.js');
     await traceImpact('/fake', 'hyp-001', { whatIf: 'PROPOSED' });
@@ -451,9 +455,8 @@ describe('traceImpact edge cases', () => {
     expect(capturedEntities).toBeDefined();
     expect(capturedEntities!.has('hyp-001')).toBe(true);
     expect(capturedEntities!.has('fnd-001')).toBe(false);
-    vi.doUnmock('../../../src/graph/loader.js');
-    vi.doUnmock('../../../src/graph/orchestrator-setup.js');
-    vi.resetModules();
+    _mockLoadGraph.clear();
+    _mockOrchestrator.clear();
   });
 });
 
@@ -498,7 +501,6 @@ describe('convertCascadeTrace with real data', () => {
 // T032: buildImpactedNodes skips graph-absent nodes from BFS scoring
 describe('traceImpact excludes dangling link targets', () => {
   it('BFS-scored node absent from graph is excluded from impactedNodes', async () => {
-    vi.resetModules();
     // Graph where A→missing (dangling) and A→B (valid)
     const mockGraph = {
       nodes: new Map([
@@ -511,15 +513,14 @@ describe('traceImpact excludes dangling link targets', () => {
       errors: [],
       warnings: [],
     };
-    vi.doMock('../../../src/graph/loader.js', () => ({ loadGraph: async () => mockGraph }));
+    _mockLoadGraph.set(async () => mockGraph);
     const { traceImpact } = await import('../../../src/graph/impact.js');
     const report = await traceImpact('/fake', 'A');
     // missing-node gets a BFS scoring entry but should be excluded from impactedNodes
     const ids = report.impactedNodes.map(n => n.nodeId);
     expect(ids).toContain('B');
     expect(ids).not.toContain('missing-node');
-    vi.doUnmock('../../../src/graph/loader.js');
-    vi.resetModules();
+    _mockLoadGraph.clear();
   });
 });
 

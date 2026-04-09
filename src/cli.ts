@@ -5,6 +5,7 @@ import { initCommand } from './cli/init.js';
 import { graphCommand } from './cli/graph.js';
 import { serveCommand } from './cli/serve.js';
 import { exportHtmlCommand } from './cli/export-html.js';
+import { runDoctorChecks, formatDoctorResults } from './cli/doctor.js';
 import { startMcpServer } from './mcp-server/index.js';
 import { VERSION } from './version.js';
 import { CliAdapter } from './registry/cli-adapter.js';
@@ -85,6 +86,16 @@ program
   .description('Start MCP server over stdio')
   .action(withCliErrorHandling(async () => {
     await startMcpServer();
+  }));
+
+program
+  .command('doctor')
+  .description('Diagnose EMDD environment')
+  .option('--lang <locale>', 'Language (en|ko)', 'en')
+  .action(withCliErrorHandling(async (options) => {
+    setLocale(getLocale(options.lang));
+    const results = await runDoctorChecks();
+    console.log(formatDoctorResults(results, VERSION));
   }));
 
 program
