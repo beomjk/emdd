@@ -5,7 +5,7 @@ import { initCommand } from './cli/init.js';
 import { graphCommand } from './cli/graph.js';
 import { serveCommand } from './cli/serve.js';
 import { exportHtmlCommand } from './cli/export-html.js';
-import { runDoctorChecks } from './cli/doctor.js';
+import { runDoctorChecks, formatDoctorResults } from './cli/doctor.js';
 import { startMcpServer } from './mcp-server/index.js';
 import { VERSION } from './version.js';
 import { CliAdapter } from './registry/cli-adapter.js';
@@ -95,37 +95,7 @@ program
   .action(withCliErrorHandling(async (options) => {
     setLocale(getLocale(options.lang));
     const results = await runDoctorChecks();
-    console.log();
-    console.log(chalk.bold.cyan(t('doctor.title', { version: VERSION })));
-    console.log();
-    const icons: Record<string, string> = {
-      pass: chalk.green('\u2713'),
-      warn: chalk.yellow('~'),
-      fail: chalk.red('\u2717'),
-      info: chalk.blue('\u2139'),
-    };
-    for (const r of results) {
-      console.log(`  ${icons[r.status]} ${r.message}`);
-      if (r.details) {
-        for (const d of r.details.slice(0, 5)) {
-          console.log(`    ${chalk.gray(d)}`);
-        }
-        if (r.details.length > 5) {
-          console.log(`    ${chalk.gray(`... and ${r.details.length - 5} more`)}`);
-        }
-      }
-    }
-    const fails = results.filter(r => r.status === 'fail').length;
-    const warns = results.filter(r => r.status === 'warn').length;
-    console.log();
-    if (fails > 0) {
-      console.log(`  ${chalk.red(t('doctor.summary_fail', { count: String(fails) }))}`);
-    } else if (warns > 0) {
-      console.log(`  ${chalk.yellow(t('doctor.summary_warn', { count: String(warns) }))}`);
-    } else {
-      console.log(`  ${chalk.green(t('doctor.summary_pass'))}`);
-    }
-    console.log();
+    console.log(formatDoctorResults(results, VERSION));
   }));
 
 program
