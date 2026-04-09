@@ -5,6 +5,8 @@
   import { fetchGraph, fetchNeighbors } from './lib/api.js';
   import CytoscapeGraph from './components/CytoscapeGraph.svelte';
   import DetailPanel from './components/DetailPanel.svelte';
+  import Filters from './components/Filters.svelte';
+  import SearchBar from './components/SearchBar.svelte';
 
   let graphRef: CytoscapeGraph | undefined = $state();
   let hopDepth = $state(2);
@@ -54,6 +56,11 @@
     selectNode(id);
   }
 
+  function handleSearchNavigate(id: string): void {
+    graphRef?.panToNode(id);
+    graphRef?.pulseNode(id);
+  }
+
   // Load graph on mount
   $effect(() => {
     loadGraph();
@@ -64,6 +71,19 @@
   <!-- Toolbar -->
   <header class="toolbar">
     <div class="toolbar-title">EMDD Dashboard</div>
+    {#if dashboardState.graph && dashboardState.graph.nodes.length > 0}
+      <Filters
+        types={filterState.allTypes}
+        statuses={filterState.allStatuses}
+        edgeTypes={filterState.allEdgeTypes}
+      />
+      <SearchBar
+        nodes={dashboardState.graph.nodes}
+        visibleTypes={filterState.visibleTypes}
+        visibleStatuses={filterState.visibleStatuses}
+        onNavigate={handleSearchNavigate}
+      />
+    {/if}
   </header>
 
   <!-- Main content -->

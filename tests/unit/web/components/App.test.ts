@@ -8,26 +8,25 @@ vi.mock('../../../../src/web/frontend/lib/api.js', () => ({
   fetchNodeDetail: vi.fn(),
 }));
 
-vi.mock('../../../../src/web/frontend/components/CytoscapeGraph.svelte', () => {
-  // Return a minimal stub component factory
-  return {
-    default: (function () {
-      const component = function ($$anchor: any, $$props: any) {
-        // Minimal Svelte 5 compiled component structure
-        const div = document.createElement('div');
-        div.setAttribute('data-testid', 'cytoscape-stub');
-        $$anchor.before(div);
-      };
-      // Mark as Svelte component
-      (component as any).__svelte_meta = { loc: {} };
-      (component as any)['$$' as any] = true;
-      return component;
-    })(),
+// Stub child components that depend on browser APIs
+function createStubComponent(testId: string) {
+  const component = function ($$anchor: any, _$$props: any) {
+    const div = document.createElement('div');
+    div.setAttribute('data-testid', testId);
+    $$anchor.before(div);
   };
-});
+  (component as any).__svelte_meta = { loc: {} };
+  (component as any)['$$' as any] = true;
+  return component;
+}
+
+vi.mock('../../../../src/web/frontend/components/CytoscapeGraph.svelte', () => ({
+  default: createStubComponent('cytoscape-stub'),
+}));
 
 import App from '../../../../src/web/frontend/App.svelte';
 import { fetchGraph, fetchNeighbors } from '../../../../src/web/frontend/lib/api.js';
+import { dashboardState } from '../../../../src/web/frontend/state/dashboard.svelte.js';
 
 const mockFetchGraph = vi.mocked(fetchGraph);
 const mockFetchNeighbors = vi.mocked(fetchNeighbors);
@@ -35,6 +34,10 @@ const mockFetchNeighbors = vi.mocked(fetchNeighbors);
 describe('App', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Reset singleton state between tests
+    dashboardState.graph = null;
+    dashboardState.selectedNodeId = null;
+    dashboardState.error = null;
   });
 
   describe('loading state', () => {
@@ -91,6 +94,47 @@ describe('App', () => {
       mockFetchGraph.mockReturnValue(new Promise(() => {}));
       render(App);
       expect(screen.getByText('EMDD Dashboard')).toBeInTheDocument();
+    });
+
+    it('renders Filters when graph is loaded', async () => {
+      const graph = makeGraph(
+        [makeNode(), makeNode({ id: 'exp-001', type: 'experiment', status: 'TESTING' })],
+        [],
+      );
+      mockFetchGraph.mockResolvedValue(graph);
+      render(App);
+      await waitFor(() => {
+        // Filters renders section labels
+        expect(screen.getByText('Types')).toBeInTheDocument();
+        expect(screen.getByText('Statuses')).toBeInTheDocument();
+        expect(screen.getByText('Edges')).toBeInTheDocument();
+      });
+    });
+
+    it('renders SearchBar when graph is loaded', async () => {
+      const graph = makeGraph([makeNode()], []);
+      mockFetchGraph.mockResolvedValue(graph);
+      render(App);
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText('Search nodes...')).toBeInTheDocument();
+      });
+    });
+
+    it('does not render Filters or SearchBar during loading', () => {
+      mockFetchGraph.mockReturnValue(new Promise(() => {}));
+      render(App);
+      expect(screen.queryByText('Types')).not.toBeInTheDocument();
+      expect(screen.queryByPlaceholderText('Search nodes...')).not.toBeInTheDocument();
+    });
+
+    it('does not render Filters or SearchBar for empty graph', async () => {
+      mockFetchGraph.mockResolvedValue(makeGraph([], []));
+      render(App);
+      await waitFor(() => {
+        expect(screen.getByText('No nodes found in the graph.')).toBeInTheDocument();
+      });
+      expect(screen.queryByText('Types')).not.toBeInTheDocument();
+      expect(screen.queryByPlaceholderText('Search nodes...')).not.toBeInTheDocument();
     });
   });
 });
