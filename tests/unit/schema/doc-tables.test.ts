@@ -6,9 +6,9 @@ import { DOC_GENERATORS } from '../../../src/schema/doc-tables.js';
 describe('readme-cli-core', () => {
   const gen = () => DOC_GENERATORS['readme-cli-core']();
 
-  it('produces a table with 9 data rows', () => {
+  it('produces a table with 10 data rows', () => {
     const lines = gen().split('\n').filter(l => l.startsWith('| `emdd'));
-    expect(lines).toHaveLength(9);
+    expect(lines).toHaveLength(10);
   });
 
   it('contains init (non-registry)', () => {

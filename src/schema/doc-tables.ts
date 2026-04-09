@@ -25,6 +25,7 @@ const NON_REGISTRY_COMMANDS: NonRegistryCommand[] = [
   { cliName: 'graph', description: 'Generate `_graph.mmd` (Mermaid diagram)', positional: '[path]', options: '' },
   { cliName: 'mcp', description: 'Start MCP server (stdio transport)', options: '' },
   { cliName: 'doctor', description: 'Diagnose EMDD environment', options: '`--lang en\\|ko`' },
+  { cliName: 'workflow', description: 'Show the EMDD research session cycle', options: '`--lang en\\|ko`' },
 ];
 
 // ── Prompt Metadata (derived from PROMPT_META SSOT) ────────────────
@@ -53,6 +54,7 @@ const NON_REGISTRY_GROUP: Record<string, DocGroup> = {
   'graph': 'export',
   'mcp': 'export',
   'doctor': 'core',
+  'workflow': 'core',
 };
 
 function getDocGroup(def: CommandDef): DocGroup {

@@ -103,7 +103,7 @@ describe('command count parity', () => {
   it('total CLI commands in README equals registry (minus cli:false) plus non-registry', () => {
     const allDefs = createDefaultRegistry().getAll();
     const cliDefs = allDefs.filter(d => d.cli !== false);
-    const nonRegistryCount = 6; // init, graph, serve, export-html, mcp, doctor
+    const nonRegistryCount = 7; // init, graph, serve, export-html, mcp, doctor, workflow (all defined directly in cli.ts)
     const expectedTotal = cliDefs.length + nonRegistryCount;
 
     // Count data rows across all 3 README tables
