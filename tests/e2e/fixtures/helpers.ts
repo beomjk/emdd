@@ -74,9 +74,10 @@ export const sel = {
   // Layout selector
   layoutSelector: '.layout-selector select',
 
-  // Export & Refresh
-  exportBtn: '.export-btn',
-  refreshBtn: '.refresh-btn',
+  // Export & Refresh — Svelte migration unified these under .toolbar-btn,
+  // so we target them by aria-label for a semantic, stable selector.
+  exportBtn: 'button[aria-label="Export"]',
+  refreshBtn: 'button[aria-label="Refresh"]',
 
   // Toast
   toast: '.toast',
