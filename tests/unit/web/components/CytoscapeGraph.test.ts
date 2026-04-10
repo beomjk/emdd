@@ -95,16 +95,6 @@ vi.mock('../../../../src/web/frontend/lib/api.js', () => ({
   fetchClusters: vi.fn().mockResolvedValue({ clusters: [] }),
 }));
 
-vi.mock('../../../../src/web/frontend/state/dashboard.svelte.js', () => {
-  let theme = 'light';
-  return {
-    dashboardState: {
-      get theme() { return theme; },
-      set theme(v: string) { theme = v; },
-    },
-  };
-});
-
 import cytoscape from 'cytoscape';
 import { mount, unmount } from 'svelte';
 import { fetchClusters } from '../../../../src/web/frontend/lib/api.js';
@@ -127,6 +117,7 @@ function renderGraph(overrides: Record<string, unknown> = {}) {
   const defaults = {
     graph,
     layout: 'force' as const,
+    theme: 'light',
     visibleTypes: new Set(['hypothesis', 'experiment']),
     visibleStatuses: new Set(['PROPOSED', 'PLANNED']),
     visibleEdgeTypes: new Set(['tested_by']),
@@ -487,21 +478,141 @@ describe('CytoscapeGraph', () => {
 
   // ── Theme change effect ───────────────────────────────────────────
   describe('theme change effect', () => {
-    it('sets up style refresh capability via cy.style().fromJson().update()', async () => {
-      // Note: Cannot test reactive theme changes because vi.mock replaces
-      // dashboardState with a plain object (no Svelte $state reactivity).
-      // This test verifies the style chain is available and called during init.
-      const mockUpdate = vi.fn();
-      const mockFromJson = vi.fn().mockReturnValue({ update: mockUpdate });
-
+    it('does NOT call cy.style().fromJson().update() on initial mount', async () => {
+      // The theme effect guards against initial mount via prevTheme === null check.
       renderGraph();
       await waitFor(() => expect(mockCytoscape).toHaveBeenCalled());
 
-      // The style() getter is available on the cy instance
-      expect(mockCyInstance.style).toBeDefined();
-      // The style chain (fromJson → update) is correctly wired
-      const chain = (mockCyInstance.style as Mock)();
-      expect(chain.fromJson).toBeDefined();
+      // style() is called once during init (stylesheet setup via cytoscape({style: ...})),
+      // but the fromJson().update() chain should not fire yet.
+      const styleMock = mockCyInstance.style as Mock;
+      // style() may be called during init, but fromJson only fires on theme change.
+      const fromJsonCalls = styleMock.mock.results
+        .filter((r) => r.type === 'return')
+        .flatMap((r) => {
+          const chain = r.value as { fromJson?: Mock };
+          return chain.fromJson ? (chain.fromJson as Mock).mock.calls : [];
+        });
+      expect(fromJsonCalls.length).toBe(0);
+    });
+
+    it('refreshes Cytoscape styles when theme prop changes', async () => {
+      const { rerender } = renderGraph({ theme: 'light' });
+      await waitFor(() => expect(mockCytoscape).toHaveBeenCalled());
+
+      // Clear any init-time style interactions
+      const styleMock = mockCyInstance.style as Mock;
+      styleMock.mockClear();
+
+      // Re-render with a new theme → effect should fire
+      await rerender({
+        graph: makeGraph(
+          [
+            makeNode({ id: 'hyp-001', title: 'Hypothesis 1', type: 'hypothesis', status: 'PROPOSED' }),
+            makeNode({ id: 'exp-001', title: 'Experiment 1', type: 'experiment', status: 'PLANNED' }),
+          ],
+          [makeEdge({ source: 'hyp-001', target: 'exp-001', relation: 'tested_by' })],
+        ),
+        layout: 'force' as const,
+        theme: 'dark',
+        visibleTypes: new Set(['hypothesis', 'experiment']),
+        visibleStatuses: new Set(['PROPOSED', 'PLANNED']),
+        visibleEdgeTypes: new Set(['tested_by']),
+        selectedNodeId: null,
+        neighborIds: [],
+        onNodeClick: vi.fn(),
+        onBackgroundClick: vi.fn(),
+      });
+
+      // Expect the full style refresh chain: style().fromJson(...).update()
+      await waitFor(() => {
+        const fromJsonCalls = styleMock.mock.results
+          .filter((r) => r.type === 'return')
+          .flatMap((r) => {
+            const chain = r.value as { fromJson?: Mock };
+            return chain.fromJson ? (chain.fromJson as Mock).mock.calls : [];
+          });
+        expect(fromJsonCalls.length).toBeGreaterThan(0);
+      });
+    });
+  });
+
+  // ── Layout re-run gating by topologyChanged ────────────────────────
+  describe('layout re-run gating', () => {
+    it('runs layout on initial mount (topology change)', async () => {
+      renderGraph();
+      await waitFor(() => {
+        expect(mockCyInstance.layout).toHaveBeenCalled();
+      });
+    });
+
+    it('does NOT re-run layout when only visual data changes (no topology change)', async () => {
+      const nodes = [
+        makeNode({ id: 'hyp-001', title: 'Original', type: 'hypothesis', status: 'PROPOSED' }),
+      ];
+      const edges: ReturnType<typeof makeEdge>[] = [];
+
+      const { rerender } = renderGraph({ graph: makeGraph(nodes, edges) });
+      await waitFor(() => expect(mockCyInstance.layout).toHaveBeenCalled());
+
+      // Clear layout call tracking
+      (mockCyInstance.layout as Mock).mockClear();
+
+      // Rerender with SAME topology but changed title (visual-only update)
+      const updatedNodes = [
+        makeNode({ id: 'hyp-001', title: 'Updated Title', type: 'hypothesis', status: 'PROPOSED' }),
+      ];
+      await rerender({
+        graph: makeGraph(updatedNodes, edges),
+        layout: 'force' as const,
+        theme: 'light',
+        visibleTypes: new Set(['hypothesis']),
+        visibleStatuses: new Set(['PROPOSED']),
+        visibleEdgeTypes: new Set<string>(),
+        selectedNodeId: null,
+        neighborIds: [],
+        onNodeClick: vi.fn(),
+        onBackgroundClick: vi.fn(),
+      });
+
+      // Allow effects to flush
+      await new Promise((r) => setTimeout(r, 0));
+
+      // layout should NOT have been called again — topologyChanged=false
+      expect(mockCyInstance.layout).not.toHaveBeenCalled();
+    });
+
+    it('DOES re-run layout when topology changes (new node added)', async () => {
+      const nodes = [
+        makeNode({ id: 'hyp-001', title: 'Hyp 1', type: 'hypothesis', status: 'PROPOSED' }),
+      ];
+
+      const { rerender } = renderGraph({ graph: makeGraph(nodes, []) });
+      await waitFor(() => expect(mockCyInstance.layout).toHaveBeenCalled());
+
+      (mockCyInstance.layout as Mock).mockClear();
+
+      // Add a new node → topology changed
+      const nextNodes = [
+        ...nodes,
+        makeNode({ id: 'exp-001', title: 'Exp 1', type: 'experiment', status: 'PLANNED' }),
+      ];
+      await rerender({
+        graph: makeGraph(nextNodes, []),
+        layout: 'force' as const,
+        theme: 'light',
+        visibleTypes: new Set(['hypothesis', 'experiment']),
+        visibleStatuses: new Set(['PROPOSED', 'PLANNED']),
+        visibleEdgeTypes: new Set<string>(),
+        selectedNodeId: null,
+        neighborIds: [],
+        onNodeClick: vi.fn(),
+        onBackgroundClick: vi.fn(),
+      });
+
+      await waitFor(() => {
+        expect(mockCyInstance.layout).toHaveBeenCalled();
+      });
     });
   });
 

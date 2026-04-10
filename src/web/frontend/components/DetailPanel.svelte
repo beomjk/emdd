@@ -91,7 +91,7 @@
         <div class="detail-content">
           <div class="detail-header">
             <span class="detail-id">{detail.id}</span>
-            <button class="detail-close" onclick={onClose}>&times;</button>
+            <button class="detail-close" aria-label="Close detail panel" onclick={onClose}>&times;</button>
           </div>
           <h3 class="detail-title">{detail.title}</h3>
           <div class="detail-badges">

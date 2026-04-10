@@ -4,7 +4,6 @@
   import { getNodeColor, getStatusBorder } from '../lib/constants.js';
   import { getLayoutConfig } from '../lib/cytoscape-setup.js';
   import { fetchClusters } from '../lib/api.js';
-  import { dashboardState } from '../state/dashboard.svelte.js';
   import { diffGraph } from '../lib/graph-diff.js';
   import Tooltip from './Tooltip.svelte';
   import Legend from './Legend.svelte';
@@ -12,6 +11,7 @@
   let {
     graph,
     layout,
+    theme,
     visibleTypes,
     visibleStatuses,
     visibleEdgeTypes,
@@ -22,6 +22,7 @@
   }: {
     graph: SerializedGraph;
     layout: 'force' | 'hierarchical';
+    theme: string;
     visibleTypes: Set<string>;
     visibleStatuses: Set<string>;
     visibleEdgeTypes: Set<string>;
@@ -416,7 +417,22 @@
       }
     } else {
       showPerfHint = false;
-      if (cullingCleanup) { cullingCleanup(); cullingCleanup = null; }
+      if (cullingCleanup) {
+        cullingCleanup();
+        cullingCleanup = null;
+        // When culling turns off, previously-culled nodes may still carry
+        // display:none. The filter effect will re-apply display, but only
+        // if visibleTypes/Statuses/EdgeTypes references changed. Explicitly
+        // reset display here so we never leave nodes stuck invisible.
+        cy!.batch(() => {
+          cy!.nodes('[!isCluster]').forEach((node) => {
+            node.style('display', 'element');
+          });
+          cy!.edges().forEach((edge) => {
+            edge.style('display', 'element');
+          });
+        });
+      }
     }
 
     // Apply clusters only when topology changes (async, guarded)
@@ -533,7 +549,7 @@
   // ── Effect: theme change → refresh Cytoscape styles ────────────────
   let prevTheme: string | null = null;
   $effect(() => {
-    const _t = dashboardState.theme;
+    const _t = theme;
     if (!cy) return;
     if (prevTheme === null) { prevTheme = _t; return; }
     if (_t === prevTheme) return;
@@ -551,7 +567,7 @@
   {#if showPerfHint}
     <div class="perf-hint">
       Large graph detected. Use <b>filters</b> or <b>local graph mode</b> for better performance.
-      <button class="perf-hint-close" onclick={() => showPerfHint = false}>&times;</button>
+      <button class="perf-hint-close" aria-label="Dismiss performance hint" onclick={() => showPerfHint = false}>&times;</button>
     </div>
   {/if}
 </div>

@@ -144,4 +144,48 @@ describe('diffGraph', () => {
 
     expect(delta.addedEdges).toHaveLength(0);
   });
+
+  // ── Node field change coverage ──────────────────────────────────────
+  // nodeChanged compares 7 fields: title, status, type, confidence, invalid,
+  // bodyPreview, tags. Regression protection against silent field additions.
+
+  it('detects updated node data (type change)', () => {
+    const old = makeGraph([makeNode('a', { type: 'hypothesis' })]);
+    const next = makeGraph([makeNode('a', { type: 'experiment' })]);
+    const delta = diffGraph(old, next, buildNodeData, buildEdgeData);
+
+    expect(delta.updatedNodes).toHaveLength(1);
+    expect(delta.updatedNodes[0].id).toBe('a');
+    expect(delta.topologyChanged).toBe(false);
+  });
+
+  it('detects updated node data (confidence change)', () => {
+    const old = makeGraph([makeNode('a', { confidence: 0.5 })]);
+    const next = makeGraph([makeNode('a', { confidence: 0.9 })]);
+    const delta = diffGraph(old, next, buildNodeData, buildEdgeData);
+
+    expect(delta.updatedNodes).toHaveLength(1);
+    expect(delta.updatedNodes[0].id).toBe('a');
+    expect(delta.topologyChanged).toBe(false);
+  });
+
+  it('detects updated node data (invalid flag flipped)', () => {
+    const old = makeGraph([makeNode('a', { invalid: false })]);
+    const next = makeGraph([makeNode('a', { invalid: true })]);
+    const delta = diffGraph(old, next, buildNodeData, buildEdgeData);
+
+    expect(delta.updatedNodes).toHaveLength(1);
+    expect(delta.updatedNodes[0].id).toBe('a');
+    expect(delta.topologyChanged).toBe(false);
+  });
+
+  it('detects updated node data (bodyPreview change)', () => {
+    const old = makeGraph([makeNode('a', { bodyPreview: 'old summary' })]);
+    const next = makeGraph([makeNode('a', { bodyPreview: 'new summary' })]);
+    const delta = diffGraph(old, next, buildNodeData, buildEdgeData);
+
+    expect(delta.updatedNodes).toHaveLength(1);
+    expect(delta.updatedNodes[0].id).toBe('a');
+    expect(delta.topologyChanged).toBe(false);
+  });
 });

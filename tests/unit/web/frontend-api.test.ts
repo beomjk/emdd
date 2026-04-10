@@ -60,12 +60,35 @@ describe('fetchNodeDetail', () => {
 
 describe('fetchNeighbors', () => {
   it('passes depth as query param', async () => {
-    const data = { center: 'hyp-001', depth: 3, neighbors: ['exp-001'] };
+    // Contract: server returns NeighborNode[] objects with `.id`, not string[]
+    // See commit 8a7b963 — the prior CRITICAL bug was treating these as strings.
+    const data = {
+      center: 'hyp-001',
+      depth: 3,
+      neighbors: [
+        { id: 'exp-001', type: 'experiment', title: 'Exp 1', status: 'PLANNED', distance: 1 },
+        { id: 'fnd-001', type: 'finding', title: 'Finding 1', status: 'CONFIRMED', distance: 2 },
+      ],
+    };
     mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve(data) });
 
     const result = await fetchNeighbors('hyp-001', 3);
-    expect(result.neighbors).toEqual(['exp-001']);
+    expect(result.neighbors).toHaveLength(2);
+    // Each neighbor MUST have an `id` field that callers can read.
+    expect(result.neighbors[0].id).toBe('exp-001');
+    expect(result.neighbors[1].id).toBe('fnd-001');
+    // Pin the mapping pattern used in App.svelte selectNode
+    const ids = result.neighbors.map((n) => n.id);
+    expect(ids).toEqual(['exp-001', 'fnd-001']);
     expect(mockFetch).toHaveBeenCalledWith('/api/neighbors/hyp-001?depth=3', undefined);
+  });
+
+  it('handles empty neighbors array', async () => {
+    const data = { center: 'hyp-001', depth: 2, neighbors: [] };
+    mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve(data) });
+
+    const result = await fetchNeighbors('hyp-001', 2);
+    expect(result.neighbors).toEqual([]);
   });
 });
 

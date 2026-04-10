@@ -28,8 +28,8 @@ async function apiFetch<T>(url: string, init?: RequestInit): Promise<T> {
   return await res.json() as T;
 }
 
-export async function fetchGraph(): Promise<SerializedGraph> {
-  return apiFetch<SerializedGraph>('/api/graph');
+export async function fetchGraph(init?: RequestInit): Promise<SerializedGraph> {
+  return apiFetch<SerializedGraph>('/api/graph', init);
 }
 
 export async function fetchNodeDetail(id: string, init?: RequestInit): Promise<NodeDetailResponse> {

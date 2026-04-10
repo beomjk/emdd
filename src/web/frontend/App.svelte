@@ -21,6 +21,23 @@
   let toastTimer: ReturnType<typeof setTimeout> | null = null;
   // Abort in-flight neighbor fetch when selection changes or depth changes
   let neighborAbort: AbortController | null = null;
+  // Abort in-flight graph-update fetch when a newer SSE event arrives
+  let graphUpdateAbort: AbortController | null = null;
+
+  async function refetchNeighbors(id: string, depth: number): Promise<void> {
+    neighborAbort?.abort();
+    neighborAbort = new AbortController();
+    const signal = neighborAbort.signal;
+    try {
+      const result = await fetchNeighbors(id, depth, { signal });
+      if (signal.aborted) return;
+      neighborIds = (result.neighbors ?? []).map((n) => n.id);
+    } catch (e) {
+      if ((e as Error)?.name === 'AbortError') return;
+      neighborIds = [];
+      showToast(e instanceof Error ? e.message : 'Failed to load neighbors', 'error');
+    }
+  }
 
   async function loadGraph(): Promise<void> {
     dashboardState.error = null;
@@ -38,17 +55,7 @@
 
   async function selectNode(id: string): Promise<void> {
     dashboardState.selectNode(id);
-    neighborAbort?.abort();
-    neighborAbort = new AbortController();
-    const signal = neighborAbort.signal;
-    try {
-      const result = await fetchNeighbors(id, hopDepth, { signal });
-      if (signal.aborted) return;
-      neighborIds = (result.neighbors ?? []).map((n) => n.id);
-    } catch (e) {
-      if ((e as Error)?.name === 'AbortError') return;
-      neighborIds = [];
-    }
+    await refetchNeighbors(id, hopDepth);
     graphRef?.panToNode(id);
   }
 
@@ -61,17 +68,7 @@
   async function handleDepthChange(newDepth: number): Promise<void> {
     hopDepth = newDepth;
     if (!dashboardState.selectedNodeId) return;
-    neighborAbort?.abort();
-    neighborAbort = new AbortController();
-    const signal = neighborAbort.signal;
-    try {
-      const result = await fetchNeighbors(dashboardState.selectedNodeId, newDepth, { signal });
-      if (signal.aborted) return;
-      neighborIds = (result.neighbors ?? []).map((n) => n.id);
-    } catch (e) {
-      if ((e as Error)?.name === 'AbortError') return;
-      neighborIds = [];
-    }
+    await refetchNeighbors(dashboardState.selectedNodeId, newDepth);
   }
 
   function handleNodeClickFromDetail(id: string): void {
@@ -122,19 +119,26 @@
   }
 
   async function handleGraphUpdated(): Promise<void> {
+    // Guard against concurrent SSE events — only the latest update wins
+    graphUpdateAbort?.abort();
+    graphUpdateAbort = new AbortController();
+    const signal = graphUpdateAbort.signal;
     try {
       const prevSelectedId = dashboardState.selectedNodeId;
-      const graph = await fetchGraph();
+      const graph = await fetchGraph({ signal });
+      if (signal.aborted) return;
       // IMPORTANT: mergeFromGraph MUST be called BEFORE setGraph.
       // It reads _allTypes (derived from the OLD graph) to distinguish
       // "previously known" vs "newly discovered" types for auto-visibility.
       filterState.mergeFromGraph(graph);
       dashboardState.setGraph(graph);
-      // Re-select previous node if still exists
+      // Re-select previous node if still exists, and refresh its neighbors
+      // since the underlying graph may have added/removed edges.
       if (prevSelectedId) {
         const stillExists = graph.nodes.some((n) => n.id === prevSelectedId);
         if (stillExists) {
           dashboardState.selectNode(prevSelectedId);
+          await refetchNeighbors(prevSelectedId, hopDepth);
         } else {
           dashboardState.deselectNode();
           neighborIds = [];
@@ -142,6 +146,7 @@
       }
       showToast('Graph updated');
     } catch (e) {
+      if ((e as Error)?.name === 'AbortError') return;
       showToast(e instanceof Error ? e.message : 'Failed to update graph', 'error');
     }
   }
@@ -153,6 +158,8 @@
     sseState.connect();
     return () => {
       sseState.disconnect();
+      neighborAbort?.abort();
+      graphUpdateAbort?.abort();
       if (toastTimer) clearTimeout(toastTimer);
     };
   });
@@ -209,6 +216,7 @@
         bind:this={graphRef}
         graph={dashboardState.graph}
         layout={dashboardState.layout}
+        theme={dashboardState.theme}
         visibleTypes={filterState.visibleTypes}
         visibleStatuses={filterState.visibleStatuses}
         visibleEdgeTypes={filterState.visibleEdgeTypes}

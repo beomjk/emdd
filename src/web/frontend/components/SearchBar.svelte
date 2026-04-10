@@ -41,6 +41,16 @@
     hasNavigated = false;
   });
 
+  // Clamp currentIndex when matches shrinks (e.g. filter change narrows results).
+  // Without this, prev/next navigation and match[currentIndex] indexing produce
+  // stale or undefined values when filters reduce the result set.
+  $effect(() => {
+    if (currentIndex >= matches.length) {
+      currentIndex = 0;
+      hasNavigated = false;
+    }
+  });
+
   function handleKeyDown(e: KeyboardEvent): void {
     if (e.key === 'Enter') {
       if (matches.length === 0) return;

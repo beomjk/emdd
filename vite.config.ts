@@ -6,7 +6,10 @@ export default defineConfig({
   plugins: [svelte({ compilerOptions: { runes: true } })],
   build: {
     outDir: '../../../dist/web',
-    emptyOutDir: true,
+    // IMPORTANT: must be false — tsc writes backend files (server.js, cache.js,
+    // routes/static.js, etc.) to dist/web/ BEFORE vite runs. Emptying outDir
+    // would wipe those and break `emdd serve` and the Playwright E2E pipeline.
+    emptyOutDir: false,
     cssCodeSplit: false,
     rollupOptions: {
       output: {

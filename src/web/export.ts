@@ -18,15 +18,6 @@ export interface ExportResult {
 
 // ── HTML escaping for export ────────────────────────────────────────
 
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
 /** Escape `</` sequences in strings embedded inside `<script>` blocks. */
 function escapeScriptContent(json: string): string {
   return json.replace(/<\//g, '<\\/');
