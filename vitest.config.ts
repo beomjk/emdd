@@ -14,7 +14,7 @@ export default defineConfig({
         '**/*.d.ts',
         'src/web/frontend/types/**',
       ],
-      reporter: ['text', 'html', 'json-summary', 'lcov'],
+      reporter: ['text', 'html', 'json', 'json-summary', 'lcov'],
       reportsDirectory: './coverage',
       reportOnFailure: true,
       thresholds: {
