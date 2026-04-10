@@ -5,29 +5,31 @@ export default defineConfig({
   test: {
     globals: true,
     root: '.',
+    // Coverage MUST be at root level — when using `projects`, vitest ignores
+    // per-project coverage config and uses only the root coverage settings.
+    coverage: {
+      provider: 'v8',
+      include: ['src/**/*.{ts,svelte}'],
+      exclude: [
+        '**/*.d.ts',
+        'src/web/frontend/types/**',
+      ],
+      reporter: ['text', 'html', 'json-summary', 'lcov'],
+      reportsDirectory: './coverage',
+      reportOnFailure: true,
+      thresholds: {
+        lines: 90,
+        functions: 87,
+        branches: 80,
+        statements: 90,
+      },
+    },
     projects: [
       {
         test: {
           name: 'node',
           include: ['tests/**/*.test.ts'],
           exclude: ['tests/unit/web/components/**'],
-          coverage: {
-            provider: 'v8',
-            include: ['src/**/*.ts'],
-            exclude: [
-              'src/web/frontend/**',
-              '**/*.d.ts',
-            ],
-            reporter: ['text', 'html', 'json-summary', 'lcov'],
-            reportsDirectory: './coverage',
-            reportOnFailure: true,
-            thresholds: {
-              lines: 90,
-              functions: 87,
-              branches: 80,
-              statements: 90,
-            },
-          },
         },
       },
       {
@@ -41,19 +43,6 @@ export default defineConfig({
           environment: 'jsdom',
           include: ['tests/unit/web/components/**/*.test.ts'],
           setupFiles: ['tests/setup/svelte.ts'],
-          coverage: {
-            provider: 'v8',
-            include: ['src/web/frontend/**/*.{ts,svelte}'],
-            exclude: ['**/*.d.ts'],
-            reporter: ['text', 'json-summary'],
-            reportsDirectory: './coverage/components',
-            thresholds: {
-              lines: 60,
-              functions: 55,
-              branches: 50,
-              statements: 60,
-            },
-          },
         },
       },
     ],
