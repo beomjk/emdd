@@ -109,6 +109,9 @@
     try {
       const prevSelectedId = dashboardState.selectedNodeId;
       const graph = await fetchGraph();
+      // IMPORTANT: mergeFromGraph MUST be called BEFORE setGraph.
+      // It reads _allTypes (derived from the OLD graph) to distinguish
+      // "previously known" vs "newly discovered" types for auto-visibility.
       filterState.mergeFromGraph(graph);
       dashboardState.setGraph(graph);
       // Re-select previous node if still exists

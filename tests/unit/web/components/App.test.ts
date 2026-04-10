@@ -7,6 +7,7 @@ vi.mock('../../../../src/web/frontend/lib/api.js', () => ({
   fetchNeighbors: vi.fn(),
   fetchNodeDetail: vi.fn(),
   fetchExportHtml: vi.fn(),
+  triggerRefresh: vi.fn(),
 }));
 
 vi.mock('../../../../src/web/frontend/state/sse.svelte.js', () => ({
@@ -40,13 +41,14 @@ vi.mock('../../../../src/web/frontend/components/HealthSidebar.svelte', () => ({
 }));
 
 import App from '../../../../src/web/frontend/App.svelte';
-import { fetchGraph, fetchNeighbors, fetchExportHtml } from '../../../../src/web/frontend/lib/api.js';
+import { fetchGraph, fetchNeighbors, fetchNodeDetail, fetchExportHtml, triggerRefresh } from '../../../../src/web/frontend/lib/api.js';
 import { dashboardState } from '../../../../src/web/frontend/state/dashboard.svelte.js';
 import { sseState } from '../../../../src/web/frontend/state/sse.svelte.js';
 
 const mockFetchGraph = vi.mocked(fetchGraph);
 const mockFetchNeighbors = vi.mocked(fetchNeighbors);
 const mockFetchExportHtml = vi.mocked(fetchExportHtml);
+const mockTriggerRefresh = vi.mocked(triggerRefresh);
 const mockSseState = vi.mocked(sseState);
 
 describe('App', () => {
@@ -56,6 +58,11 @@ describe('App', () => {
     dashboardState.graph = null;
     dashboardState.selectedNodeId = null;
     dashboardState.error = null;
+    // DetailPanel calls fetchNodeDetail when a node is selected — provide default mocks
+    vi.mocked(fetchNeighbors).mockResolvedValue({ center: '', depth: 2, neighbors: [] });
+    vi.mocked(fetchNodeDetail).mockResolvedValue({
+      id: 'hyp-001', title: 'Test', type: 'hypothesis', body: null,
+    });
   });
 
   describe('loading state', () => {
@@ -352,6 +359,90 @@ describe('App', () => {
       });
 
       vi.unstubAllGlobals();
+    });
+  });
+
+  describe('SSE graph update flow', () => {
+    it('re-fetches graph when SSE handler is called', async () => {
+      const graph1 = makeGraph([makeNode()], []);
+      const graph2 = makeGraph([makeNode(), makeNode({ id: 'exp-001', type: 'experiment' })], []);
+      mockFetchGraph.mockResolvedValueOnce(graph1).mockResolvedValueOnce(graph2);
+
+      render(App);
+      await waitFor(() => {
+        expect(mockSseState.onGraphUpdated).toHaveBeenCalled();
+      });
+
+      // Capture the registered SSE handler and invoke it
+      const handler = mockSseState.onGraphUpdated.mock.calls[0][0] as () => Promise<void>;
+      await handler();
+
+      // fetchGraph should have been called twice (initial load + SSE update)
+      expect(mockFetchGraph).toHaveBeenCalledTimes(2);
+    });
+
+    it('preserves selected node if it still exists after SSE update', async () => {
+      const node = makeNode({ id: 'hyp-001' });
+      const graph1 = makeGraph([node], []);
+      const graph2 = makeGraph([node], []);
+      mockFetchGraph.mockResolvedValueOnce(graph1).mockResolvedValueOnce(graph2);
+
+      render(App);
+      await waitFor(() => {
+        expect(mockSseState.onGraphUpdated).toHaveBeenCalled();
+      });
+
+      // Select a node
+      dashboardState.selectNode('hyp-001');
+
+      // Trigger SSE update
+      const handler = mockSseState.onGraphUpdated.mock.calls[0][0] as () => Promise<void>;
+      await handler();
+
+      expect(dashboardState.selectedNodeId).toBe('hyp-001');
+    });
+
+    it('deselects node if it was removed after SSE update', async () => {
+      const node = makeNode({ id: 'hyp-001' });
+      const graph1 = makeGraph([node], []);
+      const graph2 = makeGraph([], []); // node removed
+      mockFetchGraph.mockResolvedValueOnce(graph1).mockResolvedValueOnce(graph2);
+
+      render(App);
+      await waitFor(() => {
+        expect(mockSseState.onGraphUpdated).toHaveBeenCalled();
+      });
+
+      // Select a node
+      dashboardState.selectNode('hyp-001');
+
+      // Trigger SSE update
+      const handler = mockSseState.onGraphUpdated.mock.calls[0][0] as () => Promise<void>;
+      await handler();
+
+      expect(dashboardState.selectedNodeId).toBeNull();
+    });
+  });
+
+  describe('refresh flow', () => {
+    it('calls triggerRefresh and re-fetches graph on Refresh click', async () => {
+      const graph = makeGraph([makeNode()], []);
+      mockFetchGraph.mockResolvedValue(graph);
+      mockTriggerRefresh.mockResolvedValue({ reloaded: true, loadedAt: '', nodeCount: 1 });
+
+      render(App);
+      await waitFor(() => {
+        screen.getByRole('button', { name: /refresh/i });
+      });
+
+      const btn = screen.getByRole('button', { name: /refresh/i });
+      await btn.click();
+
+      await waitFor(() => {
+        expect(mockTriggerRefresh).toHaveBeenCalled();
+        // Initial load + refresh
+        expect(mockFetchGraph).toHaveBeenCalledTimes(2);
+      });
     });
   });
 });

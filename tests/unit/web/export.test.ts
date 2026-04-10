@@ -86,4 +86,58 @@ describe('generateExportHtml', () => {
 
     expect(html).toContain("name: 'fcose'");
   });
+
+  describe('XSS prevention', () => {
+    it('escapes HTML in node titles to prevent innerHTML injection', () => {
+      const xssPayload = '<img src=x onerror=alert(document.cookie)>';
+      const graph = {
+        nodes: [
+          { id: 'hyp-001', title: xssPayload, type: 'hypothesis', status: 'PROPOSED', tags: [], links: [] },
+        ],
+        edges: [],
+        loadedAt: new Date().toISOString(),
+      };
+      const { html } = generateExportHtml(graph as any);
+
+      // The raw payload must not appear unescaped in the inline script
+      expect(html).not.toContain("'+d.title+'");
+      // The esc() function must be present
+      expect(html).toContain('function esc(');
+      // Title should be in JSON data (escaped by JSON.stringify), not raw HTML
+      expect(html).not.toContain(`<h3>${xssPayload}</h3>`);
+    });
+
+    it('escapes </script> sequences in JSON data to prevent script breakout', () => {
+      const graph = {
+        nodes: [
+          { id: 'hyp-001', title: '</script><script>alert(1)</script>', type: 'hypothesis', status: 'PROPOSED', tags: [], links: [] },
+        ],
+        edges: [],
+        loadedAt: new Date().toISOString(),
+      };
+      const { html } = generateExportHtml(graph as any);
+
+      // The literal </script> must not appear inside the script block's JSON data
+      // It should be escaped to <\/script>
+      const scriptBlocks = html.match(/<script[\s\S]*?<\/script>/g) ?? [];
+      for (const block of scriptBlocks) {
+        const inner = block.slice(block.indexOf('>') + 1, block.lastIndexOf('</script>'));
+        expect(inner).not.toContain('</script>');
+      }
+    });
+
+    it('escapes tags containing XSS payloads', () => {
+      const graph = {
+        nodes: [
+          { id: 'hyp-001', title: 'safe', type: 'hypothesis', status: 'PROPOSED', tags: ['<b>xss</b>'], links: [] },
+        ],
+        edges: [],
+        loadedAt: new Date().toISOString(),
+      };
+      const { html } = generateExportHtml(graph as any);
+
+      // The esc() function should sanitize tags in the tap handler
+      expect(html).toContain('esc(d.tags.join');
+    });
+  });
 });

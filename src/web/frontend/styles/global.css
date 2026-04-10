@@ -41,6 +41,11 @@
   --border-btn: #ccc;
   --border-separator: #eee;
   --link-color: #3498DB;
+  --color-link: #3498DB;
+  --color-link-hover: #2a6cb7;
+  --accent-color: #4A90D9;
+  --bg-active: rgba(74, 144, 217, 0.15);
+  --text-warning: #E74C3C;
   --toast-bg: #333;
   --toast-color: #fff;
   --legend-bg: rgba(255, 255, 255, 0.95);
@@ -73,6 +78,11 @@
   --border-btn: #3a4a65;
   --border-separator: #2a3a55;
   --link-color: #5dade2;
+  --color-link: #5dade2;
+  --color-link-hover: #7ec8e3;
+  --accent-color: #5dade2;
+  --bg-active: rgba(93, 173, 226, 0.15);
+  --text-warning: #ff6b6b;
   --toast-bg: #e0e0e0;
   --toast-color: #1a1a2e;
   --legend-bg: rgba(22, 33, 62, 0.95);

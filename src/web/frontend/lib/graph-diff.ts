@@ -53,7 +53,6 @@ export function diffGraph(
 
   const oldNodeMap = new Map(oldGraph.nodes.map((n) => [n.id, n]));
   const oldEdgeMap = new Map(oldGraph.edges.map((e) => [edgeId(e), e]));
-  const newEdgeMap = new Map(newGraph.edges.map((e) => [edgeId(e), e]));
 
   const addedNodes: NodeElementData[] = [];
   const updatedNodes: { id: string; data: Record<string, unknown> }[] = [];

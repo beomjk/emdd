@@ -86,4 +86,18 @@ describe('createStaticRoutes', () => {
     const readCall = vi.mocked(fs.readFileSync).mock.calls[0][0] as string;
     expect(readCall).toContain('dist/web');
   });
+
+  it('rejects path traversal attempts with 403', async () => {
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+    vi.mocked(fs.readFileSync).mockReturnValue('secret');
+
+    const app = createStaticRoutes();
+    // Use URL-encoded path separators to bypass Hono's URL normalization
+    const res = await app.request('/..%2F..%2F..%2Fetc%2Fpasswd.js');
+
+    expect(res.status).toBe(403);
+    expect(await res.text()).toBe('Forbidden');
+    // readFileSync should NOT have been called for traversal paths
+    expect(fs.readFileSync).not.toHaveBeenCalled();
+  });
 });

@@ -16,6 +16,22 @@ export interface ExportResult {
   edgeCount: number;
 }
 
+// ── HTML escaping for export ────────────────────────────────────────
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/** Escape `</` sequences in strings embedded inside `<script>` blocks. */
+function escapeScriptContent(json: string): string {
+  return json.replace(/<\//g, '<\\/');
+}
+
 // ── Filter graph ────────────────────────────────────────────────────
 
 function filterGraph(
@@ -104,7 +120,7 @@ export function generateExportHtml(
   }
 
   const vendorJs = readVendorBundle();
-  const elementsJson = JSON.stringify(elements);
+  const elementsJson = escapeScriptContent(JSON.stringify(elements));
   const layoutName = layout === 'hierarchical' ? 'dagre' : 'fcose';
 
   const layoutConfig = layout === 'hierarchical'
@@ -155,18 +171,19 @@ var cy = cytoscape({
 });
 cy.on('mouseover','edge',function(e){e.target.style('label',e.target.data('relation'));e.target.style('font-size','9px');e.target.style('color','#888');e.target.style('text-rotation','autorotate')});
 cy.on('mouseout','edge',function(e){e.target.style('label','')});
-var colors=${JSON.stringify(NODE_COLORS)};
+var colors=${escapeScriptContent(JSON.stringify(NODE_COLORS))};
+function esc(s){if(s==null)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
 cy.on('tap','node',function(e){
   var d=e.target.data();
-  var h='<h3>'+d.title+'</h3>';
-  h+='<span class="badge" style="background:'+(colors[d.type]||'#999')+'">'+d.type+'</span>';
-  if(d.status)h+='<span class="badge" style="background:#666">'+d.status+'</span>';
+  var h='<h3>'+esc(d.title)+'</h3>';
+  h+='<span class="badge" style="background:'+(colors[d.type]||'#999')+'">'+esc(d.type)+'</span>';
+  if(d.status)h+='<span class="badge" style="background:#666">'+esc(d.status)+'</span>';
   h+='<div class="meta">';
-  h+='<b>ID:</b> '+d.id+'<br>';
+  h+='<b>ID:</b> '+esc(d.id)+'<br>';
   if(d.confidence!=null)h+='<b>Confidence:</b> '+(d.confidence*100).toFixed(0)+'%<br>';
-  if(d.tags&&d.tags.length)h+='<b>Tags:</b> '+d.tags.join(', ')+'<br>';
-  if(d.links&&d.links.length){h+='<b>Links:</b><ul>';d.links.forEach(function(l){h+='<li>'+l.relation+' → '+l.target+'</li>'});h+='</ul>'}
-  if(d.invalid)h+='<br><b style="color:#FF9800">⚠ Invalid node:</b> '+d.title;
+  if(d.tags&&d.tags.length)h+='<b>Tags:</b> '+esc(d.tags.join(', '))+'<br>';
+  if(d.links&&d.links.length){h+='<b>Links:</b><ul>';d.links.forEach(function(l){h+='<li>'+esc(l.relation)+' \u2192 '+esc(l.target)+'</li>'});h+='</ul>'}
+  if(d.invalid)h+='<br><b style="color:#FF9800">\u26a0 Invalid node:</b> '+esc(d.title);
   h+='</div>';
   document.getElementById('detail-content').innerHTML=h;
   document.getElementById('detail').style.display='block';

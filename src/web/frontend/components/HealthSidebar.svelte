@@ -61,12 +61,19 @@
         consolidation.deferredItems.length > 0),
   );
 
+  let loadAbort: AbortController | null = null;
+
   $effect(() => {
     const _g = dashboardState.graph;
-    if (_g) loadData();
+    if (!_g) return;
+    // Abort previous in-flight requests to avoid race conditions on rapid updates
+    loadAbort?.abort();
+    loadAbort = new AbortController();
+    loadData(loadAbort.signal);
+    return () => { loadAbort?.abort(); };
   });
 
-  async function loadData(): Promise<void> {
+  async function loadData(signal: AbortSignal): Promise<void> {
     loading = true;
     error = null;
 
@@ -75,6 +82,9 @@
       fetchPromotionCandidates(),
       fetchConsolidation(),
     ]);
+
+    // Guard: if aborted while awaiting, discard stale results
+    if (signal.aborted) return;
 
     const [healthResult, promoResult, consolResult] = results;
 

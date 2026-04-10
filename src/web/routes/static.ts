@@ -36,9 +36,14 @@ export function createStaticRoutes(): Hono {
 
   app.get('/:file{.+\\.(js|css)}', (c) => {
     const file = c.req.param('file');
-    const ext = path.extname(file);
+    const resolved = path.resolve(webDir, file);
+    // Prevent path traversal — resolved path must stay within webDir
+    if (!resolved.startsWith(webDir + path.sep) && resolved !== webDir) {
+      return new Response('Forbidden', { status: 403 });
+    }
+    const ext = path.extname(resolved);
     const mimeType = MIME_TYPES[ext] ?? 'application/octet-stream';
-    return serveFile(path.join(webDir, file), mimeType);
+    return serveFile(resolved, mimeType);
   });
 
   return app;

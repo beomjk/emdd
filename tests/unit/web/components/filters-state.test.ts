@@ -122,6 +122,42 @@ describe('filterState', () => {
       filterState.mergeFromGraph(graph2);
       expect(filterState.visibleTypes.has('experiment')).toBe(false);
     });
+
+    it('must run before setGraph to correctly detect new types', () => {
+      // Setup: init with ['hypothesis']
+      const graph1 = makeGraph(['hypothesis']);
+      dashboardState.setGraph(graph1);
+      filterState.initFromGraph(graph1);
+
+      // Correct order: mergeFromGraph THEN setGraph
+      // mergeFromGraph reads _allTypes derived from OLD graph to detect new types
+      const graph2 = makeGraph(['hypothesis', 'finding']);
+      filterState.mergeFromGraph(graph2);  // _allTypes still reflects graph1
+      dashboardState.setGraph(graph2);
+
+      // 'finding' was unknown before → should be auto-visible
+      expect(filterState.visibleTypes.has('finding')).toBe(true);
+    });
+
+    it('wrong order (setGraph first) treats new types as already known', () => {
+      const graph1 = makeGraph(['hypothesis']);
+      dashboardState.setGraph(graph1);
+      filterState.initFromGraph(graph1);
+
+      // User deselects hypothesis
+      filterState.toggleType('hypothesis');
+      expect(filterState.visibleTypes.has('hypothesis')).toBe(false);
+
+      // Wrong order: setGraph THEN mergeFromGraph
+      const graph2 = makeGraph(['hypothesis', 'finding']);
+      dashboardState.setGraph(graph2);     // _allTypes now reflects graph2
+      filterState.mergeFromGraph(graph2);  // 'finding' seen as "already known"
+
+      // 'finding' was NOT in visibleTypes before merge, and since _allTypes
+      // already includes it (graph2 set first), mergeFromGraph won't add it
+      // This demonstrates why order matters
+      expect(filterState.visibleTypes.has('finding')).toBe(false);
+    });
   });
 
   describe('hasActiveFilters', () => {
