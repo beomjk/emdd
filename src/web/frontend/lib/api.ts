@@ -5,6 +5,7 @@ import type {
   PromoteCandidate,
   CheckResult,
 } from '../../types.js';
+import type { NeighborNode } from '../../../graph/types.js';
 
 export interface NodeDetailResponse {
   id: string;
@@ -38,8 +39,9 @@ export async function fetchNodeDetail(id: string, init?: RequestInit): Promise<N
 export async function fetchNeighbors(
   id: string,
   depth: number,
-): Promise<{ center: string; depth: number; neighbors: string[] }> {
-  return apiFetch(`/api/neighbors/${encodeURIComponent(id)}?depth=${depth}`);
+  init?: RequestInit,
+): Promise<{ center: string; depth: number; neighbors: NeighborNode[] }> {
+  return apiFetch(`/api/neighbors/${encodeURIComponent(id)}?depth=${depth}`, init);
 }
 
 export async function fetchHealth(): Promise<HealthReport> {

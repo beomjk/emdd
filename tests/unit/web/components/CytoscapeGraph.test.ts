@@ -36,8 +36,10 @@ function createMockCyInstance() {
   const nodesCollection = {
     forEach: vi.fn(),
     some: vi.fn(() => false),
+    remove: vi.fn(),
+    length: 0,
   };
-  const edgesCollection = { forEach: vi.fn() };
+  const edgesCollection = { forEach: vi.fn(), remove: vi.fn() };
   const elementsCollection = {
     removeClass: vi.fn().mockReturnThis(),
     forEach: vi.fn(),
@@ -50,6 +52,7 @@ function createMockCyInstance() {
       listeners.get(evt)!.push(handler as Function);
       return inst;
     }),
+    off: vi.fn(() => inst),
     add: vi.fn(({ data }: { group: string; data: Record<string, unknown> }) => {
       elements.set(data.id as string, { data, style: {} });
     }),
@@ -103,6 +106,7 @@ vi.mock('../../../../src/web/frontend/state/dashboard.svelte.js', () => {
 });
 
 import cytoscape from 'cytoscape';
+import { mount, unmount } from 'svelte';
 import { fetchClusters } from '../../../../src/web/frontend/lib/api.js';
 import CytoscapeGraph from '../../../../src/web/frontend/components/CytoscapeGraph.svelte';
 import { makeNode, makeEdge, makeGraph } from '../../../fixtures/component-fixtures.js';
@@ -498,6 +502,208 @@ describe('CytoscapeGraph', () => {
       // The style chain (fromJson → update) is correctly wired
       const chain = (mockCyInstance.style as Mock)();
       expect(chain.fromJson).toBeDefined();
+    });
+  });
+
+  // ── Public API: panToNode / pulseNode (exported methods) ────────────
+  // Svelte 5 exposes exported functions via mount() return value.
+  describe('exported methods', () => {
+    function mountGraph(overrides: Record<string, unknown> = {}) {
+      const target = document.createElement('div');
+      document.body.appendChild(target);
+      const graph = makeGraph(
+        [
+          makeNode({ id: 'hyp-001', title: 'Hypothesis 1', type: 'hypothesis' }),
+          makeNode({ id: 'exp-001', title: 'Experiment 1', type: 'experiment', status: 'PLANNED' }),
+        ],
+        [makeEdge({ source: 'hyp-001', target: 'exp-001' })],
+      );
+      const defaults = {
+        graph,
+        layout: 'force' as const,
+        visibleTypes: new Set(['hypothesis', 'experiment']),
+        visibleStatuses: new Set(['PROPOSED', 'PLANNED']),
+        visibleEdgeTypes: new Set(['tested_by']),
+        selectedNodeId: null,
+        neighborIds: [] as string[],
+        onNodeClick: vi.fn(),
+        onBackgroundClick: vi.fn(),
+      };
+      const instance = mount(CytoscapeGraph, {
+        target,
+        props: { ...defaults, ...overrides },
+      });
+      return { instance, target };
+    }
+
+    // Helper — make getElementById return a node that tracks animate calls
+    function setupMockNodeLookup(cy: any, idsToExist: string[]) {
+      const animateMock = vi.fn();
+      const styleMock = vi.fn((key?: string) => {
+        if (key === 'border-width') return '2px';
+        if (key === 'border-color') return '#000';
+        return '';
+      });
+      (cy.getElementById as Mock).mockImplementation((id: string) => ({
+        id: () => id,
+        length: idsToExist.includes(id) ? 1 : 0,
+        animate: animateMock,
+        style: styleMock,
+      }));
+      return { animateMock };
+    }
+
+    it('panToNode calls cy.animate for an existing node', async () => {
+      const { instance, target } = mountGraph();
+      await waitFor(() => expect(mockCytoscape).toHaveBeenCalled());
+
+      setupMockNodeLookup(mockCyInstance, ['hyp-001']);
+      (mockCyInstance.animate as Mock).mockClear();
+
+      instance.panToNode('hyp-001');
+
+      expect(mockCyInstance.animate).toHaveBeenCalled();
+      const args = (mockCyInstance.animate as Mock).mock.calls[0];
+      expect(args[0]).toMatchObject({ zoom: 1.5 });
+
+      unmount(instance);
+      target.remove();
+    });
+
+    it('panToNode is a no-op when the node does not exist', async () => {
+      const { instance, target } = mountGraph();
+      await waitFor(() => expect(mockCytoscape).toHaveBeenCalled());
+
+      setupMockNodeLookup(mockCyInstance, []); // no ids exist
+      (mockCyInstance.animate as Mock).mockClear();
+
+      instance.panToNode('unknown-id');
+
+      expect(mockCyInstance.animate).not.toHaveBeenCalled();
+
+      unmount(instance);
+      target.remove();
+    });
+
+    it('pulseNode triggers a node.animate call for an existing node', async () => {
+      const { instance, target } = mountGraph();
+      await waitFor(() => expect(mockCytoscape).toHaveBeenCalled());
+
+      const { animateMock } = setupMockNodeLookup(mockCyInstance, ['hyp-001']);
+
+      instance.pulseNode('hyp-001');
+
+      expect(animateMock).toHaveBeenCalled();
+      const firstCallStyle = animateMock.mock.calls[0][0].style;
+      expect(firstCallStyle['border-color']).toBe('#FF6B6B');
+      expect(firstCallStyle['border-width']).toBe(6);
+
+      unmount(instance);
+      target.remove();
+    });
+
+    it('pulseNode is a no-op when the node does not exist', async () => {
+      const { instance, target } = mountGraph();
+      await waitFor(() => expect(mockCytoscape).toHaveBeenCalled());
+
+      const { animateMock } = setupMockNodeLookup(mockCyInstance, []);
+
+      instance.pulseNode('unknown-id');
+
+      expect(animateMock).not.toHaveBeenCalled();
+
+      unmount(instance);
+      target.remove();
+    });
+  });
+
+  // ── Viewport culling setup for large graphs (500+ nodes) ────────────
+  describe('viewport culling', () => {
+    function makeLargeGraph(nodeCount: number) {
+      const nodes = Array.from({ length: nodeCount }, (_, i) =>
+        makeNode({ id: `n-${i}`, title: `Node ${i}`, type: 'hypothesis' }),
+      );
+      return makeGraph(nodes, []);
+    }
+
+    it('registers viewport listener and shows perf hint for graphs >= 500 nodes', async () => {
+      const { container } = renderGraph({ graph: makeLargeGraph(500) });
+
+      await waitFor(() => {
+        expect(mockCyInstance.on).toHaveBeenCalledWith('viewport', expect.any(Function));
+      });
+      expect(mockCyInstance.on).toHaveBeenCalledWith('layoutstop', expect.any(Function));
+      expect(container.querySelector('.perf-hint')).not.toBeNull();
+    });
+
+    it('does NOT set up viewport culling for graphs < 500 nodes', async () => {
+      const { container } = renderGraph({ graph: makeLargeGraph(10) });
+      await waitFor(() => expect(mockCytoscape).toHaveBeenCalled());
+
+      // No viewport listener should be registered
+      const viewportCalls = (mockCyInstance.on as Mock).mock.calls.filter(
+        (c: any[]) => c[0] === 'viewport',
+      );
+      expect(viewportCalls.length).toBe(0);
+      expect(container.querySelector('.perf-hint')).toBeNull();
+    });
+  });
+
+  // ── Cluster application logic ───────────────────────────────────────
+  describe('cluster application', () => {
+    it('adds compound nodes and moves child nodes into them', async () => {
+      mockFetchClusters.mockResolvedValueOnce({
+        clusters: [
+          { id: 'cluster-1', label: 'Cluster 1', nodeIds: ['hyp-001'], isManual: false },
+        ],
+      });
+
+      renderGraph();
+      await waitFor(() => expect(mockFetchClusters).toHaveBeenCalled());
+
+      // Wait for async applyClustersToGraph to complete
+      await waitFor(() => {
+        const addCalls = (mockCyInstance.add as Mock).mock.calls;
+        const clusterAdd = addCalls.find(
+          (c: any[]) => c[0]?.data?.isCluster === true,
+        );
+        expect(clusterAdd).toBeDefined();
+      });
+
+      // Verify cluster data is correctly populated
+      const addCalls = (mockCyInstance.add as Mock).mock.calls;
+      const clusterAdd = addCalls.find((c: any[]) => c[0]?.data?.isCluster === true);
+      expect(clusterAdd?.[0].data).toMatchObject({
+        id: 'cluster-1',
+        label: 'Cluster 1',
+        isCluster: true,
+        isManual: false,
+      });
+      expect(clusterAdd?.[0].data.bgColor).toBeDefined();
+      expect(clusterAdd?.[0].data.borderColor).toBeDefined();
+    });
+
+    it('gracefully handles fetchClusters rejection (silent degradation)', async () => {
+      mockFetchClusters.mockRejectedValueOnce(new Error('cluster API down'));
+
+      const { container } = renderGraph();
+      await waitFor(() => expect(mockFetchClusters).toHaveBeenCalled());
+
+      // Graph canvas still rendered — no error thrown
+      expect(container.querySelector('.cy-container')).not.toBeNull();
+    });
+
+    it('skips cluster application when response is empty', async () => {
+      mockFetchClusters.mockResolvedValueOnce({ clusters: [] });
+      (mockCyInstance.add as Mock).mockClear();
+
+      renderGraph();
+      await waitFor(() => expect(mockFetchClusters).toHaveBeenCalled());
+
+      // No cluster was added (only the original nodes)
+      const addCalls = (mockCyInstance.add as Mock).mock.calls;
+      const clusterAdd = addCalls.find((c: any[]) => c[0]?.data?.isCluster === true);
+      expect(clusterAdd).toBeUndefined();
     });
   });
 });

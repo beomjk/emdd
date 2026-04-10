@@ -47,6 +47,8 @@
   --text-warning: #E74C3C;
   --toast-bg: #333;
   --toast-color: #fff;
+  --toast-error-bg: #c0392b;
+  --toast-error-color: #ffffff;
   --legend-bg: rgba(255, 255, 255, 0.95);
   --bg-warning: #fff3e0;
   --text-warning-strong: #e65100;
@@ -83,6 +85,8 @@
   --text-warning: #ff6b6b;
   --toast-bg: #e0e0e0;
   --toast-color: #1a1a2e;
+  --toast-error-bg: #e74c3c;
+  --toast-error-color: #ffffff;
   --legend-bg: rgba(22, 33, 62, 0.95);
   --bg-warning: #2a2218;
   --text-warning-strong: #f0a050;

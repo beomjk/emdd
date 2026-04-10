@@ -300,16 +300,33 @@ describe('App', () => {
   });
 
   describe('toast', () => {
-    it('shows error toast when error exists with loaded graph', async () => {
+    it('shows error toast via the Toast component when export fails', async () => {
       const graph = makeGraph([makeNode()], []);
       mockFetchGraph.mockResolvedValue(graph);
+      mockFetchExportHtml.mockRejectedValue(new Error('Export failed'));
       render(App);
       await waitFor(() => {
         expect(screen.getByTestId('cytoscape-stub')).toBeInTheDocument();
       });
-      dashboardState.error = 'Something went wrong';
+      const exportBtn = screen.getByRole('button', { name: /export/i });
+      exportBtn.click();
       await waitFor(() => {
-        expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+        expect(screen.getByText('Export failed')).toBeInTheDocument();
+      });
+    });
+
+    it('shows error toast via the Toast component when refresh fails', async () => {
+      const graph = makeGraph([makeNode()], []);
+      mockFetchGraph.mockResolvedValue(graph);
+      mockTriggerRefresh.mockRejectedValue(new Error('Refresh failed'));
+      render(App);
+      await waitFor(() => {
+        expect(screen.getByTestId('cytoscape-stub')).toBeInTheDocument();
+      });
+      const refreshBtn = screen.getByRole('button', { name: /refresh/i });
+      refreshBtn.click();
+      await waitFor(() => {
+        expect(screen.getByText('Refresh failed')).toBeInTheDocument();
       });
     });
   });

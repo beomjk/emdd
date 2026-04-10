@@ -2,14 +2,16 @@
   let {
     message,
     visible,
+    type = 'info',
   }: {
     message: string;
     visible: boolean;
+    type?: 'info' | 'error';
   } = $props();
 </script>
 
 {#if visible}
-  <div class="toast" role="status">
+  <div class="toast" class:toast-error={type === 'error'} role="status">
     {message}
   </div>
 {/if}
@@ -26,6 +28,10 @@
     font-size: 13px;
     z-index: 100;
     animation: toast-in 0.3s ease-out;
+  }
+  .toast-error {
+    background: var(--toast-error-bg, #c0392b);
+    color: var(--toast-error-color, #ffffff);
   }
   @keyframes toast-in {
     from { opacity: 0; transform: translateY(10px); }

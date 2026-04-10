@@ -1,5 +1,4 @@
 <script lang="ts">
-  import type { SerializedGraph } from '../types.js';
   import { dashboardState } from './state/dashboard.svelte.js';
   import { filterState } from './state/filters.svelte.js';
   import { sseState } from './state/sse.svelte.js';
@@ -18,7 +17,10 @@
   let loading = $state(true);
   let toastMessage = $state('');
   let toastVisible = $state(false);
+  let toastType = $state<'info' | 'error'>('info');
   let toastTimer: ReturnType<typeof setTimeout> | null = null;
+  // Abort in-flight neighbor fetch when selection changes or depth changes
+  let neighborAbort: AbortController | null = null;
 
   async function loadGraph(): Promise<void> {
     dashboardState.error = null;
@@ -27,7 +29,8 @@
       dashboardState.setGraph(graph);
       filterState.initFromGraph(graph);
     } catch (e) {
-      dashboardState.error = e instanceof Error ? e.message : 'Failed to load graph';
+      const msg = e instanceof Error ? e.message : 'Failed to load graph';
+      dashboardState.error = msg;
     } finally {
       loading = false;
     }
@@ -35,16 +38,22 @@
 
   async function selectNode(id: string): Promise<void> {
     dashboardState.selectNode(id);
+    neighborAbort?.abort();
+    neighborAbort = new AbortController();
+    const signal = neighborAbort.signal;
     try {
-      const result = await fetchNeighbors(id, hopDepth);
-      neighborIds = result.neighbors ?? [];
-    } catch {
+      const result = await fetchNeighbors(id, hopDepth, { signal });
+      if (signal.aborted) return;
+      neighborIds = (result.neighbors ?? []).map((n) => n.id);
+    } catch (e) {
+      if ((e as Error)?.name === 'AbortError') return;
       neighborIds = [];
     }
     graphRef?.panToNode(id);
   }
 
   function deselectNode(): void {
+    neighborAbort?.abort();
     dashboardState.deselectNode();
     neighborIds = [];
   }
@@ -52,10 +61,15 @@
   async function handleDepthChange(newDepth: number): Promise<void> {
     hopDepth = newDepth;
     if (!dashboardState.selectedNodeId) return;
+    neighborAbort?.abort();
+    neighborAbort = new AbortController();
+    const signal = neighborAbort.signal;
     try {
-      const result = await fetchNeighbors(dashboardState.selectedNodeId, newDepth);
-      neighborIds = result.neighbors ?? [];
-    } catch {
+      const result = await fetchNeighbors(dashboardState.selectedNodeId, newDepth, { signal });
+      if (signal.aborted) return;
+      neighborIds = (result.neighbors ?? []).map((n) => n.id);
+    } catch (e) {
+      if ((e as Error)?.name === 'AbortError') return;
       neighborIds = [];
     }
   }
@@ -82,7 +96,7 @@
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {
-      dashboardState.error = e instanceof Error ? e.message : 'Failed to export';
+      showToast(e instanceof Error ? e.message : 'Failed to export', 'error');
     }
   }
 
@@ -90,16 +104,18 @@
     try {
       await triggerRefresh();
       const graph = await fetchGraph();
+      // Preserve user filter selections across manual refresh (mirrors SSE path)
+      filterState.mergeFromGraph(graph);
       dashboardState.setGraph(graph);
-      filterState.initFromGraph(graph);
       showToast('Graph refreshed');
     } catch (e) {
-      dashboardState.error = e instanceof Error ? e.message : 'Failed to refresh';
+      showToast(e instanceof Error ? e.message : 'Failed to refresh', 'error');
     }
   }
 
-  function showToast(msg: string): void {
+  function showToast(msg: string, type: 'info' | 'error' = 'info'): void {
     toastMessage = msg;
+    toastType = type;
     toastVisible = true;
     if (toastTimer) clearTimeout(toastTimer);
     toastTimer = setTimeout(() => { toastVisible = false; }, 3000);
@@ -126,7 +142,7 @@
       }
       showToast('Graph updated');
     } catch (e) {
-      dashboardState.error = e instanceof Error ? e.message : 'Failed to update graph';
+      showToast(e instanceof Error ? e.message : 'Failed to update graph', 'error');
     }
   }
 
@@ -212,13 +228,8 @@
     {/if}
   </div>
 
-  <!-- Error toast -->
-  {#if dashboardState.error && dashboardState.graph}
-    <div class="error-toast">{dashboardState.error}</div>
-  {/if}
-
-  <!-- SSE update toast -->
-  <Toast message={toastMessage} visible={toastVisible} />
+  <!-- Unified toast (info/error) -->
+  <Toast message={toastMessage} visible={toastVisible} type={toastType} />
 </div>
 
 <style>
@@ -303,16 +314,5 @@
     overflow: hidden;
     clip: rect(0, 0, 0, 0);
     border: 0;
-  }
-  .error-toast {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    padding: 8px 16px;
-    background: var(--toast-bg);
-    color: var(--toast-color);
-    border-radius: 4px;
-    font-size: 13px;
-    z-index: 100;
   }
 </style>

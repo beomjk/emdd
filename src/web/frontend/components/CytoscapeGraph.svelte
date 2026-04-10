@@ -184,6 +184,10 @@
   }
 
   // ── Viewport culling for 500+ nodes ─────────────────────────────────
+  // Current edge-type filter set — updated by the filter effect so culling
+  // can respect the active edge-type filter without needing prop access.
+  let currentVisibleEdgeTypes: Set<string> = new Set();
+
   function setupViewportCulling(cyInst: cytoscape.Core): () => void {
     let timer: ReturnType<typeof setTimeout> | null = null;
 
@@ -193,10 +197,23 @@
       const x1 = ext.x1 - pad, y1 = ext.y1 - pad;
       const x2 = ext.x2 + pad, y2 = ext.y2 + pad;
 
-      cyInst.nodes('[!isCluster]').forEach((node) => {
-        const pos = node.position();
-        const inViewport = pos.x >= x1 && pos.x <= x2 && pos.y >= y1 && pos.y <= y2;
-        node.style('display', (inViewport && isFilterVisible(node)) ? 'element' : 'none');
+      cyInst.batch(() => {
+        cyInst.nodes('[!isCluster]').forEach((node) => {
+          const pos = node.position();
+          const inViewport = pos.x >= x1 && pos.x <= x2 && pos.y >= y1 && pos.y <= y2;
+          node.style('display', (inViewport && isFilterVisible(node)) ? 'element' : 'none');
+        });
+
+        // Edges: hide when either endpoint was culled (or the edge-type is off).
+        // Cytoscape does not auto-hide edges when endpoints have display:none,
+        // so we must propagate visibility explicitly — mirroring the filter effect.
+        cyInst.edges().forEach((edge) => {
+          const rel = edge.data('relation');
+          const srcVisible = edge.source().style('display') !== 'none';
+          const tgtVisible = edge.target().style('display') !== 'none';
+          const edgeTypeOk = currentVisibleEdgeTypes.has(rel);
+          edge.style('display', (edgeTypeOk && srcVisible && tgtVisible) ? 'element' : 'none');
+        });
       });
     };
 
@@ -451,12 +468,13 @@
     const _vs = visibleStatuses;
     const _ve = visibleEdgeTypes;
 
-    // Update shared predicate so viewport culling respects filters
+    // Update shared predicate + edge-type set so viewport culling respects filters
     isFilterVisible = (node) => {
       const type = node.data('type');
       const status = node.data('status') ?? '';
       return _vt.has(type) && (_vs.has(status) || !status);
     };
+    currentVisibleEdgeTypes = _ve;
 
     cy.batch(() => {
       cy!.nodes('[!isCluster]').forEach((node) => {
