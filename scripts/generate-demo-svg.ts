@@ -9,7 +9,7 @@
 import { writeFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { NODE_COLORS } from '../src/web/frontend/constants.js';
+import { NODE_COLORS } from '../src/web/constants.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const outPath = resolve(__dirname, '../docs/assets/demo.svg');

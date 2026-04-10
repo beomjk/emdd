@@ -63,6 +63,13 @@ describe('App', () => {
     vi.mocked(fetchNodeDetail).mockResolvedValue({
       id: 'hyp-001', title: 'Test', type: 'hypothesis', body: null,
     });
+    // ThemeToggle uses matchMedia for system preference — jsdom doesn't provide it
+    vi.stubGlobal('matchMedia', vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })));
   });
 
   describe('loading state', () => {

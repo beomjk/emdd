@@ -36,6 +36,8 @@
   let cy: cytoscape.Core | undefined;
   let showPerfHint = $state(false);
   let cullingCleanup: (() => void) | null = null;
+  // Shared filter predicate — viewport culling must respect filter state
+  let isFilterVisible: (node: cytoscape.NodeSingular) => boolean = () => true;
 
   // Tooltip state
   let tooltipNode = $state<SerializedNode | null>(null);
@@ -193,7 +195,8 @@
 
       cyInst.nodes('[!isCluster]').forEach((node) => {
         const pos = node.position();
-        node.style('display', (pos.x >= x1 && pos.x <= x2 && pos.y >= y1 && pos.y <= y2) ? 'element' : 'none');
+        const inViewport = pos.x >= x1 && pos.x <= x2 && pos.y >= y1 && pos.y <= y2;
+        node.style('display', (inViewport && isFilterVisible(node)) ? 'element' : 'none');
       });
     };
 
@@ -205,7 +208,11 @@
     cyInst.on('viewport', debouncedCull);
     cyInst.on('layoutstop', performCulling);
 
-    return () => { if (timer) clearTimeout(timer); };
+    return () => {
+      if (timer) clearTimeout(timer);
+      cyInst.off('viewport', debouncedCull);
+      cyInst.off('layoutstop', performCulling);
+    };
   }
 
   // ── Cluster application ─────────────────────────────────────────────
@@ -444,11 +451,16 @@
     const _vs = visibleStatuses;
     const _ve = visibleEdgeTypes;
 
+    // Update shared predicate so viewport culling respects filters
+    isFilterVisible = (node) => {
+      const type = node.data('type');
+      const status = node.data('status') ?? '';
+      return _vt.has(type) && (_vs.has(status) || !status);
+    };
+
     cy.batch(() => {
       cy!.nodes('[!isCluster]').forEach((node) => {
-        const type = node.data('type');
-        const status = node.data('status') ?? '';
-        const show = _vt.has(type) && (_vs.has(status) || !status);
+        const show = isFilterVisible(node);
         node.style('display', show ? 'element' : 'none');
       });
 

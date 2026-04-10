@@ -7,13 +7,17 @@
     localStorage.setItem('emdd-theme', dashboardState.theme);
   }
 
-  // Restore persisted theme on mount
+  // Restore persisted theme on mount, fall back to system preference
   $effect(() => {
     const saved = localStorage.getItem('emdd-theme');
+    let theme: 'light' | 'dark';
     if (saved === 'dark' || saved === 'light') {
-      dashboardState.theme = saved;
-      document.documentElement.dataset.theme = saved;
+      theme = saved;
+    } else {
+      theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     }
+    dashboardState.theme = theme;
+    document.documentElement.dataset.theme = theme;
     return undefined;
   });
 </script>

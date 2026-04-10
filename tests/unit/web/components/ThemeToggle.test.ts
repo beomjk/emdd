@@ -20,6 +20,13 @@ describe('ThemeToggle', () => {
       length: 0,
       key: vi.fn(),
     });
+    // Default matchMedia stub (light preference) — jsdom doesn't provide it
+    vi.stubGlobal('matchMedia', vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })));
   });
 
   afterEach(() => {
@@ -41,6 +48,7 @@ describe('ThemeToggle', () => {
   });
 
   it('toggles theme from dark to light on click', async () => {
+    getItemSpy.mockReturnValue('dark');
     dashboardState.theme = 'dark';
     document.documentElement.dataset.theme = 'dark';
     render(ThemeToggle);
@@ -70,5 +78,30 @@ describe('ThemeToggle', () => {
     render(ThemeToggle);
     expect(dashboardState.theme).toBe('dark');
     expect(document.documentElement.dataset.theme).toBe('dark');
+  });
+
+  it('falls back to system prefers-color-scheme when localStorage is empty', () => {
+    getItemSpy.mockReturnValue(null);
+    vi.stubGlobal('matchMedia', vi.fn().mockImplementation((query: string) => ({
+      matches: query === '(prefers-color-scheme: dark)',
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })));
+    render(ThemeToggle);
+    expect(dashboardState.theme).toBe('dark');
+    expect(document.documentElement.dataset.theme).toBe('dark');
+  });
+
+  it('uses light theme when system preference is light and no localStorage', () => {
+    getItemSpy.mockReturnValue(null);
+    vi.stubGlobal('matchMedia', vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })));
+    render(ThemeToggle);
+    expect(dashboardState.theme).toBe('light');
   });
 });

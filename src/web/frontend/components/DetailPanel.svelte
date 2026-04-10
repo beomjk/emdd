@@ -282,8 +282,8 @@
     font-size: 11px;
   }
   .hop-btn.active {
-    border-color: var(--link-color);
-    background: var(--link-color);
+    border-color: var(--color-link);
+    background: var(--color-link);
     color: #fff;
   }
   .links-section {
@@ -301,7 +301,7 @@
     background: none;
     border: none;
     padding: 0;
-    color: var(--link-color);
+    color: var(--color-link);
     text-decoration: none;
     cursor: pointer;
     font-size: 12px;

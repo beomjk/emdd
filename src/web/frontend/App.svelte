@@ -170,8 +170,8 @@
         visibleStatuses={filterState.visibleStatuses}
         onNavigate={handleSearchNavigate}
       />
-      <button class="export-btn" aria-label="Export" onclick={handleExport}>Export</button>
-      <button class="refresh-btn" aria-label="Refresh" onclick={handleRefresh}>Refresh</button>
+      <button class="toolbar-btn" aria-label="Export" onclick={handleExport}>Export</button>
+      <button class="toolbar-btn" aria-label="Refresh" onclick={handleRefresh}>Refresh</button>
     {/if}
   </header>
 
@@ -282,7 +282,7 @@
     font-size: 12px;
     cursor: pointer;
   }
-  .export-btn {
+  .toolbar-btn {
     padding: 4px 10px;
     border: 1px solid var(--border-btn);
     border-radius: 4px;
@@ -291,18 +291,8 @@
     font-size: 12px;
     cursor: pointer;
   }
-  .export-btn:hover,
-  .refresh-btn:hover {
+  .toolbar-btn:hover {
     background: var(--bg-hover);
-  }
-  .refresh-btn {
-    padding: 4px 10px;
-    border: 1px solid var(--border-btn);
-    border-radius: 4px;
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    font-size: 12px;
-    cursor: pointer;
   }
   .sr-only {
     position: absolute;
