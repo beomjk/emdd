@@ -120,6 +120,24 @@ describe('diffGraph', () => {
     expect(delta.topologyChanged).toBe(true);
   });
 
+  it('detects updated node data (tags change)', () => {
+    const old = makeGraph([makeNode('a', { tags: ['alpha'] })]);
+    const next = makeGraph([makeNode('a', { tags: ['alpha', 'beta'] })]);
+    const delta = diffGraph(old, next, buildNodeData, buildEdgeData);
+
+    expect(delta.updatedNodes).toHaveLength(1);
+    expect(delta.updatedNodes[0].id).toBe('a');
+    expect(delta.topologyChanged).toBe(false);
+  });
+
+  it('does not flag unchanged tags as updated', () => {
+    const old = makeGraph([makeNode('a', { tags: ['x', 'y'] })]);
+    const next = makeGraph([makeNode('a', { tags: ['x', 'y'] })]);
+    const delta = diffGraph(old, next, buildNodeData, buildEdgeData);
+
+    expect(delta.updatedNodes).toHaveLength(0);
+  });
+
   it('filters edges with invalid node references', () => {
     const graph = makeGraph([makeNode('a')], [makeEdge('a', 'missing')]);
     const delta = diffGraph(null, graph, buildNodeData, buildEdgeData);

@@ -34,8 +34,8 @@
   // ── Internal state ──────────────────────────────────────────────────
   let container: HTMLElement;
   let cy: cytoscape.Core | undefined;
-  let pinnedPositions = new Map<string, { x: number; y: number }>();
   let showPerfHint = $state(false);
+  let cullingCleanup: (() => void) | null = null;
 
   // Tooltip state
   let tooltipNode = $state<SerializedNode | null>(null);
@@ -338,6 +338,7 @@
 
     return () => {
       clusterAbort?.abort();
+      if (cullingCleanup) { cullingCleanup(); cullingCleanup = null; }
       if (tooltipTimer) clearTimeout(tooltipTimer);
       prevGraph = null;
       inst.destroy();
@@ -386,8 +387,12 @@
     // Viewport culling for large graphs
     if (_g.nodes.length >= 500) {
       showPerfHint = true;
+      if (!cullingCleanup) {
+        cullingCleanup = setupViewportCulling(cy!);
+      }
     } else {
       showPerfHint = false;
+      if (cullingCleanup) { cullingCleanup(); cullingCleanup = null; }
     }
 
     // Apply clusters only when topology changes (async, guarded)

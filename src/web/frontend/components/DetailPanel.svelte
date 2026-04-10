@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { SerializedNode } from '../../types.js';
   import { getNodeColor } from '../lib/constants.js';
-  import { fetchNodeDetail } from '../lib/api.js';
+  import { fetchNodeDetail, type NodeDetailResponse } from '../lib/api.js';
 
   let {
     node,
@@ -17,22 +17,7 @@
     onClose: () => void;
   } = $props();
 
-  interface NodeDetail {
-    id: string;
-    title: string;
-    type: string;
-    status?: string;
-    confidence?: number;
-    tags?: string[];
-    links?: { target: string; relation: string }[];
-    body: string | null;
-    created?: string;
-    updated?: string;
-    invalid?: boolean;
-    parseError?: string;
-  }
-
-  let detail = $state<NodeDetail | null>(null);
+  let detail = $state<NodeDetailResponse | null>(null);
   let loading = $state(false);
   let error = $state<string | null>(null);
   let fetchAbort: AbortController | null = null;

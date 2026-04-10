@@ -109,6 +109,7 @@ function nodeChanged(a: SerializedNode, b: SerializedNode): boolean {
     a.type !== b.type ||
     a.confidence !== b.confidence ||
     a.invalid !== b.invalid ||
-    a.bodyPreview !== b.bodyPreview
+    a.bodyPreview !== b.bodyPreview ||
+    JSON.stringify(a.tags) !== JSON.stringify(b.tags)
   );
 }

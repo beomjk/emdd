@@ -3,7 +3,7 @@ import { svelte } from '@sveltejs/vite-plugin-svelte';
 
 export default defineConfig({
   root: 'src/web/frontend',
-  plugins: [svelte()],
+  plugins: [svelte({ compilerOptions: { runes: true } })],
   build: {
     outDir: '../../../dist/web',
     emptyOutDir: true,
@@ -14,6 +14,5 @@ export default defineConfig({
         assetFileNames: '[name].[ext]',
       },
     },
-    codeSplitting: false,
   },
 });

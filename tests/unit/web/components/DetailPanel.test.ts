@@ -145,6 +145,54 @@ describe('DetailPanel', () => {
     });
   });
 
+  describe('renderMarkdown XSS escaping', () => {
+    it('escapes script tags in body', async () => {
+      mockFetchNodeDetail.mockResolvedValue(
+        makeNodeDetail({ body: '<script>alert("xss")</script>' }) as any,
+      );
+      const { container } = render(DetailPanel, {
+        props: { node: makeNode(), depth: 2, ...defaultCallbacks },
+      });
+      await waitFor(() => {
+        const body = container.querySelector('.detail-body');
+        expect(body).toBeInTheDocument();
+        expect(body!.innerHTML).not.toContain('<script>');
+        expect(body!.textContent).toContain('<script>alert("xss")</script>');
+      });
+    });
+
+    it('escapes img onerror injection', async () => {
+      mockFetchNodeDetail.mockResolvedValue(
+        makeNodeDetail({ body: '<img src=x onerror=alert(1)>' }) as any,
+      );
+      const { container } = render(DetailPanel, {
+        props: { node: makeNode(), depth: 2, ...defaultCallbacks },
+      });
+      await waitFor(() => {
+        const body = container.querySelector('.detail-body');
+        expect(body).toBeInTheDocument();
+        // Must not create an actual img element
+        expect(body!.querySelector('img')).toBeNull();
+        // The escaped text is visible as content
+        expect(body!.textContent).toContain('<img src=x onerror=alert(1)>');
+      });
+    });
+
+    it('escapes HTML entities in body', async () => {
+      mockFetchNodeDetail.mockResolvedValue(
+        makeNodeDetail({ body: '5 > 3 & 2 < 4 "quoted"' }) as any,
+      );
+      const { container } = render(DetailPanel, {
+        props: { node: makeNode(), depth: 2, ...defaultCallbacks },
+      });
+      await waitFor(() => {
+        const body = container.querySelector('.detail-body');
+        expect(body).toBeInTheDocument();
+        expect(body!.textContent).toContain('5 > 3 & 2 < 4 "quoted"');
+      });
+    });
+  });
+
   describe('invalid node display', () => {
     it('shows warning badge and parse error', async () => {
       mockFetchNodeDetail.mockResolvedValue(
