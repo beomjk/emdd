@@ -11,6 +11,16 @@ const MIME_TYPES: Record<string, string> = {
   '.css': 'text/css',
 };
 
+// Explicit allowlist of files the dashboard bundle needs. Everything else
+// under webDir (notably the compiled backend .js files like server.js,
+// cache.js, watcher.js, routes/*.js) is not served. Bundle filenames
+// without a hash — Vite's default when `build.rollupOptions.output` is
+// unconfigured — keep this list short and stable.
+const ALLOWED_STATIC_FILES: ReadonlySet<string> = new Set([
+  'bundle.js',
+  'style.css',
+]);
+
 export function createStaticRoutes(): Hono {
   const app = new Hono();
   // In dev (tsx): __dirname = src/web/routes → go up to project root, then dist/web
@@ -30,14 +40,17 @@ export function createStaticRoutes(): Hono {
     }
   }
 
-  app.get('/', (c) => {
+  app.get('/', () => {
     return serveFile(path.join(webDir, 'index.html'), 'text/html');
   });
 
-  app.get('/:file{.+\\.(js|css)}', (c) => {
+  app.get('/:file{[A-Za-z0-9._-]+\\.(js|css)}', (c) => {
     const file = c.req.param('file');
+    if (!ALLOWED_STATIC_FILES.has(file)) {
+      return new Response('Not found', { status: 404 });
+    }
     const resolved = path.resolve(webDir, file);
-    // Prevent path traversal — resolved path must stay within webDir
+    // Belt-and-braces path-traversal defense on top of the allowlist.
     if (!resolved.startsWith(webDir + path.sep) && resolved !== webDir) {
       return new Response('Forbidden', { status: 403 });
     }

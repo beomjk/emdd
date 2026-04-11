@@ -21,8 +21,10 @@
   let toastTimer: ReturnType<typeof setTimeout> | null = null;
   // Abort in-flight neighbor fetch when selection changes or depth changes
   let neighborAbort: AbortController | null = null;
-  // Abort in-flight graph-update fetch when a newer SSE event arrives
-  let graphUpdateAbort: AbortController | null = null;
+  // Single shared abort controller for any in-flight graph load:
+  // initial loadGraph, manual refresh, and SSE updates all share this slot
+  // so the most recent request always wins and earlier ones are cancelled.
+  let graphLoadAbort: AbortController | null = null;
 
   async function refetchNeighbors(id: string, depth: number): Promise<void> {
     neighborAbort?.abort();
@@ -40,16 +42,21 @@
   }
 
   async function loadGraph(): Promise<void> {
+    graphLoadAbort?.abort();
+    graphLoadAbort = new AbortController();
+    const signal = graphLoadAbort.signal;
     dashboardState.error = null;
     try {
-      const graph = await fetchGraph();
+      const graph = await fetchGraph({ signal });
+      if (signal.aborted) return;
       dashboardState.setGraph(graph);
       filterState.initFromGraph(graph);
     } catch (e) {
+      if ((e as Error)?.name === 'AbortError') return;
       const msg = e instanceof Error ? e.message : 'Failed to load graph';
       dashboardState.error = msg;
     } finally {
-      loading = false;
+      if (!signal.aborted) loading = false;
     }
   }
 
@@ -98,14 +105,31 @@
   }
 
   async function handleRefresh(): Promise<void> {
+    graphLoadAbort?.abort();
+    graphLoadAbort = new AbortController();
+    const signal = graphLoadAbort.signal;
     try {
       await triggerRefresh();
-      const graph = await fetchGraph();
+      if (signal.aborted) return;
+      const prevSelectedId = dashboardState.selectedNodeId;
+      const graph = await fetchGraph({ signal });
+      if (signal.aborted) return;
       // Preserve user filter selections across manual refresh (mirrors SSE path)
       filterState.mergeFromGraph(graph);
       dashboardState.setGraph(graph);
+      // Refresh neighbors if selection survives — mirrors handleGraphUpdated
+      if (prevSelectedId) {
+        const stillExists = graph.nodes.some((n) => n.id === prevSelectedId);
+        if (stillExists) {
+          await refetchNeighbors(prevSelectedId, hopDepth);
+        } else {
+          dashboardState.deselectNode();
+          neighborIds = [];
+        }
+      }
       showToast('Graph refreshed');
     } catch (e) {
+      if ((e as Error)?.name === 'AbortError') return;
       showToast(e instanceof Error ? e.message : 'Failed to refresh', 'error');
     }
   }
@@ -119,17 +143,15 @@
   }
 
   async function handleGraphUpdated(): Promise<void> {
-    // Guard against concurrent SSE events — only the latest update wins
-    graphUpdateAbort?.abort();
-    graphUpdateAbort = new AbortController();
-    const signal = graphUpdateAbort.signal;
+    // Guard against concurrent SSE events (and racing initial load / refresh)
+    // by sharing a single abort slot with loadGraph + handleRefresh.
+    graphLoadAbort?.abort();
+    graphLoadAbort = new AbortController();
+    const signal = graphLoadAbort.signal;
     try {
       const prevSelectedId = dashboardState.selectedNodeId;
       const graph = await fetchGraph({ signal });
       if (signal.aborted) return;
-      // IMPORTANT: mergeFromGraph MUST be called BEFORE setGraph.
-      // It reads _allTypes (derived from the OLD graph) to distinguish
-      // "previously known" vs "newly discovered" types for auto-visibility.
       filterState.mergeFromGraph(graph);
       dashboardState.setGraph(graph);
       // Re-select previous node if still exists, and refresh its neighbors
@@ -159,7 +181,7 @@
     return () => {
       sseState.disconnect();
       neighborAbort?.abort();
-      graphUpdateAbort?.abort();
+      graphLoadAbort?.abort();
       if (toastTimer) clearTimeout(toastTimer);
     };
   });

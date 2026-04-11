@@ -240,7 +240,12 @@
       if (signal?.aborted) return;
       if (!clusters || clusters.length === 0) return;
 
-      cyInst.nodes('[?isCluster]').remove();
+      // Orphan cluster children BEFORE removing the compound parents.
+      // Cytoscape cascades removal to descendants, so removing the parent
+      // without orphaning first would also delete every clustered domain node.
+      const existingClusters = cyInst.nodes('[?isCluster]');
+      existingClusters.children().move({ parent: null });
+      existingClusters.remove();
 
       for (let i = 0; i < clusters.length; i++) {
         const cluster = clusters[i];
@@ -273,6 +278,19 @@
   // ── Previous graph reference for incremental updates ────────────────
   let prevGraph: SerializedGraph | null = null;
   let clusterAbort: AbortController | null = null;
+  // Retain the active layout so we can stop it before starting a new one.
+  // Two effects kick off layouts (data-sync + layout-switch); without this
+  // guard they can run concurrently and produce non-deterministic positions.
+  let activeLayout: cytoscape.Layouts | null = null;
+
+  function runLayout(cyInst: cytoscape.Core, config: unknown): cytoscape.Layouts {
+    if (activeLayout) {
+      try { activeLayout.stop(); } catch { /* stop is best-effort */ }
+    }
+    const layoutObj = cyInst.layout(config as cytoscape.LayoutOptions);
+    activeLayout = layoutObj;
+    return layoutObj;
+  }
 
   // Node data builder for diffGraph (reuses buildElements logic for single node)
   function buildNodeDataForDiff(node: SerializedNode) {
@@ -363,6 +381,10 @@
 
     return () => {
       clusterAbort?.abort();
+      if (activeLayout) {
+        try { activeLayout.stop(); } catch { /* stop is best-effort */ }
+        activeLayout = null;
+      }
       if (cullingCleanup) { cullingCleanup(); cullingCleanup = null; }
       if (tooltipTimer) clearTimeout(tooltipTimer);
       prevGraph = null;
@@ -405,8 +427,8 @@
 
     // Run layout only when topology changed
     if (delta.topologyChanged) {
-      const layoutConfig = getLayoutConfig(layout, !isInitial, isInitial) as any;
-      cy.layout(layoutConfig).run();
+      const layoutConfig = getLayoutConfig(layout, !isInitial, isInitial);
+      runLayout(cy, layoutConfig).run();
     }
 
     // Viewport culling for large graphs
@@ -421,15 +443,19 @@
         cullingCleanup();
         cullingCleanup = null;
         // When culling turns off, previously-culled nodes may still carry
-        // display:none. The filter effect will re-apply display, but only
-        // if visibleTypes/Statuses/EdgeTypes references changed. Explicitly
-        // reset display here so we never leave nodes stuck invisible.
+        // display:none. Re-apply current filter visibility instead of forcing
+        // everything to 'element' — otherwise deselected filter chips would
+        // silently reappear until the user next toggles a filter.
         cy!.batch(() => {
           cy!.nodes('[!isCluster]').forEach((node) => {
-            node.style('display', 'element');
+            node.style('display', isFilterVisible(node) ? 'element' : 'none');
           });
           cy!.edges().forEach((edge) => {
-            edge.style('display', 'element');
+            const rel = edge.data('relation');
+            const srcVisible = edge.source().style('display') !== 'none';
+            const tgtVisible = edge.target().style('display') !== 'none';
+            const edgeTypeOk = currentVisibleEdgeTypes.has(rel);
+            edge.style('display', (edgeTypeOk && srcVisible && tgtVisible) ? 'element' : 'none');
           });
         });
       }
@@ -461,7 +487,7 @@
       }
     });
 
-    const layoutObj = cy.layout(getLayoutConfig(_l, true, false) as any);
+    const layoutObj = runLayout(cy, getLayoutConfig(_l, true, false));
 
     if (pinned.size > 0) {
       layoutObj.on('layoutstop', () => {

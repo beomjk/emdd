@@ -42,13 +42,23 @@ describe('DetailPanel', () => {
   });
 
   describe('error state', () => {
-    it('shows error message when fetch fails', async () => {
-      mockFetchNodeDetail.mockRejectedValue(new Error('Not found'));
+    it('shows "Node not found: <id>" for 404 responses', async () => {
+      mockFetchNodeDetail.mockRejectedValue(new Error('404 Not Found'));
       render(DetailPanel, {
         props: { node: makeNode({ id: 'bad-001' }), depth: 2, ...defaultCallbacks },
       });
       await waitFor(() => {
         expect(screen.getByText('Node not found: bad-001')).toBeInTheDocument();
+      });
+    });
+
+    it('surfaces non-404 errors with the underlying message', async () => {
+      mockFetchNodeDetail.mockRejectedValue(new Error('500 Internal Server Error'));
+      render(DetailPanel, {
+        props: { node: makeNode({ id: 'bad-001' }), depth: 2, ...defaultCallbacks },
+      });
+      await waitFor(() => {
+        expect(screen.getByText(/Failed to load node: 500 Internal Server Error/)).toBeInTheDocument();
       });
     });
   });

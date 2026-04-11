@@ -4,6 +4,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 let fetchGraph: typeof import('../../../src/web/frontend/lib/api.js').fetchGraph;
 let fetchNodeDetail: typeof import('../../../src/web/frontend/lib/api.js').fetchNodeDetail;
 let fetchNeighbors: typeof import('../../../src/web/frontend/lib/api.js').fetchNeighbors;
+let fetchHealth: typeof import('../../../src/web/frontend/lib/api.js').fetchHealth;
+let fetchPromotionCandidates: typeof import('../../../src/web/frontend/lib/api.js').fetchPromotionCandidates;
+let fetchConsolidation: typeof import('../../../src/web/frontend/lib/api.js').fetchConsolidation;
+let fetchClusters: typeof import('../../../src/web/frontend/lib/api.js').fetchClusters;
 let fetchExportHtml: typeof import('../../../src/web/frontend/lib/api.js').fetchExportHtml;
 let triggerRefresh: typeof import('../../../src/web/frontend/lib/api.js').triggerRefresh;
 
@@ -17,6 +21,10 @@ beforeEach(async () => {
   fetchGraph = mod.fetchGraph;
   fetchNodeDetail = mod.fetchNodeDetail;
   fetchNeighbors = mod.fetchNeighbors;
+  fetchHealth = mod.fetchHealth;
+  fetchPromotionCandidates = mod.fetchPromotionCandidates;
+  fetchConsolidation = mod.fetchConsolidation;
+  fetchClusters = mod.fetchClusters;
   fetchExportHtml = mod.fetchExportHtml;
   triggerRefresh = mod.triggerRefresh;
 });
@@ -121,6 +129,74 @@ describe('triggerRefresh', () => {
     const result = await triggerRefresh();
     expect(result.reloaded).toBe(true);
     expect(mockFetch).toHaveBeenCalledWith('/api/refresh', { method: 'POST' });
+  });
+});
+
+describe('fetchHealth', () => {
+  it('hits /api/health and returns parsed payload', async () => {
+    const data = { totalNodes: 10, gapCount: 2 };
+    mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve(data) });
+
+    const result = await fetchHealth();
+    expect(result).toEqual(data);
+    expect(mockFetch).toHaveBeenCalledWith('/api/health', undefined);
+  });
+
+  it('throws on non-ok response', async () => {
+    mockFetch.mockResolvedValue({ ok: false, status: 503, statusText: 'Service Unavailable' });
+    await expect(fetchHealth()).rejects.toThrow('503 Service Unavailable');
+  });
+});
+
+describe('fetchPromotionCandidates', () => {
+  it('hits /api/promotion-candidates and returns the candidates envelope', async () => {
+    const data = { candidates: [{ id: 'hyp-001', reason: 'confidence' }] };
+    mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve(data) });
+
+    const result = await fetchPromotionCandidates();
+    expect(result.candidates).toHaveLength(1);
+    expect(mockFetch).toHaveBeenCalledWith('/api/promotion-candidates', undefined);
+  });
+
+  it('throws on server error', async () => {
+    mockFetch.mockResolvedValue({ ok: false, status: 500, statusText: 'Internal Server Error' });
+    await expect(fetchPromotionCandidates()).rejects.toThrow('500 Internal Server Error');
+  });
+});
+
+describe('fetchConsolidation', () => {
+  it('hits /api/consolidation and returns the check result', async () => {
+    const data = { orphanedFindings: [], deferredItems: [], duplicateClusters: [] };
+    mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve(data) });
+
+    const result = await fetchConsolidation();
+    expect(result).toEqual(data);
+    expect(mockFetch).toHaveBeenCalledWith('/api/consolidation', undefined);
+  });
+
+  it('throws on non-ok response', async () => {
+    mockFetch.mockResolvedValue({ ok: false, status: 404, statusText: 'Not Found' });
+    await expect(fetchConsolidation()).rejects.toThrow('404 Not Found');
+  });
+});
+
+describe('fetchClusters', () => {
+  it('hits /api/clusters and returns the clusters envelope', async () => {
+    const data = {
+      clusters: [
+        { id: 'cluster-1', label: 'Test', nodeIds: ['hyp-001'], isManual: false },
+      ],
+    };
+    mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve(data) });
+
+    const result = await fetchClusters();
+    expect(result.clusters).toHaveLength(1);
+    expect(mockFetch).toHaveBeenCalledWith('/api/clusters', undefined);
+  });
+
+  it('throws on non-ok response', async () => {
+    mockFetch.mockResolvedValue({ ok: false, status: 500, statusText: 'Internal Server Error' });
+    await expect(fetchClusters()).rejects.toThrow('500 Internal Server Error');
   });
 });
 

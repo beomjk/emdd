@@ -64,6 +64,44 @@ test.describe('US2: Filtering and Search', () => {
       const afterIds = await getVisibleNodeIds(page);
       expect(afterIds.length).toBeLessThan(FIXTURE.nodeCount);
     });
+
+    test('edge type filter toggles deactivate the button and hide matching edges', async ({ page }) => {
+      const edgeButtons = page.locator(`${sel.filterSectionEdges} ${sel.filterBtn}`);
+      const count = await edgeButtons.count();
+      expect(count).toBeGreaterThan(0);
+
+      // Pick the first edge-type button and capture its relation label
+      const firstBtn = edgeButtons.first();
+      const relationLabel = ((await firstBtn.textContent()) ?? '').trim();
+      await expect(firstBtn).toHaveClass(/\bactive\b/);
+
+      // Count how many edges currently carry that relation in the cy instance
+      const edgesOfTypeBefore = await page.evaluate((rel) => {
+        const cy = (document.querySelector('.cy-container') as any)?._cyreg?.cy;
+        if (!cy) return 0;
+        return cy.edges().filter((e: any) => e.data('relation') === rel).length;
+      }, relationLabel);
+      expect(edgesOfTypeBefore).toBeGreaterThan(0);
+
+      // The Cytoscape canvas intercepts pointer events for the edge-filter
+      // section. Dispatching a synthetic click via the DOM bypasses the
+      // canvas overlay while still exercising the Svelte onclick handler.
+      await firstBtn.evaluate((el) => (el as HTMLButtonElement).click());
+      await page.waitForTimeout(300);
+
+      // After toggling, the button should no longer be active
+      await expect(firstBtn).not.toHaveClass(/\bactive\b/);
+
+      // And every edge with that relation should have display:none
+      const visibleEdgesOfType = await page.evaluate((rel) => {
+        const cy = (document.querySelector('.cy-container') as any)?._cyreg?.cy;
+        if (!cy) return -1;
+        return cy.edges()
+          .filter((e: any) => e.data('relation') === rel)
+          .filter((e: any) => e.style('display') !== 'none').length;
+      }, relationLabel);
+      expect(visibleEdgesOfType).toBe(0);
+    });
   });
 
   test.describe('Search', () => {

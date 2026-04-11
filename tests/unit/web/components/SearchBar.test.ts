@@ -204,4 +204,62 @@ describe('SearchBar', () => {
       });
     });
   });
+
+  describe('currentIndex clamping on narrowed matches', () => {
+    // Regression: filter change narrows `matches`, leaving currentIndex
+    // pointing past the end. Without the clamp effect, Next/Prev and the
+    // `matches[currentIndex]` access would produce undefined and crash.
+    it('does not crash when filter narrows matches to fewer than currentIndex', async () => {
+      vi.useRealTimers();
+      const onNavigate = vi.fn();
+      const { rerender } = render(SearchBar, {
+        props: { ...defaultProps, onNavigate },
+      });
+      const input = screen.getByPlaceholderText('Search nodes...');
+      await fireEvent.input(input, { target: { value: 'hyp' } });
+      await waitFor(() => screen.getByLabelText('Next match'));
+
+      // Navigate to index 1 (second match)
+      await fireEvent.click(screen.getByLabelText('Next match'));
+      expect(onNavigate).toHaveBeenLastCalledWith('hyp-002');
+
+      // Narrow matches by removing TESTING status from the visible set.
+      // Only hyp-001 (PROPOSED) remains.
+      await rerender({
+        ...defaultProps,
+        onNavigate,
+        visibleStatuses: new Set(['PROPOSED', 'SUPPORTED']),
+      });
+
+      // Should not throw, and Next should land on the single remaining match
+      const nextBtn = screen.getByLabelText('Next match');
+      expect(() => fireEvent.click(nextBtn)).not.toThrow();
+      await waitFor(() => {
+        expect(onNavigate).toHaveBeenLastCalledWith('hyp-001');
+      });
+    });
+
+    it('resets match count display when filter narrows below current index', async () => {
+      vi.useRealTimers();
+      const { rerender } = render(SearchBar, { props: defaultProps });
+      const input = screen.getByPlaceholderText('Search nodes...');
+      await fireEvent.input(input, { target: { value: 'hyp' } });
+      await waitFor(() => screen.getByText(/1 \/ 2/));
+
+      // Click Next to advance currentIndex to 1
+      await fireEvent.click(screen.getByLabelText('Next match'));
+      await waitFor(() => screen.getByText(/2 \/ 2/));
+
+      // Narrow to 1 match
+      await rerender({
+        ...defaultProps,
+        visibleStatuses: new Set(['PROPOSED', 'SUPPORTED']),
+      });
+
+      // Count should clamp to "1 / 1"
+      await waitFor(() => {
+        expect(screen.getByText(/1 \/ 1/)).toBeInTheDocument();
+      });
+    });
+  });
 });

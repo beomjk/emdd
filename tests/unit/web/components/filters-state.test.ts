@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { filterState } from '../../../../src/web/frontend/state/filters.svelte.js';
-import { dashboardState } from '../../../../src/web/frontend/state/dashboard.svelte.js';
 import type { SerializedGraph } from '../../../../src/web/types.js';
 
 function makeGraph(
@@ -28,10 +27,10 @@ function makeGraph(
 
 describe('filterState', () => {
   beforeEach(() => {
-    dashboardState.graph = null;
-    filterState.visibleTypes = new Set();
-    filterState.visibleStatuses = new Set();
-    filterState.visibleEdgeTypes = new Set();
+    // Reset to a clean slate — filterState now owns its own knownTypes state
+    // (no longer derived from dashboardState.graph), so reset via initFromGraph
+    // on an empty graph.
+    filterState.initFromGraph({ nodes: [], edges: [], loadedAt: '' });
   });
 
   describe('initFromGraph', () => {
@@ -73,7 +72,6 @@ describe('filterState', () => {
   describe('resetAll', () => {
     it('restores all types/statuses/edgeTypes to visible', () => {
       const graph = makeGraph();
-      dashboardState.setGraph(graph);
       filterState.initFromGraph(graph);
 
       filterState.toggleType('hypothesis');
@@ -87,7 +85,6 @@ describe('filterState', () => {
   describe('mergeFromGraph', () => {
     it('preserves user deselection when graph updates', () => {
       const graph1 = makeGraph(['hypothesis', 'experiment']);
-      dashboardState.setGraph(graph1);
       filterState.initFromGraph(graph1);
 
       // User deselects hypothesis
@@ -103,7 +100,6 @@ describe('filterState', () => {
 
     it('adds newly discovered types as visible', () => {
       const graph1 = makeGraph(['hypothesis']);
-      dashboardState.setGraph(graph1);
       filterState.initFromGraph(graph1);
 
       // SSE update introduces 'finding' type
@@ -114,7 +110,6 @@ describe('filterState', () => {
 
     it('removes types that no longer exist in graph', () => {
       const graph1 = makeGraph(['hypothesis', 'experiment']);
-      dashboardState.setGraph(graph1);
       filterState.initFromGraph(graph1);
 
       // SSE update removes 'experiment'
@@ -123,47 +118,40 @@ describe('filterState', () => {
       expect(filterState.visibleTypes.has('experiment')).toBe(false);
     });
 
-    it('must run before setGraph to correctly detect new types', () => {
-      // Setup: init with ['hypothesis']
+    it('detects newly-discovered types regardless of any sibling store state', () => {
+      // filterState owns _knownTypes directly. It no longer needs callers
+      // to invoke it before some other store's setter — any order is fine.
       const graph1 = makeGraph(['hypothesis']);
-      dashboardState.setGraph(graph1);
       filterState.initFromGraph(graph1);
 
-      // Correct order: mergeFromGraph THEN setGraph
-      // mergeFromGraph reads _allTypes derived from OLD graph to detect new types
       const graph2 = makeGraph(['hypothesis', 'finding']);
-      filterState.mergeFromGraph(graph2);  // _allTypes still reflects graph1
-      dashboardState.setGraph(graph2);
+      filterState.mergeFromGraph(graph2);
 
-      // 'finding' was unknown before → should be auto-visible
       expect(filterState.visibleTypes.has('finding')).toBe(true);
+      expect(filterState.allTypes).toEqual(['finding', 'hypothesis']);
     });
 
-    it('wrong order (setGraph first) treats new types as already known', () => {
-      const graph1 = makeGraph(['hypothesis']);
-      dashboardState.setGraph(graph1);
-      filterState.initFromGraph(graph1);
-
-      // User deselects hypothesis
+    it('preserves deselection even after multiple merges that add+remove types', () => {
+      filterState.initFromGraph(makeGraph(['hypothesis', 'experiment']));
       filterState.toggleType('hypothesis');
       expect(filterState.visibleTypes.has('hypothesis')).toBe(false);
 
-      // Wrong order: setGraph THEN mergeFromGraph
-      const graph2 = makeGraph(['hypothesis', 'finding']);
-      dashboardState.setGraph(graph2);     // _allTypes now reflects graph2
-      filterState.mergeFromGraph(graph2);  // 'finding' seen as "already known"
+      // Add a new type
+      filterState.mergeFromGraph(makeGraph(['hypothesis', 'experiment', 'finding']));
+      expect(filterState.visibleTypes.has('hypothesis')).toBe(false);
+      expect(filterState.visibleTypes.has('finding')).toBe(true);
 
-      // 'finding' was NOT in visibleTypes before merge, and since _allTypes
-      // already includes it (graph2 set first), mergeFromGraph won't add it
-      // This demonstrates why order matters
-      expect(filterState.visibleTypes.has('finding')).toBe(false);
+      // Remove experiment
+      filterState.mergeFromGraph(makeGraph(['hypothesis', 'finding']));
+      expect(filterState.visibleTypes.has('hypothesis')).toBe(false);
+      expect(filterState.visibleTypes.has('finding')).toBe(true);
+      expect(filterState.allTypes).toEqual(['finding', 'hypothesis']);
     });
   });
 
   describe('hasActiveFilters', () => {
     it('returns false when all types/statuses/edgeTypes are visible', () => {
       const graph = makeGraph();
-      dashboardState.setGraph(graph);
       filterState.initFromGraph(graph);
 
       expect(filterState.hasActiveFilters).toBe(false);
@@ -171,7 +159,6 @@ describe('filterState', () => {
 
     it('returns true when a type is deselected', () => {
       const graph = makeGraph();
-      dashboardState.setGraph(graph);
       filterState.initFromGraph(graph);
 
       filterState.toggleType('hypothesis');

@@ -1,19 +1,9 @@
 :root {
-  /* Node type colors */
-  --color-hypothesis: #4A90D9;
-  --color-experiment: #7B68EE;
-  --color-finding: #50C878;
-  --color-knowledge: #DAA520;
-  --color-question: #FF8C42;
-  --color-episode: #A0A0A0;
-  --color-decision: #20B2AA;
-
-  /* Status border colors */
-  --border-positive: #2ECC71;
-  --border-negative: #E74C3C;
-  --border-in-progress: #3498DB;
-  --border-initial: #95A5A6;
-  --border-terminal: #95A5A6;
+  /* Node type and status border colors are owned by src/web/constants.ts
+   * (NODE_COLORS, getStatusBorder). They are injected via Cytoscape data
+   * properties and inline styles rather than CSS variables, so the same
+   * definitions here would be dead code and invite drift. Only keep
+   * --border-invalid because DetailPanel.svelte reads it as a fallback. */
   --border-invalid: #FF9800;
 
   /* Layout */

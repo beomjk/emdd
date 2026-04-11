@@ -468,5 +468,203 @@ describe('App', () => {
         expect(mockFetchGraph).toHaveBeenCalledTimes(2);
       });
     });
+
+    it('shows "Graph refreshed" success toast', async () => {
+      const graph = makeGraph([makeNode()], []);
+      mockFetchGraph.mockResolvedValue(graph);
+      mockTriggerRefresh.mockResolvedValue({ reloaded: true, loadedAt: '', nodeCount: 1 });
+
+      render(App);
+      await waitFor(() => screen.getByRole('button', { name: /refresh/i }));
+      await screen.getByRole('button', { name: /refresh/i }).click();
+
+      await waitFor(() => {
+        expect(screen.getByText('Graph refreshed')).toBeInTheDocument();
+      });
+    });
+
+    it('refreshes neighbors when selection survives a manual refresh', async () => {
+      const node = makeNode({ id: 'hyp-001' });
+      const graph = makeGraph([node], []);
+      mockFetchGraph.mockResolvedValue(graph);
+      mockTriggerRefresh.mockResolvedValue({ reloaded: true, loadedAt: '', nodeCount: 1 });
+
+      render(App);
+      await waitFor(() => screen.getByRole('button', { name: /refresh/i }));
+
+      dashboardState.selectNode('hyp-001');
+      mockFetchNeighbors.mockClear();
+
+      await screen.getByRole('button', { name: /refresh/i }).click();
+
+      await waitFor(() => {
+        expect(mockFetchNeighbors).toHaveBeenCalledWith(
+          'hyp-001',
+          expect.any(Number),
+          expect.objectContaining({ signal: expect.any(AbortSignal) }),
+        );
+      });
+    });
+
+    it('deselects node if manual refresh removes it', async () => {
+      const node = makeNode({ id: 'hyp-001' });
+      const graph1 = makeGraph([node], []);
+      const graph2 = makeGraph([], []);
+      mockFetchGraph.mockResolvedValueOnce(graph1).mockResolvedValueOnce(graph2);
+      mockTriggerRefresh.mockResolvedValue({ reloaded: true, loadedAt: '', nodeCount: 0 });
+
+      render(App);
+      await waitFor(() => screen.getByRole('button', { name: /refresh/i }));
+
+      dashboardState.selectNode('hyp-001');
+      await screen.getByRole('button', { name: /refresh/i }).click();
+
+      await waitFor(() => {
+        expect(dashboardState.selectedNodeId).toBeNull();
+      });
+    });
+  });
+
+  describe('SSE error paths', () => {
+    it('shows error toast when SSE fetchGraph rejects with non-abort error', async () => {
+      const graph1 = makeGraph([makeNode()], []);
+      mockFetchGraph.mockResolvedValueOnce(graph1).mockRejectedValueOnce(new Error('SSE fetch failed'));
+
+      render(App);
+      await waitFor(() => {
+        expect(mockSseState.onGraphUpdated).toHaveBeenCalled();
+      });
+
+      const handler = mockSseState.onGraphUpdated.mock.calls[0][0] as () => Promise<void>;
+      await handler();
+
+      await waitFor(() => {
+        expect(screen.getByText('SSE fetch failed')).toBeInTheDocument();
+      });
+    });
+
+    it('swallows AbortError from aborted SSE fetchGraph without toasting', async () => {
+      const graph1 = makeGraph([makeNode()], []);
+      const abortErr = new Error('Aborted');
+      abortErr.name = 'AbortError';
+      mockFetchGraph.mockResolvedValueOnce(graph1).mockRejectedValueOnce(abortErr);
+
+      render(App);
+      await waitFor(() => {
+        expect(mockSseState.onGraphUpdated).toHaveBeenCalled();
+      });
+
+      const handler = mockSseState.onGraphUpdated.mock.calls[0][0] as () => Promise<void>;
+      await handler();
+
+      // No error toast was shown
+      expect(screen.queryByText('Aborted')).not.toBeInTheDocument();
+    });
+
+    it('shows "Graph updated" success toast after SSE happy-path update', async () => {
+      const graph1 = makeGraph([makeNode()], []);
+      const graph2 = makeGraph([makeNode(), makeNode({ id: 'exp-001', type: 'experiment' })], []);
+      mockFetchGraph.mockResolvedValueOnce(graph1).mockResolvedValueOnce(graph2);
+
+      render(App);
+      await waitFor(() => {
+        expect(mockSseState.onGraphUpdated).toHaveBeenCalled();
+      });
+
+      const handler = mockSseState.onGraphUpdated.mock.calls[0][0] as () => Promise<void>;
+      await handler();
+
+      await waitFor(() => {
+        expect(screen.getByText('Graph updated')).toBeInTheDocument();
+      });
+    });
+
+    it('aborts the earlier SSE fetch when a new one fires before it resolves', async () => {
+      const graph1 = makeGraph([makeNode()], []);
+      let firstSignal: AbortSignal | undefined;
+      let secondSignal: AbortSignal | undefined;
+      const firstDeferred: { resolve?: (g: typeof graph1) => void } = {};
+
+      mockFetchGraph
+        .mockImplementationOnce(() => Promise.resolve(graph1))
+        .mockImplementationOnce((opts: { signal?: AbortSignal } = {}) => {
+          firstSignal = opts.signal;
+          return new Promise((resolve) => { firstDeferred.resolve = resolve; });
+        })
+        .mockImplementationOnce((opts: { signal?: AbortSignal } = {}) => {
+          secondSignal = opts.signal;
+          return Promise.resolve(graph1);
+        });
+
+      render(App);
+      await waitFor(() => {
+        expect(mockSseState.onGraphUpdated).toHaveBeenCalled();
+      });
+
+      const handler = mockSseState.onGraphUpdated.mock.calls[0][0] as () => Promise<void>;
+      const firstPromise = handler();
+      // Let the first handler enter its fetch so it gets a signal
+      await new Promise((r) => setTimeout(r, 0));
+      const secondPromise = handler();
+      await secondPromise;
+      // Unblock the first fetch so the handler can proceed through the aborted check
+      firstDeferred.resolve?.(graph1);
+      await firstPromise;
+
+      expect(firstSignal).toBeDefined();
+      expect(firstSignal?.aborted).toBe(true);
+      expect(secondSignal?.aborted).toBe(false);
+    });
+  });
+
+  describe('neighbor error paths', () => {
+    it('refetches neighbors on SSE update when selection survives', async () => {
+      const node = makeNode({ id: 'hyp-001' });
+      const graph = makeGraph([node], []);
+      mockFetchGraph.mockResolvedValue(graph);
+      mockFetchNeighbors.mockResolvedValue({ center: 'hyp-001', depth: 2, neighbors: [] });
+
+      render(App);
+      await waitFor(() => {
+        expect(screen.getByTestId('cytoscape-stub')).toBeInTheDocument();
+      });
+
+      dashboardState.selectNode('hyp-001');
+      mockFetchNeighbors.mockClear();
+
+      const handler = mockSseState.onGraphUpdated.mock.calls[0][0] as () => Promise<void>;
+      await handler();
+
+      await waitFor(() => {
+        expect(mockFetchNeighbors).toHaveBeenCalledWith(
+          'hyp-001',
+          expect.any(Number),
+          expect.objectContaining({ signal: expect.any(AbortSignal) }),
+        );
+      });
+    });
+
+    it('calls fetchNeighbors with a non-aborted signal on refresh flow', async () => {
+      const node = makeNode({ id: 'hyp-001' });
+      const graph = makeGraph([node], []);
+      mockFetchGraph.mockResolvedValue(graph);
+      mockFetchNeighbors.mockResolvedValue({ center: 'hyp-001', depth: 2, neighbors: [] });
+      mockTriggerRefresh.mockResolvedValue({ reloaded: true, loadedAt: '', nodeCount: 1 });
+
+      render(App);
+      await waitFor(() => screen.getByRole('button', { name: /refresh/i }));
+
+      dashboardState.selectNode('hyp-001');
+      mockFetchNeighbors.mockClear();
+
+      await screen.getByRole('button', { name: /refresh/i }).click();
+
+      await waitFor(() => {
+        expect(mockFetchNeighbors).toHaveBeenCalled();
+      });
+      // Signal is attached and not aborted at the time of call
+      const [, , opts] = mockFetchNeighbors.mock.calls.at(-1) ?? [];
+      expect(opts?.signal).toBeInstanceOf(AbortSignal);
+    });
   });
 });

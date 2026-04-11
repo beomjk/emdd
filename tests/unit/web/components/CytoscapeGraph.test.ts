@@ -33,11 +33,17 @@ function createMockCyInstance() {
     forEach: vi.fn(),
   });
 
+  const childrenCollection = { move: vi.fn() };
   const nodesCollection = {
     forEach: vi.fn(),
     some: vi.fn(() => false),
     remove: vi.fn(),
     length: 0,
+    // Compound cluster parents expose children() — used by applyClustersToGraph
+    // to orphan descendants before removing the parent (regression guard for
+    // the cluster-cascade bug fixed in the deep-review cycle).
+    children: vi.fn(() => childrenCollection),
+    filter: vi.fn(() => nodesCollection),
   };
   const edgesCollection = { forEach: vi.fn(), remove: vi.fn() };
   const elementsCollection = {

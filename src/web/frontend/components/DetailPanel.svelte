@@ -24,10 +24,13 @@
 
   const hopDepths = [1, 2, 3];
 
-  // Fetch full detail when node changes
+  // Fetch full detail when the selected node id changes.
+  // IMPORTANT: track only `node?.id` — if we tracked `node` itself, every SSE
+  // update would re-fetch (because `selectedNode` is a $derived that returns
+  // a new object reference on each graph mutation even when the id is stable).
   $effect(() => {
-    const _n = node;
-    if (!_n) {
+    const _id = node?.id ?? null;
+    if (!_id) {
       detail = null;
       return;
     }
@@ -36,9 +39,13 @@
     const signal = fetchAbort.signal;
     loading = true;
     error = null;
-    fetchNodeDetail(_n.id, { signal })
+    fetchNodeDetail(_id, { signal })
       .then((d) => { if (!signal.aborted) detail = d; })
-      .catch((e) => { if (!signal.aborted) error = `Node not found: ${_n.id}`; })
+      .catch((e) => {
+        if (signal.aborted) return;
+        const msg = e instanceof Error ? e.message : String(e);
+        error = msg.startsWith('404') ? `Node not found: ${_id}` : `Failed to load node: ${msg}`;
+      })
       .finally(() => { if (!signal.aborted) loading = false; });
 
     return () => { fetchAbort?.abort(); };
