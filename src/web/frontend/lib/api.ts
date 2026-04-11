@@ -44,24 +44,28 @@ export async function fetchNeighbors(
   return apiFetch(`/api/neighbors/${encodeURIComponent(id)}?depth=${depth}`, init);
 }
 
-export async function fetchHealth(): Promise<HealthReport> {
-  return apiFetch<HealthReport>('/api/health');
+export async function fetchHealth(init?: RequestInit): Promise<HealthReport> {
+  return apiFetch<HealthReport>('/api/health', init);
 }
 
-export async function fetchPromotionCandidates(): Promise<{ candidates: PromoteCandidate[] }> {
-  return apiFetch('/api/promotion-candidates');
+export async function fetchPromotionCandidates(
+  init?: RequestInit,
+): Promise<{ candidates: PromoteCandidate[] }> {
+  return apiFetch('/api/promotion-candidates', init);
 }
 
-export async function fetchConsolidation(): Promise<CheckResult> {
-  return apiFetch<CheckResult>('/api/consolidation');
+export async function fetchConsolidation(init?: RequestInit): Promise<CheckResult> {
+  return apiFetch<CheckResult>('/api/consolidation', init);
 }
 
-export async function fetchClusters(): Promise<{ clusters: VisualCluster[] }> {
-  return apiFetch('/api/clusters');
+export async function fetchClusters(init?: RequestInit): Promise<{ clusters: VisualCluster[] }> {
+  return apiFetch('/api/clusters', init);
 }
 
-export async function triggerRefresh(): Promise<{ reloaded: boolean; loadedAt: string; nodeCount: number }> {
-  return apiFetch('/api/refresh', { method: 'POST' });
+export async function triggerRefresh(
+  init?: RequestInit,
+): Promise<{ reloaded: boolean; loadedAt: string; nodeCount: number }> {
+  return apiFetch('/api/refresh', { method: 'POST', ...init });
 }
 
 export async function fetchExportHtml(

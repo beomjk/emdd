@@ -4,6 +4,14 @@ let _visibleTypes = $state(new Set<string>());
 let _visibleStatuses = $state(new Set<string>());
 let _visibleEdgeTypes = $state(new Set<string>());
 
+// Status values that should never be exposed as filter chips. An empty
+// string comes from nodes without a `status` frontmatter field (coerced in
+// cache.ts), and rendering a blank chip is confusing — the graph uses a
+// `|| !status` fallback to keep those nodes visible regardless.
+function stripEmpty(values: Iterable<string>): string[] {
+  return [...values].filter((v) => v !== '');
+}
+
 // `_allTypes/_allStatuses/_allEdgeTypes` are owned by the filter store
 // rather than derived from dashboardState.graph. Deriving them from another
 // store created a hidden temporal-ordering constraint: mergeFromGraph had
@@ -25,13 +33,8 @@ function uniqueSorted<T>(values: Iterable<T>): T[] {
 
 export const filterState = {
   get visibleTypes() { return _visibleTypes; },
-  set visibleTypes(v: Set<string>) { _visibleTypes = v; },
-
   get visibleStatuses() { return _visibleStatuses; },
-  set visibleStatuses(v: Set<string>) { _visibleStatuses = v; },
-
   get visibleEdgeTypes() { return _visibleEdgeTypes; },
-  set visibleEdgeTypes(v: Set<string>) { _visibleEdgeTypes = v; },
 
   get allTypes(): string[] { return _allTypes; },
   get allStatuses(): string[] { return _allStatuses; },
@@ -60,7 +63,7 @@ export const filterState = {
   },
   initFromGraph(graph: SerializedGraph) {
     const types = uniqueSorted(graph.nodes.map((n) => n.type));
-    const statuses = uniqueSorted(graph.nodes.map((n) => n.status));
+    const statuses = uniqueSorted(stripEmpty(graph.nodes.map((n) => n.status)));
     const edges = uniqueSorted(graph.edges.map((e) => e.relation));
     _allTypes = types;
     _allStatuses = statuses;
@@ -75,7 +78,7 @@ export const filterState = {
     const prevKnownEdges = new Set(_allEdgeTypes);
 
     const incomingTypes = new Set(graph.nodes.map((n) => n.type));
-    const incomingStatuses = new Set(graph.nodes.map((n) => n.status));
+    const incomingStatuses = new Set(stripEmpty(graph.nodes.map((n) => n.status)));
     const incomingEdges = new Set(graph.edges.map((e) => e.relation));
 
     // Add newly discovered values to visible sets, preserve user deselections

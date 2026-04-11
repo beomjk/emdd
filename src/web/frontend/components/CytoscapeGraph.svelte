@@ -1,6 +1,6 @@
 <script lang="ts">
   import cytoscape from 'cytoscape';
-  import type { SerializedGraph, SerializedNode, VisualCluster } from '../../types.js';
+  import type { SerializedGraph, SerializedNode } from '../../types.js';
   import { getNodeColor, getStatusBorder } from '../lib/constants.js';
   import { getLayoutConfig } from '../lib/cytoscape-setup.js';
   import { fetchClusters } from '../lib/api.js';
@@ -61,10 +61,6 @@
   ];
 
   // ── Exported API ────────────────────────────────────────────────────
-  export function getCy(): cytoscape.Core | undefined {
-    return cy;
-  }
-
   export function panToNode(nodeId: string): void {
     if (!cy) return;
     const node = cy.getElementById(nodeId);
@@ -189,6 +185,47 @@
   // can respect the active edge-type filter without needing prop access.
   let currentVisibleEdgeTypes: Set<string> = new Set();
 
+  // Single source of truth for "which non-cluster node should be visible
+  // right now". The filter effect writes this; culling, culling teardown,
+  // and the filter effect itself all read it — eliminating three drifted
+  // copies that previously caused the culling/filter conflict bug.
+  function applyNodeAndEdgeVisibility(
+    cyInst: cytoscape.Core,
+    opts: { viewportFilter?: (node: cytoscape.NodeSingular) => boolean } = {},
+  ): void {
+    const viewportFilter = opts.viewportFilter;
+    cyInst.batch(() => {
+      cyInst.nodes('[!isCluster]').forEach((node) => {
+        const show =
+          isFilterVisible(node) && (viewportFilter ? viewportFilter(node) : true);
+        node.style('display', show ? 'element' : 'none');
+      });
+
+      // Edges: hide when either endpoint was culled or the edge-type is off.
+      // Cytoscape does not auto-hide edges when endpoints have display:none,
+      // so we propagate visibility explicitly.
+      cyInst.edges().forEach((edge) => {
+        const rel = edge.data('relation');
+        const srcVisible = edge.source().style('display') !== 'none';
+        const tgtVisible = edge.target().style('display') !== 'none';
+        const edgeTypeOk = currentVisibleEdgeTypes.has(rel);
+        edge.style(
+          'display',
+          edgeTypeOk && srcVisible && tgtVisible ? 'element' : 'none',
+        );
+      });
+
+      // Cluster compound parents are hidden when every child is hidden.
+      // Without this pass, culling leaves empty dashed boxes at viewport
+      // edges even when their members have scrolled off-screen.
+      cyInst.nodes('[?isCluster]').forEach((cluster) => {
+        const children = cluster.children();
+        const anyVisible = children.some((c) => c.style('display') !== 'none');
+        cluster.style('display', anyVisible ? 'element' : 'none');
+      });
+    });
+  }
+
   function setupViewportCulling(cyInst: cytoscape.Core): () => void {
     let timer: ReturnType<typeof setTimeout> | null = null;
 
@@ -197,24 +234,11 @@
       const pad = (ext.w + ext.h) * 0.2;
       const x1 = ext.x1 - pad, y1 = ext.y1 - pad;
       const x2 = ext.x2 + pad, y2 = ext.y2 + pad;
-
-      cyInst.batch(() => {
-        cyInst.nodes('[!isCluster]').forEach((node) => {
+      applyNodeAndEdgeVisibility(cyInst, {
+        viewportFilter: (node) => {
           const pos = node.position();
-          const inViewport = pos.x >= x1 && pos.x <= x2 && pos.y >= y1 && pos.y <= y2;
-          node.style('display', (inViewport && isFilterVisible(node)) ? 'element' : 'none');
-        });
-
-        // Edges: hide when either endpoint was culled (or the edge-type is off).
-        // Cytoscape does not auto-hide edges when endpoints have display:none,
-        // so we must propagate visibility explicitly — mirroring the filter effect.
-        cyInst.edges().forEach((edge) => {
-          const rel = edge.data('relation');
-          const srcVisible = edge.source().style('display') !== 'none';
-          const tgtVisible = edge.target().style('display') !== 'none';
-          const edgeTypeOk = currentVisibleEdgeTypes.has(rel);
-          edge.style('display', (edgeTypeOk && srcVisible && tgtVisible) ? 'element' : 'none');
-        });
+          return pos.x >= x1 && pos.x <= x2 && pos.y >= y1 && pos.y <= y2;
+        },
       });
     };
 
@@ -238,7 +262,6 @@
     try {
       const { clusters } = await fetchClusters();
       if (signal?.aborted) return;
-      if (!clusters || clusters.length === 0) return;
 
       // Orphan cluster children BEFORE removing the compound parents.
       // Cytoscape cascades removal to descendants, so removing the parent
@@ -247,31 +270,40 @@
       existingClusters.children().move({ parent: null });
       existingClusters.remove();
 
-      for (let i = 0; i < clusters.length; i++) {
-        const cluster = clusters[i];
-        const colorIdx = i % CLUSTER_COLORS.length;
+      if (clusters && clusters.length > 0) {
+        for (let i = 0; i < clusters.length; i++) {
+          const cluster = clusters[i];
+          const colorIdx = i % CLUSTER_COLORS.length;
 
-        cyInst.add({
-          group: 'nodes',
-          data: {
-            id: cluster.id,
-            label: cluster.label,
-            isCluster: true,
-            isManual: cluster.isManual,
-            bgColor: CLUSTER_COLORS[colorIdx],
-            borderColor: CLUSTER_BORDER_COLORS[colorIdx],
-          },
-        });
+          cyInst.add({
+            group: 'nodes',
+            data: {
+              id: cluster.id,
+              label: cluster.label,
+              isCluster: true,
+              isManual: cluster.isManual,
+              bgColor: CLUSTER_COLORS[colorIdx],
+              borderColor: CLUSTER_BORDER_COLORS[colorIdx],
+            },
+          });
 
-        for (const nodeId of cluster.nodeIds) {
-          const node = cyInst.getElementById(nodeId);
-          if (node.length > 0 && !node.isChild()) {
-            node.move({ parent: cluster.id });
+          for (const nodeId of cluster.nodeIds) {
+            const node = cyInst.getElementById(nodeId);
+            if (node.length > 0 && !node.isChild()) {
+              node.move({ parent: cluster.id });
+            }
           }
         }
       }
-    } catch {
-      // Silent degradation — graph still renders without clusters
+
+      // Re-apply filter visibility so that freshly-added cluster parents
+      // correctly collapse when all their children are hidden. Without this
+      // pass, a cluster added after the user already has filters active would
+      // render as an empty dashed box until the next filter toggle.
+      applyNodeAndEdgeVisibility(cyInst);
+    } catch (err) {
+      if ((err as Error)?.name === 'AbortError') return;
+      console.warn('[emdd] cluster fetch failed, rendering graph without clusters:', err);
     }
   }
 
@@ -359,6 +391,19 @@
       onNodeClick(evt.target.id());
     });
 
+    // Cluster parent tap → fit viewport to the cluster's children.
+    // Restores the "click cluster to zoom" UX that lived in the pre-migration
+    // clusters.ts and would otherwise be silently dropped.
+    inst.on('tap', 'node[?isCluster]', (evt) => {
+      const cluster = evt.target;
+      const children = cluster.children();
+      if (children.length === 0) return;
+      inst.animate(
+        { fit: { eles: children, padding: 40 } } as any,
+        { duration: 300 },
+      );
+    });
+
     inst.on('tap', (evt) => {
       if (evt.target === inst) onBackgroundClick();
     });
@@ -442,27 +487,21 @@
       if (cullingCleanup) {
         cullingCleanup();
         cullingCleanup = null;
-        // When culling turns off, previously-culled nodes may still carry
-        // display:none. Re-apply current filter visibility instead of forcing
-        // everything to 'element' — otherwise deselected filter chips would
+        // Culling turnoff must re-apply current filter visibility instead of
+        // forcing everything to 'element' — otherwise deselected filter chips
         // silently reappear until the user next toggles a filter.
-        cy!.batch(() => {
-          cy!.nodes('[!isCluster]').forEach((node) => {
-            node.style('display', isFilterVisible(node) ? 'element' : 'none');
-          });
-          cy!.edges().forEach((edge) => {
-            const rel = edge.data('relation');
-            const srcVisible = edge.source().style('display') !== 'none';
-            const tgtVisible = edge.target().style('display') !== 'none';
-            const edgeTypeOk = currentVisibleEdgeTypes.has(rel);
-            edge.style('display', (edgeTypeOk && srcVisible && tgtVisible) ? 'element' : 'none');
-          });
-        });
+        applyNodeAndEdgeVisibility(cy!);
       }
     }
 
-    // Apply clusters only when topology changes (async, guarded)
-    if (delta.topologyChanged || isInitial) {
+    // Refetch clusters whenever any input that influences community detection
+    // changes: topology (adds/removes) OR node-data updates. Backend cluster
+    // detection uses tag overlap + types to weight edges and to label
+    // communities, so a tag rename with no link change still shifts the
+    // resulting clusters. Refetching on updatedNodes catches this.
+    const clusterInputsChanged =
+      delta.topologyChanged || delta.updatedNodes.length > 0;
+    if (clusterInputsChanged || isInitial) {
       clusterAbort?.abort();
       clusterAbort = new AbortController();
       applyClustersToGraph(cy, clusterAbort.signal);
@@ -490,7 +529,11 @@
     const layoutObj = runLayout(cy, getLayoutConfig(_l, true, false));
 
     if (pinned.size > 0) {
-      layoutObj.on('layoutstop', () => {
+      // Use `.one()` so the listener fires exactly once — otherwise a rapid
+      // layout toggle stops the previous layout, its listener fires with a
+      // stale `pinned` closure from the earlier run, and nodes jitter toward
+      // old positions before the new layout's listener takes effect.
+      layoutObj.one('layoutstop', () => {
         pinned.forEach((pos, id) => {
           const node = cy!.getElementById(id);
           if (node.length > 0) {
@@ -518,26 +561,7 @@
     };
     currentVisibleEdgeTypes = _ve;
 
-    cy.batch(() => {
-      cy!.nodes('[!isCluster]').forEach((node) => {
-        const show = isFilterVisible(node);
-        node.style('display', show ? 'element' : 'none');
-      });
-
-      cy!.edges().forEach((edge) => {
-        const rel = edge.data('relation');
-        const srcVisible = edge.source().style('display') !== 'none';
-        const tgtVisible = edge.target().style('display') !== 'none';
-        edge.style('display', _ve.has(rel) && srcVisible && tgtVisible ? 'element' : 'none');
-      });
-
-      // Hide cluster compound nodes when all children hidden
-      cy!.nodes('[?isCluster]').forEach((cluster) => {
-        const children = cluster.children();
-        const anyVisible = children.some((c) => c.style('display') !== 'none');
-        cluster.style('display', anyVisible ? 'element' : 'none');
-      });
-    });
+    applyNodeAndEdgeVisibility(cy);
   });
 
   // ── Effect: neighbor highlighting ───────────────────────────────────

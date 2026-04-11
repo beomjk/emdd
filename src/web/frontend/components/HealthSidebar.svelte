@@ -77,10 +77,13 @@
     loading = true;
     error = null;
 
+    // Thread the abort signal through every fetch so cancelled sidebar loads
+    // actually stop the network request rather than continuing to completion
+    // and having the result thrown away.
     const results = await Promise.allSettled([
-      fetchHealth(),
-      fetchPromotionCandidates(),
-      fetchConsolidation(),
+      fetchHealth({ signal }),
+      fetchPromotionCandidates({ signal }),
+      fetchConsolidation({ signal }),
     ]);
 
     // Guard: if aborted while awaiting, discard stale results

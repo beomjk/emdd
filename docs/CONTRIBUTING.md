@@ -79,7 +79,7 @@ npm run dev -- health examples/ml-backbone-selection
 ```bash
 npm run build          # Full build pipeline
 npm run dev            # Run CLI via tsx (skip build)
-npm run lint           # Type-check only (tsc --noEmit)
+npm run lint           # tsc --noEmit + svelte-check (frontend)
 npm run gen:spec-tables # Update SPEC_EN/KO.md auto-generated tables
 npm run spec:coverage  # Check @spec tag coverage (--threshold 80)
 ```

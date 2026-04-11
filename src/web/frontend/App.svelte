@@ -91,6 +91,14 @@
     try {
       const types = [...filterState.visibleTypes];
       const statuses = [...filterState.visibleStatuses];
+      // Guard: an empty filter array means "select nothing", but the server's
+      // contract is that a missing/empty param means "no filter" (show all).
+      // Without this check, deselecting every type silently exports the full
+      // graph — the opposite of what the user asked for.
+      if (types.length === 0 || statuses.length === 0) {
+        showToast('Select at least one type and one status to export', 'error');
+        return;
+      }
       const html = await fetchExportHtml(dashboardState.layout, types, statuses);
       const blob = new Blob([html], { type: 'text/html' });
       const url = URL.createObjectURL(blob);
@@ -117,6 +125,9 @@
       // Preserve user filter selections across manual refresh (mirrors SSE path)
       filterState.mergeFromGraph(graph);
       dashboardState.setGraph(graph);
+      // Belt-and-braces: clear loading in case refresh was somehow invoked
+      // while the initial loadGraph was still pending (shared abort slot).
+      loading = false;
       // Refresh neighbors if selection survives — mirrors handleGraphUpdated
       if (prevSelectedId) {
         const stillExists = graph.nodes.some((n) => n.id === prevSelectedId);
@@ -154,6 +165,11 @@
       if (signal.aborted) return;
       filterState.mergeFromGraph(graph);
       dashboardState.setGraph(graph);
+      // Clear any lingering initial-load state: if this SSE event fired while
+      // the initial loadGraph was still in flight, its finally{} skipped
+      // `loading = false` because the signal was aborted. Set it here so the
+      // loading overlay drops regardless of how the initial fetch terminated.
+      loading = false;
       // Re-select previous node if still exists, and refresh its neighbors
       // since the underlying graph may have added/removed edges.
       if (prevSelectedId) {

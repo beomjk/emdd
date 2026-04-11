@@ -152,7 +152,13 @@ function buildInvalidNode(filePath: string, graphDir: string): Node | null {
       parseError = 'Missing required field: type';
     }
   } catch (e) {
-    parseError = `Parse error: ${e instanceof Error ? e.message : String(e)}`;
+    // Scrub the user's absolute workspace path from YAML error messages so it
+    // never reaches the web UI (or an exported HTML bundle). js-yaml embeds
+    // the file path in its error text verbatim, which would leak local
+    // filesystem layout to anyone who sees the parse error.
+    const raw = e instanceof Error ? e.message : String(e);
+    const scrubbed = raw.split(graphDir).join('graph');
+    parseError = `Parse error: ${scrubbed}`;
   }
 
   return {

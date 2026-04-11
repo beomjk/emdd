@@ -7,18 +7,30 @@
     localStorage.setItem('emdd-theme', dashboardState.theme);
   }
 
-  // Restore persisted theme on mount, fall back to system preference
+  // Restore persisted theme on mount, fall back to system preference.
+  // When no explicit preference is saved, subscribe to OS-level changes so
+  // auto dark mode (sunset trigger, night shift, etc.) updates the dashboard
+  // live instead of requiring a page reload.
   $effect(() => {
     const saved = localStorage.getItem('emdd-theme');
+    const mql = window.matchMedia('(prefers-color-scheme: dark)');
     let theme: 'light' | 'dark';
     if (saved === 'dark' || saved === 'light') {
       theme = saved;
     } else {
-      theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      theme = mql.matches ? 'dark' : 'light';
     }
     dashboardState.theme = theme;
     document.documentElement.dataset.theme = theme;
-    return undefined;
+
+    const onSystemChange = (e: MediaQueryListEvent): void => {
+      if (localStorage.getItem('emdd-theme')) return; // explicit preference wins
+      const next = e.matches ? 'dark' : 'light';
+      dashboardState.theme = next;
+      document.documentElement.dataset.theme = next;
+    };
+    mql.addEventListener('change', onSystemChange);
+    return () => mql.removeEventListener('change', onSystemChange);
   });
 </script>
 

@@ -561,6 +561,41 @@ describe('App', () => {
       expect(screen.queryByText('Aborted')).not.toBeInTheDocument();
     });
 
+    it('clears loading state when SSE update supersedes in-flight initial fetch', async () => {
+      const graph2 = makeGraph(
+        [makeNode(), makeNode({ id: 'exp-001', type: 'experiment' })],
+        [],
+      );
+
+      // First call: hangs until aborted (mirrors slow network during SSE)
+      mockFetchGraph
+        .mockImplementationOnce((opts?: { signal?: AbortSignal }) => {
+          return new Promise((_, reject) => {
+            opts?.signal?.addEventListener('abort', () => {
+              const err = new Error('Aborted');
+              err.name = 'AbortError';
+              reject(err);
+            });
+          });
+        })
+        .mockResolvedValueOnce(graph2);
+
+      render(App);
+
+      // Initial state: loading visible
+      expect(screen.getByText('Loading graph...')).toBeInTheDocument();
+
+      // SSE fires before initial load resolves
+      const handler = mockSseState.onGraphUpdated.mock.calls[0][0] as () => Promise<void>;
+      await handler();
+
+      // Loading must clear — graph rendered via the SSE-initiated fetch
+      await waitFor(() => {
+        expect(screen.queryByText('Loading graph...')).not.toBeInTheDocument();
+        expect(screen.getByTestId('cytoscape-stub')).toBeInTheDocument();
+      });
+    });
+
     it('shows "Graph updated" success toast after SSE happy-path update', async () => {
       const graph1 = makeGraph([makeNode()], []);
       const graph2 = makeGraph([makeNode(), makeNode({ id: 'exp-001', type: 'experiment' })], []);

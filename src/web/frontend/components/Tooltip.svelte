@@ -8,10 +8,43 @@
     y: number;
     visible: boolean;
   } = $props();
+
+  let tooltipEl: HTMLDivElement | undefined = $state();
+  let clampedX = $state(0);
+  let clampedY = $state(0);
+
+  // Clamp the tooltip inside the viewport. If the tooltip would overflow the
+  // right edge, flip it to the left of the node. Vertically center on the
+  // node's rendered position. Runs after mount and whenever x/y/node change.
+  $effect(() => {
+    if (!visible || !node || !tooltipEl) return;
+    // Read dimensions AFTER the conditional block has rendered the element.
+    const rect = tooltipEl.getBoundingClientRect();
+    const parent = tooltipEl.offsetParent as HTMLElement | null;
+    const bounds = parent?.getBoundingClientRect() ?? { width: window.innerWidth, height: window.innerHeight };
+    const margin = 8;
+
+    // Default: 15px to the right of the node, vertically centered.
+    let left = x + 15;
+    let top = y - rect.height / 2;
+
+    // Flip to the left side if the right edge would overflow.
+    if (left + rect.width + margin > bounds.width) {
+      left = x - rect.width - 15;
+    }
+    // Clamp within viewport.
+    if (left < margin) left = margin;
+    if (top < margin) top = margin;
+    if (top + rect.height + margin > bounds.height) {
+      top = bounds.height - rect.height - margin;
+    }
+    clampedX = left;
+    clampedY = top;
+  });
 </script>
 
 {#if visible && node}
-  <div class="node-tooltip" style="left:{x + 15}px;top:{y}px">
+  <div bind:this={tooltipEl} class="node-tooltip" style="left:{clampedX}px;top:{clampedY}px">
     <div class="node-tooltip-title">{node.title || node.id}</div>
     <div class="node-tooltip-badges">
       <span class="badge-type" style="background:{getNodeColor(node.type)}">{node.type}</span>

@@ -27,7 +27,10 @@
     if (!q) return [];
     return nodes.filter((n) => {
       if (!visibleTypes.has(n.type)) return false;
-      if (!visibleStatuses.has(n.status)) return false;
+      // Mirror CytoscapeGraph's fallback: a node with no status should not be
+      // hidden by the status filter. Otherwise statusless nodes become visible
+      // in the graph but unsearchable, which is confusing and inconsistent.
+      if (n.status && !visibleStatuses.has(n.status)) return false;
       return n.id.toLowerCase().startsWith(q) || n.title.toLowerCase().includes(q);
     });
   });
@@ -56,12 +59,12 @@
       if (matches.length === 0) return;
       if (e.shiftKey) {
         currentIndex = ((currentIndex - 1) + matches.length) % matches.length;
-      } else {
-        if (hasNavigated) {
-          currentIndex = (currentIndex + 1) % matches.length;
-        }
-        hasNavigated = true;
+      } else if (hasNavigated) {
+        currentIndex = (currentIndex + 1) % matches.length;
       }
+      // Arm hasNavigated for both directions so the next Enter (forward)
+      // advances from the current position instead of repeating it.
+      hasNavigated = true;
       onNavigate(matches[currentIndex].id);
     } else if (e.key === 'Escape') {
       query = '';

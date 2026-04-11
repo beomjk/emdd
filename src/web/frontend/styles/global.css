@@ -10,23 +10,19 @@
   --sidebar-width: 280px;
   --detail-width: 320px;
   --toolbar-height: 48px;
-  --timeline-height: 60px;
 
   /* Semantic colors — light theme */
   --bg-primary: #fafafa;
   --bg-surface: #fff;
-  --bg-surface-alt: #f8f8f8;
   --bg-hover: #f0f0f0;
   --bg-badge: #f0f0f0;
   --bg-code: #eee;
   --bg-bar-track: #eee;
-  --bg-gap: #fff8f0;
   --bg-graph: #fafafa;
   --text-primary: #333;
   --text-secondary: #555;
   --text-muted: #888;
   --text-faint: #999;
-  --text-gap-type: #e67e22;
   --border-color: #e0e0e0;
   --border-btn: #ccc;
   --border-separator: #eee;
@@ -53,18 +49,15 @@
 [data-theme="dark"] {
   --bg-primary: #1a1a2e;
   --bg-surface: #16213e;
-  --bg-surface-alt: #1a2744;
   --bg-hover: #1f3050;
   --bg-badge: #2a3a55;
   --bg-code: #2a3a55;
   --bg-bar-track: #2a3a55;
-  --bg-gap: #2a2218;
   --bg-graph: #0f1729;
   --text-primary: #e0e0e0;
   --text-secondary: #b0b8c8;
   --text-muted: #8090a8;
   --text-faint: #607080;
-  --text-gap-type: #f0a050;
   --border-color: #2a3a55;
   --border-btn: #3a4a65;
   --border-separator: #2a3a55;

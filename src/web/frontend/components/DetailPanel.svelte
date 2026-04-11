@@ -100,7 +100,7 @@
             <span class="detail-id">{detail.id}</span>
             <button class="detail-close" aria-label="Close detail panel" onclick={onClose}>&times;</button>
           </div>
-          <h3 class="detail-title">{detail.title}</h3>
+          <h3 class="detail-title">{detail.title || detail.id}</h3>
           <div class="detail-badges">
             <span class="badge-type" style="background:{getNodeColor(detail.type)}">{detail.type}</span>
             {#if detail.status}
