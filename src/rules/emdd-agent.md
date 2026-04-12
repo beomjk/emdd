@@ -11,13 +11,15 @@ Every session follows this prompt cycle:
        Review             Maintenance (if triggered)
 ```
 
-1. **Session Start** → Run the `context-loading` prompt. It provides graph state, episode arc, backlog, transition-ready nodes, and open questions. Follow the Episode Directive to read specific episodes for deeper context.
+**Claude Code shortcuts:** `/emdd-open` (Session Start) and `/emdd-close` (Session End + Maintenance + Review).
+
+1. **Session Start** → Run the `context-loading` prompt (or `/emdd-open`). It provides graph state, episode arc, backlog, transition-ready nodes, and open questions. Follow the Episode Directive to read specific episodes for deeper context.
 2. **During Work** — Execute experiments, write code, take notes. Mark surprises with [!].
 3. **Session End** → Run the `episode-creation` prompt. Record what was tried, create Findings, list next steps with prerequisite node IDs.
 4. **Maintenance** → Run the `consolidation` prompt when triggers fire. Promote findings, split experiments, update confidence.
 5. **Review** → Run the `health-review` prompt periodically for a full health dashboard with recommendations.
 
-> Steps 4-5 are not mandatory every session — run when consolidation triggers fire or on a weekly cadence.
+> Steps 3-5 can be run together via `/emdd-close`. Steps 4-5 are not mandatory every session — run when consolidation triggers fire or on a weekly cadence.
 
 ## Intervention Rules
 

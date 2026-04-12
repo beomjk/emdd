@@ -1154,7 +1154,10 @@ DVC exp run → metrics.json → post-experiment hook → Claude Code
 project-root/
 ├── .emdd.yml                  # 프로젝트 설정 (emdd init으로 생성)
 ├── .claude/
-│   └── CLAUDE.md              # EMDD 규칙 + 에이전트 행동 (emdd init으로 생성)
+│   ├── CLAUDE.md              # EMDD 규칙 + 에이전트 행동 (emdd init으로 생성)
+│   └── skills/
+│       ├── emdd-open/SKILL.md   # /emdd-open 세션 시작 스킬
+│       └── emdd-close/SKILL.md  # /emdd-close 세션 종료 스킬
 │
 ├── graph/                     # ★ EMDD 지식 그래프
 │   ├── _index.md              # 자동 생성 인덱스

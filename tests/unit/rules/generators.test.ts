@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, rmSync, existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { getRulesContent, generateRulesFile } from '../../../src/rules/generators.js';
+import { getRulesContent, generateRulesFile, getSkillContent, generateSkillFiles } from '../../../src/rules/generators.js';
 import { NODE_TYPES, NODE_TYPE_DIRS, ID_PREFIXES, EDGE_TYPES, CEREMONY_TRIGGERS } from '../../../src/graph/types.js';
 
 // Rough token estimator: ~4 chars per token
@@ -178,5 +178,76 @@ describe('generateRulesFile', () => {
     expect(existsSync(join(tmpDir, '.windsurf', 'rules', 'emdd.md'))).toBe(true);
     expect(existsSync(join(tmpDir, '.clinerules', 'emdd.md'))).toBe(true);
     expect(existsSync(join(tmpDir, '.github', 'copilot-instructions.md'))).toBe(true);
+  });
+});
+
+describe('getSkillContent', () => {
+  it('generates emdd-open skill with valid YAML frontmatter', () => {
+    const content = getSkillContent('emdd-open');
+    expect(content).toMatch(/^---\nname: emdd-open\n/);
+    expect(content).toContain('description:');
+    expect(content).toContain('---');
+  });
+
+  it('emdd-open skill references context-loading MCP prompt', () => {
+    const content = getSkillContent('emdd-open');
+    expect(content).toContain('context-loading');
+  });
+
+  it('generates emdd-close skill with valid YAML frontmatter', () => {
+    const content = getSkillContent('emdd-close');
+    expect(content).toMatch(/^---\nname: emdd-close\n/);
+    expect(content).toContain('description:');
+  });
+
+  it('emdd-close skill references all closing prompts', () => {
+    const content = getSkillContent('emdd-close');
+    expect(content).toContain('episode-creation');
+    expect(content).toContain('consolidation');
+    expect(content).toContain('health-review');
+  });
+
+  it('throws for unknown skill name', () => {
+    expect(() => getSkillContent('unknown' as any)).toThrow();
+  });
+});
+
+describe('generateSkillFiles', () => {
+  let tmpDir: string;
+
+  beforeEach(() => {
+    tmpDir = mkdtempSync(join(tmpdir(), 'emdd-skills-'));
+  });
+  afterEach(() => {
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it('creates emdd-open and emdd-close skill directories', () => {
+    const result = generateSkillFiles(tmpDir);
+    expect(existsSync(join(tmpDir, '.claude', 'skills', 'emdd-open', 'SKILL.md'))).toBe(true);
+    expect(existsSync(join(tmpDir, '.claude', 'skills', 'emdd-close', 'SKILL.md'))).toBe(true);
+    expect(result.created).toHaveLength(2);
+  });
+
+  it('skill files start with valid YAML frontmatter', () => {
+    generateSkillFiles(tmpDir);
+    const open = readFileSync(join(tmpDir, '.claude', 'skills', 'emdd-open', 'SKILL.md'), 'utf-8');
+    const close = readFileSync(join(tmpDir, '.claude', 'skills', 'emdd-close', 'SKILL.md'), 'utf-8');
+    expect(open).toMatch(/^---\nname: emdd-open\n/);
+    expect(close).toMatch(/^---\nname: emdd-close\n/);
+  });
+
+  it('skips existing files when force is false', () => {
+    generateSkillFiles(tmpDir);
+    const result = generateSkillFiles(tmpDir);
+    expect(result.skipped).toHaveLength(2);
+    expect(result.created).toHaveLength(0);
+  });
+
+  it('overwrites existing files when force is true', () => {
+    generateSkillFiles(tmpDir);
+    const result = generateSkillFiles(tmpDir, { force: true });
+    expect(result.created).toHaveLength(2);
+    expect(result.skipped).toHaveLength(0);
   });
 });

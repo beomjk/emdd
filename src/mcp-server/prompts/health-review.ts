@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { getHealth } from '../../graph/operations.js';
+import { resolveGraphDir } from '../../graph/loader.js';
 import { CEREMONY_TRIGGERS } from '../../graph/types.js';
 import { getLocale, setLocale } from '../../i18n/index.js';
 import { PROMPT_META } from './meta.js';
@@ -14,11 +15,12 @@ export function registerHealthReview(server: McpServer): void {
   server.prompt(
     meta.name,
     meta.description,
-    { graphDir: z.string().describe('Path to the EMDD graph directory'), lang: z.string().optional().describe('Language locale (en or ko)') },
-    async ({ graphDir, lang }) => {
+    { graphDir: z.string().optional().describe('Path to the EMDD graph directory'), lang: z.string().optional().describe('Language locale (en or ko)') },
+    async ({ graphDir: rawGraphDir, lang }) => {
       const locale = getLocale(lang);
       setLocale(locale);
       try {
+        const graphDir = rawGraphDir || resolveGraphDir();
         const health = await getHealth(graphDir);
 
         const typeBreakdown = Object.entries(health.byType)

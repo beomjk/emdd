@@ -1201,6 +1201,9 @@ project-root/
 +-- .emdd.yml                  # Project config (created by emdd init)
 +-- .claude/
 |   +-- CLAUDE.md              # EMDD rules + agent behavior (created by emdd init)
+|   +-- skills/
+|       +-- emdd-open/SKILL.md   # /emdd-open session start skill
+|       +-- emdd-close/SKILL.md  # /emdd-close session end skill
 |
 +-- graph/                     # EMDD knowledge graph
 |   +-- _index.md              # Auto-generated index

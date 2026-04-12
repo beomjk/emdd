@@ -33,7 +33,7 @@ const NON_REGISTRY_COMMANDS: NonRegistryCommand[] = [
 function promptParams(meta: typeof PROMPT_META[number]): string {
   if (!meta.hasGraphDir && !meta.hasLang) return '(none)';
   const parts: string[] = [];
-  if (meta.hasGraphDir) parts.push('`graphDir` (required)');
+  if (meta.hasGraphDir) parts.push('`graphDir?`');
   if (meta.hasLang) parts.push('`lang?`');
   return parts.join(', ');
 }

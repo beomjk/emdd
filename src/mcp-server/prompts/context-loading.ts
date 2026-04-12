@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { getHealth, checkConsolidation, listNodes, getBacklog, detectTransitions } from '../../graph/operations.js';
+import { resolveGraphDir } from '../../graph/loader.js';
 import { getLocale, setLocale } from '../../i18n/index.js';
 import { nodeDate } from '../../graph/date-utils.js';
 import { VALID_URGENCIES } from '../../graph/types.js';
@@ -310,11 +311,12 @@ export function registerContextLoading(server: McpServer): void {
   server.prompt(
     meta.name,
     meta.description,
-    { graphDir: z.string().describe('Path to the EMDD graph directory'), lang: z.string().optional().describe('Language locale (en or ko)') },
-    async ({ graphDir, lang }) => {
+    { graphDir: z.string().optional().describe('Path to the EMDD graph directory'), lang: z.string().optional().describe('Language locale (en or ko)') },
+    async ({ graphDir: rawGraphDir, lang }) => {
       const locale = getLocale(lang);
       setLocale(locale);
       try {
+        const graphDir = rawGraphDir || resolveGraphDir();
         const health = await getHealth(graphDir);
 
         let text: string;

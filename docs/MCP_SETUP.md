@@ -226,7 +226,7 @@ All tools accept a `graphDir` parameter — the path to your EMDD `graph/` direc
 
 ### Parameter Details
 
-- **`graphDir`** — Absolute or relative path to the `graph/` directory (e.g., `./graph` or `/home/user/project/graph`)
+- **`graphDir`** — (Optional) Absolute or relative path to the `graph/` directory. If omitted, auto-resolved by walking up from the server's working directory
 - **`type`** — Node type: `hypothesis`, `experiment`, `finding`, `knowledge`, `question`, `decision`, `episode`
 - **`status`** — Any valid status string for the node type (e.g., `proposed`, `testing`, `supported`, `refuted`, `active`)
 - **`since`** — Date filter in `YYYY-MM-DD` format — returns nodes updated (or created) on or after this date
@@ -257,10 +257,10 @@ All tools accept a `graphDir` parameter — the path to your EMDD `graph/` direc
 <!-- Generated from command registry — DO NOT EDIT -->
 | Prompt | Parameters | Description |
 |--------|-----------|-------------|
-| `context-loading` | `graphDir` (required), `lang?` | [Cycle 1/4 · Session Start] Load EMDD graph context — provides a summary of nodes, edges, health, and structural gaps |
-| `episode-creation` | `graphDir` (required), `lang?` | [Cycle 2/4 · Session End] Step-by-step guide for writing an EMDD Episode node — includes frontmatter template, mandatory sections, and linking instructions |
-| `consolidation` | `graphDir` (required), `lang?` | [Cycle 3/4 · Maintenance] Consolidation execution guide — checks triggers and provides a step-by-step procedure for promoting findings, generating questions, and updating hypotheses |
-| `health-review` | `graphDir` (required), `lang?` | [Cycle 4/4 · Review] Full health dashboard with actionable recommendations — analyzes node distribution, structural gaps, and link density |
+| `context-loading` | `graphDir?`, `lang?` | [Cycle 1/4 · Session Start] Load EMDD graph context — provides a summary of nodes, edges, health, and structural gaps |
+| `episode-creation` | `graphDir?`, `lang?` | [Cycle 2/4 · Session End] Step-by-step guide for writing an EMDD Episode node — includes frontmatter template, mandatory sections, and linking instructions |
+| `consolidation` | `graphDir?`, `lang?` | [Cycle 3/4 · Maintenance] Consolidation execution guide — checks triggers and provides a step-by-step procedure for promoting findings, generating questions, and updating hypotheses |
+| `health-review` | `graphDir?`, `lang?` | [Cycle 4/4 · Review] Full health dashboard with actionable recommendations — analyzes node distribution, structural gaps, and link density |
 <!-- /AUTO:mcp-prompt-table -->
 
 ### Session Cycle
@@ -307,9 +307,9 @@ On Windows, `npx` must be invoked through `cmd /c` for MCP clients to resolve it
 
 ### "graphDir" — what path to use?
 
-Point to the `graph/` directory inside your EMDD project. If your project is at `/home/user/my-research`, the graphDir is `/home/user/my-research/graph`.
+The `graphDir` parameter is **optional** for both tools and prompts. When omitted, the server auto-resolves by walking up from its working directory to find the first `graph/` folder.
 
-Most AI tools set the working directory to the project root, so `./graph` usually works.
+If you need to specify it explicitly, point to the `graph/` directory inside your EMDD project (e.g., `./graph` or `/home/user/my-research/graph`).
 
 ### Server exits immediately
 

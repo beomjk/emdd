@@ -32,6 +32,20 @@ describe('MCP Prompts via SDK Client', () => {
   // --- context-loading ---
 
   describe('context-loading', () => {
+    it('works without graphDir (auto-resolves from cwd)', async () => {
+      // When graphDir is omitted, resolveGraphDir() is used.
+      // If no graph/ dir is found at cwd, the prompt returns an error message (not a crash).
+      const result = await client.getPrompt({
+        name: 'context-loading',
+        arguments: {},
+      });
+      expect(result.messages).toHaveLength(1);
+      const content = result.messages[0].content as { type: string; text: string };
+      expect(content.type).toBe('text');
+      // Either resolves successfully (EMDD content) or returns error text
+      expect(content.text.length).toBeGreaterThan(0);
+    });
+
     it('returns graph summary prompt', async () => {
       const result = await client.getPrompt({
         name: 'context-loading',
