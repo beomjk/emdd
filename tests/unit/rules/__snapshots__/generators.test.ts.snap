@@ -114,13 +114,15 @@ Every session follows this prompt cycle:
        Review             Maintenance (if triggered)
 \`\`\`
 
-1. **Session Start** → Run the \`context-loading\` prompt. It provides graph state, episode arc, backlog, transition-ready nodes, and open questions. Follow the Episode Directive to read specific episodes for deeper context.
+**Claude Code shortcuts:** \`/emdd-open\` (Session Start) and \`/emdd-close\` (Session End + Maintenance + Review).
+
+1. **Session Start** → Run the \`context-loading\` prompt (or \`/emdd-open\`). It provides graph state, episode arc, backlog, transition-ready nodes, and open questions. Follow the Episode Directive to read specific episodes for deeper context.
 2. **During Work** — Execute experiments, write code, take notes. Mark surprises with [!].
 3. **Session End** → Run the \`episode-creation\` prompt. Record what was tried, create Findings, list next steps with prerequisite node IDs.
 4. **Maintenance** → Run the \`consolidation\` prompt when triggers fire. Promote findings, split experiments, update confidence.
 5. **Review** → Run the \`health-review\` prompt periodically for a full health dashboard with recommendations.
 
-> Steps 4-5 are not mandatory every session — run when consolidation triggers fire or on a weekly cadence.
+> Steps 3-5 can be run together via \`/emdd-close\`. Steps 4-5 are not mandatory every session — run when consolidation triggers fire or on a weekly cadence.
 
 ## Intervention Rules
 
@@ -312,13 +314,15 @@ Every session follows this prompt cycle:
        Review             Maintenance (if triggered)
 \`\`\`
 
-1. **Session Start** → Run the \`context-loading\` prompt. It provides graph state, episode arc, backlog, transition-ready nodes, and open questions. Follow the Episode Directive to read specific episodes for deeper context.
+**Claude Code shortcuts:** \`/emdd-open\` (Session Start) and \`/emdd-close\` (Session End + Maintenance + Review).
+
+1. **Session Start** → Run the \`context-loading\` prompt (or \`/emdd-open\`). It provides graph state, episode arc, backlog, transition-ready nodes, and open questions. Follow the Episode Directive to read specific episodes for deeper context.
 2. **During Work** — Execute experiments, write code, take notes. Mark surprises with [!].
 3. **Session End** → Run the \`episode-creation\` prompt. Record what was tried, create Findings, list next steps with prerequisite node IDs.
 4. **Maintenance** → Run the \`consolidation\` prompt when triggers fire. Promote findings, split experiments, update confidence.
 5. **Review** → Run the \`health-review\` prompt periodically for a full health dashboard with recommendations.
 
-> Steps 4-5 are not mandatory every session — run when consolidation triggers fire or on a weekly cadence.
+> Steps 3-5 can be run together via \`/emdd-close\`. Steps 4-5 are not mandatory every session — run when consolidation triggers fire or on a weekly cadence.
 
 ## Intervention Rules
 
@@ -510,13 +514,15 @@ Every session follows this prompt cycle:
        Review             Maintenance (if triggered)
 \`\`\`
 
-1. **Session Start** → Run the \`context-loading\` prompt. It provides graph state, episode arc, backlog, transition-ready nodes, and open questions. Follow the Episode Directive to read specific episodes for deeper context.
+**Claude Code shortcuts:** \`/emdd-open\` (Session Start) and \`/emdd-close\` (Session End + Maintenance + Review).
+
+1. **Session Start** → Run the \`context-loading\` prompt (or \`/emdd-open\`). It provides graph state, episode arc, backlog, transition-ready nodes, and open questions. Follow the Episode Directive to read specific episodes for deeper context.
 2. **During Work** — Execute experiments, write code, take notes. Mark surprises with [!].
 3. **Session End** → Run the \`episode-creation\` prompt. Record what was tried, create Findings, list next steps with prerequisite node IDs.
 4. **Maintenance** → Run the \`consolidation\` prompt when triggers fire. Promote findings, split experiments, update confidence.
 5. **Review** → Run the \`health-review\` prompt periodically for a full health dashboard with recommendations.
 
-> Steps 4-5 are not mandatory every session — run when consolidation triggers fire or on a weekly cadence.
+> Steps 3-5 can be run together via \`/emdd-close\`. Steps 4-5 are not mandatory every session — run when consolidation triggers fire or on a weekly cadence.
 
 ## Intervention Rules
 
@@ -712,13 +718,15 @@ Every session follows this prompt cycle:
        Review             Maintenance (if triggered)
 \`\`\`
 
-1. **Session Start** → Run the \`context-loading\` prompt. It provides graph state, episode arc, backlog, transition-ready nodes, and open questions. Follow the Episode Directive to read specific episodes for deeper context.
+**Claude Code shortcuts:** \`/emdd-open\` (Session Start) and \`/emdd-close\` (Session End + Maintenance + Review).
+
+1. **Session Start** → Run the \`context-loading\` prompt (or \`/emdd-open\`). It provides graph state, episode arc, backlog, transition-ready nodes, and open questions. Follow the Episode Directive to read specific episodes for deeper context.
 2. **During Work** — Execute experiments, write code, take notes. Mark surprises with [!].
 3. **Session End** → Run the \`episode-creation\` prompt. Record what was tried, create Findings, list next steps with prerequisite node IDs.
 4. **Maintenance** → Run the \`consolidation\` prompt when triggers fire. Promote findings, split experiments, update confidence.
 5. **Review** → Run the \`health-review\` prompt periodically for a full health dashboard with recommendations.
 
-> Steps 4-5 are not mandatory every session — run when consolidation triggers fire or on a weekly cadence.
+> Steps 3-5 can be run together via \`/emdd-close\`. Steps 4-5 are not mandatory every session — run when consolidation triggers fire or on a weekly cadence.
 
 ## Intervention Rules
 
@@ -910,13 +918,15 @@ Every session follows this prompt cycle:
        Review             Maintenance (if triggered)
 \`\`\`
 
-1. **Session Start** → Run the \`context-loading\` prompt. It provides graph state, episode arc, backlog, transition-ready nodes, and open questions. Follow the Episode Directive to read specific episodes for deeper context.
+**Claude Code shortcuts:** \`/emdd-open\` (Session Start) and \`/emdd-close\` (Session End + Maintenance + Review).
+
+1. **Session Start** → Run the \`context-loading\` prompt (or \`/emdd-open\`). It provides graph state, episode arc, backlog, transition-ready nodes, and open questions. Follow the Episode Directive to read specific episodes for deeper context.
 2. **During Work** — Execute experiments, write code, take notes. Mark surprises with [!].
 3. **Session End** → Run the \`episode-creation\` prompt. Record what was tried, create Findings, list next steps with prerequisite node IDs.
 4. **Maintenance** → Run the \`consolidation\` prompt when triggers fire. Promote findings, split experiments, update confidence.
 5. **Review** → Run the \`health-review\` prompt periodically for a full health dashboard with recommendations.
 
-> Steps 4-5 are not mandatory every session — run when consolidation triggers fire or on a weekly cadence.
+> Steps 3-5 can be run together via \`/emdd-close\`. Steps 4-5 are not mandatory every session — run when consolidation triggers fire or on a weekly cadence.
 
 ## Intervention Rules
 
@@ -1017,6 +1027,8 @@ You are working in an EMDD project. The knowledge graph lives in \`graph/\` as M
 
 Use MCP prompts in order: \`context-loading\` (start) → work → \`episode-creation\` (end) → \`consolidation\` (if triggered) → \`health-review\` (periodic).
 
+Claude Code shortcuts: \`/emdd-open\` (start) and \`/emdd-close\` (end + maintenance + review).
+
 ## Key Rules
 
 1. Write an Episode at end of each session with "What I Tried" and "What's Next" (with prerequisite node IDs)
@@ -1054,6 +1066,8 @@ You are working in an EMDD project. The knowledge graph lives in \`graph/\` as M
 
 Use MCP prompts in order: \`context-loading\` (start) → work → \`episode-creation\` (end) → \`consolidation\` (if triggered) → \`health-review\` (periodic).
 
+Claude Code shortcuts: \`/emdd-open\` (start) and \`/emdd-close\` (end + maintenance + review).
+
 ## Key Rules
 
 1. Write an Episode at end of each session with "What I Tried" and "What's Next" (with prerequisite node IDs)
@@ -1061,5 +1075,46 @@ Use MCP prompts in order: \`context-loading\` (start) → work → \`episode-cre
 3. Consolidation steps: Promote findings, split experiments, generate questions, update confidence, fix orphans
 4. Never delete nodes — change status to REFUTED/RETRACTED/SUPERSEDED
 5. Graph is source of truth; you are a gardener, not an architect — suggest, don't decide
+"
+`;
+
+exports[`getSkillContent > emdd-close skill content matches snapshot 1`] = `
+"---
+name: emdd-close
+description: >-
+  EMDD 세션을 마무리합니다. 에피소드 작성, 컨솔리데이션 체크, 헬스 리뷰를 순서대로 진행합니다.
+---
+
+# EMDD Session Close
+
+End the EMDD session by running the closing prompts in sequence.
+
+## Instructions
+
+1. Call the MCP prompt \`episode-creation\` — write an Episode node recording this session's work.
+2. Call the MCP prompt \`consolidation\` — check if consolidation triggers are met and execute if needed.
+3. Call the MCP prompt \`health-review\` — review graph health and note recommendations for next session.
+
+Each prompt requires no arguments (graphDir is auto-resolved).
+If the consolidation prompt reports that no triggers are met, note that consolidation is not needed and proceed to step 3.
+"
+`;
+
+exports[`getSkillContent > emdd-open skill content matches snapshot 1`] = `
+"---
+name: emdd-open
+description: >-
+  EMDD 세션을 시작합니다. 그래프 컨텍스트를 로드하고 세션 우선순위를 안내합니다.
+---
+
+# EMDD Session Open
+
+Use the \`context-loading\` MCP prompt from the \`emdd\` server to load graph context.
+
+## Instructions
+
+1. Call the MCP prompt \`context-loading\` (no arguments needed — graphDir is auto-resolved).
+2. Read the returned context — it contains graph state, episode arc, backlog, transition-ready nodes, and open questions.
+3. Follow the Session Priorities and Episode Directive sections in the output.
 "
 `;

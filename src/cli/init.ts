@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { NODE_TYPE_DIRS } from '../graph/types.js';
 import { t } from '../i18n/index.js';
-import { generateRulesFile, type ToolType } from '../rules/generators.js';
+import { generateRulesFile, generateSkillFiles, type ToolType } from '../rules/generators.js';
 
 const MCP_SETUP_HINTS: Record<Exclude<ToolType, 'all'>, string> = {
   claude: 'claude mcp add emdd -- npx @beomjk/emdd mcp\n             Windows: claude mcp add emdd -- cmd /c npx @beomjk/emdd mcp',
@@ -68,5 +68,16 @@ export function initCommand(targetPath: string | undefined, options: { lang?: st
   }
   for (const skipped of result.skipped) {
     console.log(`Skipped (already exists): ${skipped}`);
+  }
+
+  // Generate Claude Code skills (only for claude or all)
+  if (tool === 'claude' || tool === 'all') {
+    const skillResult = generateSkillFiles(target, { force: options.force });
+    for (const created of skillResult.created) {
+      console.log(`Created ${created}`);
+    }
+    for (const skipped of skillResult.skipped) {
+      console.log(`Skipped (already exists): ${skipped}`);
+    }
   }
 }

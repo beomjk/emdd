@@ -3,12 +3,14 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-// Mock generateRulesFile to avoid side effects
+// Mock generators to avoid side effects
 vi.mock('../../../src/rules/generators.js', () => ({
   generateRulesFile: vi.fn(() => ({ created: [], skipped: [] })),
+  generateSkillFiles: vi.fn(() => ({ created: ['.claude/skills/emdd-open/SKILL.md', '.claude/skills/emdd-close/SKILL.md'], skipped: [] })),
 }));
 
 import { initCommand } from '../../../src/cli/init.js';
+import { generateSkillFiles } from '../../../src/rules/generators.js';
 import { setLocale } from '../../../src/i18n/index.js';
 
 describe('initCommand next steps output', () => {
@@ -60,5 +62,33 @@ describe('initCommand next steps output', () => {
     initCommand(target, { tool: 'copilot' });
     const output = logSpy.mock.calls.map(c => String(c[0])).join('\n');
     expect(output).toContain('.vscode/mcp.json');
+  });
+
+  it('calls generateSkillFiles for --tool claude', () => {
+    const target = path.join(tmpDir, 'proj-skills');
+    (generateSkillFiles as ReturnType<typeof vi.fn>).mockClear();
+    initCommand(target, { tool: 'claude' });
+    expect(generateSkillFiles).toHaveBeenCalledWith(target, { force: undefined });
+  });
+
+  it('calls generateSkillFiles for --tool all', () => {
+    const target = path.join(tmpDir, 'proj-skills-all');
+    (generateSkillFiles as ReturnType<typeof vi.fn>).mockClear();
+    initCommand(target, { tool: 'all' });
+    expect(generateSkillFiles).toHaveBeenCalledWith(target, { force: undefined });
+  });
+
+  it('calls generateSkillFiles for default tool (no --tool flag)', () => {
+    const target = path.join(tmpDir, 'proj-skills-default');
+    (generateSkillFiles as ReturnType<typeof vi.fn>).mockClear();
+    initCommand(target, {});
+    expect(generateSkillFiles).toHaveBeenCalledWith(target, { force: undefined });
+  });
+
+  it('does not call generateSkillFiles for non-claude tools', () => {
+    const target = path.join(tmpDir, 'proj-skills-cursor');
+    (generateSkillFiles as ReturnType<typeof vi.fn>).mockClear();
+    initCommand(target, { tool: 'cursor' });
+    expect(generateSkillFiles).not.toHaveBeenCalled();
   });
 });

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { listNodes } from '../../graph/operations.js';
+import { resolveGraphDir } from '../../graph/loader.js';
 import { nextId } from '../../graph/templates.js';
 import { nodeDate } from '../../graph/date-utils.js';
 import { getLocale, setLocale } from '../../i18n/index.js';
@@ -145,14 +146,15 @@ export function registerEpisodeCreation(server: McpServer): void {
     meta.name,
     meta.description,
     {
-      graphDir: z.string().describe('Path to the EMDD graph directory'),
+      graphDir: z.string().optional().describe('Path to the EMDD graph directory'),
       lang: z.string().optional().describe('Language locale (en or ko)'),
     },
-    async ({ graphDir, lang }) => {
+    async ({ graphDir: rawGraphDir, lang }) => {
       const locale = getLocale(lang);
       setLocale(locale);
 
       try {
+        const graphDir = rawGraphDir || resolveGraphDir();
         // Get all nodes and find episodes
         const allNodes = await listNodes(graphDir);
         const episodes = allNodes

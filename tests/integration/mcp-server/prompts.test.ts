@@ -32,6 +32,20 @@ describe('MCP Prompts via SDK Client', () => {
   // --- context-loading ---
 
   describe('context-loading', () => {
+    it('works without graphDir (auto-resolves from cwd)', async () => {
+      // When graphDir is omitted, resolveGraphDir() is used.
+      // If no graph/ dir is found at cwd, the prompt returns an error message (not a crash).
+      const result = await client.getPrompt({
+        name: 'context-loading',
+        arguments: {},
+      });
+      expect(result.messages).toHaveLength(1);
+      const content = result.messages[0].content as { type: string; text: string };
+      expect(content.type).toBe('text');
+      // Either resolves successfully (EMDD content) or returns error text
+      expect(content.text.length).toBeGreaterThan(0);
+    });
+
     it('returns graph summary prompt', async () => {
       const result = await client.getPrompt({
         name: 'context-loading',
@@ -71,6 +85,17 @@ describe('MCP Prompts via SDK Client', () => {
   // --- episode-creation ---
 
   describe('episode-creation', () => {
+    it('works without graphDir (auto-resolves from cwd)', async () => {
+      const result = await client.getPrompt({
+        name: 'episode-creation',
+        arguments: {},
+      });
+      expect(result.messages).toHaveLength(1);
+      const content = result.messages[0].content as { type: string; text: string };
+      expect(content.type).toBe('text');
+      expect(content.text.length).toBeGreaterThan(0);
+    });
+
     it('returns episode template prompt', async () => {
       const result = await client.getPrompt({
         name: 'episode-creation',
@@ -98,6 +123,17 @@ describe('MCP Prompts via SDK Client', () => {
   // --- consolidation ---
 
   describe('consolidation', () => {
+    it('works without graphDir (auto-resolves from cwd)', async () => {
+      const result = await client.getPrompt({
+        name: 'consolidation',
+        arguments: {},
+      });
+      expect(result.messages).toHaveLength(1);
+      const content = result.messages[0].content as { type: string; text: string };
+      expect(content.type).toBe('text');
+      expect(content.text.length).toBeGreaterThan(0);
+    });
+
     it('returns trigger analysis', async () => {
       const result = await client.getPrompt({
         name: 'consolidation',
@@ -125,6 +161,17 @@ describe('MCP Prompts via SDK Client', () => {
   // --- health-review ---
 
   describe('health-review', () => {
+    it('works without graphDir (auto-resolves from cwd)', async () => {
+      const result = await client.getPrompt({
+        name: 'health-review',
+        arguments: {},
+      });
+      expect(result.messages).toHaveLength(1);
+      const content = result.messages[0].content as { type: string; text: string };
+      expect(content.type).toBe('text');
+      expect(content.text.length).toBeGreaterThan(0);
+    });
+
     it('returns health analysis prompt', async () => {
       const result = await client.getPrompt({
         name: 'health-review',

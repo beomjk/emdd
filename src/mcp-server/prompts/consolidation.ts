@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { checkConsolidation, getHealth, listNodes } from '../../graph/operations.js';
+import { resolveGraphDir } from '../../graph/loader.js';
 import { CEREMONY_TRIGGERS, THRESHOLDS } from '../../graph/types.js';
 import type { Node } from '../../graph/types.js';
 import { loadConfig } from '../../graph/config.js';
@@ -16,11 +17,12 @@ export function registerConsolidation(server: McpServer): void {
   server.prompt(
     meta.name,
     meta.description,
-    { graphDir: z.string().describe('Path to the EMDD graph directory'), lang: z.string().optional().describe('Language locale (en or ko)') },
-    async ({ graphDir, lang }) => {
+    { graphDir: z.string().optional().describe('Path to the EMDD graph directory'), lang: z.string().optional().describe('Language locale (en or ko)') },
+    async ({ graphDir: rawGraphDir, lang }) => {
       const locale = getLocale(lang);
       setLocale(locale);
       try {
+        const graphDir = rawGraphDir || resolveGraphDir();
         const checkResult = await checkConsolidation(graphDir);
         const health = await getHealth(graphDir);
         const ct = CEREMONY_TRIGGERS.consolidation;

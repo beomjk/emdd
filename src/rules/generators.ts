@@ -13,6 +13,7 @@ import {
 } from '../graph/types.js';
 
 export type ToolType = 'claude' | 'cursor' | 'windsurf' | 'cline' | 'copilot' | 'all';
+export type SkillName = 'emdd-open' | 'emdd-close';
 export type RulesVariant = 'full' | 'compact';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -69,6 +70,8 @@ ${idExamples}
 ## Session Cycle
 
 Use MCP prompts in order: \`context-loading\` (start) → work → \`episode-creation\` (end) → \`consolidation\` (if triggered) → \`health-review\` (periodic).
+
+Claude Code shortcuts: \`/emdd-open\` (start) and \`/emdd-close\` (end + maintenance + review).
 
 ## Key Rules
 
@@ -262,6 +265,81 @@ export function generateRulesFile(
     // Write the content
     const content = getRulesContent(t, variant);
     fs.writeFileSync(fullPath, content, 'utf-8');
+    created.push(relativePath);
+  }
+
+  return { created, skipped };
+}
+
+// ── Skill Generation ───────────────────────────────────────────────
+
+const SKILL_CONTENT: Record<SkillName, { description: string; body: string }> = {
+  'emdd-open': {
+    description: 'EMDD 세션을 시작합니다. 그래프 컨텍스트를 로드하고 세션 우선순위를 안내합니다.',
+    body: `# EMDD Session Open
+
+Use the \`context-loading\` MCP prompt from the \`emdd\` server to load graph context.
+
+## Instructions
+
+1. Call the MCP prompt \`context-loading\` (no arguments needed — graphDir is auto-resolved).
+2. Read the returned context — it contains graph state, episode arc, backlog, transition-ready nodes, and open questions.
+3. Follow the Session Priorities and Episode Directive sections in the output.
+`,
+  },
+  'emdd-close': {
+    description: 'EMDD 세션을 마무리합니다. 에피소드 작성, 컨솔리데이션 체크, 헬스 리뷰를 순서대로 진행합니다.',
+    body: `# EMDD Session Close
+
+End the EMDD session by running the closing prompts in sequence.
+
+## Instructions
+
+1. Call the MCP prompt \`episode-creation\` — write an Episode node recording this session's work.
+2. Call the MCP prompt \`consolidation\` — check if consolidation triggers are met and execute if needed.
+3. Call the MCP prompt \`health-review\` — review graph health and note recommendations for next session.
+
+Each prompt requires no arguments (graphDir is auto-resolved).
+If the consolidation prompt reports that no triggers are met, note that consolidation is not needed and proceed to step 3.
+`,
+  },
+};
+
+/**
+ * Get SKILL.md content for a given skill name.
+ */
+export function getSkillContent(skillName: SkillName): string {
+  const skill = SKILL_CONTENT[skillName];
+  if (!skill) {
+    throw new Error(`Unknown skill: ${skillName}`);
+  }
+  return `---\nname: ${skillName}\ndescription: >-\n  ${skill.description}\n---\n\n${skill.body}`;
+}
+
+/**
+ * Generate skill files for Claude Code at the given project path.
+ */
+export function generateSkillFiles(
+  projectPath: string,
+  options: { force?: boolean } = {},
+): { created: string[]; skipped: string[] } {
+  const force = options.force ?? false;
+  const skillNames: SkillName[] = ['emdd-open', 'emdd-close'];
+
+  const created: string[] = [];
+  const skipped: string[] = [];
+
+  for (const name of skillNames) {
+    const relativePath = path.join('.claude', 'skills', name, 'SKILL.md');
+    const fullPath = path.join(projectPath, relativePath);
+
+    if (!force && fs.existsSync(fullPath)) {
+      skipped.push(relativePath);
+      continue;
+    }
+
+    fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+    fs.writeFileSync(fullPath, getSkillContent(name), 'utf-8');
     created.push(relativePath);
   }
 

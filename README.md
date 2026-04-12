@@ -110,10 +110,13 @@ claude mcp add emdd -- npx @beomjk/emdd mcp
 
 ```bash
 emdd init my-research --tool cursor   # creates .cursor/rules/emdd.mdc
+emdd init my-research --tool claude   # creates .claude/CLAUDE.md + skills (/emdd-open, /emdd-close)
 emdd init my-research --tool all      # generates rules for all supported tools
 ```
 
 Supported tools: `claude` (default), `cursor`, `windsurf`, `cline`, `copilot`, `all`.
+
+For Claude Code, use `/emdd-open` to start a session and `/emdd-close` to wrap up (writes Episode, checks consolidation, reviews health).
 
 ## What is EMDD?
 
