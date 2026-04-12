@@ -1077,3 +1077,44 @@ Claude Code shortcuts: \`/emdd-open\` (start) and \`/emdd-close\` (end + mainten
 5. Graph is source of truth; you are a gardener, not an architect — suggest, don't decide
 "
 `;
+
+exports[`getSkillContent > emdd-close skill content matches snapshot 1`] = `
+"---
+name: emdd-close
+description: >-
+  EMDD 세션을 마무리합니다. 에피소드 작성, 컨솔리데이션 체크, 헬스 리뷰를 순서대로 진행합니다.
+---
+
+# EMDD Session Close
+
+End the EMDD session by running the closing prompts in sequence.
+
+## Instructions
+
+1. Call the MCP prompt \`episode-creation\` — write an Episode node recording this session's work.
+2. Call the MCP prompt \`consolidation\` — check if consolidation triggers are met and execute if needed.
+3. Call the MCP prompt \`health-review\` — review graph health and note recommendations for next session.
+
+Each prompt requires no arguments (graphDir is auto-resolved).
+If the consolidation prompt reports that no triggers are met, note that consolidation is not needed and proceed to step 3.
+"
+`;
+
+exports[`getSkillContent > emdd-open skill content matches snapshot 1`] = `
+"---
+name: emdd-open
+description: >-
+  EMDD 세션을 시작합니다. 그래프 컨텍스트를 로드하고 세션 우선순위를 안내합니다.
+---
+
+# EMDD Session Open
+
+Use the \`context-loading\` MCP prompt from the \`emdd\` server to load graph context.
+
+## Instructions
+
+1. Call the MCP prompt \`context-loading\` (no arguments needed — graphDir is auto-resolved).
+2. Read the returned context — it contains graph state, episode arc, backlog, transition-ready nodes, and open questions.
+3. Follow the Session Priorities and Episode Directive sections in the output.
+"
+`;

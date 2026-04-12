@@ -210,6 +210,14 @@ describe('getSkillContent', () => {
   it('throws for unknown skill name', () => {
     expect(() => getSkillContent('unknown' as any)).toThrow();
   });
+
+  it('emdd-open skill content matches snapshot', () => {
+    expect(getSkillContent('emdd-open')).toMatchSnapshot();
+  });
+
+  it('emdd-close skill content matches snapshot', () => {
+    expect(getSkillContent('emdd-close')).toMatchSnapshot();
+  });
 });
 
 describe('generateSkillFiles', () => {

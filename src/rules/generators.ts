@@ -11,7 +11,6 @@ import {
   VALID_STATUSES,
   type NodeType,
 } from '../graph/types.js';
-import { PROMPT_META } from '../mcp-server/prompts/meta.js';
 
 export type ToolType = 'claude' | 'cursor' | 'windsurf' | 'cline' | 'copilot' | 'all';
 export type SkillName = 'emdd-open' | 'emdd-close';
@@ -301,7 +300,7 @@ End the EMDD session by running the closing prompts in sequence.
 3. Call the MCP prompt \`health-review\` — review graph health and note recommendations for next session.
 
 Each prompt requires no arguments (graphDir is auto-resolved).
-If consolidation triggers are not met, skip step 2 and note that consolidation is not needed.
+If the consolidation prompt reports that no triggers are met, note that consolidation is not needed and proceed to step 3.
 `,
   },
 };

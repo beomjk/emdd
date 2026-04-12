@@ -85,6 +85,17 @@ describe('MCP Prompts via SDK Client', () => {
   // --- episode-creation ---
 
   describe('episode-creation', () => {
+    it('works without graphDir (auto-resolves from cwd)', async () => {
+      const result = await client.getPrompt({
+        name: 'episode-creation',
+        arguments: {},
+      });
+      expect(result.messages).toHaveLength(1);
+      const content = result.messages[0].content as { type: string; text: string };
+      expect(content.type).toBe('text');
+      expect(content.text.length).toBeGreaterThan(0);
+    });
+
     it('returns episode template prompt', async () => {
       const result = await client.getPrompt({
         name: 'episode-creation',
@@ -112,6 +123,17 @@ describe('MCP Prompts via SDK Client', () => {
   // --- consolidation ---
 
   describe('consolidation', () => {
+    it('works without graphDir (auto-resolves from cwd)', async () => {
+      const result = await client.getPrompt({
+        name: 'consolidation',
+        arguments: {},
+      });
+      expect(result.messages).toHaveLength(1);
+      const content = result.messages[0].content as { type: string; text: string };
+      expect(content.type).toBe('text');
+      expect(content.text.length).toBeGreaterThan(0);
+    });
+
     it('returns trigger analysis', async () => {
       const result = await client.getPrompt({
         name: 'consolidation',
@@ -139,6 +161,17 @@ describe('MCP Prompts via SDK Client', () => {
   // --- health-review ---
 
   describe('health-review', () => {
+    it('works without graphDir (auto-resolves from cwd)', async () => {
+      const result = await client.getPrompt({
+        name: 'health-review',
+        arguments: {},
+      });
+      expect(result.messages).toHaveLength(1);
+      const content = result.messages[0].content as { type: string; text: string };
+      expect(content.type).toBe('text');
+      expect(content.text.length).toBeGreaterThan(0);
+    });
+
     it('returns health analysis prompt', async () => {
       const result = await client.getPrompt({
         name: 'health-review',
