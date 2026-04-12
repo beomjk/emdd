@@ -823,4 +823,83 @@ describe('CytoscapeGraph', () => {
       expect(clusterAdd).toBeUndefined();
     });
   });
+
+  describe('cluster parent tap-to-zoom', () => {
+    it('registers a tap handler on cluster parent nodes', async () => {
+      renderGraph();
+      await waitFor(() => {
+        expect(mockCyInstance.on).toHaveBeenCalledWith(
+          'tap',
+          'node[?isCluster]',
+          expect.any(Function),
+        );
+      });
+    });
+
+    it('animates fit-to-children when cluster parent is tapped', async () => {
+      renderGraph();
+      await waitFor(() => expect(mockCytoscape).toHaveBeenCalled());
+
+      // Find the cluster tap handler
+      const tapCalls = (mockCyInstance.on as Mock).mock.calls.filter(
+        (c: any[]) => c[0] === 'tap' && c[1] === 'node[?isCluster]',
+      );
+      expect(tapCalls.length).toBeGreaterThan(0);
+      const handler = tapCalls[0][2] as Function;
+
+      // Simulate a cluster tap event with children
+      const mockChildren = [{ id: () => 'child1' }, { id: () => 'child2' }];
+      const mockCluster = { children: vi.fn(() => mockChildren) };
+      handler({ target: mockCluster });
+
+      expect(mockCyInstance.animate).toHaveBeenCalledWith(
+        expect.objectContaining({ fit: expect.objectContaining({ eles: mockChildren, padding: 40 }) }),
+        expect.objectContaining({ duration: 300 }),
+      );
+    });
+
+    it('does not animate when cluster has no children', async () => {
+      renderGraph();
+      await waitFor(() => expect(mockCytoscape).toHaveBeenCalled());
+
+      const tapCalls = (mockCyInstance.on as Mock).mock.calls.filter(
+        (c: any[]) => c[0] === 'tap' && c[1] === 'node[?isCluster]',
+      );
+      const handler = tapCalls[0][2] as Function;
+
+      const mockCluster = { children: vi.fn(() => ({ length: 0 })) };
+      handler({ target: mockCluster });
+
+      expect(mockCyInstance.animate).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('drag tracking', () => {
+    it('registers a drag handler on non-cluster nodes', async () => {
+      renderGraph();
+      await waitFor(() => {
+        expect(mockCyInstance.on).toHaveBeenCalledWith(
+          'drag',
+          'node[!isCluster]',
+          expect.any(Function),
+        );
+      });
+    });
+
+    it('marks dragged node as manually positioned via scratch', async () => {
+      renderGraph();
+      await waitFor(() => expect(mockCytoscape).toHaveBeenCalled());
+
+      const dragCalls = (mockCyInstance.on as Mock).mock.calls.filter(
+        (c: any[]) => c[0] === 'drag' && c[1] === 'node[!isCluster]',
+      );
+      expect(dragCalls.length).toBeGreaterThan(0);
+      const handler = dragCalls[0][2] as Function;
+
+      const mockScratch = vi.fn();
+      handler({ target: { scratch: mockScratch } });
+
+      expect(mockScratch).toHaveBeenCalledWith('_manuallyPositioned', true);
+    });
+  });
 });

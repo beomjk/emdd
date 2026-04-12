@@ -43,6 +43,7 @@ vi.mock('../../../../src/web/frontend/components/HealthSidebar.svelte', () => ({
 import App from '../../../../src/web/frontend/App.svelte';
 import { fetchGraph, fetchNeighbors, fetchNodeDetail, fetchExportHtml, triggerRefresh } from '../../../../src/web/frontend/lib/api.js';
 import { dashboardState } from '../../../../src/web/frontend/state/dashboard.svelte.js';
+import { filterState } from '../../../../src/web/frontend/state/filters.svelte.js';
 import { sseState } from '../../../../src/web/frontend/state/sse.svelte.js';
 
 const mockFetchGraph = vi.mocked(fetchGraph);
@@ -380,10 +381,34 @@ describe('App', () => {
           expect.any(Array),
           expect.any(Array),
           expect.any(Array),
+          expect.objectContaining({ signal: expect.any(AbortSignal) }),
         );
       });
 
       vi.unstubAllGlobals();
+    });
+
+    it('shows error toast when all types are deselected and export is clicked', async () => {
+      const graph = makeGraph([makeNode()], []);
+      mockFetchGraph.mockResolvedValue(graph);
+      render(App);
+      await waitFor(() => {
+        screen.getByRole('button', { name: /export/i });
+      });
+
+      // Deselect all types so visibleTypes becomes empty
+      for (const t of filterState.allTypes) {
+        filterState.toggleType(t);
+      }
+
+      const btn = screen.getByRole('button', { name: /export/i });
+      await btn.click();
+
+      await waitFor(() => {
+        expect(screen.getByText('Select at least one type and one status to export')).toBeInTheDocument();
+      });
+      // fetchExportHtml should NOT have been called
+      expect(mockFetchExportHtml).not.toHaveBeenCalled();
     });
   });
 

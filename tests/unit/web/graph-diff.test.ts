@@ -188,4 +188,43 @@ describe('diffGraph', () => {
     expect(delta.updatedNodes[0].id).toBe('a');
     expect(delta.topologyChanged).toBe(false);
   });
+
+  // ── Combined mutation scenario ──────────────────────────────────────
+  it('handles simultaneous add, remove, and update in a single diff', () => {
+    const old = makeGraph(
+      [
+        makeNode('a', { title: 'A original' }),
+        makeNode('b', { title: 'B to remove' }),
+        makeNode('c', { title: 'C unchanged' }),
+      ],
+      [makeEdge('a', 'b'), makeEdge('a', 'c')],
+    );
+
+    const next = makeGraph(
+      [
+        makeNode('a', { title: 'A updated' }),     // updated (title change)
+        // 'b' removed
+        makeNode('c', { title: 'C unchanged' }),    // unchanged
+        makeNode('d', { title: 'D new' }),           // added
+      ],
+      [makeEdge('a', 'c'), makeEdge('a', 'd', 'supports')],  // 'a→b' removed, 'a→d' added
+    );
+
+    const delta = diffGraph(old, next, buildNodeData, buildEdgeData);
+
+    // Nodes
+    expect(delta.addedNodes).toHaveLength(1);
+    expect(delta.addedNodes[0].id).toBe('d');
+    expect(delta.removedNodeIds).toEqual(['b']);
+    expect(delta.updatedNodes).toHaveLength(1);
+    expect(delta.updatedNodes[0].id).toBe('a');
+
+    // Edges
+    expect(delta.addedEdges).toHaveLength(1);
+    expect(delta.addedEdges[0].id).toBe('a-supports-d');
+    expect(delta.removedEdgeIds).toEqual(['a-tests-b']);
+
+    // Topology changed because nodes/edges were added and removed
+    expect(delta.topologyChanged).toBe(true);
+  });
 });

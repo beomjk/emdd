@@ -203,4 +203,51 @@ describe('filterState', () => {
       expect(filterState.hasActiveFilters).toBe(true);
     });
   });
+
+  describe('stripEmpty', () => {
+    it('excludes empty-string statuses from allStatuses and visibleStatuses', () => {
+      // Nodes without a `status` frontmatter field get coerced to '' by the
+      // loader. The filter store should strip these so they never appear as
+      // filter chips.
+      const graph: SerializedGraph = {
+        nodes: [
+          { id: 'a', title: 'A', type: 'hypothesis', status: '', tags: [], links: [] },
+          { id: 'b', title: 'B', type: 'hypothesis', status: 'PROPOSED', tags: [], links: [] },
+        ],
+        edges: [],
+        loadedAt: new Date().toISOString(),
+      };
+      filterState.initFromGraph(graph);
+
+      expect(filterState.allStatuses).toEqual(['PROPOSED']);
+      expect(filterState.visibleStatuses).toEqual(new Set(['PROPOSED']));
+      // The empty string should not appear in either list
+      expect(filterState.allStatuses).not.toContain('');
+      expect(filterState.visibleStatuses.has('')).toBe(false);
+    });
+
+    it('excludes empty-string statuses after mergeFromGraph', () => {
+      const graph1: SerializedGraph = {
+        nodes: [
+          { id: 'a', title: 'A', type: 'hypothesis', status: 'PROPOSED', tags: [], links: [] },
+        ],
+        edges: [],
+        loadedAt: new Date().toISOString(),
+      };
+      filterState.initFromGraph(graph1);
+
+      const graph2: SerializedGraph = {
+        nodes: [
+          { id: 'a', title: 'A', type: 'hypothesis', status: 'PROPOSED', tags: [], links: [] },
+          { id: 'b', title: 'B', type: 'experiment', status: '', tags: [], links: [] },
+        ],
+        edges: [],
+        loadedAt: new Date().toISOString(),
+      };
+      filterState.mergeFromGraph(graph2);
+
+      expect(filterState.allStatuses).not.toContain('');
+      expect(filterState.visibleStatuses.has('')).toBe(false);
+    });
+  });
 });

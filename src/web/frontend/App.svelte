@@ -26,6 +26,7 @@
   // initial loadGraph, manual refresh, and SSE updates all share this slot
   // so the most recent request always wins and earlier ones are cancelled.
   let graphLoadAbort: AbortController | null = null;
+  let exportAbort: AbortController | null = null;
 
   async function refetchNeighbors(id: string, depth: number): Promise<void> {
     neighborAbort?.abort();
@@ -102,7 +103,9 @@
         return;
       }
       const edgeTypes = [...filterState.visibleEdgeTypes];
-      const html = await fetchExportHtml(dashboardState.layout, types, statuses, edgeTypes);
+      exportAbort?.abort();
+      exportAbort = new AbortController();
+      const html = await fetchExportHtml(dashboardState.layout, types, statuses, edgeTypes, { signal: exportAbort.signal });
       const blob = new Blob([html], { type: 'text/html' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -204,6 +207,7 @@
       sseState.disconnect();
       neighborAbort?.abort();
       graphLoadAbort?.abort();
+      exportAbort?.abort();
       if (toastTimer) clearTimeout(toastTimer);
     };
   });

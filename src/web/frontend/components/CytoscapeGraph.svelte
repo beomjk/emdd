@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import cytoscape from 'cytoscape';
   import type { SerializedGraph, SerializedNode, LayoutMode } from '../../types.js';
   import { getNodeColor, getStatusBorder } from '../lib/constants.js';
@@ -470,9 +471,11 @@
       }
     });
 
-    // Run layout only when topology changed
+    // Run layout only when topology changed. Read `layout` via untrack so
+    // that changing the layout mode does not re-trigger this data-sync effect
+    // — the dedicated layout-switch effect (below) handles that case.
     if (delta.topologyChanged) {
-      const layoutConfig = getLayoutConfig(layout, !isInitial, isInitial);
+      const layoutConfig = getLayoutConfig(untrack(() => layout), !isInitial, isInitial);
       runLayout(cy, layoutConfig).run();
     }
 

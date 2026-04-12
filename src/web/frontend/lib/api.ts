@@ -65,7 +65,7 @@ export async function fetchClusters(init?: RequestInit): Promise<{ clusters: Vis
 export async function triggerRefresh(
   init?: RequestInit,
 ): Promise<{ reloaded: boolean; loadedAt: string; nodeCount: number }> {
-  return apiFetch('/api/refresh', { method: 'POST', ...init });
+  return apiFetch('/api/refresh', { ...init, method: 'POST' });
 }
 
 export async function fetchExportHtml(
