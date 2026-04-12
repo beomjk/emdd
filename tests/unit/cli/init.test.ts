@@ -78,6 +78,13 @@ describe('initCommand next steps output', () => {
     expect(generateSkillFiles).toHaveBeenCalledWith(target, { force: undefined });
   });
 
+  it('calls generateSkillFiles for default tool (no --tool flag)', () => {
+    const target = path.join(tmpDir, 'proj-skills-default');
+    (generateSkillFiles as ReturnType<typeof vi.fn>).mockClear();
+    initCommand(target, {});
+    expect(generateSkillFiles).toHaveBeenCalledWith(target, { force: undefined });
+  });
+
   it('does not call generateSkillFiles for non-claude tools', () => {
     const target = path.join(tmpDir, 'proj-skills-cursor');
     (generateSkillFiles as ReturnType<typeof vi.fn>).mockClear();
