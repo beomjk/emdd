@@ -31,6 +31,13 @@ function uniqueSorted<T>(values: Iterable<T>): T[] {
   return [...new Set(values)].sort();
 }
 
+/** True when two sets contain exactly the same elements. */
+function setsEqual<T>(a: Set<T>, b: Set<T>): boolean {
+  if (a.size !== b.size) return false;
+  for (const v of a) if (!b.has(v)) return false;
+  return true;
+}
+
 export const filterState = {
   get visibleTypes() { return _visibleTypes; },
   get visibleStatuses() { return _visibleStatuses; },
@@ -89,7 +96,7 @@ export const filterState = {
     for (const t of nextTypes) {
       if (!incomingTypes.has(t)) nextTypes.delete(t);
     }
-    _visibleTypes = nextTypes;
+    if (!setsEqual(_visibleTypes, nextTypes)) _visibleTypes = nextTypes;
 
     const nextStatuses = new Set(_visibleStatuses);
     for (const s of incomingStatuses) {
@@ -98,7 +105,7 @@ export const filterState = {
     for (const s of nextStatuses) {
       if (!incomingStatuses.has(s)) nextStatuses.delete(s);
     }
-    _visibleStatuses = nextStatuses;
+    if (!setsEqual(_visibleStatuses, nextStatuses)) _visibleStatuses = nextStatuses;
 
     const nextEdges = new Set(_visibleEdgeTypes);
     for (const e of incomingEdges) {
@@ -107,7 +114,7 @@ export const filterState = {
     for (const e of nextEdges) {
       if (!incomingEdges.has(e)) nextEdges.delete(e);
     }
-    _visibleEdgeTypes = nextEdges;
+    if (!setsEqual(_visibleEdgeTypes, nextEdges)) _visibleEdgeTypes = nextEdges;
 
     _allTypes = uniqueSorted(incomingTypes);
     _allStatuses = uniqueSorted(incomingStatuses);

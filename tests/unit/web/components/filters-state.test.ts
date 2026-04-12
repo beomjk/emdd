@@ -250,4 +250,56 @@ describe('filterState', () => {
       expect(filterState.visibleStatuses.has('')).toBe(false);
     });
   });
+
+  describe('reactivity optimization', () => {
+    it('mergeFromGraph does not reassign sets when values are unchanged', () => {
+      const graph: SerializedGraph = {
+        nodes: [
+          { id: 'a', title: 'A', type: 'hypothesis', status: 'PROPOSED', tags: [], links: [] },
+          { id: 'b', title: 'B', type: 'experiment', status: 'TESTING', tags: [], links: [] },
+        ],
+        edges: [{ source: 'a', target: 'b', relation: 'tests' }],
+        loadedAt: new Date().toISOString(),
+      };
+      filterState.initFromGraph(graph);
+
+      // Capture current Set references
+      const prevTypes = filterState.visibleTypes;
+      const prevStatuses = filterState.visibleStatuses;
+      const prevEdges = filterState.visibleEdgeTypes;
+
+      // Merge identical graph — sets should be same references (no $state trigger)
+      filterState.mergeFromGraph(graph);
+
+      expect(filterState.visibleTypes).toBe(prevTypes);
+      expect(filterState.visibleStatuses).toBe(prevStatuses);
+      expect(filterState.visibleEdgeTypes).toBe(prevEdges);
+    });
+
+    it('mergeFromGraph reassigns sets when values actually change', () => {
+      const graph1: SerializedGraph = {
+        nodes: [
+          { id: 'a', title: 'A', type: 'hypothesis', status: 'PROPOSED', tags: [], links: [] },
+        ],
+        edges: [],
+        loadedAt: new Date().toISOString(),
+      };
+      filterState.initFromGraph(graph1);
+      const prevTypes = filterState.visibleTypes;
+
+      const graph2: SerializedGraph = {
+        nodes: [
+          { id: 'a', title: 'A', type: 'hypothesis', status: 'PROPOSED', tags: [], links: [] },
+          { id: 'b', title: 'B', type: 'experiment', status: 'TESTING', tags: [], links: [] },
+        ],
+        edges: [],
+        loadedAt: new Date().toISOString(),
+      };
+      filterState.mergeFromGraph(graph2);
+
+      // New type 'experiment' was added → new Set reference
+      expect(filterState.visibleTypes).not.toBe(prevTypes);
+      expect(filterState.visibleTypes.has('experiment')).toBe(true);
+    });
+  });
 });

@@ -102,7 +102,7 @@ describe('sseState', () => {
     expect(handler).not.toHaveBeenCalled();
 
     es1.triggerError(); // drop
-    vi.advanceTimersByTime(3000);
+    vi.advanceTimersByTime(1000); // initial backoff is 1s
     const es2 = MockEventSource.instances[1];
     es2.emit('connected'); // reconnect → handler called
     vi.advanceTimersByTime(200);
@@ -161,7 +161,7 @@ describe('sseState', () => {
     expect(sseState.connected).toBe(false);
   });
 
-  it('reconnects after error with 3s delay', () => {
+  it('reconnects after error with 1s initial delay', () => {
     sseState.connect();
     const es = MockEventSource.instances[0];
     es.triggerError();
@@ -172,10 +172,97 @@ describe('sseState', () => {
     // Should not reconnect immediately
     expect(MockEventSource.instances).toHaveLength(1);
 
-    // Advance past reconnect delay
-    vi.advanceTimersByTime(3000);
+    // Not yet at 1s
+    vi.advanceTimersByTime(999);
+    expect(MockEventSource.instances).toHaveLength(1);
+
+    // At 1s — reconnect fires
+    vi.advanceTimersByTime(1);
     expect(MockEventSource.instances).toHaveLength(2);
     expect(MockEventSource.instances[1].url).toBe('/api/events');
+  });
+
+  it('exponential backoff doubles delay on each failure (1s → 2s → 4s)', () => {
+    sseState.connect();
+
+    // First failure: 1s delay
+    MockEventSource.instances[0].triggerError();
+    vi.advanceTimersByTime(999);
+    expect(MockEventSource.instances).toHaveLength(1);
+    vi.advanceTimersByTime(1);
+    expect(MockEventSource.instances).toHaveLength(2);
+
+    // Second failure: 2s delay
+    MockEventSource.instances[1].triggerError();
+    vi.advanceTimersByTime(1999);
+    expect(MockEventSource.instances).toHaveLength(2);
+    vi.advanceTimersByTime(1);
+    expect(MockEventSource.instances).toHaveLength(3);
+
+    // Third failure: 4s delay
+    MockEventSource.instances[2].triggerError();
+    vi.advanceTimersByTime(3999);
+    expect(MockEventSource.instances).toHaveLength(3);
+    vi.advanceTimersByTime(1);
+    expect(MockEventSource.instances).toHaveLength(4);
+  });
+
+  it('backoff caps at 30s', () => {
+    sseState.connect();
+
+    // Drive delay to 32s (1→2→4→8→16→32), which should cap at 30s
+    for (let i = 0; i < 5; i++) {
+      MockEventSource.instances[MockEventSource.instances.length - 1].triggerError();
+      // Advance past max possible delay to trigger reconnect
+      vi.advanceTimersByTime(30_000);
+    }
+
+    // 6th failure: delay should be capped at 30s, not 32s
+    const countBefore = MockEventSource.instances.length;
+    MockEventSource.instances[countBefore - 1].triggerError();
+
+    vi.advanceTimersByTime(29_999);
+    expect(MockEventSource.instances).toHaveLength(countBefore);
+    vi.advanceTimersByTime(1);
+    expect(MockEventSource.instances).toHaveLength(countBefore + 1);
+  });
+
+  it('backoff resets to 1s after successful reconnect', () => {
+    sseState.connect();
+
+    // Fail twice to increase delay to 2s
+    MockEventSource.instances[0].triggerError();
+    vi.advanceTimersByTime(1000);
+    MockEventSource.instances[1].triggerError();
+    vi.advanceTimersByTime(2000);
+
+    // Successful reconnect
+    MockEventSource.instances[2].emit('connected');
+
+    // Next failure should use 1s delay again (reset)
+    MockEventSource.instances[2].triggerError();
+    vi.advanceTimersByTime(999);
+    expect(MockEventSource.instances).toHaveLength(3);
+    vi.advanceTimersByTime(1);
+    expect(MockEventSource.instances).toHaveLength(4);
+  });
+
+  it('rapid errors do not create duplicate reconnect timers', () => {
+    sseState.connect();
+    const es = MockEventSource.instances[0];
+
+    // Fire multiple errors before the reconnect timer fires
+    es.triggerError();
+    es.triggerError();
+    es.triggerError();
+
+    // Only ONE reconnect should happen after the initial 1s delay
+    vi.advanceTimersByTime(1000);
+    expect(MockEventSource.instances).toHaveLength(2);
+
+    // No additional reconnects from the duplicate errors
+    vi.advanceTimersByTime(5000);
+    expect(MockEventSource.instances).toHaveLength(2);
   });
 
   it('disconnect cancels pending reconnect timer', () => {

@@ -259,10 +259,41 @@
   }
 
   // ── Cluster application ─────────────────────────────────────────────
+  // Track previous cluster membership to skip unnecessary rebuilds.
+  // Key: cluster.id, Value: sorted nodeIds joined by ','
+  let prevClusterFingerprint: Map<string, string> | null = null;
+
+  function clusterMembershipChanged(
+    clusters: { id: string; nodeIds: string[] }[],
+  ): boolean {
+    if (!prevClusterFingerprint) return true;
+    if (clusters.length !== prevClusterFingerprint.size) return true;
+    for (const c of clusters) {
+      const prev = prevClusterFingerprint.get(c.id);
+      if (prev === undefined) return true;
+      const curr = [...c.nodeIds].sort().join(',');
+      if (prev !== curr) return true;
+    }
+    return false;
+  }
+
+  function buildClusterFingerprint(
+    clusters: { id: string; nodeIds: string[] }[],
+  ): Map<string, string> {
+    const map = new Map<string, string>();
+    for (const c of clusters) {
+      map.set(c.id, [...c.nodeIds].sort().join(','));
+    }
+    return map;
+  }
+
   async function applyClustersToGraph(cyInst: cytoscape.Core, signal?: AbortSignal): Promise<void> {
     try {
       const { clusters } = await fetchClusters(signal ? { signal } : undefined);
       if (signal?.aborted) return;
+
+      // Skip full rebuild when cluster membership is unchanged.
+      if (!clusterMembershipChanged(clusters ?? [])) return;
 
       // Orphan cluster children BEFORE removing the compound parents.
       // Cytoscape cascades removal to descendants, so removing the parent
@@ -296,6 +327,8 @@
           }
         }
       }
+
+      prevClusterFingerprint = buildClusterFingerprint(clusters ?? []);
 
       // Re-apply filter visibility so that freshly-added cluster parents
       // correctly collapse when all their children are hidden. Without this
