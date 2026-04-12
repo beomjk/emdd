@@ -64,6 +64,7 @@
     dashboardState.selectNode(id);
     await refetchNeighbors(id, hopDepth);
     graphRef?.panToNode(id);
+    graphRef?.pulseNode(id);
   }
 
   function deselectNode(): void {
@@ -99,7 +100,8 @@
         showToast('Select at least one type and one status to export', 'error');
         return;
       }
-      const html = await fetchExportHtml(dashboardState.layout, types, statuses);
+      const edgeTypes = [...filterState.visibleEdgeTypes];
+      const html = await fetchExportHtml(dashboardState.layout, types, statuses, edgeTypes);
       const blob = new Blob([html], { type: 'text/html' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -141,6 +143,7 @@
       showToast('Graph refreshed');
     } catch (e) {
       if ((e as Error)?.name === 'AbortError') return;
+      loading = false;
       showToast(e instanceof Error ? e.message : 'Failed to refresh', 'error');
     }
   }
@@ -185,6 +188,7 @@
       showToast('Graph updated');
     } catch (e) {
       if ((e as Error)?.name === 'AbortError') return;
+      loading = false;
       showToast(e instanceof Error ? e.message : 'Failed to update graph', 'error');
     }
   }
@@ -192,9 +196,10 @@
   // Load graph on mount + set up SSE
   $effect(() => {
     loadGraph();
-    sseState.onGraphUpdated(handleGraphUpdated);
+    const unsubSse = sseState.onGraphUpdated(handleGraphUpdated);
     sseState.connect();
     return () => {
+      unsubSse();
       sseState.disconnect();
       neighborAbort?.abort();
       graphLoadAbort?.abort();
@@ -245,7 +250,7 @@
     {:else if !dashboardState.graph || dashboardState.graph.nodes.length === 0}
       <div class="empty-state">
         <p>No nodes found in the graph.</p>
-        <p class="empty-hint">Create some nodes with <code>emdd add</code> to get started.</p>
+        <p class="empty-hint">Create some nodes with <code>emdd new &lt;type&gt; &lt;slug&gt;</code> to get started.</p>
       </div>
     {:else}
       <HealthSidebar onNodeClick={selectNode} />

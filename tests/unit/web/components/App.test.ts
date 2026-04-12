@@ -16,7 +16,7 @@ vi.mock('../../../../src/web/frontend/state/sse.svelte.js', () => ({
     lastUpdate: null,
     connect: vi.fn(),
     disconnect: vi.fn(),
-    onGraphUpdated: vi.fn(),
+    onGraphUpdated: vi.fn(() => vi.fn()),
   },
 }));
 
@@ -100,11 +100,11 @@ describe('App', () => {
       });
     });
 
-    it('shows hint about emdd add', async () => {
+    it('shows hint about emdd new command', async () => {
       mockFetchGraph.mockResolvedValue(makeGraph([], []));
       render(App);
       await waitFor(() => {
-        expect(screen.getByText('emdd add')).toBeInTheDocument();
+        expect(screen.getByText(/emdd new/)).toBeInTheDocument();
       });
     });
   });
@@ -377,6 +377,7 @@ describe('App', () => {
       await waitFor(() => {
         expect(mockFetchExportHtml).toHaveBeenCalledWith(
           dashboardState.layout,
+          expect.any(Array),
           expect.any(Array),
           expect.any(Array),
         );

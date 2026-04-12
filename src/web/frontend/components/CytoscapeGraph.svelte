@@ -571,13 +571,13 @@
     const _neigh = neighborIds;
 
     cy.batch(() => {
-      if (!_sel || _neigh.length === 0) {
+      if (!_sel) {
         cy!.elements().removeClass('dimmed').removeClass('highlighted');
         return;
       }
 
       const keepSet = new Set([_sel, ..._neigh]);
-      cy!.nodes().forEach((node) => {
+      cy!.nodes('[!isCluster]').forEach((node) => {
         if (keepSet.has(node.id())) {
           node.removeClass('dimmed').addClass('highlighted');
         } else {

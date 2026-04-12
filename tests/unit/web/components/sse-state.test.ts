@@ -68,14 +68,80 @@ describe('sseState', () => {
     expect(sseState.connected).toBe(true);
   });
 
-  it('calls handler on "graph-updated" event', () => {
+  it('calls handler on "graph-updated" event after debounce', () => {
     const handler = vi.fn();
     sseState.onGraphUpdated(handler);
     sseState.connect();
     const es = MockEventSource.instances[0];
     es.emit('graph-updated');
+    // Handler is debounced — not called synchronously
+    expect(handler).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(200);
     expect(handler).toHaveBeenCalledOnce();
     expect(sseState.lastUpdate).not.toBeNull();
+  });
+
+  it('debounces rapid graph-updated events into a single handler call', () => {
+    const handler = vi.fn();
+    sseState.onGraphUpdated(handler);
+    sseState.connect();
+    const es = MockEventSource.instances[0];
+    // Fire 5 rapid events within the debounce window
+    for (let i = 0; i < 5; i++) es.emit('graph-updated');
+    vi.advanceTimersByTime(200);
+    expect(handler).toHaveBeenCalledOnce();
+  });
+
+  it('calls handler on reconnect (not on initial connect)', () => {
+    const handler = vi.fn();
+    sseState.onGraphUpdated(handler);
+    sseState.connect();
+    const es1 = MockEventSource.instances[0];
+    es1.emit('connected'); // initial → handler NOT called
+    vi.advanceTimersByTime(200);
+    expect(handler).not.toHaveBeenCalled();
+
+    es1.triggerError(); // drop
+    vi.advanceTimersByTime(3000);
+    const es2 = MockEventSource.instances[1];
+    es2.emit('connected'); // reconnect → handler called
+    vi.advanceTimersByTime(200);
+    expect(handler).toHaveBeenCalledOnce();
+  });
+
+  it('supports multiple subscribers', () => {
+    const h1 = vi.fn();
+    const h2 = vi.fn();
+    sseState.onGraphUpdated(h1);
+    sseState.onGraphUpdated(h2);
+    sseState.connect();
+    const es = MockEventSource.instances[0];
+    es.emit('graph-updated');
+    vi.advanceTimersByTime(200);
+    expect(h1).toHaveBeenCalledOnce();
+    expect(h2).toHaveBeenCalledOnce();
+  });
+
+  it('onGraphUpdated returns unsubscribe function', () => {
+    const handler = vi.fn();
+    const unsub = sseState.onGraphUpdated(handler);
+    sseState.connect();
+    const es = MockEventSource.instances[0];
+    unsub();
+    es.emit('graph-updated');
+    vi.advanceTimersByTime(200);
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it('disconnect clears all handlers', () => {
+    const handler = vi.fn();
+    sseState.onGraphUpdated(handler);
+    sseState.disconnect();
+    sseState.connect();
+    const es = MockEventSource.instances[0];
+    es.emit('graph-updated');
+    vi.advanceTimersByTime(200);
+    expect(handler).not.toHaveBeenCalled();
   });
 
   it('does not create duplicate EventSource on repeated connect()', () => {

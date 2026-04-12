@@ -2,7 +2,8 @@ let _connected = $state(false);
 let _lastUpdate = $state<string | null>(null);
 let _eventSource: EventSource | null = null;
 let _reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-let _handler: (() => void) | null = null;
+let _debounceTimer: ReturnType<typeof setTimeout> | null = null;
+let _handlers = new Set<() => void>();
 // Track whether this session has ever connected. The first 'connected' event
 // is the initial handshake (the caller's $effect already kicks off loadGraph),
 // but any subsequent 'connected' event means we reconnected after a drop —
@@ -28,12 +29,19 @@ export const sseState = {
       // mutations that happened during the disconnected window. EventSource
       // has no replay buffer, so graph-updated events broadcast during the
       // gap are already lost — the only way to recover is to refetch.
-      if (wasReconnect) _handler?.();
+      if (wasReconnect) _handlers.forEach((h) => h());
     });
 
     _eventSource.addEventListener('graph-updated', () => {
       _lastUpdate = new Date().toISOString();
-      _handler?.();
+      // Debounce rapid-fire SSE events (e.g., bulk file operations that
+      // trigger dozens of fs-watcher events within milliseconds) so the
+      // client only refetches once per burst.
+      if (_debounceTimer) clearTimeout(_debounceTimer);
+      _debounceTimer = setTimeout(() => {
+        _debounceTimer = null;
+        _handlers.forEach((h) => h());
+      }, 200);
     });
 
     _eventSource.onerror = () => {
@@ -52,13 +60,16 @@ export const sseState = {
 
   disconnect() {
     if (_reconnectTimer) { clearTimeout(_reconnectTimer); _reconnectTimer = null; }
+    if (_debounceTimer) { clearTimeout(_debounceTimer); _debounceTimer = null; }
     _eventSource?.close();
     _eventSource = null;
     _connected = false;
     _hasBeenConnected = false;
+    _handlers.clear();
   },
 
-  onGraphUpdated(handler: () => void) {
-    _handler = handler;
+  onGraphUpdated(handler: () => void): () => void {
+    _handlers.add(handler);
+    return () => { _handlers.delete(handler); };
   },
 };

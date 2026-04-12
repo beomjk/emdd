@@ -8,6 +8,7 @@ export interface ExportOptions {
   layout?: LayoutMode;
   types?: string[];
   statuses?: string[];
+  edgeTypes?: string[];
 }
 
 export interface ExportResult {
@@ -18,9 +19,12 @@ export interface ExportResult {
 
 // ── HTML escaping for export ────────────────────────────────────────
 
-/** Escape `</` sequences in strings embedded inside `<script>` blocks. */
+/** Escape angle brackets in strings embedded inside `<script>` blocks.
+ *  Replacing `<` with `\u003c` prevents the HTML5 parser from entering
+ *  "script data escaped state" via `<!--` or `<script` sequences, and
+ *  also prevents the classic `</script>` breakout. */
 function escapeScriptContent(json: string): string {
-  return json.replace(/<\//g, '<\\/');
+  return json.replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
 }
 
 // ── Filter graph ────────────────────────────────────────────────────
@@ -37,13 +41,19 @@ function filterGraph(
   }
   if (options.statuses && options.statuses.length > 0) {
     const statusSet = new Set(options.statuses);
-    nodes = nodes.filter((n) => statusSet.has(n.status));
+    // Mirror the frontend's `|| !status` fallback: nodes without a status
+    // field (coerced to '' by cache.ts) stay visible regardless of filter.
+    nodes = nodes.filter((n) => !n.status || statusSet.has(n.status));
   }
 
   const nodeIds = new Set(nodes.map((n) => n.id));
-  const edges = graph.edges.filter(
+  let edges = graph.edges.filter(
     (e) => nodeIds.has(e.source) && nodeIds.has(e.target),
   );
+  if (options.edgeTypes && options.edgeTypes.length > 0) {
+    const edgeTypeSet = new Set(options.edgeTypes);
+    edges = edges.filter((e) => edgeTypeSet.has(e.relation));
+  }
 
   return { nodes, edges };
 }
@@ -112,8 +122,6 @@ export function generateExportHtml(
 
   const vendorJs = readVendorBundle();
   const elementsJson = escapeScriptContent(JSON.stringify(elements));
-  const layoutName = layout === 'hierarchical' ? 'dagre' : 'fcose';
-
   const layoutConfig = layout === 'hierarchical'
     ? `{ name: 'dagre', rankDir: 'TB', nodeSep: 50, rankSep: 80, animate: false, nodeDimensionsIncludeLabels: true }`
     : `{ name: 'fcose', animate: false, quality: 'proof', nodeDimensionsIncludeLabels: true }`;

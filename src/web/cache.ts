@@ -1,8 +1,8 @@
 import fs from 'node:fs';
 import matter from 'gray-matter';
-import type { Graph, HealthReport } from '../graph/types.js';
+import type { Graph, HealthReport, PromoteCandidate, CheckResult } from '../graph/types.js';
 import { loadGraph } from '../graph/loader.js';
-import { getHealth, detectClusters } from '../graph/operations.js';
+import { getHealth, detectClusters, getPromotionCandidates, checkConsolidation } from '../graph/operations.js';
 import type { SerializedGraph, SerializedNode, SerializedEdge, VisualCluster } from './types.js';
 
 export interface GraphCache {
@@ -10,6 +10,8 @@ export interface GraphCache {
   invalidate(): void;
   getGraph(): Promise<SerializedGraph>;
   getHealth(): Promise<HealthReport>;
+  getPromotionCandidates(): Promise<import('../graph/types.js').PromoteCandidate[]>;
+  getConsolidation(): Promise<import('../graph/types.js').CheckResult>;
   getRawGraph(): Promise<Graph>;
   getClusters(): Promise<VisualCluster[]>;
 }
@@ -55,6 +57,8 @@ export function createGraphCache(graphDir: string): GraphCache {
   let cachedGraph: SerializedGraph | null = null;
   let cachedRawGraph: Graph | null = null;
   let cachedHealth: HealthReport | null = null;
+  let cachedPromoCandidates: PromoteCandidate[] | null = null;
+  let cachedConsolidation: CheckResult | null = null;
   let cachedClusters: VisualCluster[] | null = null;
 
   return {
@@ -62,8 +66,10 @@ export function createGraphCache(graphDir: string): GraphCache {
       const graph = await loadGraph(graphDir, { permissive: true });
       cachedRawGraph = graph;
       cachedGraph = serializeGraph(graph);
-      cachedHealth = null; // invalidate health when graph reloads
-      cachedClusters = null; // invalidate clusters when graph reloads
+      cachedHealth = null;
+      cachedPromoCandidates = null;
+      cachedConsolidation = null;
+      cachedClusters = null;
       return cachedGraph;
     },
 
@@ -71,6 +77,8 @@ export function createGraphCache(graphDir: string): GraphCache {
       cachedGraph = null;
       cachedRawGraph = null;
       cachedHealth = null;
+      cachedPromoCandidates = null;
+      cachedConsolidation = null;
       cachedClusters = null;
     },
 
@@ -86,6 +94,20 @@ export function createGraphCache(graphDir: string): GraphCache {
         cachedHealth = await getHealth(graphDir);
       }
       return cachedHealth;
+    },
+
+    async getPromotionCandidates(): Promise<PromoteCandidate[]> {
+      if (!cachedPromoCandidates) {
+        cachedPromoCandidates = await getPromotionCandidates(graphDir);
+      }
+      return cachedPromoCandidates;
+    },
+
+    async getConsolidation(): Promise<CheckResult> {
+      if (!cachedConsolidation) {
+        cachedConsolidation = await checkConsolidation(graphDir);
+      }
+      return cachedConsolidation;
     },
 
     async getRawGraph(): Promise<Graph> {
