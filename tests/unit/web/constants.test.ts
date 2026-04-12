@@ -4,7 +4,7 @@ import {
   getNodeColor,
   getStatusBorder,
   STATUS_BORDER_LEGEND,
-} from '../../../src/web/frontend/constants.js';
+} from '../../../src/web/constants.js';
 
 describe('NODE_COLORS / getNodeColor', () => {
   it('returns correct color for each known type', () => {

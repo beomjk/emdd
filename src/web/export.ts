@@ -1,20 +1,30 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import type { SerializedGraph, SerializedNode, SerializedEdge } from './types.js';
-import type { LayoutMode } from './frontend/graph.js';
-import { NODE_COLORS, getNodeColor, getStatusBorder } from './frontend/constants.js';
+import type { SerializedGraph, SerializedNode, SerializedEdge, LayoutMode } from './types.js';
+import { NODE_COLORS, getNodeColor, getStatusBorder } from './constants.js';
 
 export interface ExportOptions {
   layout?: LayoutMode;
   types?: string[];
   statuses?: string[];
+  edgeTypes?: string[];
 }
 
 export interface ExportResult {
   html: string;
   nodeCount: number;
   edgeCount: number;
+}
+
+// ── HTML escaping for export ────────────────────────────────────────
+
+/** Escape angle brackets in strings embedded inside `<script>` blocks.
+ *  Replacing `<` with `\u003c` prevents the HTML5 parser from entering
+ *  "script data escaped state" via `<!--` or `<script` sequences, and
+ *  also prevents the classic `</script>` breakout. */
+function escapeScriptContent(json: string): string {
+  return json.replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
 }
 
 // ── Filter graph ────────────────────────────────────────────────────
@@ -31,13 +41,19 @@ function filterGraph(
   }
   if (options.statuses && options.statuses.length > 0) {
     const statusSet = new Set(options.statuses);
-    nodes = nodes.filter((n) => statusSet.has(n.status));
+    // Mirror the frontend's `|| !status` fallback: nodes without a status
+    // field (coerced to '' by cache.ts) stay visible regardless of filter.
+    nodes = nodes.filter((n) => !n.status || statusSet.has(n.status));
   }
 
   const nodeIds = new Set(nodes.map((n) => n.id));
-  const edges = graph.edges.filter(
+  let edges = graph.edges.filter(
     (e) => nodeIds.has(e.source) && nodeIds.has(e.target),
   );
+  if (options.edgeTypes && options.edgeTypes.length > 0) {
+    const edgeTypeSet = new Set(options.edgeTypes);
+    edges = edges.filter((e) => edgeTypeSet.has(e.relation));
+  }
 
   return { nodes, edges };
 }
@@ -105,9 +121,7 @@ export function generateExportHtml(
   }
 
   const vendorJs = readVendorBundle();
-  const elementsJson = JSON.stringify(elements);
-  const layoutName = layout === 'hierarchical' ? 'dagre' : 'fcose';
-
+  const elementsJson = escapeScriptContent(JSON.stringify(elements));
   const layoutConfig = layout === 'hierarchical'
     ? `{ name: 'dagre', rankDir: 'TB', nodeSep: 50, rankSep: 80, animate: false, nodeDimensionsIncludeLabels: true }`
     : `{ name: 'fcose', animate: false, quality: 'proof', nodeDimensionsIncludeLabels: true }`;
@@ -156,18 +170,19 @@ var cy = cytoscape({
 });
 cy.on('mouseover','edge',function(e){e.target.style('label',e.target.data('relation'));e.target.style('font-size','9px');e.target.style('color','#888');e.target.style('text-rotation','autorotate')});
 cy.on('mouseout','edge',function(e){e.target.style('label','')});
-var colors=${JSON.stringify(NODE_COLORS)};
+var colors=${escapeScriptContent(JSON.stringify(NODE_COLORS))};
+function esc(s){if(s==null)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
 cy.on('tap','node',function(e){
   var d=e.target.data();
-  var h='<h3>'+d.title+'</h3>';
-  h+='<span class="badge" style="background:'+(colors[d.type]||'#999')+'">'+d.type+'</span>';
-  if(d.status)h+='<span class="badge" style="background:#666">'+d.status+'</span>';
+  var h='<h3>'+esc(d.title)+'</h3>';
+  h+='<span class="badge" style="background:'+(colors[d.type]||'#999')+'">'+esc(d.type)+'</span>';
+  if(d.status)h+='<span class="badge" style="background:#666">'+esc(d.status)+'</span>';
   h+='<div class="meta">';
-  h+='<b>ID:</b> '+d.id+'<br>';
+  h+='<b>ID:</b> '+esc(d.id)+'<br>';
   if(d.confidence!=null)h+='<b>Confidence:</b> '+(d.confidence*100).toFixed(0)+'%<br>';
-  if(d.tags&&d.tags.length)h+='<b>Tags:</b> '+d.tags.join(', ')+'<br>';
-  if(d.links&&d.links.length){h+='<b>Links:</b><ul>';d.links.forEach(function(l){h+='<li>'+l.relation+' → '+l.target+'</li>'});h+='</ul>'}
-  if(d.invalid)h+='<br><b style="color:#FF9800">⚠ Invalid node:</b> '+d.title;
+  if(d.tags&&d.tags.length)h+='<b>Tags:</b> '+esc(d.tags.join(', '))+'<br>';
+  if(d.links&&d.links.length){h+='<b>Links:</b><ul>';d.links.forEach(function(l){h+='<li>'+esc(l.relation)+' \u2192 '+esc(l.target)+'</li>'});h+='</ul>'}
+  if(d.invalid)h+='<br><b style="color:#FF9800">\u26a0 Invalid node:</b> '+esc(d.title);
   h+='</div>';
   document.getElementById('detail-content').innerHTML=h;
   document.getElementById('detail').style.display='block';

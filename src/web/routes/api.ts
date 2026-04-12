@@ -2,8 +2,9 @@ import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import type { GraphCache } from '../cache.js';
 import type { SSEManager } from '../sse.js';
-import { readNode, getNeighbors, getPromotionCandidates, checkConsolidation } from '../../graph/operations.js';
+import { readNode, getNeighbors } from '../../graph/operations.js';
 import { generateExportHtml } from '../export.js';
+import type { LayoutMode } from '../types.js';
 
 export function createApiRoutes(graphDir: string, cache: GraphCache, sseManager?: SSEManager): Hono {
   const api = new Hono();
@@ -70,28 +71,30 @@ export function createApiRoutes(graphDir: string, cache: GraphCache, sseManager?
     }
   });
 
-  // GET /api/promotion-candidates
+  // GET /api/promotion-candidates (cached — invalidated on graph reload)
   api.get('/promotion-candidates', async (c) => {
-    const candidates = await getPromotionCandidates(graphDir);
+    const candidates = await cache.getPromotionCandidates();
     return c.json({ candidates });
   });
 
-  // GET /api/consolidation
+  // GET /api/consolidation (cached — invalidated on graph reload)
   api.get('/consolidation', async (c) => {
-    const result = await checkConsolidation(graphDir);
+    const result = await cache.getConsolidation();
     return c.json(result);
   });
 
   // GET /api/export
   api.get('/export', async (c) => {
     const graph = await cache.getGraph();
-    const layout = (c.req.query('layout') ?? 'force') as 'force' | 'hierarchical';
+    const layout = (c.req.query('layout') ?? 'force') as LayoutMode;
     const typesParam = c.req.query('types');
     const statusesParam = c.req.query('statuses');
+    const edgeTypesParam = c.req.query('edgeTypes');
     const types = typesParam ? typesParam.split(',').filter(Boolean) : undefined;
     const statuses = statusesParam ? statusesParam.split(',').filter(Boolean) : undefined;
+    const edgeTypes = edgeTypesParam ? edgeTypesParam.split(',').filter(Boolean) : undefined;
 
-    const { html } = generateExportHtml(graph, { layout, types, statuses });
+    const { html } = generateExportHtml(graph, { layout, types, statuses, edgeTypes });
     return c.html(html);
   });
 

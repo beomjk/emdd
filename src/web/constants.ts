@@ -3,8 +3,8 @@ import {
   NEGATIVE_STATUSES,
   IN_PROGRESS_STATUSES,
   TERMINAL_STATUSES,
-} from '../../graph/types.js';
-import type { NodeType } from '../../graph/types.js';
+} from '../graph/types.js';
+import type { NodeType } from '../graph/types.js';
 
 // ── Node type colors (single source of truth) ───────────────────────
 

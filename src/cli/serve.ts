@@ -18,7 +18,11 @@ async function tryListen(
     const currentPort = port + i;
     try {
       const server = await new Promise<Server>((resolve, reject) => {
-        const s = serve({ fetch: app, port: currentPort });
+        // Bind to loopback only — the dashboard is a local developer tool and
+        // binding to all interfaces would expose the graph data and the
+        // compiled backend .js files (served by the static route) to any
+        // peer on the same LAN.
+        const s = serve({ fetch: app, port: currentPort, hostname: '127.0.0.1' });
         // @hono/node-server returns the http.Server directly
         const httpServer = s as unknown as Server;
         httpServer.once('error', reject);
