@@ -4,6 +4,7 @@ import type { GraphCache } from '../cache.js';
 import type { SSEManager } from '../sse.js';
 import { readNode, getNeighbors } from '../../graph/operations.js';
 import { generateExportHtml } from '../export.js';
+import type { LayoutMode } from '../types.js';
 
 export function createApiRoutes(graphDir: string, cache: GraphCache, sseManager?: SSEManager): Hono {
   const api = new Hono();
@@ -85,7 +86,7 @@ export function createApiRoutes(graphDir: string, cache: GraphCache, sseManager?
   // GET /api/export
   api.get('/export', async (c) => {
     const graph = await cache.getGraph();
-    const layout = (c.req.query('layout') ?? 'force') as 'force' | 'hierarchical';
+    const layout = (c.req.query('layout') ?? 'force') as LayoutMode;
     const typesParam = c.req.query('types');
     const statusesParam = c.req.query('statuses');
     const edgeTypesParam = c.req.query('edgeTypes');

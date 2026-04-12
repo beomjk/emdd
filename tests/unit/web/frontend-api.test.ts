@@ -56,6 +56,46 @@ describe('apiFetch (via fetchGraph)', () => {
   });
 });
 
+describe('AbortSignal forwarding', () => {
+  it('forwards signal via RequestInit to fetch', async () => {
+    const data = { nodes: [], edges: [], loadedAt: '2026-01-01' };
+    mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve(data) });
+
+    const controller = new AbortController();
+    await fetchGraph({ signal: controller.signal });
+    expect(mockFetch).toHaveBeenCalledWith('/api/graph', { signal: controller.signal });
+  });
+
+  it('forwards signal for fetchClusters', async () => {
+    const data = { clusters: [] };
+    mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve(data) });
+
+    const controller = new AbortController();
+    await fetchClusters({ signal: controller.signal });
+    expect(mockFetch).toHaveBeenCalledWith('/api/clusters', { signal: controller.signal });
+  });
+
+  it('forwards signal for triggerRefresh (merged with method: POST)', async () => {
+    const data = { reloaded: true, loadedAt: '2026-01-01', nodeCount: 5 };
+    mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve(data) });
+
+    const controller = new AbortController();
+    await triggerRefresh({ signal: controller.signal });
+    expect(mockFetch).toHaveBeenCalledWith('/api/refresh', { method: 'POST', signal: controller.signal });
+  });
+
+  it('forwards init for fetchExportHtml', async () => {
+    mockFetch.mockResolvedValue({ ok: true, text: () => Promise.resolve('<html></html>') });
+    mockFetch.mockClear();
+    mockFetch.mockResolvedValue({ ok: true, text: () => Promise.resolve('<html></html>') });
+
+    const controller = new AbortController();
+    await fetchExportHtml('force', undefined, undefined, undefined, { signal: controller.signal });
+    const callInit = mockFetch.mock.calls[0][1];
+    expect(callInit).toEqual({ signal: controller.signal });
+  });
+});
+
 describe('fetchNodeDetail', () => {
   it('encodes node ID in URL', async () => {
     const data = { id: 'hyp-001', title: 'Test', type: 'hypothesis', body: null };

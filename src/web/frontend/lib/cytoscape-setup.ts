@@ -2,6 +2,7 @@ import cytoscape from 'cytoscape';
 import fcose from 'cytoscape-fcose';
 import dagre from 'cytoscape-dagre';
 import type { NodeType } from '../../../graph/types.js';
+import type { LayoutMode } from '../../types.js';
 
 // Register plugins once
 cytoscape.use(fcose);
@@ -45,7 +46,7 @@ export function getHierarchicalLayout(animate = false) {
   };
 }
 
-export function getLayoutConfig(mode: 'force' | 'hierarchical', animate = false, initial = true) {
+export function getLayoutConfig(mode: LayoutMode, animate = false, initial = true) {
   return mode === 'hierarchical'
     ? getHierarchicalLayout(animate)
     : getForceLayout(animate, initial);

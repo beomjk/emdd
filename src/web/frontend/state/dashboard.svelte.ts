@@ -1,8 +1,8 @@
-import type { SerializedGraph, SerializedNode } from '../../types.js';
+import type { SerializedGraph, SerializedNode, LayoutMode } from '../../types.js';
 
 let _graph = $state<SerializedGraph | null>(null);
 let _selectedNodeId = $state<string | null>(null);
-let _layout = $state<'force' | 'hierarchical'>('force');
+let _layout = $state<LayoutMode>('force');
 let _theme = $state<'light' | 'dark'>('light');
 let _error = $state<string | null>(null);
 
@@ -18,7 +18,7 @@ export const dashboardState = {
   set selectedNodeId(v: string | null) { _selectedNodeId = v; },
 
   get layout() { return _layout; },
-  set layout(v: 'force' | 'hierarchical') { _layout = v; },
+  set layout(v: LayoutMode) { _layout = v; },
 
   get theme() { return _theme; },
   set theme(v: 'light' | 'dark') { _theme = v; },
@@ -31,6 +31,6 @@ export const dashboardState = {
   selectNode(id: string) { _selectedNodeId = id; },
   deselectNode() { _selectedNodeId = null; },
   setGraph(graph: SerializedGraph) { _graph = graph; },
-  setLayout(mode: 'force' | 'hierarchical') { _layout = mode; },
+  setLayout(mode: LayoutMode) { _layout = mode; },
   toggleTheme() { _theme = _theme === 'light' ? 'dark' : 'light'; },
 };

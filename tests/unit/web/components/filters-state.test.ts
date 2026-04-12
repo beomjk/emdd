@@ -147,6 +147,44 @@ describe('filterState', () => {
       expect(filterState.visibleTypes.has('finding')).toBe(true);
       expect(filterState.allTypes).toEqual(['finding', 'hypothesis']);
     });
+
+    it('preserves status deselection when graph updates', () => {
+      filterState.initFromGraph(makeGraph(['hypothesis'], ['PROPOSED', 'TESTING']));
+
+      filterState.toggleStatus('PROPOSED');
+      expect(filterState.visibleStatuses.has('PROPOSED')).toBe(false);
+
+      // SSE update with same statuses — should preserve deselection
+      filterState.mergeFromGraph(makeGraph(['hypothesis'], ['PROPOSED', 'TESTING']));
+      expect(filterState.visibleStatuses.has('PROPOSED')).toBe(false);
+      expect(filterState.visibleStatuses.has('TESTING')).toBe(true);
+    });
+
+    it('adds newly discovered statuses as visible', () => {
+      filterState.initFromGraph(makeGraph(['hypothesis'], ['PROPOSED']));
+
+      filterState.mergeFromGraph(makeGraph(['hypothesis'], ['PROPOSED', 'SUPPORTED']));
+      expect(filterState.visibleStatuses.has('SUPPORTED')).toBe(true);
+    });
+
+    it('preserves edgeType deselection when graph updates', () => {
+      filterState.initFromGraph(makeGraph(['hypothesis'], ['PROPOSED'], ['tests', 'supports']));
+
+      filterState.toggleEdgeType('tests');
+      expect(filterState.visibleEdgeTypes.has('tests')).toBe(false);
+
+      // SSE update with same edge types — should preserve deselection
+      filterState.mergeFromGraph(makeGraph(['hypothesis'], ['PROPOSED'], ['tests', 'supports']));
+      expect(filterState.visibleEdgeTypes.has('tests')).toBe(false);
+      expect(filterState.visibleEdgeTypes.has('supports')).toBe(true);
+    });
+
+    it('adds newly discovered edgeTypes as visible', () => {
+      filterState.initFromGraph(makeGraph(['hypothesis'], ['PROPOSED'], ['tests']));
+
+      filterState.mergeFromGraph(makeGraph(['hypothesis'], ['PROPOSED'], ['tests', 'contradicts']));
+      expect(filterState.visibleEdgeTypes.has('contradicts')).toBe(true);
+    });
   });
 
   describe('hasActiveFilters', () => {

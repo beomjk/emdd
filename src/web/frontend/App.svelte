@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { LayoutMode } from '../types.js';
   import { dashboardState } from './state/dashboard.svelte.js';
   import { filterState } from './state/filters.svelte.js';
   import { sseState } from './state/sse.svelte.js';
@@ -119,7 +120,7 @@
     graphLoadAbort = new AbortController();
     const signal = graphLoadAbort.signal;
     try {
-      await triggerRefresh();
+      await triggerRefresh({ signal });
       if (signal.aborted) return;
       const prevSelectedId = dashboardState.selectedNodeId;
       const graph = await fetchGraph({ signal });
@@ -219,7 +220,7 @@
         <select
           aria-label="Layout"
           value={dashboardState.layout}
-          onchange={(e) => dashboardState.setLayout((e.target as HTMLSelectElement).value as 'force' | 'hierarchical')}
+          onchange={(e) => dashboardState.setLayout((e.target as HTMLSelectElement).value as LayoutMode)}
         >
           <option value="force">Force</option>
           <option value="hierarchical">Hierarchical</option>

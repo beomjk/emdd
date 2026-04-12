@@ -1,6 +1,6 @@
 <script lang="ts">
   import cytoscape from 'cytoscape';
-  import type { SerializedGraph, SerializedNode } from '../../types.js';
+  import type { SerializedGraph, SerializedNode, LayoutMode } from '../../types.js';
   import { getNodeColor, getStatusBorder } from '../lib/constants.js';
   import { getLayoutConfig } from '../lib/cytoscape-setup.js';
   import { fetchClusters } from '../lib/api.js';
@@ -21,7 +21,7 @@
     onBackgroundClick,
   }: {
     graph: SerializedGraph;
-    layout: 'force' | 'hierarchical';
+    layout: LayoutMode;
     theme: string;
     visibleTypes: Set<string>;
     visibleStatuses: Set<string>;
@@ -260,7 +260,7 @@
   // ── Cluster application ─────────────────────────────────────────────
   async function applyClustersToGraph(cyInst: cytoscape.Core, signal?: AbortSignal): Promise<void> {
     try {
-      const { clusters } = await fetchClusters();
+      const { clusters } = await fetchClusters(signal ? { signal } : undefined);
       if (signal?.aborted) return;
 
       // Orphan cluster children BEFORE removing the compound parents.

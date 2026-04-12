@@ -73,13 +73,14 @@ export async function fetchExportHtml(
   types?: string[],
   statuses?: string[],
   edgeTypes?: string[],
+  init?: RequestInit,
 ): Promise<string> {
   const params = new URLSearchParams({ layout });
   if (types?.length) params.set('types', types.join(','));
   if (statuses?.length) params.set('statuses', statuses.join(','));
   if (edgeTypes?.length) params.set('edgeTypes', edgeTypes.join(','));
 
-  const res = await fetch(`/api/export?${params}`);
+  const res = await fetch(`/api/export?${params}`, init);
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
   return await res.text();
 }
