@@ -1,8 +1,11 @@
 node_modules/
 dist/
+build/
 *.tsbuildinfo
 coverage/
 *.cast
+*.log
+.env*
 .npmrc
 playwright-report/
 test-results/
