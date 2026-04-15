@@ -33,4 +33,15 @@ export const dashboardState = {
   setGraph(graph: SerializedGraph) { _graph = graph; },
   setLayout(mode: LayoutMode) { _layout = mode; },
   toggleTheme() { _theme = _theme === 'light' ? 'dark' : 'light'; },
+  restoreSelection(id: string | null, graph: SerializedGraph) {
+    _graph = graph;
+    if (!id) {
+      _selectedNodeId = null;
+      return false;
+    }
+
+    const exists = graph.nodes.some((node) => node.id === id);
+    _selectedNodeId = exists ? id : null;
+    return exists;
+  },
 };

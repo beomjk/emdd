@@ -64,9 +64,21 @@
 
   async function selectNode(id: string): Promise<void> {
     dashboardState.selectNode(id);
+    focusGraphNode(id);
     await refetchNeighbors(id, hopDepth);
+  }
+
+  function isNodeVisibleUnderFilters(
+    node: { type: string; status: string },
+    visibleTypes: Set<string>,
+    visibleStatuses: Set<string>,
+  ): boolean {
+    return visibleTypes.has(node.type) && (!node.status || visibleStatuses.has(node.status));
+  }
+
+  function focusGraphNode(id: string): void {
     graphRef?.panToNode(id);
-    graphRef?.pulseNode(id);
+    graphRef?.pulseNode(id, { keepSelectedCue: true });
   }
 
   function deselectNode(): void {
@@ -82,30 +94,34 @@
   }
 
   function handleNodeClickFromDetail(id: string): void {
-    selectNode(id);
+    void selectNode(id);
   }
 
   function handleSearchNavigate(id: string): void {
-    graphRef?.panToNode(id);
-    graphRef?.pulseNode(id);
+    void selectNode(id);
   }
 
   async function handleExport(): Promise<void> {
     try {
       const types = [...filterState.visibleTypes];
       const statuses = [...filterState.visibleStatuses];
-      // Guard: an empty filter array means "select nothing", but the server's
-      // contract is that a missing/empty param means "no filter" (show all).
-      // Without this check, deselecting every type silently exports the full
-      // graph — the opposite of what the user asked for.
-      if (types.length === 0 || statuses.length === 0) {
-        showToast('Select at least one type and one status to export', 'error');
-        return;
-      }
       const edgeTypes = [...filterState.visibleEdgeTypes];
       exportAbort?.abort();
       exportAbort = new AbortController();
-      const html = await fetchExportHtml(dashboardState.layout, types, statuses, edgeTypes, { signal: exportAbort.signal });
+      // Preserve intentionally empty filter groups so the downloaded HTML
+      // mirrors the current canvas, including empty or statusless-only views.
+      const html = await fetchExportHtml(
+        dashboardState.layout,
+        types,
+        statuses,
+        edgeTypes,
+        dashboardState.theme,
+        { signal: exportAbort.signal },
+        {
+          preserveEmptyTypes: types.length === 0,
+          preserveEmptyStatuses: statuses.length === 0,
+        },
+      );
       const blob = new Blob([html], { type: 'text/html' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -130,17 +146,15 @@
       if (signal.aborted) return;
       // Preserve user filter selections across manual refresh (mirrors SSE path)
       filterState.mergeFromGraph(graph);
-      dashboardState.setGraph(graph);
+      const selectionPreserved = dashboardState.restoreSelection(prevSelectedId, graph);
       // Belt-and-braces: clear loading in case refresh was somehow invoked
       // while the initial loadGraph was still pending (shared abort slot).
       loading = false;
       // Refresh neighbors if selection survives — mirrors handleGraphUpdated
       if (prevSelectedId) {
-        const stillExists = graph.nodes.some((n) => n.id === prevSelectedId);
-        if (stillExists) {
+        if (selectionPreserved) {
           await refetchNeighbors(prevSelectedId, hopDepth);
         } else {
-          dashboardState.deselectNode();
           neighborIds = [];
         }
       }
@@ -171,7 +185,7 @@
       const graph = await fetchGraph({ signal });
       if (signal.aborted) return;
       filterState.mergeFromGraph(graph);
-      dashboardState.setGraph(graph);
+      const selectionPreserved = dashboardState.restoreSelection(prevSelectedId, graph);
       // Clear any lingering initial-load state: if this SSE event fired while
       // the initial loadGraph was still in flight, its finally{} skipped
       // `loading = false` because the signal was aborted. Set it here so the
@@ -180,12 +194,9 @@
       // Re-select previous node if still exists, and refresh its neighbors
       // since the underlying graph may have added/removed edges.
       if (prevSelectedId) {
-        const stillExists = graph.nodes.some((n) => n.id === prevSelectedId);
-        if (stillExists) {
-          dashboardState.selectNode(prevSelectedId);
+        if (selectionPreserved) {
           await refetchNeighbors(prevSelectedId, hopDepth);
         } else {
-          dashboardState.deselectNode();
           neighborIds = [];
         }
       }
@@ -210,6 +221,17 @@
       exportAbort?.abort();
       if (toastTimer) clearTimeout(toastTimer);
     };
+  });
+
+  $effect(() => {
+    const selectedNode = dashboardState.selectedNode;
+    const visibleTypes = filterState.visibleTypes;
+    const visibleStatuses = filterState.visibleStatuses;
+
+    if (!selectedNode) return;
+    if (!isNodeVisibleUnderFilters(selectedNode, visibleTypes, visibleStatuses)) {
+      deselectNode();
+    }
   });
 </script>
 

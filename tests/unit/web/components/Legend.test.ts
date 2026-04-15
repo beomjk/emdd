@@ -1,6 +1,10 @@
 import { render, screen } from '@testing-library/svelte';
 import Legend from '../../../../src/web/frontend/components/Legend.svelte';
-import { NODE_COLORS, STATUS_BORDER_LEGEND } from '../../../../src/web/frontend/lib/constants.js';
+import {
+  GRAPH_STATE_CUE_LEGEND,
+  NODE_COLORS,
+  STATUS_BORDER_LEGEND,
+} from '../../../../src/web/frontend/lib/constants.js';
 
 describe('Legend', () => {
   it('renders "Node Types" heading', () => {
@@ -48,7 +52,22 @@ describe('Legend', () => {
   it('renders status labels', () => {
     render(Legend);
     for (const [label] of STATUS_BORDER_LEGEND) {
-      expect(screen.getByText(label)).toBeInTheDocument();
+      expect(screen.getAllByText(label).length).toBeGreaterThan(0);
+    }
+  });
+
+  it('renders "State Cues" heading and one cue per legend entry', () => {
+    const { container } = render(Legend);
+    expect(screen.getByText('State Cues')).toBeInTheDocument();
+    const samples = container.querySelectorAll('.legend-cue-sample');
+    expect(samples.length).toBe(GRAPH_STATE_CUE_LEGEND.length);
+  });
+
+  it('renders state cue labels and descriptions', () => {
+    render(Legend);
+    for (const [label, , description] of GRAPH_STATE_CUE_LEGEND) {
+      expect(screen.getAllByText(label).length).toBeGreaterThan(0);
+      expect(screen.getByText(description)).toBeInTheDocument();
     }
   });
 });

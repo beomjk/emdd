@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { sel, FIXTURE, waitForGraphReady, getCyNodeCount } from './fixtures/helpers.js';
+import { clickCyNode, sel, FIXTURE, waitForGraphReady, getCyNodeCount } from './fixtures/helpers.js';
 
 test.describe('US6: Refresh Button', () => {
   test.beforeEach(async ({ page }) => {
@@ -54,5 +54,23 @@ test.describe('US6: Refresh Button', () => {
       { hasText: labelBefore.trim() },
     ).first();
     await expect(typeButtonAfter).not.toHaveClass(/\bactive\b/);
+  });
+
+  test('refresh keeps the selected node visibly selected when it still exists', async ({ page }) => {
+    await clickCyNode(page, 'hyp-001');
+    await expect(page.locator(sel.detailPanelOpen)).toBeVisible();
+
+    await page.locator(sel.refreshBtn).click();
+    await expect(page.locator(sel.toast)).toContainText(/refreshed/i);
+    await expect(page.locator(sel.detailPanelOpen)).toBeVisible();
+    await expect(page.locator(sel.detailId)).toContainText('hyp-001');
+
+    await expect.poll(async () => {
+      return page.evaluate(() => {
+        const cy = (document.querySelector('.cy-container') as any)?._cyreg?.cy;
+        if (!cy) return 0;
+        return Number.parseFloat(cy.getElementById('hyp-001').style('border-width'));
+      });
+    }).toBeGreaterThanOrEqual(4);
   });
 });

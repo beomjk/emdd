@@ -4,10 +4,27 @@ import type { GraphCache } from '../cache.js';
 import type { SSEManager } from '../sse.js';
 import { readNode, getNeighbors } from '../../graph/operations.js';
 import { generateExportHtml } from '../export.js';
-import type { LayoutMode } from '../types.js';
+import type { LayoutMode, VisualCluster } from '../types.js';
+import { resolveGraphTheme } from '../visual-state.js';
 
 export function createApiRoutes(graphDir: string, cache: GraphCache, sseManager?: SSEManager): Hono {
   const api = new Hono();
+
+  function parseLayoutMode(layout?: string): LayoutMode {
+    return layout === 'hierarchical' ? 'hierarchical' : 'force';
+  }
+
+  function parseListParam(
+    searchParams: URLSearchParams,
+    key: string,
+    options: { preserveEmpty?: boolean } = {},
+  ): string[] | undefined {
+    if (!searchParams.has(key)) return undefined;
+    const raw = searchParams.get(key) ?? '';
+    return raw === ''
+      ? (options.preserveEmpty ? [] : undefined)
+      : raw.split(',').filter(Boolean);
+  }
 
   // GET /api/graph
   api.get('/graph', async (c) => {
@@ -86,15 +103,33 @@ export function createApiRoutes(graphDir: string, cache: GraphCache, sseManager?
   // GET /api/export
   api.get('/export', async (c) => {
     const graph = await cache.getGraph();
-    const layout = (c.req.query('layout') ?? 'force') as LayoutMode;
-    const typesParam = c.req.query('types');
-    const statusesParam = c.req.query('statuses');
-    const edgeTypesParam = c.req.query('edgeTypes');
-    const types = typesParam ? typesParam.split(',').filter(Boolean) : undefined;
-    const statuses = statusesParam ? statusesParam.split(',').filter(Boolean) : undefined;
-    const edgeTypes = edgeTypesParam ? edgeTypesParam.split(',').filter(Boolean) : undefined;
+    let clusters: VisualCluster[] = [];
+    try {
+      clusters = await cache.getClusters();
+    } catch (err) {
+      console.warn('[emdd] cluster export failed, falling back to export without clusters:', err);
+    }
+    const searchParams = new URL(c.req.url).searchParams;
+    const layout = parseLayoutMode(searchParams.get('layout') ?? undefined);
+    const theme = resolveGraphTheme(searchParams.get('theme') ?? undefined);
+    const types = parseListParam(searchParams, 'types', {
+      preserveEmpty: searchParams.get('preserveEmptyTypes') === '1',
+    });
+    const statuses = parseListParam(searchParams, 'statuses', {
+      preserveEmpty: searchParams.get('preserveEmptyStatuses') === '1',
+    });
+    const edgeTypes = parseListParam(searchParams, 'edgeTypes', {
+      preserveEmpty: true,
+    });
 
-    const { html } = generateExportHtml(graph, { layout, types, statuses, edgeTypes });
+    const { html } = generateExportHtml(graph, {
+      layout,
+      theme,
+      types,
+      statuses,
+      edgeTypes,
+      clusters,
+    });
     return c.html(html);
   });
 

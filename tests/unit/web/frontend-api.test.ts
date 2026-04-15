@@ -90,9 +90,20 @@ describe('AbortSignal forwarding', () => {
     mockFetch.mockResolvedValue({ ok: true, text: () => Promise.resolve('<html></html>') });
 
     const controller = new AbortController();
-    await fetchExportHtml('force', undefined, undefined, undefined, { signal: controller.signal });
+    await fetchExportHtml('force', undefined, undefined, undefined, 'dark', { signal: controller.signal });
     const callInit = mockFetch.mock.calls[0][1];
     expect(callInit).toEqual({ signal: controller.signal });
+  });
+
+  it('treats RequestInit as the fifth argument for backward compatibility', async () => {
+    mockFetch.mockResolvedValue({ ok: true, text: () => Promise.resolve('<html></html>') });
+
+    const controller = new AbortController();
+    await fetchExportHtml('force', undefined, undefined, undefined, { signal: controller.signal });
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/export?layout=force',
+      { signal: controller.signal },
+    );
   });
 });
 
@@ -141,17 +152,55 @@ describe('fetchNeighbors', () => {
 });
 
 describe('fetchExportHtml', () => {
-  it('returns text response with layout params', async () => {
+  it('returns text response with layout, filter, and theme params', async () => {
     mockFetch.mockResolvedValue({ ok: true, text: () => Promise.resolve('<html>export</html>') });
 
     mockFetch.mockClear();
     mockFetch.mockResolvedValue({ ok: true, text: () => Promise.resolve('<html>export</html>') });
-    const result = await fetchExportHtml('force', ['hypothesis'], ['PROPOSED']);
+    const result = await fetchExportHtml('force', ['hypothesis'], ['PROPOSED'], ['supports'], 'dark');
     expect(result).toBe('<html>export</html>');
     const url = mockFetch.mock.calls[0][0] as string;
     expect(url).toContain('layout=force');
     expect(url).toContain('types=hypothesis');
     expect(url).toContain('statuses=PROPOSED');
+    expect(url).toContain('edgeTypes=supports');
+    expect(url).toContain('theme=dark');
+  });
+
+  it('serializes an explicit empty edge filter instead of dropping it', async () => {
+    mockFetch.mockResolvedValue({ ok: true, text: () => Promise.resolve('<html>export</html>') });
+
+    await fetchExportHtml('force', ['hypothesis'], ['PROPOSED'], []);
+    const url = mockFetch.mock.calls[0][0] as string;
+    expect(url).toContain('edgeTypes=');
+  });
+
+  it('drops empty type and status filters by default', async () => {
+    mockFetch.mockResolvedValue({ ok: true, text: () => Promise.resolve('<html>export</html>') });
+
+    await fetchExportHtml('force', [], []);
+    expect(mockFetch).toHaveBeenCalledWith('/api/export?layout=force', undefined);
+  });
+
+  it('serializes an explicit empty status filter when requested', async () => {
+    mockFetch.mockResolvedValue({ ok: true, text: () => Promise.resolve('<html>export</html>') });
+    mockFetch.mockClear();
+    mockFetch.mockResolvedValue({ ok: true, text: () => Promise.resolve('<html>export</html>') });
+
+    await fetchExportHtml(
+      'force',
+      ['hypothesis'],
+      [],
+      undefined,
+      'dark',
+      undefined,
+      { preserveEmptyStatuses: true },
+    );
+    const url = mockFetch.mock.calls[0][0] as string;
+    expect(url).toContain('types=hypothesis');
+    expect(url).toContain('statuses=');
+    expect(url).toContain('preserveEmptyStatuses=1');
+    expect(url).toContain('theme=dark');
   });
 
   it('throws on non-ok response', async () => {

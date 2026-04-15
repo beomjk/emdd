@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Hono } from 'hono';
@@ -229,6 +229,7 @@ describe('GET /api/export', () => {
     const html = await res.text();
     expect(html).toContain('<!DOCTYPE html>');
     expect(html).toContain('EMDD Graph Export');
+    expect(html).toContain('data-theme="light"');
   });
 
   it('exports with types and statuses query params', async () => {
@@ -247,6 +248,75 @@ describe('GET /api/export', () => {
     expect(res.status).toBe(200);
     const html = await res.text();
     expect(html).toContain('<!DOCTYPE html>');
+  });
+
+  it('exports with theme=dark and preserves the theme marker', async () => {
+    const { app } = createApp(SAMPLE_GRAPH);
+    const res = await app.request('/api/export?theme=dark');
+
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain('data-theme="dark"');
+  });
+
+  it('preserves an explicit empty edge filter as zero exported edges', async () => {
+    const { app } = createApp(SAMPLE_GRAPH);
+    const res = await app.request('/api/export?edgeTypes=');
+
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain('0 edges');
+  });
+
+  it('treats empty type and status query params as no filter by default', async () => {
+    const { app } = createApp(SAMPLE_GRAPH);
+    const res = await app.request('/api/export?types=&statuses=');
+
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain('14 nodes');
+  });
+
+  it('preserves an explicit empty type filter when requested', async () => {
+    const { app } = createApp(SAMPLE_GRAPH);
+    const res = await app.request('/api/export?types=&preserveEmptyTypes=1');
+
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain('0 nodes');
+  });
+
+  it('includes grouped-region data in export output', async () => {
+    const { app } = createApp(SAMPLE_GRAPH);
+    const res = await app.request('/api/export');
+
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain("node[?isCluster]");
+    expect(html).toContain('"isCluster":true');
+  });
+
+  it('falls back to export without clusters when cluster detection fails', async () => {
+    const cache = createGraphCache(SAMPLE_GRAPH);
+    const failingCache = {
+      ...cache,
+      getClusters: async () => {
+        throw new Error('cluster boom');
+      },
+    };
+    const app = new Hono();
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    app.route('/api', createApiRoutes(SAMPLE_GRAPH, failingCache as any));
+
+    const res = await app.request('/api/export');
+    const html = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(html).toContain('<!DOCTYPE html>');
+    expect(html).not.toContain('"isCluster":true');
+
+    warnSpy.mockRestore();
   });
 });
 

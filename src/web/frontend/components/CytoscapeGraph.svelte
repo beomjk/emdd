@@ -2,8 +2,17 @@
   import { untrack } from 'svelte';
   import cytoscape from 'cytoscape';
   import type { SerializedGraph, SerializedNode, LayoutMode } from '../../types.js';
-  import { getNodeColor, getStatusBorder } from '../lib/constants.js';
-  import { getLayoutConfig } from '../lib/cytoscape-setup.js';
+  import {
+    GRAPH_MOTION_PROFILE,
+    getClusterVisualState,
+    getGraphThemeTokens,
+    getNodeVisualState,
+  } from '../lib/constants.js';
+  import {
+    getClusterFocusAnimation,
+    getLayoutConfig,
+    getNodeFocusAnimation,
+  } from '../lib/cytoscape-setup.js';
   import { fetchClusters } from '../lib/api.js';
   import { diffGraph } from '../lib/graph-diff.js';
   import Tooltip from './Tooltip.svelte';
@@ -47,44 +56,35 @@
   let tooltipY = $state(0);
   let tooltipVisible = $state(false);
 
-  // Cluster colors
-  const CLUSTER_COLORS = [
-    'rgba(74, 144, 217, 0.08)', 'rgba(123, 104, 238, 0.08)',
-    'rgba(80, 200, 120, 0.08)', 'rgba(218, 165, 32, 0.08)',
-    'rgba(255, 140, 66, 0.08)', 'rgba(32, 178, 170, 0.08)',
-    'rgba(160, 160, 160, 0.08)', 'rgba(220, 80, 80, 0.08)',
-  ];
-  const CLUSTER_BORDER_COLORS = [
-    'rgba(74, 144, 217, 0.3)', 'rgba(123, 104, 238, 0.3)',
-    'rgba(80, 200, 120, 0.3)', 'rgba(218, 165, 32, 0.3)',
-    'rgba(255, 140, 66, 0.3)', 'rgba(32, 178, 170, 0.3)',
-    'rgba(160, 160, 160, 0.3)', 'rgba(220, 80, 80, 0.3)',
-  ];
-
   // ── Exported API ────────────────────────────────────────────────────
   export function panToNode(nodeId: string): void {
     if (!cy) return;
     const node = cy.getElementById(nodeId);
     if (node.length > 0) {
-      cy.animate({ center: { eles: node }, zoom: 1.5 } as any, { duration: 300 });
+      const [animation, options] = getNodeFocusAnimation(node);
+      cy.animate(animation as any, options);
     }
   }
 
-  export function pulseNode(nodeId: string): void {
+  export function pulseNode(
+    nodeId: string,
+    opts: { keepSelectedCue?: boolean } = {},
+  ): void {
     if (!cy) return;
     const node = cy.getElementById(nodeId);
     if (node.length === 0) return;
-    const origW = node.style('border-width');
-    const origC = node.style('border-color');
     node.animate(
       { style: { 'border-width': 6, 'border-color': '#FF6B6B' } } as any,
       {
-        duration: 300,
+        duration: GRAPH_MOTION_PROFILE.selectionEmphasisMs,
         complete: () => {
-          node.animate(
-            { style: { 'border-width': origW, 'border-color': origC } } as any,
-            { duration: 300 },
-          );
+          if (opts.keepSelectedCue && untrack(() => selectedNodeId) === nodeId) {
+            node.style('border-width', '4');
+            node.removeStyle('border-color');
+            return;
+          }
+          node.removeStyle('border-width');
+          node.removeStyle('border-color');
         },
       },
     );
@@ -95,6 +95,11 @@
     return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   }
 
+  function getCssVarWithFallback(name: string, fallback: string): string {
+    const value = getCssVar(name);
+    return value || fallback;
+  }
+
   function truncate(text: string, max: number): string {
     return text.length > max ? text.slice(0, max - 1) + '\u2026' : text;
   }
@@ -103,7 +108,9 @@
     return graph.nodes.find((n) => n.id === id);
   }
 
-  function getCyStyles(): cytoscape.StylesheetStyle[] {
+  function getCyStyles(activeTheme: string = theme): cytoscape.StylesheetStyle[] {
+    const themeTokens = getGraphThemeTokens(activeTheme);
+
     return [
       {
         selector: 'node',
@@ -116,26 +123,17 @@
           'font-size': '10px',
           'text-valign': 'bottom',
           'text-margin-y': 6,
-          color: getCssVar('--cy-node-text'),
+          color: 'data(textColor)',
           width: 30,
           height: 30,
-        },
-      },
-      {
-        selector: 'node[?invalid]',
-        style: {
-          'border-style': 'dashed',
-          'border-color': '#FF9800',
-          'border-width': 2,
-          'background-image': 'none',
         },
       },
       {
         selector: 'edge',
         style: {
           width: 1.5,
-          'line-color': getCssVar('--cy-edge-color'),
-          'target-arrow-color': getCssVar('--cy-edge-color'),
+          'line-color': getCssVarWithFallback('--cy-edge-color', '#ccc'),
+          'target-arrow-color': getCssVarWithFallback('--cy-edge-color', '#ccc'),
           'target-arrow-shape': 'triangle',
           'curve-style': 'bezier',
           'arrow-scale': 0.8,
@@ -146,37 +144,81 @@
         style: {
           label: 'data(relation)',
           'font-size': '9px',
-          color: getCssVar('--cy-edge-label'),
+          color: getCssVarWithFallback('--cy-edge-label', '#888'),
           'text-rotation': 'autorotate',
         },
       },
-      { selector: '.dimmed', style: { opacity: 0.15 } },
-      { selector: '.highlighted', style: { opacity: 1 } },
+      {
+        selector: 'node.dimmed',
+        style: { opacity: 0.28 },
+      },
+      {
+        selector: 'edge.dimmed',
+        style: { opacity: 0.18 },
+      },
+      {
+        selector: 'node.highlighted',
+        style: {
+          opacity: 1,
+          'underlay-color': getCssVarWithFallback(
+            '--cy-highlight-underlay',
+            themeTokens.highlightUnderlay,
+          ),
+          'underlay-opacity': 1,
+          'underlay-padding': 6,
+          'underlay-shape': 'ellipse',
+        } as any,
+      },
+      {
+        selector: 'edge.highlighted',
+        style: {
+          opacity: 1,
+          width: 2.5,
+        },
+      },
+      {
+        selector: 'node.selected-node',
+        style: {
+          'border-width': 4,
+          'font-weight': 700,
+          'underlay-color': getCssVarWithFallback(
+            '--cy-selection-underlay',
+            themeTokens.selectionUnderlay,
+          ),
+          'underlay-opacity': 1,
+          'underlay-padding': 10,
+          'underlay-shape': 'ellipse',
+          'text-outline-width': 1,
+          'text-outline-color': getCssVarWithFallback(
+            '--cy-selection-outline',
+            themeTokens.selectionOutline,
+          ),
+        } as any,
+      },
       // Cluster styles
       {
         selector: 'node[?isCluster]',
         style: {
           'background-color': 'data(bgColor)',
           'background-opacity': 1,
-          'border-width': 1,
+          'border-width': 'data(borderWidth)',
           'border-color': 'data(borderColor)',
-          'border-style': 'dashed',
+          'border-style': 'data(borderStyle)' as any,
           shape: 'roundrectangle',
           label: 'data(label)',
           'font-size': '12px',
           'text-valign': 'top',
           'text-halign': 'center',
           'text-margin-y': -8,
-          color: getCssVar('--cy-node-text'),
+          color: 'data(textColor)',
           'font-weight': 'bold',
+          'text-background-color': 'data(labelBgColor)',
+          'text-background-opacity': 1,
+          'text-background-padding': 4,
           padding: '16px' as any,
           'min-width': '80px' as any,
           'min-height': '60px' as any,
         } as any,
-      },
-      {
-        selector: 'node[?isCluster][?isManual]',
-        style: { 'border-style': 'solid' } as any,
       },
     ];
   }
@@ -259,64 +301,94 @@
   }
 
   // ── Cluster application ─────────────────────────────────────────────
-  // Track previous cluster membership to skip unnecessary rebuilds.
-  // Key: cluster.id, Value: sorted nodeIds joined by ','
+  // Track the rendered cluster payload so metadata-only changes (label/manual
+  // styling) still trigger a rebuild even when membership is unchanged.
   let prevClusterFingerprint: Map<string, string> | null = null;
 
-  function clusterMembershipChanged(
-    clusters: { id: string; nodeIds: string[] }[],
+  function clusterDataChanged(
+    clusters: { id: string; label: string; isManual: boolean; nodeIds: string[] }[],
   ): boolean {
     if (!prevClusterFingerprint) return true;
     if (clusters.length !== prevClusterFingerprint.size) return true;
     for (const c of clusters) {
       const prev = prevClusterFingerprint.get(c.id);
       if (prev === undefined) return true;
-      const curr = [...c.nodeIds].sort().join(',');
+      const curr = JSON.stringify({
+        label: c.label,
+        isManual: c.isManual,
+        nodeIds: [...c.nodeIds].sort(),
+      });
       if (prev !== curr) return true;
     }
     return false;
   }
 
   function buildClusterFingerprint(
-    clusters: { id: string; nodeIds: string[] }[],
+    clusters: { id: string; label: string; isManual: boolean; nodeIds: string[] }[],
   ): Map<string, string> {
     const map = new Map<string, string>();
     for (const c of clusters) {
-      map.set(c.id, [...c.nodeIds].sort().join(','));
+      map.set(c.id, JSON.stringify({
+        label: c.label,
+        isManual: c.isManual,
+        nodeIds: [...c.nodeIds].sort(),
+      }));
     }
     return map;
   }
 
-  async function applyClustersToGraph(cyInst: cytoscape.Core, signal?: AbortSignal): Promise<void> {
+  function buildClusterData(
+    cluster: { id: string; label: string; isManual: boolean },
+    activeTheme: string,
+  ) {
+    const visualState = getClusterVisualState({
+      theme: activeTheme,
+      isManual: cluster.isManual,
+    });
+    const themeTokens = getGraphThemeTokens(activeTheme);
+
+    return {
+      id: cluster.id,
+      label: cluster.label,
+      isCluster: true,
+      isManual: cluster.isManual,
+      bgColor: visualState.fillColor,
+      borderColor: visualState.borderColor,
+      borderStyle: visualState.borderStyle,
+      borderWidth: visualState.borderWidth,
+      textColor: visualState.textColor,
+      labelBgColor: themeTokens.groupLabelBg,
+    };
+  }
+
+  function clearRenderedClusters(cyInst: cytoscape.Core): void {
+    const existingClusters = cyInst.nodes('[?isCluster]');
+    existingClusters.children().move({ parent: null });
+    existingClusters.remove();
+  }
+
+  async function applyClustersToGraph(
+    cyInst: cytoscape.Core,
+    signal?: AbortSignal,
+  ): Promise<void> {
     try {
       const { clusters } = await fetchClusters(signal ? { signal } : undefined);
       if (signal?.aborted) return;
+      const resolvedTheme = untrack(() => theme);
 
-      // Skip full rebuild when cluster membership is unchanged.
-      if (!clusterMembershipChanged(clusters ?? [])) return;
+      // Skip full rebuild when the rendered cluster payload is unchanged.
+      if (!clusterDataChanged(clusters ?? [])) return;
 
       // Orphan cluster children BEFORE removing the compound parents.
       // Cytoscape cascades removal to descendants, so removing the parent
       // without orphaning first would also delete every clustered domain node.
-      const existingClusters = cyInst.nodes('[?isCluster]');
-      existingClusters.children().move({ parent: null });
-      existingClusters.remove();
+      clearRenderedClusters(cyInst);
 
       if (clusters && clusters.length > 0) {
-        for (let i = 0; i < clusters.length; i++) {
-          const cluster = clusters[i];
-          const colorIdx = i % CLUSTER_COLORS.length;
-
+        for (const cluster of clusters) {
           cyInst.add({
             group: 'nodes',
-            data: {
-              id: cluster.id,
-              label: cluster.label,
-              isCluster: true,
-              isManual: cluster.isManual,
-              bgColor: CLUSTER_COLORS[colorIdx],
-              borderColor: CLUSTER_BORDER_COLORS[colorIdx],
-            },
+            data: buildClusterData(cluster, resolvedTheme),
           });
 
           for (const nodeId of cluster.nodeIds) {
@@ -335,8 +407,13 @@
       // pass, a cluster added after the user already has filters active would
       // render as an empty dashed box until the next filter toggle.
       applyNodeAndEdgeVisibility(cyInst);
+      applySelectionState(cyInst, selectedNodeId, neighborIds);
     } catch (err) {
       if ((err as Error)?.name === 'AbortError') return;
+      clearRenderedClusters(cyInst);
+      prevClusterFingerprint = null;
+      applyNodeAndEdgeVisibility(cyInst);
+      applySelectionState(cyInst, selectedNodeId, neighborIds);
       console.warn('[emdd] cluster fetch failed, rendering graph without clusters:', err);
     }
   }
@@ -360,7 +437,8 @@
 
   // Node data builder for diffGraph (reuses buildElements logic for single node)
   function buildNodeDataForDiff(node: SerializedNode) {
-    const border = getStatusBorder(node);
+    const visualState = getNodeVisualState(node, { theme });
+
     return {
       id: node.id,
       label: truncate(node.title || node.id, 20),
@@ -371,10 +449,11 @@
       tags: node.tags,
       bodyPreview: node.bodyPreview,
       invalid: node.invalid ?? false,
-      bgColor: getNodeColor(node.type),
-      borderWidth: border.width,
-      borderStyle: border.style,
-      borderColor: border.color,
+      bgColor: visualState.fillColor,
+      borderWidth: visualState.borderWidth,
+      borderStyle: visualState.borderStyle,
+      borderColor: visualState.borderColor,
+      textColor: visualState.textColor,
     };
   }
 
@@ -388,13 +467,94 @@
     };
   }
 
+  function syncGraphThemeTokens(cyInst: cytoscape.Core, activeTheme: string): void {
+    const themeTokens = getGraphThemeTokens(activeTheme);
+
+    cyInst.batch(() => {
+      for (const node of graph.nodes) {
+        const element = cyInst.getElementById(node.id);
+        if (element.length === 0) continue;
+        const visualState = getNodeVisualState(node, { theme: activeTheme });
+        element.data({
+          bgColor: visualState.fillColor,
+          borderWidth: visualState.borderWidth,
+          borderStyle: visualState.borderStyle,
+          borderColor: visualState.borderColor,
+          textColor: visualState.textColor,
+        });
+      }
+
+      cyInst.nodes('[?isCluster]').forEach((clusterNode) => {
+        const clusterState = getClusterVisualState({
+          theme: activeTheme,
+          isManual: Boolean(clusterNode.data('isManual')),
+        });
+        clusterNode.data({
+          bgColor: clusterState.fillColor,
+          borderColor: clusterState.borderColor,
+          borderStyle: clusterState.borderStyle,
+          borderWidth: clusterState.borderWidth,
+          textColor: clusterState.textColor,
+          labelBgColor: themeTokens.groupLabelBg,
+        });
+      });
+    });
+  }
+
+  function applySelectionState(
+    cyInst: cytoscape.Core,
+    selectedId: string | null,
+    highlightedNeighborIds: string[],
+  ): void {
+    cyInst.batch(() => {
+      if (!selectedId) {
+        cyInst.nodes('[!isCluster]').forEach((node) => {
+          node.style('border-width', String(node.data('borderWidth') ?? 1));
+        });
+        cyInst.elements()
+          .removeClass('dimmed')
+          .removeClass('highlighted')
+          .removeClass('selected-node');
+        return;
+      }
+
+      const keepSet = new Set([selectedId, ...highlightedNeighborIds]);
+      cyInst.nodes('[!isCluster]').forEach((node) => {
+        const isSelected = node.id() === selectedId;
+        if (keepSet.has(node.id())) {
+          node.removeClass('dimmed').addClass('highlighted');
+        } else {
+          node.addClass('dimmed').removeClass('highlighted').removeClass('selected-node');
+        }
+
+        if (isSelected) {
+          node.addClass('selected-node');
+          node.style('border-width', '4');
+        } else {
+          node.removeClass('selected-node');
+          node.style('border-width', String(node.data('borderWidth') ?? 1));
+        }
+      });
+
+      cyInst.edges().forEach((edge) => {
+        const s = edge.source().id();
+        const t = edge.target().id();
+        if (keepSet.has(s) && keepSet.has(t)) {
+          edge.removeClass('dimmed').addClass('highlighted');
+        } else {
+          edge.addClass('dimmed').removeClass('highlighted');
+        }
+      });
+    });
+  }
+
   // ── Init effect: create Cytoscape instance once ────────────────────
   $effect(() => {
     if (!container) return;
 
     const inst = cytoscape({
       container,
-      style: getCyStyles(),
+      style: untrack(() => getCyStyles(theme)),
       wheelSensitivity: 0.3,
     });
     cy = inst;
@@ -432,10 +592,8 @@
       const cluster = evt.target;
       const children = cluster.children();
       if (children.length === 0) return;
-      inst.animate(
-        { fit: { eles: children, padding: 40 } } as any,
-        { duration: 300 },
-      );
+      const [animation, options] = getClusterFocusAnimation(children);
+      inst.animate(animation as any, options);
     });
 
     inst.on('tap', (evt) => {
@@ -512,6 +670,16 @@
       runLayout(cy, layoutConfig).run();
     }
 
+    // Graph data changes can affect which nodes/clusters remain visible under
+    // the active filters and whether the current selection still needs visual
+    // emphasis. Re-apply both after each sync to avoid stale artifacts.
+    applyNodeAndEdgeVisibility(cy);
+    applySelectionState(
+      cy,
+      untrack(() => selectedNodeId),
+      untrack(() => neighborIds),
+    );
+
     // Viewport culling for large graphs
     if (_g.nodes.length >= 500) {
       showPerfHint = true;
@@ -564,20 +732,28 @@
 
     const layoutObj = runLayout(cy, getLayoutConfig(_l, true, false));
 
-    if (pinned.size > 0) {
-      // Use `.one()` so the listener fires exactly once — otherwise a rapid
-      // layout toggle stops the previous layout, its listener fires with a
-      // stale `pinned` closure from the earlier run, and nodes jitter toward
-      // old positions before the new layout's listener takes effect.
-      layoutObj.one('layoutstop', () => {
-        pinned.forEach((pos, id) => {
-          const node = cy!.getElementById(id);
-          if (node.length > 0) {
-            node.animate({ position: pos } as any, { duration: 200 });
-          }
-        });
+    // Use `.one()` so the listener fires exactly once — otherwise a rapid
+    // layout toggle stops the previous layout, its listener fires with a
+    // stale `pinned` closure from the earlier run, and nodes jitter toward
+    // old positions before the new layout's listener takes effect.
+    layoutObj.one('layoutstop', () => {
+      if (!cy) return;
+
+      pinned.forEach((pos, id) => {
+        const node = cy!.getElementById(id);
+        if (node.length > 0) {
+          node.animate({ position: pos } as any, { duration: 200 });
+        }
       });
-    }
+
+      // Layout animation can reset per-node inline styles. Re-apply the
+      // current selection cues so the focused node stays visibly selected
+      // after layout switches.
+      setTimeout(() => {
+        if (!cy) return;
+        applySelectionState(cy, selectedNodeId, neighborIds);
+      }, 0);
+    });
 
     layoutObj.run();
   });
@@ -600,38 +776,6 @@
     applyNodeAndEdgeVisibility(cy);
   });
 
-  // ── Effect: neighbor highlighting ───────────────────────────────────
-  $effect(() => {
-    if (!cy) return;
-    const _sel = selectedNodeId;
-    const _neigh = neighborIds;
-
-    cy.batch(() => {
-      if (!_sel) {
-        cy!.elements().removeClass('dimmed').removeClass('highlighted');
-        return;
-      }
-
-      const keepSet = new Set([_sel, ..._neigh]);
-      cy!.nodes('[!isCluster]').forEach((node) => {
-        if (keepSet.has(node.id())) {
-          node.removeClass('dimmed').addClass('highlighted');
-        } else {
-          node.addClass('dimmed').removeClass('highlighted');
-        }
-      });
-      cy!.edges().forEach((edge) => {
-        const s = edge.source().id();
-        const t = edge.target().id();
-        if (keepSet.has(s) && keepSet.has(t)) {
-          edge.removeClass('dimmed').addClass('highlighted');
-        } else {
-          edge.addClass('dimmed').removeClass('highlighted');
-        }
-      });
-    });
-  });
-
   // ── Effect: theme change → refresh Cytoscape styles ────────────────
   let prevTheme: string | null = null;
   $effect(() => {
@@ -640,7 +784,19 @@
     if (prevTheme === null) { prevTheme = _t; return; }
     if (_t === prevTheme) return;
     prevTheme = _t;
-    cy.style().fromJson(getCyStyles()).update();
+    syncGraphThemeTokens(cy, _t);
+    cy.style().fromJson(getCyStyles(_t)).update();
+  });
+
+  // Theme refresh can temporarily reset class-driven emphasis. Re-apply the
+  // current selection state after any theme/selection change so selected-node
+  // cues survive theme toggles and style rebuilds.
+  $effect(() => {
+    const _t = theme;
+    const _sel = selectedNodeId;
+    const _neigh = neighborIds;
+    if (!cy) return;
+    applySelectionState(cy, _sel, _neigh);
   });
 </script>
 

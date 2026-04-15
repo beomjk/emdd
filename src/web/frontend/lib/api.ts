@@ -4,8 +4,15 @@ import type {
   HealthReport,
   PromoteCandidate,
   CheckResult,
+  LayoutMode,
+  GraphTheme,
 } from '../../types.js';
 import type { NeighborNode } from '../../../graph/types.js';
+
+interface ExportSerializationOptions {
+  preserveEmptyTypes?: boolean;
+  preserveEmptyStatuses?: boolean;
+}
 
 export interface NodeDetailResponse {
   id: string;
@@ -68,19 +75,57 @@ export async function triggerRefresh(
   return apiFetch('/api/refresh', { ...init, method: 'POST' });
 }
 
-export async function fetchExportHtml(
-  layout: string,
+export function fetchExportHtml(
+  layout: LayoutMode,
   types?: string[],
   statuses?: string[],
   edgeTypes?: string[],
   init?: RequestInit,
+): Promise<string>;
+export function fetchExportHtml(
+  layout: LayoutMode,
+  types?: string[],
+  statuses?: string[],
+  edgeTypes?: string[],
+  theme?: GraphTheme,
+  init?: RequestInit,
+  serializationOptions?: ExportSerializationOptions,
+): Promise<string>;
+export async function fetchExportHtml(
+  layout: LayoutMode,
+  types?: string[],
+  statuses?: string[],
+  edgeTypes?: string[],
+  themeOrInit?: GraphTheme | RequestInit,
+  init?: RequestInit,
+  serializationOptions: ExportSerializationOptions = {},
 ): Promise<string> {
-  const params = new URLSearchParams({ layout });
-  if (types?.length) params.set('types', types.join(','));
-  if (statuses?.length) params.set('statuses', statuses.join(','));
-  if (edgeTypes?.length) params.set('edgeTypes', edgeTypes.join(','));
+  let theme: GraphTheme | undefined;
+  let requestInit = init;
 
-  const res = await fetch(`/api/export?${params}`, init);
+  if (typeof init === 'undefined' && themeOrInit && typeof themeOrInit === 'object') {
+    requestInit = themeOrInit;
+  } else {
+    theme = themeOrInit as GraphTheme | undefined;
+  }
+
+  const params = new URLSearchParams({ layout });
+  if (types?.length) {
+    params.set('types', types.join(','));
+  } else if (types && serializationOptions.preserveEmptyTypes) {
+    params.set('types', '');
+    params.set('preserveEmptyTypes', '1');
+  }
+  if (statuses?.length) {
+    params.set('statuses', statuses.join(','));
+  } else if (statuses && serializationOptions.preserveEmptyStatuses) {
+    params.set('statuses', '');
+    params.set('preserveEmptyStatuses', '1');
+  }
+  if (edgeTypes) params.set('edgeTypes', edgeTypes.join(','));
+  if (theme) params.set('theme', theme);
+
+  const res = await fetch(`/api/export?${params}`, requestInit);
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
   return await res.text();
 }

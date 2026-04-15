@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { sel, waitForGraphReady, getCyNodeCount } from './fixtures/helpers.js';
+import { clickCyNode, sel, waitForGraphReady, getCyNodeCount } from './fixtures/helpers.js';
 
 test.describe('US4: Layout Switching and Clustering', () => {
   test.beforeEach(async ({ page }) => {
@@ -62,6 +62,31 @@ test.describe('US4: Layout Switching and Clustering', () => {
     await expect(page.locator(sel.layoutSelector)).toHaveValue('force');
     const count = await getCyNodeCount(page);
     expect(count).toBeGreaterThan(0);
+  });
+
+  test('layout switching keeps the active selection focused', async ({ page }) => {
+    await clickCyNode(page, 'hyp-001');
+    await expect(page.locator(sel.detailPanelOpen)).toBeVisible();
+
+    await page.locator(sel.layoutSelector).selectOption('hierarchical');
+    await page.waitForTimeout(1500);
+
+    await expect(page.locator(sel.detailPanelOpen)).toBeVisible();
+    await expect(page.locator(sel.detailId)).toContainText('hyp-001');
+    await expect.poll(async () => {
+      return page.evaluate(() => {
+        const cy = (document.querySelector('.cy-container') as any)?._cyreg?.cy;
+        if (!cy) return false;
+        return cy.getElementById('hyp-001').hasClass('selected-node');
+      });
+    }).toBe(true);
+    await expect.poll(async () => {
+      return page.evaluate(() => {
+        const cy = (document.querySelector('.cy-container') as any)?._cyreg?.cy;
+        if (!cy) return 0;
+        return Number.parseFloat(cy.getElementById('hyp-001').style('underlay-opacity') || '0');
+      });
+    }).toBeGreaterThan(0);
   });
 
   test('cluster compound nodes render with colored backgrounds', async ({ page }) => {

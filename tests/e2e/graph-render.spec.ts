@@ -99,6 +99,90 @@ test.describe('US1: Graph Dashboard Renders Identically', () => {
     await expect(hopButtons.nth(2)).toHaveClass(/active/);
   });
 
+  test('selection, link navigation, and grouped focus stay within the shared motion profile', async ({ page }) => {
+    await page.route('**/api/clusters', async (route) => {
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          clusters: [
+            {
+              id: 'cluster-us1',
+              label: 'US1 Cluster',
+              nodeIds: ['hyp-001', 'exp-001'],
+              isManual: false,
+            },
+          ],
+        }),
+      });
+    });
+
+    await page.goto('/');
+    await waitForGraphReady(page);
+
+    await page.evaluate(() => {
+      const cy = (document.querySelector('.cy-container') as any)?._cyreg?.cy;
+      if (!cy) return;
+
+      const motion = { cyDurations: [] as number[], nodeDurations: [] as number[] };
+      (window as any).__emddMotion = motion;
+
+      const originalCyAnimate = cy.animate.bind(cy);
+      cy.animate = (args: unknown, opts?: { duration?: number }) => {
+        if (typeof opts?.duration === 'number') motion.cyDurations.push(opts.duration);
+        return originalCyAnimate(args, opts);
+      };
+
+      cy.nodes('[!isCluster]').forEach((node: any) => {
+        const originalNodeAnimate = node.animate.bind(node);
+        node.animate = (args: unknown, opts?: { duration?: number }) => {
+          if (typeof opts?.duration === 'number') motion.nodeDurations.push(opts.duration);
+          return originalNodeAnimate(args, opts);
+        };
+      });
+    });
+
+    await clickCyNode(page, 'exp-001');
+    await page.waitForFunction(() => {
+      const motion = (window as any).__emddMotion;
+      return motion && motion.cyDurations.length > 0 && motion.nodeDurations.length > 0;
+    });
+    const panel = page.locator(sel.detailPanelOpen);
+    await expect(panel).toBeVisible();
+    await expect(panel.locator(sel.detailId)).toContainText('exp-001');
+
+    const motion = await page.evaluate(() => (window as any).__emddMotion);
+    expect(motion.cyDurations).toContain(300);
+    expect(Math.max(...motion.cyDurations)).toBeLessThanOrEqual(300);
+    expect(Math.max(...motion.nodeDurations)).toBeLessThanOrEqual(300);
+
+    const links = panel.locator(sel.linkTarget);
+    await expect(links.first()).toBeVisible();
+    await links.first().click();
+
+    await page.waitForFunction(() => {
+      const cy = (document.querySelector('.cy-container') as any)?._cyreg?.cy;
+      if (!cy) return false;
+      return cy.nodes('[?isCluster]').length > 0;
+    });
+
+    await page.evaluate(() => {
+      const cy = (document.querySelector('.cy-container') as any)?._cyreg?.cy;
+      if (!cy) return;
+      const cluster = cy.getElementById('cluster-us1');
+      if (cluster?.length) cluster.emit('tap');
+    });
+    await page.waitForFunction(() => {
+      const motion = (window as any).__emddMotion;
+      return motion && motion.cyDurations.includes(500);
+    });
+
+    const updatedMotion = await page.evaluate(() => (window as any).__emddMotion);
+    expect(updatedMotion.cyDurations).toContain(300);
+    expect(updatedMotion.cyDurations).toContain(500);
+    expect(Math.max(...updatedMotion.cyDurations)).toBeLessThanOrEqual(500);
+    expect(Math.max(...updatedMotion.nodeDurations)).toBeLessThanOrEqual(300);
+  });
+
   test('clicking background closes detail panel', async ({ page }) => {
     await clickCyNode(page, 'fnd-001');
     await page.waitForTimeout(300);

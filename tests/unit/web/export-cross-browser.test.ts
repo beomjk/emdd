@@ -77,7 +77,8 @@ describe('SC-008: Export HTML cross-browser compatibility', () => {
     expect(html).toContain('class="close"');
 
     // Click handlers for interactivity
-    expect(html).toContain("cy.on('tap','node'");
+    expect(html).toContain("cy.on('tap','node[?isCluster]'");
+    expect(html).toContain("cy.on('tap','node[!isCluster]'");
     expect(html).toContain("cy.on('mouseover','edge'");
   });
 });

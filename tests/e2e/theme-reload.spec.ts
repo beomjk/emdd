@@ -1,5 +1,10 @@
 import { test, expect } from '@playwright/test';
-import { sel, waitForGraphReady, getTheme } from './fixtures/helpers.js';
+import {
+  clickCyNode,
+  getTheme,
+  sel,
+  waitForGraphReady,
+} from './fixtures/helpers.js';
 
 test.describe('US5: Theme Toggle and Live Reload', () => {
   test.beforeEach(async ({ page }) => {
@@ -51,6 +56,97 @@ test.describe('US5: Theme Toggle and Live Reload', () => {
 
       const themeAfterReload = await getTheme(page);
       expect(themeAfterReload).toBe(themeAfterToggle);
+    });
+
+    test('selected and grouped graph cues restyle with the active theme', async ({ page }) => {
+      await page.route('**/api/clusters', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            clusters: [
+              {
+                id: 'cluster-theme',
+                label: 'Theme Cluster',
+                nodeIds: ['hyp-001', 'exp-001'],
+                isManual: false,
+              },
+            ],
+          }),
+        });
+      });
+
+      await page.reload();
+      await waitForGraphReady(page);
+      await clickCyNode(page, 'hyp-001');
+      await expect(page.locator(sel.detailPanelOpen)).toBeVisible();
+
+      await expect.poll(async () => {
+        return page.evaluate(() => {
+          const cy = (document.querySelector('.cy-container') as any)?._cyreg?.cy;
+          if (!cy) return false;
+          return cy.getElementById('hyp-001').hasClass('selected-node');
+        });
+      }).toBe(true);
+
+      const detailTitleBefore = await page.locator(sel.detailTitle).textContent();
+
+      const before = await page.evaluate(() => {
+        const cy = (document.querySelector('.cy-container') as any)?._cyreg?.cy;
+        if (!cy) throw new Error('Cytoscape not found');
+
+        const node = cy.getElementById('hyp-001');
+        const cluster = cy.getElementById('cluster-theme');
+
+        return {
+          theme: document.documentElement.dataset.theme ?? 'light',
+          isSelected: node.hasClass('selected-node'),
+          nodeTextColor: node.data('textColor'),
+          graphBackground: getComputedStyle(
+            document.querySelector('.graph-canvas') as HTMLElement,
+          ).backgroundColor,
+          clusterBorderColor: cluster.data('borderColor'),
+          clusterBorderStyle: cluster.style('border-style'),
+          clusterLabelBgColor: cluster.data('labelBgColor'),
+        };
+      });
+
+      expect(before.isSelected).toBe(true);
+      expect(before.graphBackground).not.toBe('');
+      expect(before.clusterBorderStyle).toBe('dashed');
+
+      await page.locator(sel.themeToggle).click();
+      await page.waitForTimeout(200);
+      await expect(page.locator(sel.detailPanelOpen)).toBeVisible();
+      await expect(page.locator(sel.detailTitle)).toHaveText(detailTitleBefore ?? '');
+
+      const after = await page.evaluate(() => {
+        const cy = (document.querySelector('.cy-container') as any)?._cyreg?.cy;
+        if (!cy) throw new Error('Cytoscape not found');
+
+        const node = cy.getElementById('hyp-001');
+        const cluster = cy.getElementById('cluster-theme');
+
+        return {
+          theme: document.documentElement.dataset.theme ?? 'light',
+          isSelected: node.hasClass('selected-node'),
+          nodeTextColor: node.data('textColor'),
+          graphBackground: getComputedStyle(
+            document.querySelector('.graph-canvas') as HTMLElement,
+          ).backgroundColor,
+          clusterBorderColor: cluster.data('borderColor'),
+          clusterBorderStyle: cluster.style('border-style'),
+          clusterLabelBgColor: cluster.data('labelBgColor'),
+        };
+      });
+
+      expect(after.theme).not.toBe(before.theme);
+      expect(after.isSelected).toBe(true);
+      expect(after.graphBackground).not.toBe(before.graphBackground);
+      expect(after.nodeTextColor).not.toBe(before.nodeTextColor);
+      expect(after.clusterBorderColor).not.toBe(before.clusterBorderColor);
+      expect(after.clusterLabelBgColor).not.toBe(before.clusterLabelBgColor);
+      expect(after.clusterBorderStyle).toBe(before.clusterBorderStyle);
     });
 
     test('theme toggle updates button content', async ({ page }) => {

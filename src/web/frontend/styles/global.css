@@ -44,6 +44,12 @@
   --cy-node-text: #555;
   --cy-edge-color: #ccc;
   --cy-edge-label: #888;
+  --cy-cluster-bg: rgba(74, 144, 217, 0.08);
+  --cy-cluster-border: rgba(74, 144, 217, 0.3);
+  --cy-highlight-underlay: rgba(74, 144, 217, 0.16);
+  --cy-selection-underlay: rgba(74, 144, 217, 0.24);
+  --cy-selection-outline: rgba(248, 250, 252, 0.92);
+  --cy-group-label-bg: rgba(255, 255, 255, 0.82);
 }
 
 [data-theme="dark"] {
@@ -79,6 +85,12 @@
   --cy-node-text: #b0b8c8;
   --cy-edge-color: #3a4a65;
   --cy-edge-label: #8090a8;
+  --cy-cluster-bg: rgba(93, 173, 226, 0.14);
+  --cy-cluster-border: rgba(93, 173, 226, 0.45);
+  --cy-highlight-underlay: rgba(93, 173, 226, 0.22);
+  --cy-selection-underlay: rgba(93, 173, 226, 0.3);
+  --cy-selection-outline: rgba(12, 18, 32, 0.9);
+  --cy-group-label-bg: rgba(15, 23, 41, 0.84);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }

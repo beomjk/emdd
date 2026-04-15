@@ -7,6 +7,14 @@ import { createGraphCache } from '../../../src/web/cache.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SAMPLE_GRAPH = path.resolve(__dirname, '../../fixtures/sample-graph');
 
+function extractElements(html: string): Array<{ group: string; data: Record<string, unknown> }> {
+  const match = html.match(/var elements = (\[[\s\S]*?\]);\r?\nvar cy = cytoscape\(/);
+  if (!match) {
+    throw new Error('Exported HTML did not contain embedded elements JSON');
+  }
+  return JSON.parse(match[1]);
+}
+
 describe('generateExportHtml', () => {
   it('returns HTML with inline Cytoscape.js', async () => {
     const cache = createGraphCache(SAMPLE_GRAPH);
@@ -70,6 +78,15 @@ describe('generateExportHtml', () => {
     expect(nodeCount).toBe(testingCount);
   });
 
+  it('preserves an explicit empty edge filter as zero exported edges', async () => {
+    const cache = createGraphCache(SAMPLE_GRAPH);
+    const graph = await cache.getGraph();
+    const { edgeCount, html } = generateExportHtml(graph, { edgeTypes: [] });
+
+    expect(edgeCount).toBe(0);
+    expect(html).toContain('0 edges');
+  });
+
   it('applies hierarchical layout config', async () => {
     const cache = createGraphCache(SAMPLE_GRAPH);
     const graph = await cache.getGraph();
@@ -85,6 +102,64 @@ describe('generateExportHtml', () => {
     const { html } = generateExportHtml(graph);
 
     expect(html).toContain("name: 'fcose'");
+  });
+
+  it('defaults exported HTML to the light theme', async () => {
+    const cache = createGraphCache(SAMPLE_GRAPH);
+    const graph = await cache.getGraph();
+    const { html } = generateExportHtml(graph);
+
+    expect(html).toContain('data-theme="light"');
+  });
+
+  it('applies dark theme styling when requested', async () => {
+    const cache = createGraphCache(SAMPLE_GRAPH);
+    const graph = await cache.getGraph();
+    const { html } = generateExportHtml(graph, { theme: 'dark' });
+
+    expect(html).toContain('data-theme="dark"');
+    expect(html).toContain('#0f172a');
+  });
+
+  it('renders grouped-region container treatment when clusters are provided', () => {
+    const graph = {
+      nodes: [
+        { id: 'hyp-001', title: 'Hypothesis 1', type: 'hypothesis', status: 'PROPOSED', tags: [], links: [] },
+      ],
+      edges: [],
+      loadedAt: new Date().toISOString(),
+    };
+    const { html } = generateExportHtml(graph as any, {
+      theme: 'dark',
+      clusters: [
+        { id: 'cluster-1', label: 'Manual Group', nodeIds: ['hyp-001'], isManual: true },
+      ],
+    });
+
+    expect(html).toContain('"isCluster":true');
+    expect(html).toContain('"parent":"cluster-1"');
+    expect(html).toContain("node[?isCluster]");
+    expect(html).toContain('Manual Group');
+  });
+
+  it('drops overlapping clusters that would otherwise export as empty containers', () => {
+    const graph = {
+      nodes: [
+        { id: 'hyp-001', title: 'Hypothesis 1', type: 'hypothesis', status: 'PROPOSED', tags: [], links: [] },
+      ],
+      edges: [],
+      loadedAt: new Date().toISOString(),
+    };
+    const { html } = generateExportHtml(graph as any, {
+      clusters: [
+        { id: 'cluster-1', label: 'Primary Group', nodeIds: ['hyp-001'], isManual: true },
+        { id: 'cluster-2', label: 'Overlapping Group', nodeIds: ['hyp-001'], isManual: true },
+      ],
+    });
+    const elements = extractElements(html);
+
+    expect(elements.some((element) => element.data.id === 'cluster-1')).toBe(true);
+    expect(elements.some((element) => element.data.id === 'cluster-2')).toBe(false);
   });
 
   describe('XSS prevention', () => {
