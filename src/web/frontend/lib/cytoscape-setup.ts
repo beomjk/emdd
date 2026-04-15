@@ -3,6 +3,7 @@ import fcose from 'cytoscape-fcose';
 import dagre from 'cytoscape-dagre';
 import type { NodeType } from '../../../graph/types.js';
 import type { LayoutMode } from '../../types.js';
+import { GRAPH_MOTION_PROFILE } from '../../visual-state.js';
 
 // Register plugins once
 cytoscape.use(fcose);
@@ -23,7 +24,7 @@ export function getForceLayout(animate = false, initial = true) {
   return {
     name: 'fcose' as const,
     animate,
-    animationDuration: animate ? 500 : 0,
+    animationDuration: animate ? GRAPH_MOTION_PROFILE.layoutTransitionMs : 0,
     quality: (initial ? 'proof' : 'default') as 'proof' | 'default',
     nodeDimensionsIncludeLabels: true,
   };
@@ -36,7 +37,7 @@ export function getHierarchicalLayout(animate = false) {
     nodeSep: 50,
     rankSep: 80,
     animate,
-    animationDuration: animate ? 500 : 0,
+    animationDuration: animate ? GRAPH_MOTION_PROFILE.layoutTransitionMs : 0,
     nodeDimensionsIncludeLabels: true,
     sort: (a: any, b: any) => {
       const tierA = TYPE_TIER[a.data('type') as NodeType] ?? 2;

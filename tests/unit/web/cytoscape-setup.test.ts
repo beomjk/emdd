@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import { GRAPH_MOTION_PROFILE } from '../../../src/web/visual-state.js';
 
 // Mock cytoscape and plugins before import
 vi.mock('cytoscape', () => {
@@ -31,7 +32,7 @@ describe('cytoscape-setup', () => {
     it('uses animate with duration when animate=true', () => {
       const layout = getForceLayout(true);
       expect(layout.animate).toBe(true);
-      expect(layout.animationDuration).toBe(500);
+      expect(layout.animationDuration).toBe(GRAPH_MOTION_PROFILE.layoutTransitionMs);
     });
 
     it('uses default quality when initial=false', () => {
@@ -54,6 +55,12 @@ describe('cytoscape-setup', () => {
       expect(layout.rankSep).toBe(80);
       expect(layout.animate).toBe(false);
       expect(layout.nodeDimensionsIncludeLabels).toBe(true);
+    });
+
+    it('uses the shared layout motion profile when animated', () => {
+      const layout = getHierarchicalLayout(true);
+      expect(layout.animate).toBe(true);
+      expect(layout.animationDuration).toBe(GRAPH_MOTION_PROFILE.layoutTransitionMs);
     });
 
     it('has a sort function that orders by type tier', () => {

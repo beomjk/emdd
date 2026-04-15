@@ -40,6 +40,14 @@ export interface VisualCluster {
   isManual: boolean;
 }
 
+export type {
+  GraphTheme,
+  MotionProfile,
+  VisualElementKind,
+  VisualStateKind,
+  VisualStateToken,
+} from './visual-state.js';
+
 // ── Re-export existing types used by web layer ───────────────────────
 
 export type {
