@@ -7,6 +7,14 @@ import { createGraphCache } from '../../../src/web/cache.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SAMPLE_GRAPH = path.resolve(__dirname, '../../fixtures/sample-graph');
 
+function extractElements(html: string): Array<{ group: string; data: Record<string, unknown> }> {
+  const match = html.match(/var elements = (\[[\s\S]*?\]);\r?\nvar cy = cytoscape\(/);
+  if (!match) {
+    throw new Error('Exported HTML did not contain embedded elements JSON');
+  }
+  return JSON.parse(match[1]);
+}
+
 describe('generateExportHtml', () => {
   it('returns HTML with inline Cytoscape.js', async () => {
     const cache = createGraphCache(SAMPLE_GRAPH);
@@ -132,6 +140,26 @@ describe('generateExportHtml', () => {
     expect(html).toContain('"parent":"cluster-1"');
     expect(html).toContain("node[?isCluster]");
     expect(html).toContain('Manual Group');
+  });
+
+  it('drops overlapping clusters that would otherwise export as empty containers', () => {
+    const graph = {
+      nodes: [
+        { id: 'hyp-001', title: 'Hypothesis 1', type: 'hypothesis', status: 'PROPOSED', tags: [], links: [] },
+      ],
+      edges: [],
+      loadedAt: new Date().toISOString(),
+    };
+    const { html } = generateExportHtml(graph as any, {
+      clusters: [
+        { id: 'cluster-1', label: 'Primary Group', nodeIds: ['hyp-001'], isManual: true },
+        { id: 'cluster-2', label: 'Overlapping Group', nodeIds: ['hyp-001'], isManual: true },
+      ],
+    });
+    const elements = extractElements(html);
+
+    expect(elements.some((element) => element.data.id === 'cluster-1')).toBe(true);
+    expect(elements.some((element) => element.data.id === 'cluster-2')).toBe(false);
   });
 
   describe('XSS prevention', () => {

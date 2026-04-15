@@ -67,11 +67,18 @@ function filterClusters(
   visibleNodeIds: Set<string>,
 ): VisualCluster[] {
   if (!clusters) return [];
+  const assignedNodeIds = new Set<string>();
 
   return clusters
     .map((cluster) => ({
       ...cluster,
-      nodeIds: cluster.nodeIds.filter((nodeId) => visibleNodeIds.has(nodeId)),
+      nodeIds: cluster.nodeIds.filter((nodeId) => {
+        if (!visibleNodeIds.has(nodeId) || assignedNodeIds.has(nodeId)) {
+          return false;
+        }
+        assignedNodeIds.add(nodeId);
+        return true;
+      }),
     }))
     .filter((cluster) => cluster.nodeIds.length > 0);
 }

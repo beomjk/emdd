@@ -894,9 +894,16 @@ describe('CytoscapeGraph', () => {
     ) {
       const animateMock = vi.fn();
       const removeStyleMock = vi.fn();
-      const styleMock = vi.fn((key?: string) => {
-        if (key === 'border-width') return '2px';
-        if (key === 'border-color') return '#000';
+      const styles: Record<string, string> = {
+        'border-width': '2px',
+        'border-color': '#000',
+      };
+      const styleMock = vi.fn((key?: string, val?: string) => {
+        if (key && val !== undefined) {
+          styles[key] = val;
+          return undefined;
+        }
+        if (key) return styles[key] ?? '';
         return '';
       });
       (cy.getElementById as Mock).mockImplementation((id: string) => ({
@@ -967,14 +974,13 @@ describe('CytoscapeGraph', () => {
       target.remove();
     });
 
-    it('pulseNode clears temporary border overrides when the node is already selected', async () => {
-      const { instance, target } = mountGraph();
+    it('pulseNode reapplies only the selected border width when the node is still selected', async () => {
+      const { instance, target } = mountGraph({ selectedNodeId: 'hyp-001' });
       await waitFor(() => expect(mockCytoscape).toHaveBeenCalled());
 
       const { animateMock, removeStyleMock, styleMock } = setupMockNodeLookup(
         mockCyInstance,
         ['hyp-001'],
-        { selectedIds: ['hyp-001'] },
       );
 
       instance.pulseNode('hyp-001', { keepSelectedCue: true });
@@ -982,8 +988,30 @@ describe('CytoscapeGraph', () => {
       const firstCallOpts = animateMock.mock.calls[0][1];
       firstCallOpts.complete();
 
-      expect(removeStyleMock).not.toHaveBeenCalled();
+      expect(removeStyleMock).toHaveBeenCalledWith('border-color');
+      expect(removeStyleMock).not.toHaveBeenCalledWith('border-width');
       expect(styleMock).toHaveBeenCalledWith('border-width', '4');
+
+      unmount(instance);
+      target.remove();
+    });
+
+    it('pulseNode clears temporary overrides when the node is no longer selected by completion time', async () => {
+      const { instance, target } = mountGraph();
+      await waitFor(() => expect(mockCytoscape).toHaveBeenCalled());
+
+      const { animateMock, removeStyleMock } = setupMockNodeLookup(
+        mockCyInstance,
+        ['hyp-001'],
+      );
+
+      instance.pulseNode('hyp-001', { keepSelectedCue: true });
+
+      const firstCallOpts = animateMock.mock.calls[0][1];
+      firstCallOpts.complete();
+
+      expect(removeStyleMock).toHaveBeenCalledWith('border-width');
+      expect(removeStyleMock).toHaveBeenCalledWith('border-color');
 
       unmount(instance);
       target.remove();

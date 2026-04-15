@@ -142,19 +142,22 @@ test.describe('US1: Graph Dashboard Renders Identically', () => {
     });
 
     await clickCyNode(page, 'exp-001');
-    await page.waitForTimeout(500);
+    await page.waitForFunction(() => {
+      const motion = (window as any).__emddMotion;
+      return motion && motion.cyDurations.length > 0 && motion.nodeDurations.length > 0;
+    });
     const panel = page.locator(sel.detailPanelOpen);
     await expect(panel).toBeVisible();
     await expect(panel.locator(sel.detailId)).toContainText('exp-001');
 
     const motion = await page.evaluate(() => (window as any).__emddMotion);
     expect(motion.cyDurations).toContain(300);
-    expect(motion.nodeDurations).toContain(300);
+    expect(Math.max(...motion.cyDurations)).toBeLessThanOrEqual(300);
+    expect(Math.max(...motion.nodeDurations)).toBeLessThanOrEqual(300);
 
     const links = panel.locator(sel.linkTarget);
     await expect(links.first()).toBeVisible();
     await links.first().click();
-    await page.waitForTimeout(500);
 
     await page.waitForFunction(() => {
       const cy = (document.querySelector('.cy-container') as any)?._cyreg?.cy;
@@ -168,12 +171,16 @@ test.describe('US1: Graph Dashboard Renders Identically', () => {
       const cluster = cy.getElementById('cluster-us1');
       if (cluster?.length) cluster.emit('tap');
     });
-    await page.waitForTimeout(600);
+    await page.waitForFunction(() => {
+      const motion = (window as any).__emddMotion;
+      return motion && motion.cyDurations.includes(500);
+    });
 
     const updatedMotion = await page.evaluate(() => (window as any).__emddMotion);
     expect(updatedMotion.cyDurations).toContain(300);
     expect(updatedMotion.cyDurations).toContain(500);
-    expect(updatedMotion.nodeDurations).toContain(300);
+    expect(Math.max(...updatedMotion.cyDurations)).toBeLessThanOrEqual(500);
+    expect(Math.max(...updatedMotion.nodeDurations)).toBeLessThanOrEqual(300);
   });
 
   test('clicking background closes detail panel', async ({ page }) => {

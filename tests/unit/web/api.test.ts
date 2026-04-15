@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Hono } from 'hono';
@@ -276,6 +276,29 @@ describe('GET /api/export', () => {
     const html = await res.text();
     expect(html).toContain("node[?isCluster]");
     expect(html).toContain('"isCluster":true');
+  });
+
+  it('falls back to export without clusters when cluster detection fails', async () => {
+    const cache = createGraphCache(SAMPLE_GRAPH);
+    const failingCache = {
+      ...cache,
+      getClusters: async () => {
+        throw new Error('cluster boom');
+      },
+    };
+    const app = new Hono();
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    app.route('/api', createApiRoutes(SAMPLE_GRAPH, failingCache as any));
+
+    const res = await app.request('/api/export');
+    const html = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(html).toContain('<!DOCTYPE html>');
+    expect(html).not.toContain('"isCluster":true');
+
+    warnSpy.mockRestore();
   });
 });
 

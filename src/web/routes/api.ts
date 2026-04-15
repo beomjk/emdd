@@ -4,7 +4,7 @@ import type { GraphCache } from '../cache.js';
 import type { SSEManager } from '../sse.js';
 import { readNode, getNeighbors } from '../../graph/operations.js';
 import { generateExportHtml } from '../export.js';
-import type { LayoutMode } from '../types.js';
+import type { LayoutMode, VisualCluster } from '../types.js';
 import { resolveGraphTheme } from '../visual-state.js';
 
 export function createApiRoutes(graphDir: string, cache: GraphCache, sseManager?: SSEManager): Hono {
@@ -97,7 +97,12 @@ export function createApiRoutes(graphDir: string, cache: GraphCache, sseManager?
   // GET /api/export
   api.get('/export', async (c) => {
     const graph = await cache.getGraph();
-    const clusters = await cache.getClusters();
+    let clusters: VisualCluster[] = [];
+    try {
+      clusters = await cache.getClusters();
+    } catch (err) {
+      console.warn('[emdd] cluster export failed, falling back to export without clusters:', err);
+    }
     const searchParams = new URL(c.req.url).searchParams;
     const layout = parseLayoutMode(searchParams.get('layout') ?? undefined);
     const theme = resolveGraphTheme(searchParams.get('theme') ?? undefined);

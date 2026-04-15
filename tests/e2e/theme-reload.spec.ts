@@ -84,10 +84,10 @@ test.describe('US5: Theme Toggle and Live Reload', () => {
       await expect.poll(async () => {
         return page.evaluate(() => {
           const cy = (document.querySelector('.cy-container') as any)?._cyreg?.cy;
-          if (!cy) return 0;
-          return Number.parseFloat(cy.getElementById('hyp-001').style('border-width'));
+          if (!cy) return false;
+          return cy.getElementById('hyp-001').hasClass('selected-node');
         });
-      }).toBeGreaterThanOrEqual(4);
+      }).toBe(true);
 
       const detailTitleBefore = await page.locator(sel.detailTitle).textContent();
 
@@ -100,15 +100,18 @@ test.describe('US5: Theme Toggle and Live Reload', () => {
 
         return {
           theme: document.documentElement.dataset.theme ?? 'light',
-          selectedBorderWidth: node.style('border-width'),
+          isSelected: node.hasClass('selected-node'),
+          nodeTextColor: node.data('textColor'),
           graphBackground: getComputedStyle(
             document.querySelector('.graph-canvas') as HTMLElement,
           ).backgroundColor,
+          clusterBorderColor: cluster.data('borderColor'),
           clusterBorderStyle: cluster.style('border-style'),
+          clusterLabelBgColor: cluster.data('labelBgColor'),
         };
       });
 
-      expect(Number.parseFloat(before.selectedBorderWidth)).toBeGreaterThanOrEqual(4);
+      expect(before.isSelected).toBe(true);
       expect(before.graphBackground).not.toBe('');
       expect(before.clusterBorderStyle).toBe('dashed');
 
@@ -126,15 +129,24 @@ test.describe('US5: Theme Toggle and Live Reload', () => {
 
         return {
           theme: document.documentElement.dataset.theme ?? 'light',
-          selectedBorderWidth: node.style('border-width'),
+          isSelected: node.hasClass('selected-node'),
+          nodeTextColor: node.data('textColor'),
           graphBackground: getComputedStyle(
             document.querySelector('.graph-canvas') as HTMLElement,
           ).backgroundColor,
+          clusterBorderColor: cluster.data('borderColor'),
+          clusterBorderStyle: cluster.style('border-style'),
+          clusterLabelBgColor: cluster.data('labelBgColor'),
         };
       });
 
       expect(after.theme).not.toBe(before.theme);
+      expect(after.isSelected).toBe(true);
       expect(after.graphBackground).not.toBe(before.graphBackground);
+      expect(after.nodeTextColor).not.toBe(before.nodeTextColor);
+      expect(after.clusterBorderColor).not.toBe(before.clusterBorderColor);
+      expect(after.clusterLabelBgColor).not.toBe(before.clusterLabelBgColor);
+      expect(after.clusterBorderStyle).toBe(before.clusterBorderStyle);
     });
 
     test('theme toggle updates button content', async ({ page }) => {

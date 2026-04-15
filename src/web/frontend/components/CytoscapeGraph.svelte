@@ -73,15 +73,14 @@
     if (!cy) return;
     const node = cy.getElementById(nodeId);
     if (node.length === 0) return;
-    const origC = node.style('border-color');
     node.animate(
       { style: { 'border-width': 6, 'border-color': '#FF6B6B' } } as any,
       {
         duration: GRAPH_MOTION_PROFILE.selectionEmphasisMs,
         complete: () => {
-          if (opts.keepSelectedCue) {
+          if (opts.keepSelectedCue && untrack(() => selectedNodeId) === nodeId) {
             node.style('border-width', '4');
-            node.style('border-color', origC);
+            node.removeStyle('border-color');
             return;
           }
           node.removeStyle('border-width');
