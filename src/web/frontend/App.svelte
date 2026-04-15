@@ -68,6 +68,14 @@
     await refetchNeighbors(id, hopDepth);
   }
 
+  function isNodeVisibleUnderFilters(
+    node: { type: string; status: string },
+    visibleTypes: Set<string>,
+    visibleStatuses: Set<string>,
+  ): boolean {
+    return visibleTypes.has(node.type) && (!node.status || visibleStatuses.has(node.status));
+  }
+
   function focusGraphNode(id: string): void {
     graphRef?.panToNode(id);
     graphRef?.pulseNode(id, { keepSelectedCue: true });
@@ -97,17 +105,11 @@
     try {
       const types = [...filterState.visibleTypes];
       const statuses = [...filterState.visibleStatuses];
-      // Guard: an empty filter array means "select nothing", but the server's
-      // contract is that a missing/empty param means "no filter" (show all).
-      // Without this check, deselecting every type silently exports the full
-      // graph — the opposite of what the user asked for.
-      if (types.length === 0 || statuses.length === 0) {
-        showToast('Select at least one type and one status to export', 'error');
-        return;
-      }
       const edgeTypes = [...filterState.visibleEdgeTypes];
       exportAbort?.abort();
       exportAbort = new AbortController();
+      // Preserve intentionally empty filter groups so the downloaded HTML
+      // mirrors the current canvas, including empty or statusless-only views.
       const html = await fetchExportHtml(
         dashboardState.layout,
         types,
@@ -115,6 +117,10 @@
         edgeTypes,
         dashboardState.theme,
         { signal: exportAbort.signal },
+        {
+          preserveEmptyTypes: types.length === 0,
+          preserveEmptyStatuses: statuses.length === 0,
+        },
       );
       const blob = new Blob([html], { type: 'text/html' });
       const url = URL.createObjectURL(blob);
@@ -215,6 +221,17 @@
       exportAbort?.abort();
       if (toastTimer) clearTimeout(toastTimer);
     };
+  });
+
+  $effect(() => {
+    const selectedNode = dashboardState.selectedNode;
+    const visibleTypes = filterState.visibleTypes;
+    const visibleStatuses = filterState.visibleStatuses;
+
+    if (!selectedNode) return;
+    if (!isNodeVisibleUnderFilters(selectedNode, visibleTypes, visibleStatuses)) {
+      deselectNode();
+    }
   });
 </script>
 

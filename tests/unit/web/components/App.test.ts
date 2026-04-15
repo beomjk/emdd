@@ -467,33 +467,77 @@ describe('App', () => {
           expect.any(Array),
           dashboardState.theme,
           expect.objectContaining({ signal: expect.any(AbortSignal) }),
+          {
+            preserveEmptyTypes: false,
+            preserveEmptyStatuses: false,
+          },
         );
       });
 
       vi.unstubAllGlobals();
     });
 
-    it('shows error toast when all types are deselected and export is clicked', async () => {
-      const graph = makeGraph([makeNode()], []);
+    it('allows exporting a statusless-only view by preserving the empty status filter', async () => {
+      const graph = makeGraph([makeNode({ status: '' })], []);
       mockFetchGraph.mockResolvedValue(graph);
+      mockFetchExportHtml.mockResolvedValue('<html></html>');
+      const createObjectURL = vi.fn().mockReturnValue('blob:test');
+      const revokeObjectURL = vi.fn();
+      vi.stubGlobal('URL', { createObjectURL, revokeObjectURL });
+
       render(App);
       await waitFor(() => {
         screen.getByRole('button', { name: /export/i });
       });
 
-      // Deselect all types so visibleTypes becomes empty
-      for (const t of filterState.allTypes) {
-        filterState.toggleType(t);
-      }
-
       const btn = screen.getByRole('button', { name: /export/i });
       await btn.click();
 
       await waitFor(() => {
-        expect(screen.getByText('Select at least one type and one status to export')).toBeInTheDocument();
+        expect(mockFetchExportHtml).toHaveBeenCalledWith(
+          dashboardState.layout,
+          ['hypothesis'],
+          [],
+          [],
+          dashboardState.theme,
+          expect.objectContaining({ signal: expect.any(AbortSignal) }),
+          {
+            preserveEmptyTypes: false,
+            preserveEmptyStatuses: true,
+          },
+        );
       });
-      // fetchExportHtml should NOT have been called
-      expect(mockFetchExportHtml).not.toHaveBeenCalled();
+
+      vi.unstubAllGlobals();
+    });
+
+    it('deselects a node when filters hide it', async () => {
+      const graph = makeGraph(
+        [
+          makeNode({ id: 'hyp-001', type: 'hypothesis', status: 'PROPOSED' }),
+          makeNode({ id: 'exp-001', type: 'experiment', status: 'PLANNED' }),
+        ],
+        [],
+      );
+      mockFetchGraph.mockResolvedValue(graph);
+      render(App);
+      await waitFor(() => {
+        screen.getByRole('button', { name: /^hypothesis$/i });
+      });
+
+      dashboardState.selectNode('hyp-001');
+
+      await waitFor(() => {
+        expect(screen.getByLabelText('Close detail panel')).toBeInTheDocument();
+      });
+
+      const typeBtn = screen.getByRole('button', { name: /^hypothesis$/i });
+      await typeBtn.click();
+
+      await waitFor(() => {
+        expect(dashboardState.selectedNodeId).toBeNull();
+      });
+      expect(screen.queryByLabelText('Close detail panel')).not.toBeInTheDocument();
     });
   });
 

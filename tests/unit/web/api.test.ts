@@ -268,6 +268,24 @@ describe('GET /api/export', () => {
     expect(html).toContain('0 edges');
   });
 
+  it('treats empty type and status query params as no filter by default', async () => {
+    const { app } = createApp(SAMPLE_GRAPH);
+    const res = await app.request('/api/export?types=&statuses=');
+
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain('14 nodes');
+  });
+
+  it('preserves an explicit empty type filter when requested', async () => {
+    const { app } = createApp(SAMPLE_GRAPH);
+    const res = await app.request('/api/export?types=&preserveEmptyTypes=1');
+
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain('0 nodes');
+  });
+
   it('includes grouped-region data in export output', async () => {
     const { app } = createApp(SAMPLE_GRAPH);
     const res = await app.request('/api/export');

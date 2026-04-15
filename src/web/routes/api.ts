@@ -14,10 +14,16 @@ export function createApiRoutes(graphDir: string, cache: GraphCache, sseManager?
     return layout === 'hierarchical' ? 'hierarchical' : 'force';
   }
 
-  function parseListParam(searchParams: URLSearchParams, key: string): string[] | undefined {
+  function parseListParam(
+    searchParams: URLSearchParams,
+    key: string,
+    options: { preserveEmpty?: boolean } = {},
+  ): string[] | undefined {
     if (!searchParams.has(key)) return undefined;
     const raw = searchParams.get(key) ?? '';
-    return raw === '' ? [] : raw.split(',').filter(Boolean);
+    return raw === ''
+      ? (options.preserveEmpty ? [] : undefined)
+      : raw.split(',').filter(Boolean);
   }
 
   // GET /api/graph
@@ -106,9 +112,15 @@ export function createApiRoutes(graphDir: string, cache: GraphCache, sseManager?
     const searchParams = new URL(c.req.url).searchParams;
     const layout = parseLayoutMode(searchParams.get('layout') ?? undefined);
     const theme = resolveGraphTheme(searchParams.get('theme') ?? undefined);
-    const types = parseListParam(searchParams, 'types');
-    const statuses = parseListParam(searchParams, 'statuses');
-    const edgeTypes = parseListParam(searchParams, 'edgeTypes');
+    const types = parseListParam(searchParams, 'types', {
+      preserveEmpty: searchParams.get('preserveEmptyTypes') === '1',
+    });
+    const statuses = parseListParam(searchParams, 'statuses', {
+      preserveEmpty: searchParams.get('preserveEmptyStatuses') === '1',
+    });
+    const edgeTypes = parseListParam(searchParams, 'edgeTypes', {
+      preserveEmpty: true,
+    });
 
     const { html } = generateExportHtml(graph, {
       layout,

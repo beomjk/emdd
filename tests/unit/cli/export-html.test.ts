@@ -41,14 +41,17 @@ import { exportHtmlCommand } from '../../../src/cli/export-html.js';
 
 describe('exportHtmlCommand', () => {
   let consoleSpy: ReturnType<typeof vi.spyOn>;
+  let warnSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     vi.clearAllMocks();
     consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
   });
 
   afterEach(() => {
     consoleSpy.mockRestore();
+    warnSpy.mockRestore();
   });
 
   it('uses default output path graph-dashboard.html when outputArg is undefined', async () => {
@@ -116,5 +119,28 @@ describe('exportHtmlCommand', () => {
     expect(allOutput).toContain(path.resolve('graph-dashboard.html'));
     expect(allOutput).toContain('5 nodes');
     expect(allOutput).toContain('3 edges');
+  });
+
+  it('falls back to export without clusters when cluster detection fails', async () => {
+    const { createGraphCache } = await import('../../../src/web/cache.js');
+    vi.mocked(createGraphCache).mockReturnValueOnce({
+      load: vi.fn().mockResolvedValue({
+        nodes: [{ id: 'n1' }],
+        edges: [],
+        loadedAt: '2026-01-01',
+      }),
+      getClusters: vi.fn().mockRejectedValue(new Error('cluster boom')),
+    } as any);
+
+    await exportHtmlCommand(undefined, { layout: 'force' });
+
+    expect(vi.mocked(generateExportHtml)).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ clusters: [] }),
+    );
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[emdd] cluster export failed, falling back to export without clusters:',
+      expect.any(Error),
+    );
   });
 });

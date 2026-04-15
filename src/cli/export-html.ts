@@ -4,7 +4,7 @@ import chalk from 'chalk';
 import { resolveGraphDir } from '../graph/loader.js';
 import { createGraphCache } from '../web/cache.js';
 import { generateExportHtml } from '../web/export.js';
-import type { LayoutMode } from '../web/types.js';
+import type { LayoutMode, VisualCluster } from '../web/types.js';
 
 interface ExportHtmlOptions {
   layout: string;
@@ -19,7 +19,12 @@ export async function exportHtmlCommand(
   const graphDir = resolveGraphDir(undefined);
   const cache = createGraphCache(graphDir);
   const graph = await cache.load();
-  const clusters = await cache.getClusters();
+  let clusters: VisualCluster[] = [];
+  try {
+    clusters = await cache.getClusters();
+  } catch (err) {
+    console.warn('[emdd] cluster export failed, falling back to export without clusters:', err);
+  }
 
   const layout = (options.layout === 'hierarchical' ? 'hierarchical' : 'force') as LayoutMode;
   const types = options.types ? options.types.split(',').filter(Boolean) : undefined;

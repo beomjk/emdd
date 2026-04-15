@@ -1137,6 +1137,46 @@ describe('CytoscapeGraph', () => {
       expect(container.querySelector('.cy-container')).not.toBeNull();
     });
 
+    it('clears previously rendered clusters when a later fetch fails', async () => {
+      mockFetchClusters
+        .mockResolvedValueOnce({
+          clusters: [
+            { id: 'cluster-1', label: 'Cluster 1', nodeIds: ['hyp-001'], isManual: false },
+          ],
+        })
+        .mockRejectedValueOnce(new Error('cluster API down'));
+
+      const clusterChildren = { move: vi.fn() };
+      const clusterCollection = {
+        children: vi.fn(() => clusterChildren),
+        remove: vi.fn(),
+        forEach: vi.fn(),
+        some: vi.fn(() => false),
+      };
+
+      const initialGraph = makeGraph([makeNode({ id: 'hyp-001', title: 'Initial' })], []);
+      const { rerender } = renderGraph({ graph: initialGraph });
+      await waitFor(() => {
+        expect(mockFetchClusters).toHaveBeenCalledTimes(1);
+      });
+
+      (mockCyInstance.nodes as Mock).mockImplementation((selector?: string) => {
+        if (selector === '[?isCluster]') return clusterCollection;
+        return { forEach: vi.fn(), some: vi.fn(() => false) };
+      });
+      (mockCyInstance.edges as Mock).mockReturnValue({ forEach: vi.fn() });
+
+      const updatedGraph = makeGraph([makeNode({ id: 'hyp-001', title: 'Updated' })], []);
+      await rerender({ graph: updatedGraph });
+
+      await waitFor(() => {
+        expect(mockFetchClusters).toHaveBeenCalledTimes(2);
+      });
+
+      expect(clusterChildren.move).toHaveBeenCalledWith({ parent: null });
+      expect(clusterCollection.remove).toHaveBeenCalled();
+    });
+
     it('skips cluster application when response is empty', async () => {
       mockFetchClusters.mockResolvedValueOnce({ clusters: [] });
       (mockCyInstance.add as Mock).mockClear();

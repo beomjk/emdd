@@ -361,6 +361,12 @@
     };
   }
 
+  function clearRenderedClusters(cyInst: cytoscape.Core): void {
+    const existingClusters = cyInst.nodes('[?isCluster]');
+    existingClusters.children().move({ parent: null });
+    existingClusters.remove();
+  }
+
   async function applyClustersToGraph(
     cyInst: cytoscape.Core,
     signal?: AbortSignal,
@@ -376,9 +382,7 @@
       // Orphan cluster children BEFORE removing the compound parents.
       // Cytoscape cascades removal to descendants, so removing the parent
       // without orphaning first would also delete every clustered domain node.
-      const existingClusters = cyInst.nodes('[?isCluster]');
-      existingClusters.children().move({ parent: null });
-      existingClusters.remove();
+      clearRenderedClusters(cyInst);
 
       if (clusters && clusters.length > 0) {
         for (const cluster of clusters) {
@@ -406,6 +410,10 @@
       applySelectionState(cyInst, selectedNodeId, neighborIds);
     } catch (err) {
       if ((err as Error)?.name === 'AbortError') return;
+      clearRenderedClusters(cyInst);
+      prevClusterFingerprint = null;
+      applyNodeAndEdgeVisibility(cyInst);
+      applySelectionState(cyInst, selectedNodeId, neighborIds);
       console.warn('[emdd] cluster fetch failed, rendering graph without clusters:', err);
     }
   }

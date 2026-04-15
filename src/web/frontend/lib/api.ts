@@ -9,6 +9,11 @@ import type {
 } from '../../types.js';
 import type { NeighborNode } from '../../../graph/types.js';
 
+interface ExportSerializationOptions {
+  preserveEmptyTypes?: boolean;
+  preserveEmptyStatuses?: boolean;
+}
+
 export interface NodeDetailResponse {
   id: string;
   title: string;
@@ -84,6 +89,7 @@ export function fetchExportHtml(
   edgeTypes?: string[],
   theme?: GraphTheme,
   init?: RequestInit,
+  serializationOptions?: ExportSerializationOptions,
 ): Promise<string>;
 export async function fetchExportHtml(
   layout: LayoutMode,
@@ -92,6 +98,7 @@ export async function fetchExportHtml(
   edgeTypes?: string[],
   themeOrInit?: GraphTheme | RequestInit,
   init?: RequestInit,
+  serializationOptions: ExportSerializationOptions = {},
 ): Promise<string> {
   let theme: GraphTheme | undefined;
   let requestInit = init;
@@ -103,8 +110,18 @@ export async function fetchExportHtml(
   }
 
   const params = new URLSearchParams({ layout });
-  if (types) params.set('types', types.join(','));
-  if (statuses) params.set('statuses', statuses.join(','));
+  if (types?.length) {
+    params.set('types', types.join(','));
+  } else if (types && serializationOptions.preserveEmptyTypes) {
+    params.set('types', '');
+    params.set('preserveEmptyTypes', '1');
+  }
+  if (statuses?.length) {
+    params.set('statuses', statuses.join(','));
+  } else if (statuses && serializationOptions.preserveEmptyStatuses) {
+    params.set('statuses', '');
+    params.set('preserveEmptyStatuses', '1');
+  }
   if (edgeTypes) params.set('edgeTypes', edgeTypes.join(','));
   if (theme) params.set('theme', theme);
 

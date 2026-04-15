@@ -175,6 +175,34 @@ describe('fetchExportHtml', () => {
     expect(url).toContain('edgeTypes=');
   });
 
+  it('drops empty type and status filters by default', async () => {
+    mockFetch.mockResolvedValue({ ok: true, text: () => Promise.resolve('<html>export</html>') });
+
+    await fetchExportHtml('force', [], []);
+    expect(mockFetch).toHaveBeenCalledWith('/api/export?layout=force', undefined);
+  });
+
+  it('serializes an explicit empty status filter when requested', async () => {
+    mockFetch.mockResolvedValue({ ok: true, text: () => Promise.resolve('<html>export</html>') });
+    mockFetch.mockClear();
+    mockFetch.mockResolvedValue({ ok: true, text: () => Promise.resolve('<html>export</html>') });
+
+    await fetchExportHtml(
+      'force',
+      ['hypothesis'],
+      [],
+      undefined,
+      'dark',
+      undefined,
+      { preserveEmptyStatuses: true },
+    );
+    const url = mockFetch.mock.calls[0][0] as string;
+    expect(url).toContain('types=hypothesis');
+    expect(url).toContain('statuses=');
+    expect(url).toContain('preserveEmptyStatuses=1');
+    expect(url).toContain('theme=dark');
+  });
+
   it('throws on non-ok response', async () => {
     mockFetch.mockResolvedValue({ ok: false, status: 500, statusText: 'Internal Server Error' });
 
