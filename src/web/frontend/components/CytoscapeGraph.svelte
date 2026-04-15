@@ -2,8 +2,12 @@
   import { untrack } from 'svelte';
   import cytoscape from 'cytoscape';
   import type { SerializedGraph, SerializedNode, LayoutMode } from '../../types.js';
-  import { getNodeColor, getStatusBorder } from '../lib/constants.js';
-  import { getLayoutConfig } from '../lib/cytoscape-setup.js';
+  import { getNodeColor, getStatusBorder, GRAPH_MOTION_PROFILE } from '../lib/constants.js';
+  import {
+    getClusterFocusAnimation,
+    getLayoutConfig,
+    getNodeFocusAnimation,
+  } from '../lib/cytoscape-setup.js';
   import { fetchClusters } from '../lib/api.js';
   import { diffGraph } from '../lib/graph-diff.js';
   import Tooltip from './Tooltip.svelte';
@@ -66,7 +70,8 @@
     if (!cy) return;
     const node = cy.getElementById(nodeId);
     if (node.length > 0) {
-      cy.animate({ center: { eles: node }, zoom: 1.5 } as any, { duration: 300 });
+      const [animation, options] = getNodeFocusAnimation(node);
+      cy.animate(animation as any, options);
     }
   }
 
@@ -79,11 +84,11 @@
     node.animate(
       { style: { 'border-width': 6, 'border-color': '#FF6B6B' } } as any,
       {
-        duration: 300,
+        duration: GRAPH_MOTION_PROFILE.selectionEmphasisMs,
         complete: () => {
           node.animate(
             { style: { 'border-width': origW, 'border-color': origC } } as any,
-            { duration: 300 },
+            { duration: GRAPH_MOTION_PROFILE.selectionEmphasisMs },
           );
         },
       },
@@ -432,10 +437,8 @@
       const cluster = evt.target;
       const children = cluster.children();
       if (children.length === 0) return;
-      inst.animate(
-        { fit: { eles: children, padding: 40 } } as any,
-        { duration: 300 },
-      );
+      const [animation, options] = getClusterFocusAnimation(children);
+      inst.animate(animation as any, options);
     });
 
     inst.on('tap', (evt) => {

@@ -105,6 +105,7 @@ import cytoscape from 'cytoscape';
 import { mount, unmount } from 'svelte';
 import { fetchClusters } from '../../../../src/web/frontend/lib/api.js';
 import CytoscapeGraph from '../../../../src/web/frontend/components/CytoscapeGraph.svelte';
+import { GRAPH_MOTION_PROFILE } from '../../../../src/web/visual-state.js';
 import { makeNode, makeEdge, makeGraph } from '../../../fixtures/component-fixtures.js';
 
 const mockCytoscape = cytoscape as unknown as Mock;
@@ -682,6 +683,7 @@ describe('CytoscapeGraph', () => {
       expect(mockCyInstance.animate).toHaveBeenCalled();
       const args = (mockCyInstance.animate as Mock).mock.calls[0];
       expect(args[0]).toMatchObject({ zoom: 1.5 });
+      expect(args[1]).toMatchObject({ duration: GRAPH_MOTION_PROFILE.focusTransitionMs });
 
       unmount(instance);
       target.remove();
@@ -712,8 +714,18 @@ describe('CytoscapeGraph', () => {
 
       expect(animateMock).toHaveBeenCalled();
       const firstCallStyle = animateMock.mock.calls[0][0].style;
+      const firstCallOpts = animateMock.mock.calls[0][1];
       expect(firstCallStyle['border-color']).toBe('#FF6B6B');
       expect(firstCallStyle['border-width']).toBe(6);
+      expect(firstCallOpts.duration).toBe(GRAPH_MOTION_PROFILE.selectionEmphasisMs);
+
+      firstCallOpts.complete();
+
+      const secondCallStyle = animateMock.mock.calls[1][0].style;
+      const secondCallOpts = animateMock.mock.calls[1][1];
+      expect(secondCallStyle['border-color']).toBe('#000');
+      expect(secondCallStyle['border-width']).toBe('2px');
+      expect(secondCallOpts.duration).toBe(GRAPH_MOTION_PROFILE.selectionEmphasisMs);
 
       unmount(instance);
       target.remove();
@@ -854,7 +866,7 @@ describe('CytoscapeGraph', () => {
 
       expect(mockCyInstance.animate).toHaveBeenCalledWith(
         expect.objectContaining({ fit: expect.objectContaining({ eles: mockChildren, padding: 40 }) }),
-        expect.objectContaining({ duration: 300 }),
+        expect.objectContaining({ duration: GRAPH_MOTION_PROFILE.groupFocusTransitionMs }),
       );
     });
 

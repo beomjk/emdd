@@ -26,6 +26,10 @@ function createStubComponent(testId: string) {
     const div = document.createElement('div');
     div.setAttribute('data-testid', testId);
     $$anchor.before(div);
+    return {
+      panToNode: vi.fn(),
+      pulseNode: vi.fn(),
+    };
   };
   (component as any).__svelte_meta = { loc: {} };
   (component as any)['$$' as any] = true;
@@ -176,6 +180,40 @@ describe('App', () => {
       render(App);
       await waitFor(() => {
         expect(screen.getByPlaceholderText('Search nodes...')).toBeInTheDocument();
+      });
+    });
+
+    it('search navigation selects the node and opens the detail panel', async () => {
+      const graph = makeGraph(
+        [
+          makeNode({ id: 'hyp-001', title: 'Hypothesis 1', type: 'hypothesis', status: 'PROPOSED' }),
+          makeNode({ id: 'exp-001', title: 'Experiment 1', type: 'experiment', status: 'PLANNED' }),
+        ],
+        [],
+      );
+      mockFetchGraph.mockResolvedValue(graph);
+
+      render(App);
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText('Search nodes...')).toBeInTheDocument();
+      });
+
+      const input = screen.getByPlaceholderText('Search nodes...') as HTMLInputElement;
+      input.value = 'hyp-001';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+
+      await new Promise((resolve) => setTimeout(resolve, 350));
+
+      const result = await screen.findByRole('button', { name: /hyp-001/i });
+      result.click();
+
+      await waitFor(() => {
+        expect(screen.getByLabelText('Close detail panel')).toBeInTheDocument();
+        expect(mockFetchNeighbors).toHaveBeenCalledWith(
+          'hyp-001',
+          expect.any(Number),
+          expect.objectContaining({ signal: expect.any(AbortSignal) }),
+        );
       });
     });
 

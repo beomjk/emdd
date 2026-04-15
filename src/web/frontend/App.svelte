@@ -65,6 +65,10 @@
   async function selectNode(id: string): Promise<void> {
     dashboardState.selectNode(id);
     await refetchNeighbors(id, hopDepth);
+    focusGraphNode(id);
+  }
+
+  function focusGraphNode(id: string): void {
     graphRef?.panToNode(id);
     graphRef?.pulseNode(id);
   }
@@ -82,12 +86,11 @@
   }
 
   function handleNodeClickFromDetail(id: string): void {
-    selectNode(id);
+    void selectNode(id);
   }
 
   function handleSearchNavigate(id: string): void {
-    graphRef?.panToNode(id);
-    graphRef?.pulseNode(id);
+    void selectNode(id);
   }
 
   async function handleExport(): Promise<void> {

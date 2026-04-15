@@ -20,6 +20,9 @@ const TYPE_TIER: Record<NodeType, number> = {
   decision: 3,
 };
 
+const NODE_FOCUS_ZOOM = 1.5;
+const GROUP_FOCUS_PADDING = 40;
+
 export function getForceLayout(animate = false, initial = true) {
   return {
     name: 'fcose' as const,
@@ -51,4 +54,18 @@ export function getLayoutConfig(mode: LayoutMode, animate = false, initial = tru
   return mode === 'hierarchical'
     ? getHierarchicalLayout(animate)
     : getForceLayout(animate, initial);
+}
+
+export function getNodeFocusAnimation(node: cytoscape.SingularElementArgument) {
+  return [
+    { center: { eles: node }, zoom: NODE_FOCUS_ZOOM } as const,
+    { duration: GRAPH_MOTION_PROFILE.focusTransitionMs } as const,
+  ];
+}
+
+export function getClusterFocusAnimation(children: cytoscape.CollectionReturnValue) {
+  return [
+    { fit: { eles: children, padding: GROUP_FOCUS_PADDING } } as const,
+    { duration: GRAPH_MOTION_PROFILE.groupFocusTransitionMs } as const,
+  ];
 }
