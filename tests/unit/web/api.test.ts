@@ -229,6 +229,7 @@ describe('GET /api/export', () => {
     const html = await res.text();
     expect(html).toContain('<!DOCTYPE html>');
     expect(html).toContain('EMDD Graph Export');
+    expect(html).toContain('data-theme="light"');
   });
 
   it('exports with types and statuses query params', async () => {
@@ -247,6 +248,15 @@ describe('GET /api/export', () => {
     expect(res.status).toBe(200);
     const html = await res.text();
     expect(html).toContain('<!DOCTYPE html>');
+  });
+
+  it('exports with theme=dark and preserves the theme marker', async () => {
+    const { app } = createApp(SAMPLE_GRAPH);
+    const res = await app.request('/api/export?theme=dark');
+
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain('data-theme="dark"');
   });
 });
 

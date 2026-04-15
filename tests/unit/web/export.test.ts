@@ -87,6 +87,23 @@ describe('generateExportHtml', () => {
     expect(html).toContain("name: 'fcose'");
   });
 
+  it('defaults exported HTML to the light theme', async () => {
+    const cache = createGraphCache(SAMPLE_GRAPH);
+    const graph = await cache.getGraph();
+    const { html } = generateExportHtml(graph);
+
+    expect(html).toContain('data-theme="light"');
+  });
+
+  it('applies dark theme styling when requested', async () => {
+    const cache = createGraphCache(SAMPLE_GRAPH);
+    const graph = await cache.getGraph();
+    const { html } = generateExportHtml(graph, { theme: 'dark' });
+
+    expect(html).toContain('data-theme="dark"');
+    expect(html).toContain('#0f172a');
+  });
+
   describe('XSS prevention', () => {
     it('escapes HTML in node titles to prevent innerHTML injection', () => {
       const xssPayload = '<img src=x onerror=alert(document.cookie)>';

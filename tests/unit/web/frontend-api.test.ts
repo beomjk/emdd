@@ -90,7 +90,7 @@ describe('AbortSignal forwarding', () => {
     mockFetch.mockResolvedValue({ ok: true, text: () => Promise.resolve('<html></html>') });
 
     const controller = new AbortController();
-    await fetchExportHtml('force', undefined, undefined, undefined, { signal: controller.signal });
+    await fetchExportHtml('force', undefined, undefined, undefined, 'dark', { signal: controller.signal });
     const callInit = mockFetch.mock.calls[0][1];
     expect(callInit).toEqual({ signal: controller.signal });
   });
@@ -141,17 +141,19 @@ describe('fetchNeighbors', () => {
 });
 
 describe('fetchExportHtml', () => {
-  it('returns text response with layout params', async () => {
+  it('returns text response with layout, filter, and theme params', async () => {
     mockFetch.mockResolvedValue({ ok: true, text: () => Promise.resolve('<html>export</html>') });
 
     mockFetch.mockClear();
     mockFetch.mockResolvedValue({ ok: true, text: () => Promise.resolve('<html>export</html>') });
-    const result = await fetchExportHtml('force', ['hypothesis'], ['PROPOSED']);
+    const result = await fetchExportHtml('force', ['hypothesis'], ['PROPOSED'], ['supports'], 'dark');
     expect(result).toBe('<html>export</html>');
     const url = mockFetch.mock.calls[0][0] as string;
     expect(url).toContain('layout=force');
     expect(url).toContain('types=hypothesis');
     expect(url).toContain('statuses=PROPOSED');
+    expect(url).toContain('edgeTypes=supports');
+    expect(url).toContain('theme=dark');
   });
 
   it('throws on non-ok response', async () => {

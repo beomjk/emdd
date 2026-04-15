@@ -4,6 +4,8 @@ import type {
   HealthReport,
   PromoteCandidate,
   CheckResult,
+  LayoutMode,
+  GraphTheme,
 } from '../../types.js';
 import type { NeighborNode } from '../../../graph/types.js';
 
@@ -69,16 +71,18 @@ export async function triggerRefresh(
 }
 
 export async function fetchExportHtml(
-  layout: string,
+  layout: LayoutMode,
   types?: string[],
   statuses?: string[],
   edgeTypes?: string[],
+  theme?: GraphTheme,
   init?: RequestInit,
 ): Promise<string> {
   const params = new URLSearchParams({ layout });
   if (types?.length) params.set('types', types.join(','));
   if (statuses?.length) params.set('statuses', statuses.join(','));
   if (edgeTypes?.length) params.set('edgeTypes', edgeTypes.join(','));
+  if (theme) params.set('theme', theme);
 
   const res = await fetch(`/api/export?${params}`, init);
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);

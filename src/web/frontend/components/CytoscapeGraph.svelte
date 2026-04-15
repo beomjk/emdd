@@ -646,6 +646,16 @@
       runLayout(cy, layoutConfig).run();
     }
 
+    // Graph data changes can affect which nodes/clusters remain visible under
+    // the active filters and whether the current selection still needs visual
+    // emphasis. Re-apply both after each sync to avoid stale artifacts.
+    applyNodeAndEdgeVisibility(cy);
+    applySelectionState(
+      cy,
+      untrack(() => selectedNodeId),
+      untrack(() => neighborIds),
+    );
+
     // Viewport culling for large graphs
     if (_g.nodes.length >= 500) {
       showPerfHint = true;

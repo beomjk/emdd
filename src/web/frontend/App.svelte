@@ -108,7 +108,14 @@
       const edgeTypes = [...filterState.visibleEdgeTypes];
       exportAbort?.abort();
       exportAbort = new AbortController();
-      const html = await fetchExportHtml(dashboardState.layout, types, statuses, edgeTypes, { signal: exportAbort.signal });
+      const html = await fetchExportHtml(
+        dashboardState.layout,
+        types,
+        statuses,
+        edgeTypes,
+        dashboardState.theme,
+        { signal: exportAbort.signal },
+      );
       const blob = new Blob([html], { type: 'text/html' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -133,17 +140,15 @@
       if (signal.aborted) return;
       // Preserve user filter selections across manual refresh (mirrors SSE path)
       filterState.mergeFromGraph(graph);
-      dashboardState.setGraph(graph);
+      const selectionPreserved = dashboardState.restoreSelection(prevSelectedId, graph);
       // Belt-and-braces: clear loading in case refresh was somehow invoked
       // while the initial loadGraph was still pending (shared abort slot).
       loading = false;
       // Refresh neighbors if selection survives — mirrors handleGraphUpdated
       if (prevSelectedId) {
-        const stillExists = graph.nodes.some((n) => n.id === prevSelectedId);
-        if (stillExists) {
+        if (selectionPreserved) {
           await refetchNeighbors(prevSelectedId, hopDepth);
         } else {
-          dashboardState.deselectNode();
           neighborIds = [];
         }
       }
@@ -174,7 +179,7 @@
       const graph = await fetchGraph({ signal });
       if (signal.aborted) return;
       filterState.mergeFromGraph(graph);
-      dashboardState.setGraph(graph);
+      const selectionPreserved = dashboardState.restoreSelection(prevSelectedId, graph);
       // Clear any lingering initial-load state: if this SSE event fired while
       // the initial loadGraph was still in flight, its finally{} skipped
       // `loading = false` because the signal was aborted. Set it here so the
@@ -183,12 +188,9 @@
       // Re-select previous node if still exists, and refresh its neighbors
       // since the underlying graph may have added/removed edges.
       if (prevSelectedId) {
-        const stillExists = graph.nodes.some((n) => n.id === prevSelectedId);
-        if (stillExists) {
-          dashboardState.selectNode(prevSelectedId);
+        if (selectionPreserved) {
           await refetchNeighbors(prevSelectedId, hopDepth);
         } else {
-          dashboardState.deselectNode();
           neighborIds = [];
         }
       }

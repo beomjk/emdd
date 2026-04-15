@@ -62,6 +62,7 @@ describe('App', () => {
     // Reset singleton state between tests
     dashboardState.graph = null;
     dashboardState.selectedNodeId = null;
+    dashboardState.theme = 'light';
     dashboardState.error = null;
     // DetailPanel calls fetchNodeDetail when a node is selected — provide default mocks
     vi.mocked(fetchNeighbors).mockResolvedValue({ center: '', depth: 2, neighbors: [] });
@@ -419,6 +420,7 @@ describe('App', () => {
           expect.any(Array),
           expect.any(Array),
           expect.any(Array),
+          dashboardState.theme,
           expect.objectContaining({ signal: expect.any(AbortSignal) }),
         );
       });

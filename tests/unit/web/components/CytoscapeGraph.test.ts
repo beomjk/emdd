@@ -354,6 +354,54 @@ describe('CytoscapeGraph', () => {
         expect(edge._styles['display']).toBe('none');
       });
     });
+
+    it('re-applies node and cluster visibility when graph data changes under active filters', async () => {
+      const visibleStatuses = new Set(['PROPOSED']);
+      const clusterNodeStyles: Record<string, string> = {};
+      const hypNode = createMockNode('hyp-001', 'hypothesis', 'COMPLETED');
+      const clusterNode = {
+        style: vi.fn((key?: string, val?: string) => {
+          if (key && val !== undefined) { clusterNodeStyles[key] = val; return clusterNode; }
+          return clusterNodeStyles[key as string] ?? '';
+        }),
+        children: vi.fn(() => ({
+          some: (cb: (node: Record<string, unknown>) => boolean) => [hypNode].some(cb),
+        })),
+      };
+
+      mockFetchClusters.mockResolvedValue({
+        clusters: [
+          { id: 'cluster-1', label: 'Cluster 1', nodeIds: ['hyp-001'], isManual: false },
+        ],
+      });
+
+      const initialGraph = makeGraph([makeNode({ id: 'hyp-001', status: 'PROPOSED' })], []);
+      const { rerender } = renderGraph({
+        graph: initialGraph,
+        visibleStatuses,
+      });
+      await waitFor(() => expect(mockFetchClusters).toHaveBeenCalled());
+
+      (mockCyInstance.nodes as Mock).mockImplementation((selector?: string) => {
+        if (selector === '[?isCluster]') {
+          return { forEach: vi.fn((cb: Function) => [clusterNode].forEach(cb)), some: vi.fn(() => false) };
+        }
+        return { forEach: vi.fn((cb: Function) => [hypNode].forEach(cb)), some: vi.fn(() => false) };
+      });
+      (mockCyInstance.edges as Mock).mockReturnValue({ forEach: vi.fn() });
+      (mockCyInstance.batch as Mock).mockClear();
+
+      const updatedGraph = makeGraph([makeNode({ id: 'hyp-001', status: 'COMPLETED' })], []);
+      await rerender({
+        graph: updatedGraph,
+        visibleStatuses,
+      });
+
+      await waitFor(() => {
+        expect(hypNode._styles['display']).toBe('none');
+      });
+      expect(clusterNodeStyles['display']).toBe('none');
+    });
   });
 
   // ── Neighbor highlighting effect ──────────────────────────────────

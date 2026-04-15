@@ -24,7 +24,12 @@ export async function exportHtmlCommand(
   const types = options.types ? options.types.split(',').filter(Boolean) : undefined;
   const statuses = options.statuses ? options.statuses.split(',').filter(Boolean) : undefined;
 
-  const { html, nodeCount, edgeCount } = generateExportHtml(graph, { layout, types, statuses });
+  const { html, nodeCount, edgeCount } = generateExportHtml(graph, {
+    layout,
+    types,
+    statuses,
+    theme: undefined,
+  });
 
   const outputPath = path.resolve(outputArg ?? 'graph-dashboard.html');
   fs.writeFileSync(outputPath, html, 'utf-8');

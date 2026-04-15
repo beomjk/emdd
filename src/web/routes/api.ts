@@ -5,9 +5,14 @@ import type { SSEManager } from '../sse.js';
 import { readNode, getNeighbors } from '../../graph/operations.js';
 import { generateExportHtml } from '../export.js';
 import type { LayoutMode } from '../types.js';
+import { resolveGraphTheme } from '../visual-state.js';
 
 export function createApiRoutes(graphDir: string, cache: GraphCache, sseManager?: SSEManager): Hono {
   const api = new Hono();
+
+  function parseLayoutMode(layout?: string): LayoutMode {
+    return layout === 'hierarchical' ? 'hierarchical' : 'force';
+  }
 
   // GET /api/graph
   api.get('/graph', async (c) => {
@@ -86,7 +91,8 @@ export function createApiRoutes(graphDir: string, cache: GraphCache, sseManager?
   // GET /api/export
   api.get('/export', async (c) => {
     const graph = await cache.getGraph();
-    const layout = (c.req.query('layout') ?? 'force') as LayoutMode;
+    const layout = parseLayoutMode(c.req.query('layout'));
+    const theme = resolveGraphTheme(c.req.query('theme'));
     const typesParam = c.req.query('types');
     const statusesParam = c.req.query('statuses');
     const edgeTypesParam = c.req.query('edgeTypes');
@@ -94,7 +100,7 @@ export function createApiRoutes(graphDir: string, cache: GraphCache, sseManager?
     const statuses = statusesParam ? statusesParam.split(',').filter(Boolean) : undefined;
     const edgeTypes = edgeTypesParam ? edgeTypesParam.split(',').filter(Boolean) : undefined;
 
-    const { html } = generateExportHtml(graph, { layout, types, statuses, edgeTypes });
+    const { html } = generateExportHtml(graph, { layout, theme, types, statuses, edgeTypes });
     return c.html(html);
   });
 

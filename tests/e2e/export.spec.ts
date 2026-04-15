@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { sel, waitForGraphReady } from './fixtures/helpers.js';
+import { clickCyNode, getTheme, sel, waitForGraphReady } from './fixtures/helpers.js';
 
 test.describe('US6: Standalone Export', () => {
   test.beforeEach(async ({ page }) => {
@@ -42,5 +42,28 @@ test.describe('US6: Standalone Export', () => {
     const content = await (await download.createReadStream()).toArray();
     const html = Buffer.concat(content).toString('utf8');
     expect(html).toContain('<html');
+  });
+
+  test('export preserves active theme and layout without transient selection state', async ({ page }) => {
+    if (await getTheme(page) !== 'dark') {
+      await page.locator(sel.themeToggle).click();
+      await page.waitForTimeout(200);
+    }
+
+    await page.locator(sel.layoutSelector).selectOption('hierarchical');
+    await page.waitForTimeout(700);
+    await clickCyNode(page, 'hyp-001');
+    await expect(page.locator(sel.detailPanelOpen)).toBeVisible();
+
+    const downloadPromise = page.waitForEvent('download');
+    await page.locator(sel.exportBtn).click();
+    const download = await downloadPromise;
+
+    const content = await (await download.createReadStream()).toArray();
+    const html = Buffer.concat(content).toString('utf8');
+    expect(html).toContain('data-theme="dark"');
+    expect(html).toContain("name: 'dagre'");
+    expect(html).not.toContain('selectedNodeId');
+    expect(html).not.toContain('neighborIds');
   });
 });

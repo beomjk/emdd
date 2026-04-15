@@ -98,7 +98,7 @@ describe('exportHtmlCommand', () => {
     await exportHtmlCommand(undefined, { layout: 'force' });
 
     const exportCall = vi.mocked(generateExportHtml).mock.calls[0];
-    expect(exportCall[1]).toMatchObject({ types: undefined, statuses: undefined });
+    expect(exportCall[1]).toMatchObject({ types: undefined, statuses: undefined, theme: undefined });
   });
 
   it('console output includes file path, node count, and edge count', async () => {

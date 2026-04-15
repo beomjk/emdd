@@ -1,3 +1,11 @@
+import type {
+  GraphTheme,
+  MotionProfile,
+  VisualElementKind,
+  VisualStateKind,
+  VisualStateToken,
+} from './visual-state.js';
+
 // ── Serialized types for REST API responses ──────────────────────────
 
 export interface SerializedGraph {
@@ -30,6 +38,14 @@ export interface SerializedEdge {
 // ── Layout mode ─────────────────────────────────────────────────────
 
 export type LayoutMode = 'force' | 'hierarchical';
+
+export interface ExportRequest {
+  layout?: LayoutMode;
+  theme?: GraphTheme;
+  types?: string[];
+  statuses?: string[];
+  edgeTypes?: string[];
+}
 
 // ── Cluster types ────────────────────────────────────────────────────
 
