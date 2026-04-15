@@ -6,6 +6,16 @@ import {
 } from '../graph/types.js';
 import type { NodeType } from '../graph/types.js';
 
+export interface GraphThemeTokenSet {
+  nodeText: string;
+  clusterFill: string;
+  clusterBorder: string;
+  highlightUnderlay: string;
+  selectionUnderlay: string;
+  selectionOutline: string;
+  groupLabelBg: string;
+}
+
 // ── Node type colors (single source of truth) ───────────────────────
 
 export const NODE_COLORS: Record<NodeType, string> = {
@@ -20,6 +30,31 @@ export const NODE_COLORS: Record<NodeType, string> = {
 
 export function getNodeColor(type: string): string {
   return NODE_COLORS[type as NodeType] ?? '#999';
+}
+
+export const GRAPH_THEME_TOKENS: Record<'light' | 'dark', GraphThemeTokenSet> = {
+  light: {
+    nodeText: '#1F2933',
+    clusterFill: 'rgba(74, 144, 217, 0.08)',
+    clusterBorder: 'rgba(74, 144, 217, 0.3)',
+    highlightUnderlay: 'rgba(74, 144, 217, 0.16)',
+    selectionUnderlay: 'rgba(74, 144, 217, 0.24)',
+    selectionOutline: 'rgba(248, 250, 252, 0.92)',
+    groupLabelBg: 'rgba(255, 255, 255, 0.82)',
+  },
+  dark: {
+    nodeText: '#F5F7FA',
+    clusterFill: 'rgba(93, 173, 226, 0.14)',
+    clusterBorder: 'rgba(93, 173, 226, 0.45)',
+    highlightUnderlay: 'rgba(93, 173, 226, 0.22)',
+    selectionUnderlay: 'rgba(93, 173, 226, 0.3)',
+    selectionOutline: 'rgba(12, 18, 32, 0.9)',
+    groupLabelBg: 'rgba(15, 23, 41, 0.84)',
+  },
+};
+
+export function getGraphThemeTokens(theme?: string): GraphThemeTokenSet {
+  return theme === 'dark' ? GRAPH_THEME_TOKENS.dark : GRAPH_THEME_TOKENS.light;
 }
 
 // ── Status border encoding ──────────────────────────────────────────
@@ -48,3 +83,10 @@ export const STATUS_BORDER_LEGEND: Array<[label: string, borderStyle: string, bo
   ['Terminal', 'dashed', '#95A5A6', 2],
   ['Invalid', 'dashed', '#FF9800', 2],
 ];
+
+export const GRAPH_STATE_CUE_LEGEND = [
+  ['Selected', 'selected', 'Thicker border and focus ring'],
+  ['Highlighted', 'highlighted', 'Halo while neighbors stay readable'],
+  ['Grouped', 'grouped', 'Rounded container with labeled surface'],
+  ['Invalid', 'invalid', 'Dashed border fallback'],
+] as const;

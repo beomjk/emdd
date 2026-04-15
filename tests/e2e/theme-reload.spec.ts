@@ -1,5 +1,10 @@
 import { test, expect } from '@playwright/test';
-import { sel, waitForGraphReady, getTheme } from './fixtures/helpers.js';
+import {
+  clickCyNode,
+  getTheme,
+  sel,
+  waitForGraphReady,
+} from './fixtures/helpers.js';
 
 test.describe('US5: Theme Toggle and Live Reload', () => {
   test.beforeEach(async ({ page }) => {
@@ -51,6 +56,85 @@ test.describe('US5: Theme Toggle and Live Reload', () => {
 
       const themeAfterReload = await getTheme(page);
       expect(themeAfterReload).toBe(themeAfterToggle);
+    });
+
+    test('selected and grouped graph cues restyle with the active theme', async ({ page }) => {
+      await page.route('**/api/clusters', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            clusters: [
+              {
+                id: 'cluster-theme',
+                label: 'Theme Cluster',
+                nodeIds: ['hyp-001', 'exp-001'],
+                isManual: false,
+              },
+            ],
+          }),
+        });
+      });
+
+      await page.reload();
+      await waitForGraphReady(page);
+      await clickCyNode(page, 'hyp-001');
+      await expect(page.locator(sel.detailPanelOpen)).toBeVisible();
+
+      await expect.poll(async () => {
+        return page.evaluate(() => {
+          const cy = (document.querySelector('.cy-container') as any)?._cyreg?.cy;
+          if (!cy) return 0;
+          return Number.parseFloat(cy.getElementById('hyp-001').style('border-width'));
+        });
+      }).toBeGreaterThanOrEqual(4);
+
+      const detailTitleBefore = await page.locator(sel.detailTitle).textContent();
+
+      const before = await page.evaluate(() => {
+        const cy = (document.querySelector('.cy-container') as any)?._cyreg?.cy;
+        if (!cy) throw new Error('Cytoscape not found');
+
+        const node = cy.getElementById('hyp-001');
+        const cluster = cy.getElementById('cluster-theme');
+
+        return {
+          theme: document.documentElement.dataset.theme ?? 'light',
+          selectedBorderWidth: node.style('border-width'),
+          graphBackground: getComputedStyle(
+            document.querySelector('.graph-canvas') as HTMLElement,
+          ).backgroundColor,
+          clusterBorderStyle: cluster.style('border-style'),
+        };
+      });
+
+      expect(Number.parseFloat(before.selectedBorderWidth)).toBeGreaterThanOrEqual(4);
+      expect(before.graphBackground).not.toBe('');
+      expect(before.clusterBorderStyle).toBe('dashed');
+
+      await page.locator(sel.themeToggle).click();
+      await page.waitForTimeout(200);
+      await expect(page.locator(sel.detailPanelOpen)).toBeVisible();
+      await expect(page.locator(sel.detailTitle)).toHaveText(detailTitleBefore ?? '');
+
+      const after = await page.evaluate(() => {
+        const cy = (document.querySelector('.cy-container') as any)?._cyreg?.cy;
+        if (!cy) throw new Error('Cytoscape not found');
+
+        const node = cy.getElementById('hyp-001');
+        const cluster = cy.getElementById('cluster-theme');
+
+        return {
+          theme: document.documentElement.dataset.theme ?? 'light',
+          selectedBorderWidth: node.style('border-width'),
+          graphBackground: getComputedStyle(
+            document.querySelector('.graph-canvas') as HTMLElement,
+          ).backgroundColor,
+        };
+      });
+
+      expect(after.theme).not.toBe(before.theme);
+      expect(after.graphBackground).not.toBe(before.graphBackground);
     });
 
     test('theme toggle updates button content', async ({ page }) => {

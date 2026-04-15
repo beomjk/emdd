@@ -1,4 +1,12 @@
-export { NODE_COLORS, getNodeColor, getStatusBorder, STATUS_BORDER_LEGEND } from '../../constants.js';
+export {
+  GRAPH_STATE_CUE_LEGEND,
+  GRAPH_THEME_TOKENS,
+  NODE_COLORS,
+  STATUS_BORDER_LEGEND,
+  getGraphThemeTokens,
+  getNodeColor,
+  getStatusBorder,
+} from '../../constants.js';
 export {
   GRAPH_MOTION_PROFILE,
   getClusterVisualState,

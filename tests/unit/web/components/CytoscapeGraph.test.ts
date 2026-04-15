@@ -105,7 +105,10 @@ import cytoscape from 'cytoscape';
 import { mount, unmount } from 'svelte';
 import { fetchClusters } from '../../../../src/web/frontend/lib/api.js';
 import CytoscapeGraph from '../../../../src/web/frontend/components/CytoscapeGraph.svelte';
-import { GRAPH_MOTION_PROFILE } from '../../../../src/web/visual-state.js';
+import {
+  GRAPH_MOTION_PROFILE,
+  getClusterVisualState,
+} from '../../../../src/web/visual-state.js';
 import { makeNode, makeEdge, makeGraph } from '../../../fixtures/component-fixtures.js';
 
 const mockCytoscape = cytoscape as unknown as Mock;
@@ -134,7 +137,16 @@ function renderGraph(overrides: Record<string, unknown> = {}) {
     onBackgroundClick: vi.fn(),
   };
 
-  return render(CytoscapeGraph, { props: { ...defaults, ...overrides } });
+  let currentProps = { ...defaults, ...overrides };
+  const rendered = render(CytoscapeGraph, { props: currentProps });
+
+  return {
+    ...rendered,
+    rerender: async (nextProps: Record<string, unknown>) => {
+      currentProps = { ...currentProps, ...nextProps };
+      await rendered.rerender(currentProps);
+    },
+  };
 }
 
 // ── Tests ───────────────────────────────────────────────────────────
@@ -451,6 +463,53 @@ describe('CytoscapeGraph', () => {
       expect(e1._classes.has('highlighted')).toBe(true);
     });
 
+    it('adds a dedicated selected-node cue while keeping neighbors highlighted', async () => {
+      const n1 = createHighlightNode('hyp-001');
+      const n2 = createHighlightNode('exp-001');
+
+      const graph = makeGraph(
+        [
+          makeNode({ id: 'hyp-001' }),
+          makeNode({ id: 'exp-001', type: 'experiment' }),
+        ],
+        [makeEdge({ source: 'hyp-001', target: 'exp-001' })],
+      );
+
+      const { rerender } = renderGraph({
+        graph,
+        visibleTypes: new Set(['hypothesis', 'experiment']),
+      });
+      await waitFor(() => expect(mockCyInstance.batch).toHaveBeenCalled());
+
+      (mockCyInstance.nodes as Mock).mockImplementation((selector?: string) => {
+        if (selector === '[?isCluster]') return { forEach: vi.fn(), some: vi.fn(() => false) };
+        return { forEach: vi.fn((cb: Function) => [n1, n2].forEach(cb)), some: vi.fn(() => false) };
+      });
+      (mockCyInstance.edges as Mock).mockReturnValue({ forEach: vi.fn() });
+      (mockCyInstance.batch as Mock).mockClear();
+
+      await rerender({
+        graph,
+        layout: 'force' as const,
+        theme: 'light',
+        visibleTypes: new Set(['hypothesis', 'experiment']),
+        visibleStatuses: new Set(['PROPOSED', 'PLANNED']),
+        visibleEdgeTypes: new Set(['tested_by']),
+        selectedNodeId: 'hyp-001',
+        neighborIds: ['exp-001'],
+        onNodeClick: vi.fn(),
+        onBackgroundClick: vi.fn(),
+      });
+
+      await waitFor(() => {
+        expect(n1._classes.has('selected-node')).toBe(true);
+      });
+
+      expect(n1._classes.has('highlighted')).toBe(true);
+      expect(n2._classes.has('highlighted')).toBe(true);
+      expect(n2._classes.has('selected-node')).toBe(false);
+    });
+
     it('removes all highlight classes when no node is selected', async () => {
       const elemColl = { removeClass: vi.fn().mockReturnThis() };
 
@@ -541,6 +600,34 @@ describe('CytoscapeGraph', () => {
           });
         expect(fromJsonCalls.length).toBeGreaterThan(0);
       });
+    });
+
+    it('applies dark-theme cluster tokens from the shared visual-state helper', async () => {
+      mockFetchClusters.mockResolvedValue({
+        clusters: [
+          {
+            id: 'cluster-theme',
+            label: 'Theme Cluster',
+            nodeIds: ['hyp-001', 'exp-001'],
+            isManual: false,
+          },
+        ],
+      });
+
+      renderGraph({ theme: 'dark' });
+
+      await waitFor(() => {
+        expect(mockFetchClusters).toHaveBeenCalled();
+        expect(mockCyInstance.getElementById('cluster-theme').length).toBe(1);
+      });
+
+      const clusterData = mockCyInstance.getElementById('cluster-theme').data();
+      const expected = getClusterVisualState({ theme: 'dark', isManual: false });
+
+      expect(clusterData.bgColor).toBe(expected.fillColor);
+      expect(clusterData.borderColor).toBe(expected.borderColor);
+      expect(clusterData.borderStyle).toBe(expected.borderStyle);
+      expect(clusterData.textColor).toBe(expected.textColor);
     });
   });
 

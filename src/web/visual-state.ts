@@ -1,4 +1,8 @@
-import { getNodeColor, getStatusBorder } from './constants.js';
+import {
+  getGraphThemeTokens,
+  getNodeColor,
+  getStatusBorder,
+} from './constants.js';
 
 export type GraphTheme = 'light' | 'dark';
 export type VisualElementKind = 'node' | 'edge' | 'cluster';
@@ -47,21 +51,6 @@ interface ClusterVisualStateOptions {
   isManual?: boolean;
 }
 
-const THEME_TEXT_COLORS: Record<GraphTheme, string> = {
-  light: '#1F2933',
-  dark: '#F5F7FA',
-};
-
-const CLUSTER_FILL_COLORS: Record<GraphTheme, string> = {
-  light: 'rgba(74, 144, 217, 0.08)',
-  dark: 'rgba(93, 173, 226, 0.14)',
-};
-
-const CLUSTER_BORDER_COLORS: Record<GraphTheme, string> = {
-  light: 'rgba(74, 144, 217, 0.3)',
-  dark: 'rgba(93, 173, 226, 0.45)',
-};
-
 export const GRAPH_MOTION_PROFILE: MotionProfile = {
   focusTransitionMs: 300,
   selectionEmphasisMs: 300,
@@ -78,6 +67,7 @@ export function getNodeVisualState(
   options: NodeVisualStateOptions = {},
 ): VisualStateToken {
   const theme = resolveGraphTheme(options.theme);
+  const themeTokens = getGraphThemeTokens(theme);
   const baseBorder = getStatusBorder(node);
   const stateKind = node.invalid ? 'invalid' : (options.stateKind ?? 'default');
   const fillColor = getNodeColor(node.type);
@@ -115,7 +105,7 @@ export function getNodeVisualState(
     stateKind,
     theme,
     fillColor,
-    textColor: THEME_TEXT_COLORS[theme],
+    textColor: themeTokens.nodeText,
     borderColor,
     borderWidth,
     borderStyle,
@@ -129,15 +119,16 @@ export function getClusterVisualState(
   options: ClusterVisualStateOptions = {},
 ): VisualStateToken {
   const theme = resolveGraphTheme(options.theme);
+  const themeTokens = getGraphThemeTokens(theme);
   const isManual = options.isManual ?? false;
 
   return {
     elementKind: 'cluster',
     stateKind: 'grouped',
     theme,
-    fillColor: CLUSTER_FILL_COLORS[theme],
-    textColor: THEME_TEXT_COLORS[theme],
-    borderColor: CLUSTER_BORDER_COLORS[theme],
+    fillColor: themeTokens.clusterFill,
+    textColor: themeTokens.nodeText,
+    borderColor: themeTokens.clusterBorder,
     borderWidth: 1,
     borderStyle: isManual ? 'solid' : 'dashed',
     opacity: 1,
