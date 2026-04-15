@@ -64,13 +64,13 @@
 
   async function selectNode(id: string): Promise<void> {
     dashboardState.selectNode(id);
-    await refetchNeighbors(id, hopDepth);
     focusGraphNode(id);
+    await refetchNeighbors(id, hopDepth);
   }
 
   function focusGraphNode(id: string): void {
     graphRef?.panToNode(id);
-    graphRef?.pulseNode(id);
+    graphRef?.pulseNode(id, { keepSelectedCue: true });
   }
 
   function deselectNode(): void {

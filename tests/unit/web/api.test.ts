@@ -258,6 +258,25 @@ describe('GET /api/export', () => {
     const html = await res.text();
     expect(html).toContain('data-theme="dark"');
   });
+
+  it('preserves an explicit empty edge filter as zero exported edges', async () => {
+    const { app } = createApp(SAMPLE_GRAPH);
+    const res = await app.request('/api/export?edgeTypes=');
+
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain('0 edges');
+  });
+
+  it('includes grouped-region data in export output', async () => {
+    const { app } = createApp(SAMPLE_GRAPH);
+    const res = await app.request('/api/export');
+
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain("node[?isCluster]");
+    expect(html).toContain('"isCluster":true');
+  });
 });
 
 describe('GET /api/promotion-candidates', () => {

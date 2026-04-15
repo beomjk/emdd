@@ -47,6 +47,10 @@ export interface ExportRequest {
   edgeTypes?: string[];
 }
 
+export interface ExportRenderOptions extends ExportRequest {
+  clusters?: VisualCluster[];
+}
+
 // ── Cluster types ────────────────────────────────────────────────────
 
 export interface VisualCluster {

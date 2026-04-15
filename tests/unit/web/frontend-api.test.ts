@@ -94,6 +94,17 @@ describe('AbortSignal forwarding', () => {
     const callInit = mockFetch.mock.calls[0][1];
     expect(callInit).toEqual({ signal: controller.signal });
   });
+
+  it('treats RequestInit as the fifth argument for backward compatibility', async () => {
+    mockFetch.mockResolvedValue({ ok: true, text: () => Promise.resolve('<html></html>') });
+
+    const controller = new AbortController();
+    await fetchExportHtml('force', undefined, undefined, undefined, { signal: controller.signal });
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/export?layout=force',
+      { signal: controller.signal },
+    );
+  });
 });
 
 describe('fetchNodeDetail', () => {
@@ -154,6 +165,14 @@ describe('fetchExportHtml', () => {
     expect(url).toContain('statuses=PROPOSED');
     expect(url).toContain('edgeTypes=supports');
     expect(url).toContain('theme=dark');
+  });
+
+  it('serializes an explicit empty edge filter instead of dropping it', async () => {
+    mockFetch.mockResolvedValue({ ok: true, text: () => Promise.resolve('<html>export</html>') });
+
+    await fetchExportHtml('force', ['hypothesis'], ['PROPOSED'], []);
+    const url = mockFetch.mock.calls[0][0] as string;
+    expect(url).toContain('edgeTypes=');
   });
 
   it('throws on non-ok response', async () => {

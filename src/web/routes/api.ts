@@ -14,6 +14,12 @@ export function createApiRoutes(graphDir: string, cache: GraphCache, sseManager?
     return layout === 'hierarchical' ? 'hierarchical' : 'force';
   }
 
+  function parseListParam(searchParams: URLSearchParams, key: string): string[] | undefined {
+    if (!searchParams.has(key)) return undefined;
+    const raw = searchParams.get(key) ?? '';
+    return raw === '' ? [] : raw.split(',').filter(Boolean);
+  }
+
   // GET /api/graph
   api.get('/graph', async (c) => {
     const graph = await cache.getGraph();
@@ -91,16 +97,22 @@ export function createApiRoutes(graphDir: string, cache: GraphCache, sseManager?
   // GET /api/export
   api.get('/export', async (c) => {
     const graph = await cache.getGraph();
-    const layout = parseLayoutMode(c.req.query('layout'));
-    const theme = resolveGraphTheme(c.req.query('theme'));
-    const typesParam = c.req.query('types');
-    const statusesParam = c.req.query('statuses');
-    const edgeTypesParam = c.req.query('edgeTypes');
-    const types = typesParam ? typesParam.split(',').filter(Boolean) : undefined;
-    const statuses = statusesParam ? statusesParam.split(',').filter(Boolean) : undefined;
-    const edgeTypes = edgeTypesParam ? edgeTypesParam.split(',').filter(Boolean) : undefined;
+    const clusters = await cache.getClusters();
+    const searchParams = new URL(c.req.url).searchParams;
+    const layout = parseLayoutMode(searchParams.get('layout') ?? undefined);
+    const theme = resolveGraphTheme(searchParams.get('theme') ?? undefined);
+    const types = parseListParam(searchParams, 'types');
+    const statuses = parseListParam(searchParams, 'statuses');
+    const edgeTypes = parseListParam(searchParams, 'edgeTypes');
 
-    const { html } = generateExportHtml(graph, { layout, theme, types, statuses, edgeTypes });
+    const { html } = generateExportHtml(graph, {
+      layout,
+      theme,
+      types,
+      statuses,
+      edgeTypes,
+      clusters,
+    });
     return c.html(html);
   });
 

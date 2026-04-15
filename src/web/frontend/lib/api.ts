@@ -70,21 +70,45 @@ export async function triggerRefresh(
   return apiFetch('/api/refresh', { ...init, method: 'POST' });
 }
 
-export async function fetchExportHtml(
+export function fetchExportHtml(
+  layout: LayoutMode,
+  types?: string[],
+  statuses?: string[],
+  edgeTypes?: string[],
+  init?: RequestInit,
+): Promise<string>;
+export function fetchExportHtml(
   layout: LayoutMode,
   types?: string[],
   statuses?: string[],
   edgeTypes?: string[],
   theme?: GraphTheme,
   init?: RequestInit,
+): Promise<string>;
+export async function fetchExportHtml(
+  layout: LayoutMode,
+  types?: string[],
+  statuses?: string[],
+  edgeTypes?: string[],
+  themeOrInit?: GraphTheme | RequestInit,
+  init?: RequestInit,
 ): Promise<string> {
+  let theme: GraphTheme | undefined;
+  let requestInit = init;
+
+  if (typeof init === 'undefined' && themeOrInit && typeof themeOrInit === 'object') {
+    requestInit = themeOrInit;
+  } else {
+    theme = themeOrInit as GraphTheme | undefined;
+  }
+
   const params = new URLSearchParams({ layout });
-  if (types?.length) params.set('types', types.join(','));
-  if (statuses?.length) params.set('statuses', statuses.join(','));
-  if (edgeTypes?.length) params.set('edgeTypes', edgeTypes.join(','));
+  if (types) params.set('types', types.join(','));
+  if (statuses) params.set('statuses', statuses.join(','));
+  if (edgeTypes) params.set('edgeTypes', edgeTypes.join(','));
   if (theme) params.set('theme', theme);
 
-  const res = await fetch(`/api/export?${params}`, init);
+  const res = await fetch(`/api/export?${params}`, requestInit);
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
   return await res.text();
 }

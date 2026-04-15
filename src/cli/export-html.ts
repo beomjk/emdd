@@ -19,6 +19,7 @@ export async function exportHtmlCommand(
   const graphDir = resolveGraphDir(undefined);
   const cache = createGraphCache(graphDir);
   const graph = await cache.load();
+  const clusters = await cache.getClusters();
 
   const layout = (options.layout === 'hierarchical' ? 'hierarchical' : 'force') as LayoutMode;
   const types = options.types ? options.types.split(',').filter(Boolean) : undefined;
@@ -29,6 +30,7 @@ export async function exportHtmlCommand(
     types,
     statuses,
     theme: undefined,
+    clusters,
   });
 
   const outputPath = path.resolve(outputArg ?? 'graph-dashboard.html');

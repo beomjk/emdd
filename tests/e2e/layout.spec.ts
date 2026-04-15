@@ -76,10 +76,17 @@ test.describe('US4: Layout Switching and Clustering', () => {
     await expect.poll(async () => {
       return page.evaluate(() => {
         const cy = (document.querySelector('.cy-container') as any)?._cyreg?.cy;
-        if (!cy) return 0;
-        return Number.parseFloat(cy.getElementById('hyp-001').style('border-width'));
+        if (!cy) return false;
+        return cy.getElementById('hyp-001').hasClass('selected-node');
       });
-    }).toBeGreaterThanOrEqual(4);
+    }).toBe(true);
+    await expect.poll(async () => {
+      return page.evaluate(() => {
+        const cy = (document.querySelector('.cy-container') as any)?._cyreg?.cy;
+        if (!cy) return 0;
+        return Number.parseFloat(cy.getElementById('hyp-001').style('underlay-opacity') || '0');
+      });
+    }).toBeGreaterThan(0);
   });
 
   test('cluster compound nodes render with colored backgrounds', async ({ page }) => {

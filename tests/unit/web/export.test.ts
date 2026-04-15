@@ -70,6 +70,15 @@ describe('generateExportHtml', () => {
     expect(nodeCount).toBe(testingCount);
   });
 
+  it('preserves an explicit empty edge filter as zero exported edges', async () => {
+    const cache = createGraphCache(SAMPLE_GRAPH);
+    const graph = await cache.getGraph();
+    const { edgeCount, html } = generateExportHtml(graph, { edgeTypes: [] });
+
+    expect(edgeCount).toBe(0);
+    expect(html).toContain('0 edges');
+  });
+
   it('applies hierarchical layout config', async () => {
     const cache = createGraphCache(SAMPLE_GRAPH);
     const graph = await cache.getGraph();
@@ -102,6 +111,27 @@ describe('generateExportHtml', () => {
 
     expect(html).toContain('data-theme="dark"');
     expect(html).toContain('#0f172a');
+  });
+
+  it('renders grouped-region container treatment when clusters are provided', () => {
+    const graph = {
+      nodes: [
+        { id: 'hyp-001', title: 'Hypothesis 1', type: 'hypothesis', status: 'PROPOSED', tags: [], links: [] },
+      ],
+      edges: [],
+      loadedAt: new Date().toISOString(),
+    };
+    const { html } = generateExportHtml(graph as any, {
+      theme: 'dark',
+      clusters: [
+        { id: 'cluster-1', label: 'Manual Group', nodeIds: ['hyp-001'], isManual: true },
+      ],
+    });
+
+    expect(html).toContain('"isCluster":true');
+    expect(html).toContain('"parent":"cluster-1"');
+    expect(html).toContain("node[?isCluster]");
+    expect(html).toContain('Manual Group');
   });
 
   describe('XSS prevention', () => {

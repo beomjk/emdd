@@ -67,7 +67,12 @@ function createMockCyInstance() {
     edges: vi.fn(() => edgesCollection),
     elements: vi.fn(() => elementsCollection),
     batch: vi.fn((fn: Function) => fn()),
-    layout: vi.fn(() => ({ run: vi.fn(), on: vi.fn().mockReturnThis() })),
+    layout: vi.fn(() => ({
+      run: vi.fn(),
+      on: vi.fn().mockReturnThis(),
+      one: vi.fn().mockReturnThis(),
+      stop: vi.fn(),
+    })),
     animate: vi.fn(),
     destroy: vi.fn(),
     style: vi.fn(() => ({ fromJson: vi.fn().mockReturnValue({ update: vi.fn() }) })),
@@ -202,7 +207,12 @@ describe('CytoscapeGraph', () => {
   });
 
   it('calls layout.run() on initial render', async () => {
-    const mockLayout = { run: vi.fn(), on: vi.fn().mockReturnThis() };
+    const mockLayout = {
+      run: vi.fn(),
+      on: vi.fn().mockReturnThis(),
+      one: vi.fn().mockReturnThis(),
+      stop: vi.fn(),
+    };
     renderGraph();
     await waitFor(() => {
       expect(mockCyInstance.layout).toHaveBeenCalled();
@@ -416,6 +426,8 @@ describe('CytoscapeGraph', () => {
           if (key === 'status') return status;
           return undefined;
         }),
+        scratch: vi.fn(() => false),
+        position: vi.fn(() => ({ x: 0, y: 0 })),
         style: vi.fn((key?: string, val?: string) => {
           if (key && val !== undefined) { styles[key] = val; return ele; }
           return styles[key] ?? '';
@@ -556,6 +568,91 @@ describe('CytoscapeGraph', () => {
       expect(n1._classes.has('highlighted')).toBe(true);
       expect(n2._classes.has('highlighted')).toBe(true);
       expect(n2._classes.has('selected-node')).toBe(false);
+    });
+
+    it('reapplies the selected-node cue when a layout finishes', async () => {
+      const n1 = createHighlightNode('hyp-001');
+      const n2 = createHighlightNode('exp-001');
+      let onLayoutStop: (() => void) | undefined;
+      const mockLayout = {
+        run: vi.fn(),
+        on: vi.fn().mockReturnThis(),
+        one: vi.fn((event: string, handler: () => void) => {
+          if (event === 'layoutstop') onLayoutStop = handler;
+          return mockLayout;
+        }),
+        stop: vi.fn(),
+      };
+
+      const graph = makeGraph(
+        [
+          makeNode({ id: 'hyp-001' }),
+          makeNode({ id: 'exp-001', type: 'experiment' }),
+        ],
+        [makeEdge({ source: 'hyp-001', target: 'exp-001' })],
+      );
+
+      const { rerender } = renderGraph({
+        graph,
+        layout: 'force' as const,
+        visibleTypes: new Set(['hypothesis', 'experiment']),
+        selectedNodeId: null,
+        neighborIds: [],
+      });
+
+      await waitFor(() => expect(mockCytoscape).toHaveBeenCalled());
+
+      (mockCyInstance.layout as Mock).mockReturnValue(mockLayout);
+      (mockCyInstance.nodes as Mock).mockImplementation((selector?: string) => {
+        if (selector === '[?isCluster]') return { forEach: vi.fn(), some: vi.fn(() => false) };
+        return { forEach: vi.fn((cb: Function) => [n1, n2].forEach(cb)), some: vi.fn(() => false) };
+      });
+      (mockCyInstance.edges as Mock).mockReturnValue({ forEach: vi.fn() });
+
+      await rerender({
+        graph,
+        layout: 'force' as const,
+        theme: 'light',
+        visibleTypes: new Set(['hypothesis', 'experiment']),
+        visibleStatuses: new Set(['PROPOSED', 'PLANNED']),
+        visibleEdgeTypes: new Set(['tested_by']),
+        selectedNodeId: 'hyp-001',
+        neighborIds: ['exp-001'],
+        onNodeClick: vi.fn(),
+        onBackgroundClick: vi.fn(),
+      });
+
+      await waitFor(() => {
+        expect(n1._classes.has('selected-node')).toBe(true);
+      });
+
+      mockLayout.one.mockClear();
+      n1.removeClass('selected-node');
+      n1.style('border-width', '2');
+
+      await rerender({
+        graph,
+        layout: 'hierarchical' as const,
+        theme: 'light',
+        visibleTypes: new Set(['hypothesis', 'experiment']),
+        visibleStatuses: new Set(['PROPOSED', 'PLANNED']),
+        visibleEdgeTypes: new Set(['tested_by']),
+        selectedNodeId: 'hyp-001',
+        neighborIds: ['exp-001'],
+        onNodeClick: vi.fn(),
+        onBackgroundClick: vi.fn(),
+      });
+
+      await waitFor(() => {
+        expect(mockLayout.one).toHaveBeenCalledWith('layoutstop', expect.any(Function));
+      });
+
+      onLayoutStop?.();
+
+      await waitFor(() => {
+        expect(n1._classes.has('selected-node')).toBe(true);
+      });
+      expect(n1.style('border-width')).toBe('4');
     });
 
     it('removes all highlight classes when no node is selected', async () => {
@@ -790,8 +887,13 @@ describe('CytoscapeGraph', () => {
     }
 
     // Helper — make getElementById return a node that tracks animate calls
-    function setupMockNodeLookup(cy: any, idsToExist: string[]) {
+    function setupMockNodeLookup(
+      cy: any,
+      idsToExist: string[],
+      opts: { selectedIds?: string[] } = {},
+    ) {
       const animateMock = vi.fn();
+      const removeStyleMock = vi.fn();
       const styleMock = vi.fn((key?: string) => {
         if (key === 'border-width') return '2px';
         if (key === 'border-color') return '#000';
@@ -802,8 +904,10 @@ describe('CytoscapeGraph', () => {
         length: idsToExist.includes(id) ? 1 : 0,
         animate: animateMock,
         style: styleMock,
+        removeStyle: removeStyleMock,
+        hasClass: (cls: string) => cls === 'selected-node' && (opts.selectedIds ?? []).includes(id),
       }));
-      return { animateMock };
+      return { animateMock, removeStyleMock, styleMock };
     }
 
     it('panToNode calls cy.animate for an existing node', async () => {
@@ -843,7 +947,7 @@ describe('CytoscapeGraph', () => {
       const { instance, target } = mountGraph();
       await waitFor(() => expect(mockCytoscape).toHaveBeenCalled());
 
-      const { animateMock } = setupMockNodeLookup(mockCyInstance, ['hyp-001']);
+      const { animateMock, removeStyleMock } = setupMockNodeLookup(mockCyInstance, ['hyp-001']);
 
       instance.pulseNode('hyp-001');
 
@@ -856,11 +960,30 @@ describe('CytoscapeGraph', () => {
 
       firstCallOpts.complete();
 
-      const secondCallStyle = animateMock.mock.calls[1][0].style;
-      const secondCallOpts = animateMock.mock.calls[1][1];
-      expect(secondCallStyle['border-color']).toBe('#000');
-      expect(secondCallStyle['border-width']).toBe('2px');
-      expect(secondCallOpts.duration).toBe(GRAPH_MOTION_PROFILE.selectionEmphasisMs);
+      expect(removeStyleMock).toHaveBeenCalledWith('border-width');
+      expect(removeStyleMock).toHaveBeenCalledWith('border-color');
+
+      unmount(instance);
+      target.remove();
+    });
+
+    it('pulseNode clears temporary border overrides when the node is already selected', async () => {
+      const { instance, target } = mountGraph();
+      await waitFor(() => expect(mockCytoscape).toHaveBeenCalled());
+
+      const { animateMock, removeStyleMock, styleMock } = setupMockNodeLookup(
+        mockCyInstance,
+        ['hyp-001'],
+        { selectedIds: ['hyp-001'] },
+      );
+
+      instance.pulseNode('hyp-001', { keepSelectedCue: true });
+
+      const firstCallOpts = animateMock.mock.calls[0][1];
+      firstCallOpts.complete();
+
+      expect(removeStyleMock).not.toHaveBeenCalled();
+      expect(styleMock).toHaveBeenCalledWith('border-width', '4');
 
       unmount(instance);
       target.remove();
@@ -945,6 +1068,35 @@ describe('CytoscapeGraph', () => {
       });
       expect(clusterAdd?.[0].data.bgColor).toBeDefined();
       expect(clusterAdd?.[0].data.borderColor).toBeDefined();
+    });
+
+    it('rebuilds clusters when label metadata changes without membership changes', async () => {
+      mockFetchClusters
+        .mockResolvedValueOnce({
+          clusters: [
+            { id: 'cluster-1', label: 'Cluster 1', nodeIds: ['hyp-001'], isManual: false },
+          ],
+        })
+        .mockResolvedValueOnce({
+          clusters: [
+            { id: 'cluster-1', label: 'Renamed Cluster', nodeIds: ['hyp-001'], isManual: false },
+          ],
+        });
+
+      const initialGraph = makeGraph([makeNode({ id: 'hyp-001', status: 'PROPOSED' })], []);
+      const { rerender } = renderGraph({ graph: initialGraph });
+      await waitFor(() => {
+        expect(mockCyInstance.getElementById('cluster-1').length).toBe(1);
+      });
+      expect(mockCyInstance.getElementById('cluster-1').data().label).toBe('Cluster 1');
+
+      const updatedGraph = makeGraph([makeNode({ id: 'hyp-001', status: 'TESTING' })], []);
+      await rerender({ graph: updatedGraph });
+
+      await waitFor(() => {
+        expect(mockFetchClusters).toHaveBeenCalledTimes(2);
+        expect(mockCyInstance.getElementById('cluster-1').data().label).toBe('Renamed Cluster');
+      });
     });
 
     it('gracefully handles fetchClusters rejection (silent degradation)', async () => {

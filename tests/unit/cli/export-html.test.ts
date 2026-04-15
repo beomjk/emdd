@@ -12,6 +12,7 @@ vi.mock('../../../src/web/cache.js', () => ({
       edges: [],
       loadedAt: '2026-01-01',
     }),
+    getClusters: vi.fn().mockResolvedValue([]),
   }),
 }));
 
@@ -98,7 +99,12 @@ describe('exportHtmlCommand', () => {
     await exportHtmlCommand(undefined, { layout: 'force' });
 
     const exportCall = vi.mocked(generateExportHtml).mock.calls[0];
-    expect(exportCall[1]).toMatchObject({ types: undefined, statuses: undefined, theme: undefined });
+    expect(exportCall[1]).toMatchObject({
+      types: undefined,
+      statuses: undefined,
+      theme: undefined,
+      clusters: [],
+    });
   });
 
   it('console output includes file path, node count, and edge count', async () => {

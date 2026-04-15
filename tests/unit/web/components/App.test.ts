@@ -21,14 +21,17 @@ vi.mock('../../../../src/web/frontend/state/sse.svelte.js', () => ({
 }));
 
 // Stub child components that depend on browser APIs
+const panToNodeSpy = vi.fn();
+const pulseNodeSpy = vi.fn();
+
 function createStubComponent(testId: string) {
   const component = function ($$anchor: any, _$$props: any) {
     const div = document.createElement('div');
     div.setAttribute('data-testid', testId);
     $$anchor.before(div);
     return {
-      panToNode: vi.fn(),
-      pulseNode: vi.fn(),
+      panToNode: panToNodeSpy,
+      pulseNode: pulseNodeSpy,
     };
   };
   (component as any).__svelte_meta = { loc: {} };
@@ -59,6 +62,8 @@ const mockSseState = vi.mocked(sseState);
 describe('App', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    panToNodeSpy.mockReset();
+    pulseNodeSpy.mockReset();
     // Reset singleton state between tests
     dashboardState.graph = null;
     dashboardState.selectedNodeId = null;
@@ -215,6 +220,46 @@ describe('App', () => {
           expect.any(Number),
           expect.objectContaining({ signal: expect.any(AbortSignal) }),
         );
+      });
+    });
+
+    it('focuses the graph immediately before neighbors resolve during search navigation', async () => {
+      const graph = makeGraph(
+        [
+          makeNode({ id: 'hyp-001', title: 'Hypothesis 1', type: 'hypothesis', status: 'PROPOSED' }),
+          makeNode({ id: 'exp-001', title: 'Experiment 1', type: 'experiment', status: 'PLANNED' }),
+        ],
+        [],
+      );
+      mockFetchGraph.mockResolvedValue(graph);
+
+      let resolveNeighbors: ((value: { center: string; depth: number; neighbors: [] }) => void) | undefined;
+      mockFetchNeighbors.mockImplementation(() => new Promise((resolve) => {
+        resolveNeighbors = resolve as typeof resolveNeighbors;
+      }));
+
+      render(App);
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText('Search nodes...')).toBeInTheDocument();
+      });
+
+      const input = screen.getByPlaceholderText('Search nodes...') as HTMLInputElement;
+      input.value = 'hyp-001';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+
+      await new Promise((resolve) => setTimeout(resolve, 350));
+
+      const result = await screen.findByRole('button', { name: /hyp-001/i });
+      result.click();
+
+      await waitFor(() => {
+        expect(panToNodeSpy).toHaveBeenCalledWith('hyp-001');
+        expect(pulseNodeSpy).toHaveBeenCalledWith('hyp-001', { keepSelectedCue: true });
+      });
+
+      resolveNeighbors?.({ center: 'hyp-001', depth: 2, neighbors: [] });
+      await waitFor(() => {
+        expect(mockFetchNeighbors).toHaveBeenCalled();
       });
     });
 
