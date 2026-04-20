@@ -116,7 +116,12 @@ emdd init my-research --tool all      # generates rules for all supported tools
 
 Supported tools: `claude` (default), `cursor`, `windsurf`, `cline`, `copilot`, `all`.
 
-For Claude Code, use `/emdd-open` to start a session and `/emdd-close` to wrap up (writes Episode, checks consolidation, reviews health).
+For Claude Code, use `/emdd-open` to start a session and `/emdd-close` to wrap up (writes Episode, checks consolidation, reviews health). The skills map to MCP prompts:
+
+| Skill | Invokes |
+|-------|---------|
+| `/emdd-open` | `context-loading` |
+| `/emdd-close` | `episode-creation` → `consolidation` → `health-review` |
 
 ## What is EMDD?
 

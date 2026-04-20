@@ -149,10 +149,10 @@ The AI agent is a **gardener** of the graph, not an architect:
 | Type | Color | Meaning | Key Attributes |
 |------|-------|---------|----------------|
 | **Knowledge** | Blue | Confirmed facts, literature, domain rules | `knowledge_type`, `source`, `confidence` |
-| **Hypothesis** | Orange | Testable claim | `confidence`, `risk_level`, `priority`, `status`, `kill_criterion` |
+| **Hypothesis** | Orange | Testable claim | `confidence`, `risk_level`, `priority`, `status`, `kill_criterion`, `branch_group`, `branch_role` (see §6.10) |
 | **Experiment** | Green | Unit of work to validate a hypothesis | `config`, `status`, `results`, `inputs`, `outputs` |
 | **Finding** | Teal | Fact or pattern discovered from experiments/analysis | `finding_type`, `confidence`, `sources` |
-| **Question** | Yellow | Open research question | `question_type`, `urgency`, `answer_summary` |
+| **Question** | Yellow | Open research question | `question_type`, `urgency`, `answer_summary`, `spawns_branch_group` (see §6.10) |
 | **Decision** | Black | Recorded decision with rationale | `alternatives_considered`, `rationale`, `reversibility` |
 | **Episode** | Gray | Record of one exploration loop | `trigger`, `duration`, `outcome`, `spawned`, `dead_ends` |
 
@@ -182,6 +182,8 @@ Knowledge = "An established, reusable fact"
 
 **Promotion path**: `Finding -> (Consolidation promotion) -> Knowledge`. Findings are intermediate artifacts; Knowledge is an established reusable fact.
 
+**Source field convention:** Finding uses `sources` (array) because a single Finding may aggregate multiple experiments/analyses; Knowledge uses `source` (singular string) because a promoted fact typically cites one canonical source (paper, dataset, or the promoting Finding itself). Multiple-source Knowledge is rare enough that it is recorded in the body rather than the frontmatter.
+
 <!-- v0.4: Consolidation Hint Tags -->
 **Consolidation Hint**: A Finding's links may include an `extends: know-NNN` hint. This indicates that the Finding extends or reinforces a specific Knowledge node, and during the Consolidation promotion step, "Findings with hints are reviewed first" to accelerate the process. However, hints do not exempt the promotion criteria — the same criteria (2+ independent supports, confidence >= 0.9, de facto in use) still apply.
 
@@ -196,6 +198,8 @@ Knowledge = "An established, reusable fact"
 - Record the rejection reason for Findings that fail to meet promotion criteria (re-evaluate at next Consolidation)
 
 ### 6.3 Episode Node — Research Episodes
+
+<!-- ASSERT §6.3.1: episode node has frontmatter fields trigger, duration, outcome, spawned, dead_ends -->
 
 An Episode records a single exploration loop (= one session, or one meaningful unit of exploration). While Findings record "what was learned," Episodes record **"what happened"** in full — successes, failures, things deliberately not attempted, and what comes next.
 
@@ -433,6 +437,8 @@ ANY      -> DEFERRED      : explicitly deferred by the researcher
 ```
 
 ### 6.5a Kill Criterion Review Protocol
+
+<!-- ASSERT §6.5a.1: kill criterion auto-triggers include low confidence (<0.3) and stale TESTING hypothesis (>=14 days without progress) -->
 
 Every Hypothesis node has a `kill_criterion` field — a concrete, falsifiable condition that, if met, means the hypothesis should be abandoned. But a kill criterion is only useful if it's actually checked. This section defines the review protocol.
 
@@ -693,6 +699,8 @@ For AI agents, this protocol **runs automatically at session start**. For human 
 **Principle: Each Episode curates the context for the next Episode.** When the previous session records "what to read next," the following session starts not from zero but from curated context. This mirrors a human researcher's lab notebook habit — "tomorrow, pick up here; check this first before starting."
 
 ### 6.10 Parallel Exploration
+
+<!-- ASSERT §6.10.1: competing hypotheses carry branch_group and branch_role frontmatter fields; listBranchGroups returns candidates grouped by branch_group -->
 
 Research often reaches a fork: "Should we try approach A or approach B?" Rather than choosing prematurely (Anti-pattern 4: Premature Convergence), EMDD supports exploring multiple paths simultaneously and converging when evidence warrants it.
 
@@ -1471,6 +1479,18 @@ mkdir -p scratchpad
 #   analyze-refutation() -> analyze refutation impact
 #   impact-analysis(nodeId, whatIf?) -> cascade impact from a node state change
 #     See IMPACT_ANALYSIS.md for scoring algorithm details.
+#
+# Prompts (guided workflows):
+#   context-loading(graphDir?, lang?) -> session-start context summary
+#   episode-creation(graphDir?, lang?) -> Episode writing guide
+#   consolidation(graphDir?, lang?) -> consolidation execution guide
+#   health-review(graphDir?, lang?) -> full health dashboard with recommendations
+#
+# Universal optional parameters:
+#   All tools and prompts accept `graphDir?` (path to graph/ directory; auto-resolved
+#   from cwd if omitted) and `lang?` ('en' or 'ko'; defaults to EMDD_LANG env or 'en').
+#   Tool signatures above list `graphDir` only where it is conventionally passed;
+#   the MCP adapter injects `graphDir?` and `lang?` into every tool automatically.
 ```
 
 ### Week 4+: Cytoscape.js visualization, time slider, autonomous analysis
@@ -1835,7 +1855,7 @@ The researcher responds. Sometimes following the suggestion, sometimes heading i
 
 2. **Consolidation Hint Tags (6.2, 7.4)**: Officially allowed `extends: know-NNN` hints in Finding links. Added the rule "review Findings with hints first" during the Consolidation promotion step. Hints accelerate promotion judgment but do not exempt promotion criteria (2+ independent supports, confidence >= 0.9, de facto in use).
 
-3. **CLI-Slash integration**: Slash commands (`emdd-episode`, `emdd-context`, `emdd-consolidation`, `emdd-health`) rewritten to directly invoke CLI commands. Four new CLI commands added:
+3. **CLI-Slash integration**: MCP prompts (`context-loading`, `episode-creation`, `consolidation`, `health-review`) rewritten to directly invoke CLI commands. For Claude Code, these are exposed as skills: `/emdd-open` invokes `context-loading`; `/emdd-close` invokes `episode-creation` → `consolidation` → `health-review` in sequence. Four new CLI commands added:
    - `emdd update <node-id> --set key=value`: update frontmatter fields (with confidence range validation)
    - `emdd link <source-id> <target-id> <relation>`: add a link between nodes (relation validation, duplicate skip)
    - `emdd done <episode-id> "<item>" [--marker <done|deferred|superseded>]`: change status marker of an Episode "What's Next" item (default: done)
