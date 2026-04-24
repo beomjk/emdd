@@ -15,6 +15,10 @@ describe('readme-cli-core', () => {
     expect(gen()).toContain('`emdd init');
   });
 
+  it('documents codex as a supported init tool', () => {
+    expect(gen()).toContain('claude\\|codex\\|cursor');
+  });
+
   it('uses CLI command names', () => {
     const output = gen();
     expect(output).toContain('`emdd new');

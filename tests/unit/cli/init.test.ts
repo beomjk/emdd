@@ -6,7 +6,7 @@ import path from 'node:path';
 // Mock generators to avoid side effects
 vi.mock('../../../src/rules/generators.js', () => ({
   generateRulesFile: vi.fn(() => ({ created: [], skipped: [] })),
-  generateSkillFiles: vi.fn(() => ({ created: ['.claude/skills/emdd-open/SKILL.md', '.claude/skills/emdd-close/SKILL.md'], skipped: [] })),
+  generateSkillFiles: vi.fn(() => ({ created: ['skills/emdd-open/SKILL.md', 'skills/emdd-close/SKILL.md'], skipped: [] })),
 }));
 
 import { initCommand } from '../../../src/cli/init.js';
@@ -64,25 +64,40 @@ describe('initCommand next steps output', () => {
     expect(output).toContain('.vscode/mcp.json');
   });
 
+  it('prints codex MCP add command for codex tool', () => {
+    const target = path.join(tmpDir, 'proj-codex');
+    initCommand(target, { tool: 'codex' });
+    const output = logSpy.mock.calls.map(c => String(c[0])).join('\n');
+    expect(output).toContain('codex mcp add emdd -- npx @beomjk/emdd mcp');
+  });
+
   it('calls generateSkillFiles for --tool claude', () => {
     const target = path.join(tmpDir, 'proj-skills');
     (generateSkillFiles as ReturnType<typeof vi.fn>).mockClear();
     initCommand(target, { tool: 'claude' });
-    expect(generateSkillFiles).toHaveBeenCalledWith(target, { force: undefined });
+    expect(generateSkillFiles).toHaveBeenCalledWith(target, { force: undefined, tool: 'claude' });
   });
 
-  it('calls generateSkillFiles for --tool all', () => {
+  it('calls generateSkillFiles for --tool codex', () => {
+    const target = path.join(tmpDir, 'proj-skills-codex');
+    (generateSkillFiles as ReturnType<typeof vi.fn>).mockClear();
+    initCommand(target, { tool: 'codex' });
+    expect(generateSkillFiles).toHaveBeenCalledWith(target, { force: undefined, tool: 'codex' });
+  });
+
+  it('calls generateSkillFiles for claude and codex with --tool all', () => {
     const target = path.join(tmpDir, 'proj-skills-all');
     (generateSkillFiles as ReturnType<typeof vi.fn>).mockClear();
     initCommand(target, { tool: 'all' });
-    expect(generateSkillFiles).toHaveBeenCalledWith(target, { force: undefined });
+    expect(generateSkillFiles).toHaveBeenCalledWith(target, { force: undefined, tool: 'claude' });
+    expect(generateSkillFiles).toHaveBeenCalledWith(target, { force: undefined, tool: 'codex' });
   });
 
   it('calls generateSkillFiles for default tool (no --tool flag)', () => {
     const target = path.join(tmpDir, 'proj-skills-default');
     (generateSkillFiles as ReturnType<typeof vi.fn>).mockClear();
     initCommand(target, {});
-    expect(generateSkillFiles).toHaveBeenCalledWith(target, { force: undefined });
+    expect(generateSkillFiles).toHaveBeenCalledWith(target, { force: undefined, tool: 'claude' });
   });
 
   it('does not call generateSkillFiles for non-claude tools', () => {

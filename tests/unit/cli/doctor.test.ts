@@ -219,6 +219,13 @@ describe('emdd doctor', () => {
       expect(result.message).toContain('.claude');
     });
 
+    it('returns info when Codex AGENTS.md rules exist', () => {
+      fs.writeFileSync(path.join(tmpDir, 'AGENTS.md'), '# rules');
+      const result = checkToolRules(tmpDir);
+      expect(result.status).toBe('info');
+      expect(result.message).toContain('AGENTS.md');
+    });
+
     it('returns info with "none" when no rules found', () => {
       const result = checkToolRules(tmpDir);
       expect(result.status).toBe('info');
@@ -230,9 +237,11 @@ describe('emdd doctor', () => {
       fs.writeFileSync(path.join(tmpDir, '.claude', 'CLAUDE.md'), '');
       fs.mkdirSync(path.join(tmpDir, '.cursor', 'rules'), { recursive: true });
       fs.writeFileSync(path.join(tmpDir, '.cursor', 'rules', 'emdd.mdc'), '');
+      fs.writeFileSync(path.join(tmpDir, 'AGENTS.md'), '');
       const result = checkToolRules(tmpDir);
       expect(result.message).toContain('.claude');
       expect(result.message).toContain('.cursor');
+      expect(result.message).toContain('AGENTS.md');
     });
   });
 

@@ -19,7 +19,7 @@ interface NonRegistryCommand {
 }
 
 const NON_REGISTRY_COMMANDS: NonRegistryCommand[] = [
-  { cliName: 'init', description: 'Initialize a new EMDD project', positional: '[path]', options: '`--tool claude\\|cursor\\|windsurf\\|cline\\|copilot\\|all`, `--lang en\\|ko`, `--force`' },
+  { cliName: 'init', description: 'Initialize a new EMDD project', positional: '[path]', options: '`--tool claude\\|codex\\|cursor\\|windsurf\\|cline\\|copilot\\|all`, `--lang en\\|ko`, `--force`' },
   { cliName: 'serve', description: 'Start web dashboard server', positional: '[path]', options: '`-p, --port`, `--no-open`' },
   { cliName: 'export-html', description: 'Export graph as standalone HTML file', positional: '[output]', options: '`--layout force\\|hierarchical`, `--types`, `--statuses`' },
   { cliName: 'graph', description: 'Generate `_graph.mmd` (Mermaid diagram)', positional: '[path]', options: '' },

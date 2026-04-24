@@ -6,6 +6,7 @@ import { generateRulesFile, generateSkillFiles, type ToolType } from '../rules/g
 
 const MCP_SETUP_HINTS: Record<Exclude<ToolType, 'all'>, string> = {
   claude: 'claude mcp add emdd -- npx @beomjk/emdd mcp\n             Windows: claude mcp add emdd -- cmd /c npx @beomjk/emdd mcp',
+  codex: 'codex mcp add emdd -- npx @beomjk/emdd mcp\n             Windows: codex mcp add emdd -- cmd /c npx @beomjk/emdd mcp',
   cursor: 'Add to .cursor/mcp.json: {"mcpServers":{"emdd":{"command":"npx","args":["@beomjk/emdd","mcp"]}}}\n             Windows: {"mcpServers":{"emdd":{"command":"cmd","args":["/c","npx","@beomjk/emdd","mcp"]}}}',
   windsurf: 'Add to Windsurf MCP settings: command "npx", args ["@beomjk/emdd", "mcp"]\n             Windows: command "cmd", args ["/c", "npx", "@beomjk/emdd", "mcp"]',
   cline: 'Add to .continue/config.yaml: mcpServers > name: emdd, command: npx, args: [@beomjk/emdd, mcp]\n             Windows: command: cmd, args: [/c, npx, @beomjk/emdd, mcp]',
@@ -70,9 +71,10 @@ export function initCommand(targetPath: string | undefined, options: { lang?: st
     console.log(`Skipped (already exists): ${skipped}`);
   }
 
-  // Generate Claude Code skills (only for claude or all)
-  if (tool === 'claude' || tool === 'all') {
-    const skillResult = generateSkillFiles(target, { force: options.force });
+  // Generate repository-local skills for tools that support them.
+  const skillTools = tool === 'all' ? ['claude', 'codex'] as const : tool === 'claude' || tool === 'codex' ? [tool] as const : [];
+  for (const skillTool of skillTools) {
+    const skillResult = generateSkillFiles(target, { force: options.force, tool: skillTool });
     for (const created of skillResult.created) {
       console.log(`Created ${created}`);
     }

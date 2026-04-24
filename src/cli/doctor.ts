@@ -111,6 +111,7 @@ export function checkConfig(graphDir: string): DoctorCheckResult {
 
 const TOOL_RULES: Array<{ name: string; paths: string[] }> = [
   { name: '.claude', paths: ['.claude/CLAUDE.md'] },
+  { name: 'AGENTS.md', paths: ['AGENTS.md'] },
   { name: '.cursor', paths: ['.cursor/rules/emdd.mdc'] },
   { name: '.windsurf', paths: ['.windsurf/rules/emdd.md'] },
   { name: '.clinerules', paths: ['.clinerules/emdd.md'] },

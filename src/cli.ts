@@ -43,7 +43,7 @@ program
   .command('init [path]')
   .description('Initialize EMDD project')
   .option('--lang <locale>', 'Language (en|ko)', 'en')
-  .option('--tool <tool>', 'AI tool rules to generate (claude|cursor|windsurf|cline|copilot|all)', 'claude')
+  .option('--tool <tool>', 'AI tool rules to generate (claude|codex|cursor|windsurf|cline|copilot|all)', 'claude')
   .option('--force', 'Overwrite existing rules files')
   .action(withCliErrorHandling(async (path, options) => {
     initCommand(path, options);

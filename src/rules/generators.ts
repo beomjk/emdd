@@ -12,7 +12,8 @@ import {
   type NodeType,
 } from '../graph/types.js';
 
-export type ToolType = 'claude' | 'cursor' | 'windsurf' | 'cline' | 'copilot' | 'all';
+export type ToolType = 'claude' | 'codex' | 'cursor' | 'windsurf' | 'cline' | 'copilot' | 'all';
+export type SkillToolType = 'claude' | 'codex';
 export type SkillName = 'emdd-open' | 'emdd-close';
 export type RulesVariant = 'full' | 'compact';
 
@@ -21,13 +22,14 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Tool -> output path mapping (relative to project root)
 const TOOL_PATHS: Record<Exclude<ToolType, 'all'>, string> = {
   claude: '.claude/CLAUDE.md',
+  codex: 'AGENTS.md',
   cursor: '.cursor/rules/emdd.mdc',
   windsurf: '.windsurf/rules/emdd.md',
   cline: '.clinerules/emdd.md',
   copilot: '.github/copilot-instructions.md',
 };
 
-const ALL_TOOLS: Exclude<ToolType, 'all'>[] = ['claude', 'cursor', 'windsurf', 'cline', 'copilot'];
+const ALL_TOOLS: Exclude<ToolType, 'all'>[] = ['claude', 'codex', 'cursor', 'windsurf', 'cline', 'copilot'];
 
 // Short descriptions for each node type used in rules output
 const NODE_DESCRIPTIONS: Record<NodeType, string> = {
@@ -44,7 +46,14 @@ function titleCase(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-function makeCompactRules(): string {
+function shortcutGuidance(tool: Exclude<ToolType, 'all'>): string {
+  if (tool === 'codex') {
+    return 'Codex skills: `emdd-open` (start) and `emdd-close` (end + maintenance + review).';
+  }
+  return 'Claude Code shortcuts: `/emdd-open` (start) and `/emdd-close` (end + maintenance + review).';
+}
+
+function makeCompactRules(tool: Exclude<ToolType, 'all'> = 'claude'): string {
   const nodeLines = NODE_DISPLAY_ORDER.map((t) => {
     const desc = NODE_DESCRIPTIONS[t] ?? t;
     const statuses = VALID_STATUSES[t].join(', ');
@@ -71,7 +80,7 @@ ${idExamples}
 
 Use MCP prompts in order: \`context-loading\` (start) → work → \`episode-creation\` (end) → \`consolidation\` (if triggered) → \`health-review\` (periodic).
 
-Claude Code shortcuts: \`/emdd-open\` (start) and \`/emdd-close\` (end + maintenance + review).
+${shortcutGuidance(tool)}
 
 ## Key Rules
 
@@ -200,6 +209,20 @@ function loadAgentMarkdown(): string {
   return fs.readFileSync(path.join(__dirname, 'emdd-agent.md'), 'utf-8');
 }
 
+function adaptAgentMarkdownForTool(content: string, tool: Exclude<ToolType, 'all'>): string {
+  if (tool !== 'codex') {
+    return content;
+  }
+
+  return content
+    .replace(
+      '**Claude Code shortcuts:** `/emdd-open` (Session Start) and `/emdd-close` (Session End + Maintenance + Review).',
+      'Codex skills: `emdd-open` (Session Start) and `emdd-close` (Session End + Maintenance + Review).',
+    )
+    .replace('(or `/emdd-open`)', '(or the `emdd-open` skill)')
+    .replace('via `/emdd-close`', 'via the `emdd-close` skill');
+}
+
 function wrapForCursor(content: string): string {
   return `---
 description: EMDD methodology rules for AI-assisted research graph management
@@ -217,10 +240,10 @@ export function getRulesContent(tool: ToolType, variant: RulesVariant): string {
 
   let content: string;
   if (variant === 'compact') {
-    content = makeCompactRules();
+    content = makeCompactRules(resolvedTool);
   } else {
     const rules = makeFullRules();
-    const agent = loadAgentMarkdown();
+    const agent = adaptAgentMarkdownForTool(loadAgentMarkdown(), resolvedTool);
     content = `${rules}\n${agent}`;
   }
 
@@ -317,20 +340,25 @@ export function getSkillContent(skillName: SkillName): string {
 }
 
 /**
- * Generate skill files for Claude Code at the given project path.
+ * Generate skill files for AI tools that support repository-local skills.
  */
 export function generateSkillFiles(
   projectPath: string,
-  options: { force?: boolean } = {},
+  options: { force?: boolean; tool?: SkillToolType } = {},
 ): { created: string[]; skipped: string[] } {
   const force = options.force ?? false;
+  const tool = options.tool ?? 'claude';
   const skillNames: SkillName[] = ['emdd-open', 'emdd-close'];
+  const skillRoot: Record<SkillToolType, string> = {
+    claude: path.join('.claude', 'skills'),
+    codex: path.join('.agents', 'skills'),
+  };
 
   const created: string[] = [];
   const skipped: string[] = [];
 
   for (const name of skillNames) {
-    const relativePath = path.join('.claude', 'skills', name, 'SKILL.md');
+    const relativePath = path.join(skillRoot[tool], name, 'SKILL.md');
     const fullPath = path.join(projectPath, relativePath);
 
     if (!force && fs.existsSync(fullPath)) {

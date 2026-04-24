@@ -28,6 +28,17 @@ describe('emdd init --tool', () => {
     expect(existsSync(filePath)).toBe(true);
   });
 
+  it('creates AGENTS.md and Codex skills with --tool codex', () => {
+    initCommand(tmpDir, { lang: 'en', tool: 'codex' });
+    const filePath = join(tmpDir, 'AGENTS.md');
+    expect(existsSync(filePath)).toBe(true);
+    const content = readFileSync(filePath, 'utf-8');
+    expect(content).toContain('EMDD');
+    expect(content).toContain('Codex skills');
+    expect(existsSync(join(tmpDir, '.agents', 'skills', 'emdd-open', 'SKILL.md'))).toBe(true);
+    expect(existsSync(join(tmpDir, '.agents', 'skills', 'emdd-close', 'SKILL.md'))).toBe(true);
+  });
+
   it('creates all tool files with --tool all', () => {
     initCommand(tmpDir, { lang: 'en', tool: 'all' });
     expect(existsSync(join(tmpDir, '.claude', 'CLAUDE.md'))).toBe(true);
@@ -35,6 +46,8 @@ describe('emdd init --tool', () => {
     expect(existsSync(join(tmpDir, '.windsurf', 'rules', 'emdd.md'))).toBe(true);
     expect(existsSync(join(tmpDir, '.clinerules', 'emdd.md'))).toBe(true);
     expect(existsSync(join(tmpDir, '.github', 'copilot-instructions.md'))).toBe(true);
+    expect(existsSync(join(tmpDir, 'AGENTS.md'))).toBe(true);
+    expect(existsSync(join(tmpDir, '.agents', 'skills', 'emdd-open', 'SKILL.md'))).toBe(true);
   });
 
   it('defaults to claude when --tool is omitted', () => {

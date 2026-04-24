@@ -54,6 +54,17 @@ describe('getRulesContent', () => {
     expect(content).toMatchSnapshot();
   });
 
+  // --- Codex ---
+  it('generates Codex AGENTS.md with EMDD header and Codex skill guidance', () => {
+    const content = getRulesContent('codex', 'full');
+    expect(content).toContain('# EMDD');
+    expect(content).toContain('Episode');
+    expect(content).toContain('Consolidation');
+    expect(content).toContain('Codex skills: `emdd-open`');
+    expect(content).not.toContain('Claude Code shortcuts');
+    expect(content).toMatchSnapshot();
+  });
+
   // --- Compact variants ---
   it('generates compact Claude rules within 1500 token limit', () => {
     const content = getRulesContent('claude', 'compact');
@@ -69,6 +80,16 @@ describe('getRulesContent', () => {
     const tokens = estimateTokens(content);
     expect(tokens).toBeLessThanOrEqual(1500);
     expect(content).toMatch(/^---\n.*description:/s);
+    expect(content).toMatchSnapshot();
+  });
+
+  it('generates compact Codex rules within 1500 token limit', () => {
+    const content = getRulesContent('codex', 'compact');
+    const tokens = estimateTokens(content);
+    expect(tokens).toBeLessThanOrEqual(1500);
+    expect(content).toContain('EMDD');
+    expect(content).toContain('Codex skills: `emdd-open`');
+    expect(content).not.toContain('Claude Code shortcuts');
     expect(content).toMatchSnapshot();
   });
 
@@ -157,6 +178,15 @@ describe('generateRulesFile', () => {
     expect(content).toMatch(/^---\n.*description:/s);
   });
 
+  it('writes codex rules to AGENTS.md', () => {
+    generateRulesFile('codex', tmpDir);
+    const filePath = join(tmpDir, 'AGENTS.md');
+    expect(existsSync(filePath)).toBe(true);
+    const content = readFileSync(filePath, 'utf-8');
+    expect(content).toContain('# EMDD');
+    expect(content).toContain('Codex skills');
+  });
+
   it('skips existing file when force is false', () => {
     generateRulesFile('claude', tmpDir);
     const result = generateRulesFile('claude', tmpDir);
@@ -178,6 +208,7 @@ describe('generateRulesFile', () => {
     expect(existsSync(join(tmpDir, '.windsurf', 'rules', 'emdd.md'))).toBe(true);
     expect(existsSync(join(tmpDir, '.clinerules', 'emdd.md'))).toBe(true);
     expect(existsSync(join(tmpDir, '.github', 'copilot-instructions.md'))).toBe(true);
+    expect(existsSync(join(tmpDir, 'AGENTS.md'))).toBe(true);
   });
 });
 
@@ -235,6 +266,16 @@ describe('generateSkillFiles', () => {
     expect(existsSync(join(tmpDir, '.claude', 'skills', 'emdd-open', 'SKILL.md'))).toBe(true);
     expect(existsSync(join(tmpDir, '.claude', 'skills', 'emdd-close', 'SKILL.md'))).toBe(true);
     expect(result.created).toHaveLength(2);
+  });
+
+  it('creates Codex emdd-open and emdd-close skill directories', () => {
+    const result = generateSkillFiles(tmpDir, { tool: 'codex' });
+    expect(existsSync(join(tmpDir, '.agents', 'skills', 'emdd-open', 'SKILL.md'))).toBe(true);
+    expect(existsSync(join(tmpDir, '.agents', 'skills', 'emdd-close', 'SKILL.md'))).toBe(true);
+    expect(result.created).toEqual([
+      join('.agents', 'skills', 'emdd-open', 'SKILL.md'),
+      join('.agents', 'skills', 'emdd-close', 'SKILL.md'),
+    ]);
   });
 
   it('skill files start with valid YAML frontmatter', () => {

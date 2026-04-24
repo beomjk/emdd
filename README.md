@@ -65,12 +65,19 @@ npx @beomjk/emdd <command>
 ### With AI Assistant (recommended)
 
 ```bash
-# 1. Initialize and connect
+# 1. Initialize with rules for your assistant
 emdd init my-research --tool claude && cd my-research
+# For Codex instead: emdd init my-research --tool codex && cd my-research
+
+# 2. Connect your assistant
 claude mcp add emdd -- npx @beomjk/emdd mcp
 # Windows: claude mcp add emdd -- cmd /c npx @beomjk/emdd mcp
 
-# 2. Ask your AI to start
+# Or, for Codex:
+codex mcp add emdd -- npx @beomjk/emdd mcp
+# Windows: codex mcp add emdd -- cmd /c npx @beomjk/emdd mcp
+
+# 3. Ask your AI to start
 # "Load the EMDD context and help me create my first hypothesis."
 ```
 
@@ -104,6 +111,13 @@ claude mcp add emdd -- npx @beomjk/emdd mcp
 # Windows: claude mcp add emdd -- cmd /c npx @beomjk/emdd mcp
 ```
 
+**Codex** (one-line setup):
+
+```bash
+codex mcp add emdd -- npx @beomjk/emdd mcp
+# Windows: codex mcp add emdd -- cmd /c npx @beomjk/emdd mcp
+```
+
 **Cursor, Windsurf, VS Code Copilot, Continue** -- see the [MCP Setup Guide](docs/MCP_SETUP.md) for config snippets.
 
 **Auto-generate AI rules** with `emdd init --tool`:
@@ -111,12 +125,13 @@ claude mcp add emdd -- npx @beomjk/emdd mcp
 ```bash
 emdd init my-research --tool cursor   # creates .cursor/rules/emdd.mdc
 emdd init my-research --tool claude   # creates .claude/CLAUDE.md + skills (/emdd-open, /emdd-close)
+emdd init my-research --tool codex    # creates AGENTS.md + skills (emdd-open, emdd-close)
 emdd init my-research --tool all      # generates rules for all supported tools
 ```
 
-Supported tools: `claude` (default), `cursor`, `windsurf`, `cline`, `copilot`, `all`.
+Supported tools: `claude` (default), `codex`, `cursor`, `windsurf`, `cline`, `copilot`, `all`.
 
-For Claude Code, use `/emdd-open` to start a session and `/emdd-close` to wrap up (writes Episode, checks consolidation, reviews health). The skills map to MCP prompts:
+For Claude Code, use `/emdd-open` and `/emdd-close`. For Codex, use the generated `emdd-open` and `emdd-close` skills. They map to MCP prompts:
 
 | Skill | Invokes |
 |-------|---------|
@@ -142,7 +157,7 @@ Too much structure suffocates research. Too little structure evaporates it. Exis
 ## Who is it for?
 
 - **Solo researchers or small teams doing exploratory R&D** where the destination is unknown -- visual inspection R&D, architecture spikes, open-ended investigations.
-- **Developers working with AI coding assistants** (e.g., Claude Code) who want the AI to maintain the knowledge structure while they retain judgment.
+- **Developers working with AI coding assistants** (e.g., Claude Code, Codex) who want the AI to maintain the knowledge structure while they retain judgment.
 - **Anyone who has lost track of what they tried last week**, why they abandoned an approach, or which assumptions remain untested.
 - **Teams that need more rigor than a scratchpad** but less overhead than a project management system.
 - **Researchers who want to know what to explore next**, not just what they have already done.
@@ -213,7 +228,7 @@ Graph commands accept `--graphDir <path>`, `--lang <en|ko>`, and `--json`. Utili
 <!-- Generated from command registry — DO NOT EDIT -->
 | Command | Description |
 |---------|-------------|
-| `emdd init [path]` | Initialize a new EMDD project (`--tool claude\|cursor\|windsurf\|cline\|copilot\|all`, `--lang en\|ko`, `--force`) |
+| `emdd init [path]` | Initialize a new EMDD project (`--tool claude\|codex\|cursor\|windsurf\|cline\|copilot\|all`, `--lang en\|ko`, `--force`) |
 | `emdd list` | List nodes, optionally filtered by type, status, and/or date (`--type decision\|episode\|experiment\|finding\|hypothesis\|knowledge\|question`, `--status`, `--since`) |
 | `emdd read <nodeId>` | Read a node detail |
 | `emdd new <type> <slug>` | Create a new node (`--title`, `--body`, `--lang`) |

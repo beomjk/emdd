@@ -52,6 +52,24 @@ This registers the EMDD MCP server with Claude Code. Tools and prompts become av
 
 ---
 
+## Codex
+
+**macOS / Linux:**
+
+```bash
+codex mcp add emdd -- npx @beomjk/emdd mcp
+```
+
+**Windows:**
+
+```bash
+codex mcp add emdd -- cmd /c npx @beomjk/emdd mcp
+```
+
+This registers the EMDD MCP server with Codex. Tools and prompts become available immediately in your next session.
+
+---
+
 ## Cursor
 
 Create `.cursor/mcp.json` in your project root:
@@ -274,7 +292,7 @@ The four prompts form a recurring session cycle:
 
 Steps 1-2 happen every session. Steps 3-4 are triggered by graph state or run on a weekly cadence.
 
-Prompts are available in tools that support MCP prompts (e.g., Claude Code).
+Prompts are available in tools that support MCP prompts (e.g., Claude Code, Codex).
 
 ---
 
