@@ -2,6 +2,7 @@ import { loadGraph } from './loader.js';
 import { buildReverseEdgeIndex, buildNodeToComponent } from './utils.js';
 import { EDGE, STATUS, SEVERITY, type Severity } from './types.js';
 
+// §6.6 DISPUTED transition penalty multiplier (distinct from confidence.ts SEVERITY_WEIGHTS §6.7).
 const SEVERITY_PENALTIES: Record<Severity, number> = {
   FATAL: 0.5,
   WEAKENING: 0.7,

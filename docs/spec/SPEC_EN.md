@@ -149,10 +149,10 @@ The AI agent is a **gardener** of the graph, not an architect:
 | Type | Color | Meaning | Key Attributes |
 |------|-------|---------|----------------|
 | **Knowledge** | Blue | Confirmed facts, literature, domain rules | `knowledge_type`, `source`, `confidence` |
-| **Hypothesis** | Orange | Testable claim | `confidence`, `risk_level`, `priority`, `status`, `kill_criterion` |
+| **Hypothesis** | Orange | Testable claim | `confidence`, `risk_level`, `priority`, `status`, `kill_criterion`, `branch_group`, `branch_role` (see §6.10) |
 | **Experiment** | Green | Unit of work to validate a hypothesis | `config`, `status`, `results`, `inputs`, `outputs` |
 | **Finding** | Teal | Fact or pattern discovered from experiments/analysis | `finding_type`, `confidence`, `sources` |
-| **Question** | Yellow | Open research question | `question_type`, `urgency`, `answer_summary` |
+| **Question** | Yellow | Open research question | `question_type`, `urgency`, `answer_summary`, `spawns_branch_group` (see §6.10) |
 | **Decision** | Black | Recorded decision with rationale | `alternatives_considered`, `rationale`, `reversibility` |
 | **Episode** | Gray | Record of one exploration loop | `trigger`, `duration`, `outcome`, `spawned`, `dead_ends` |
 
@@ -182,6 +182,8 @@ Knowledge = "An established, reusable fact"
 
 **Promotion path**: `Finding -> (Consolidation promotion) -> Knowledge`. Findings are intermediate artifacts; Knowledge is an established reusable fact.
 
+**Source field convention:** Finding uses `sources` (array) because a single Finding may aggregate multiple experiments/analyses; Knowledge uses `source` (singular string) because a promoted fact typically cites one canonical source (paper, dataset, or the promoting Finding itself). Multiple-source Knowledge is rare enough that it is recorded in the body rather than the frontmatter.
+
 <!-- v0.4: Consolidation Hint Tags -->
 **Consolidation Hint**: A Finding's links may include an `extends: know-NNN` hint. This indicates that the Finding extends or reinforces a specific Knowledge node, and during the Consolidation promotion step, "Findings with hints are reviewed first" to accelerate the process. However, hints do not exempt the promotion criteria — the same criteria (2+ independent supports, confidence >= 0.9, de facto in use) still apply.
 
@@ -196,6 +198,8 @@ Knowledge = "An established, reusable fact"
 - Record the rejection reason for Findings that fail to meet promotion criteria (re-evaluate at next Consolidation)
 
 ### 6.3 Episode Node — Research Episodes
+
+<!-- ASSERT §6.3.1: episode node has frontmatter fields trigger, duration, outcome, spawned, dead_ends -->
 
 An Episode records a single exploration loop (= one session, or one meaningful unit of exploration). While Findings record "what was learned," Episodes record **"what happened"** in full — successes, failures, things deliberately not attempted, and what comes next.
 
@@ -433,6 +437,8 @@ ANY      -> DEFERRED      : explicitly deferred by the researcher
 ```
 
 ### 6.5a Kill Criterion Review Protocol
+
+<!-- ASSERT §6.5a.1: kill criterion auto-triggers include low confidence (<0.3) and stale TESTING hypothesis (>=14 days without progress) -->
 
 Every Hypothesis node has a `kill_criterion` field — a concrete, falsifiable condition that, if met, means the hypothesis should be abandoned. But a kill criterion is only useful if it's actually checked. This section defines the review protocol.
 
@@ -694,6 +700,8 @@ For AI agents, this protocol **runs automatically at session start**. For human 
 
 ### 6.10 Parallel Exploration
 
+<!-- ASSERT §6.10.1: competing hypotheses carry branch_group and branch_role frontmatter fields; listBranchGroups returns candidates grouped by branch_group -->
+
 Research often reaches a fork: "Should we try approach A or approach B?" Rather than choosing prematurely (Anti-pattern 4: Premature Convergence), EMDD supports exploring multiple paths simultaneously and converging when evidence warrants it.
 
 #### Branch Groups
@@ -937,7 +945,7 @@ When multiple researchers share the same EMDD graph, additional coordination mec
 
 #### Ownership and Attribution
 
-- Every node's `created_by` field identifies the author: `human:alice`, `human:bob`, `ai:claude`
+- Every node's `created_by` field identifies the author: `human:alice`, `human:bob`, `ai:claude`, `ai:codex`
 - A new optional field `assigned_to` can be added to Hypothesis and Experiment nodes to indicate responsibility
 - Episodes are always personal — each researcher writes their own Episodes for their own sessions
 - Knowledge, Finding, and Question nodes are shared — anyone can create or modify them
@@ -1104,7 +1112,7 @@ Anti-bureaucracy rules:
 ### 8.1 Storage Format: Markdown + YAML Frontmatter (Git-backed)
 
 **Rationale:**
-- AI (Claude Code) can directly Read/Edit — no API or driver needed
+- AI coding assistants (Claude Code, Codex) can directly Read/Edit — no API or driver needed
 - Git diffs are meaningful; branching/merging is natural
 - Opening the same files in Obsidian provides a graph view automatically via `[[]]` links
 - Neo4j is overkill (R&D PoC scale = hundreds of nodes)
@@ -1151,7 +1159,7 @@ sources:
 <!-- v0.3: _graph.mmd update timing clarified -->
 ### 8.2 Visualization: Mermaid (Phase 1) -> Cytoscape.js (Phase 2)
 
-**Why Mermaid is recommended:** native rendering in GitHub/Obsidian/VSCode, Claude Code generates the syntax accurately, `classDef` maps confidence/status to colors. Transition to Cytoscape.js at 50+ nodes.
+**Why Mermaid is recommended:** native rendering in GitHub/Obsidian/VSCode, AI coding assistants generate the syntax accurately, `classDef` maps confidence/status to colors. Transition to Cytoscape.js at 50+ nodes.
 
 **`_graph.mmd` update timing:** `_graph.mmd` is updated at Consolidation Ceremony completion and at Weekly Graph Review. It is not updated on Episode creation (friction budget consideration).
 
@@ -1172,20 +1180,20 @@ graph TD
     F12 -->|supports| H3
 ```
 
-### 8.3 AI Agent: Direct Use of Claude Code
+### 8.3 AI Agent: Direct Use of AI Coding Assistants
 
 **3-stage maturity model:**
 
 | Mode | Timing | Approach |
 |------|--------|----------|
-| **Manual invocation** | Day 1+ | Researcher directly tells Claude Code "results are in, update the graph" |
-| **Semi-automatic** | Week 2+ | Post-experiment hook triggers Claude automatically on experiment completion |
+| **Manual invocation** | Day 1+ | Researcher directly tells Claude Code or Codex "results are in, update the graph" |
+| **Semi-automatic** | Week 2+ | Post-experiment hook triggers the AI assistant automatically on experiment completion |
 | **Autonomous analysis** | Month 2+ | Periodic full-graph analysis, automatic gap/pattern reporting |
 
 ### 8.4 ML Tool Integration
 
 ```
-DVC exp run -> metrics.json -> post-experiment hook -> Claude Code
+DVC exp run -> metrics.json -> post-experiment hook -> Claude Code/Codex
     -> create graph/experiments/exp-XXX.md
     -> update graph/hypotheses/hyp-YYY.md confidence
     -> update graph/_graph.mmd
@@ -1199,7 +1207,13 @@ DVC exp run -> metrics.json -> post-experiment hook -> Claude Code
 ```
 project-root/
 +-- .emdd.yml                  # Project config (created by emdd init)
-+-- .claude/
++-- AGENTS.md                  # Codex EMDD rules + agent behavior (created by emdd init --tool codex)
++-- .agents/
+|   +-- skills/
+|       +-- emdd-open/SKILL.md   # Codex session start skill
+|       +-- emdd-close/SKILL.md  # Codex session end skill
+|
++-- .claude/                   # Claude Code rules + skills (created by emdd init --tool claude)
 |   +-- CLAUDE.md              # EMDD rules + agent behavior (created by emdd init)
 |   +-- skills/
 |       +-- emdd-open/SKILL.md   # /emdd-open session start skill
@@ -1431,13 +1445,13 @@ integrations:
 mkdir -p graph/{hypotheses,experiments,findings,knowledge,questions,decisions,episodes,_analysis}
 mkdir -p scratchpad
 
-# 2. Ask Claude Code:
+# 2. Ask Claude Code or Codex:
 # "Organize the current project's research questions and assumptions
 #  into EMDD nodes in the graph/ directory.
 #  Follow the format in this document."
 ```
 
-**What you need: nothing.** Markdown files and Claude Code are all it takes.
+**What you need: nothing.** Markdown files and an AI coding assistant are all it takes.
 
 ### Week 2: Mermaid auto-generation + post-experiment hook
 
@@ -1471,6 +1485,18 @@ mkdir -p scratchpad
 #   analyze-refutation() -> analyze refutation impact
 #   impact-analysis(nodeId, whatIf?) -> cascade impact from a node state change
 #     See IMPACT_ANALYSIS.md for scoring algorithm details.
+#
+# Prompts (guided workflows):
+#   context-loading(graphDir?, lang?) -> session-start context summary
+#   episode-creation(graphDir?, lang?) -> Episode writing guide
+#   consolidation(graphDir?, lang?) -> consolidation execution guide
+#   health-review(graphDir?, lang?) -> full health dashboard with recommendations
+#
+# Universal optional parameters:
+#   All tools and prompts accept `graphDir?` (path to graph/ directory; auto-resolved
+#   from cwd if omitted) and `lang?` ('en' or 'ko'; defaults to EMDD_LANG env or 'en').
+#   Tool signatures above list `graphDir` only where it is conventionally passed;
+#   the MCP adapter injects `graphDir?` and `lang?` into every tool automatically.
 ```
 
 ### Week 4+: Cytoscape.js visualization, time slider, autonomous analysis
@@ -1835,7 +1861,7 @@ The researcher responds. Sometimes following the suggestion, sometimes heading i
 
 2. **Consolidation Hint Tags (6.2, 7.4)**: Officially allowed `extends: know-NNN` hints in Finding links. Added the rule "review Findings with hints first" during the Consolidation promotion step. Hints accelerate promotion judgment but do not exempt promotion criteria (2+ independent supports, confidence >= 0.9, de facto in use).
 
-3. **CLI-Slash integration**: Slash commands (`emdd-episode`, `emdd-context`, `emdd-consolidation`, `emdd-health`) rewritten to directly invoke CLI commands. Four new CLI commands added:
+3. **CLI-Slash integration**: MCP prompts (`context-loading`, `episode-creation`, `consolidation`, `health-review`) rewritten to directly invoke CLI commands. For Claude Code and Codex, these are exposed as repository-local skills: Claude Code `/emdd-open` and Codex `emdd-open` invoke `context-loading`; Claude Code `/emdd-close` and Codex `emdd-close` invoke `episode-creation` → `consolidation` → `health-review` in sequence. Four new CLI commands added:
    - `emdd update <node-id> --set key=value`: update frontmatter fields (with confidence range validation)
    - `emdd link <source-id> <target-id> <relation>`: add a link between nodes (relation validation, duplicate skip)
    - `emdd done <episode-id> "<item>" [--marker <done|deferred|superseded>]`: change status marker of an Episode "What's Next" item (default: done)

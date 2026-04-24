@@ -400,6 +400,206 @@ Every session follows this prompt cycle:
 "
 `;
 
+exports[`getRulesContent > generates Codex AGENTS.md with EMDD header and Codex skill guidance 1`] = `
+"# EMDD — Evolving Mindmap-Driven Development
+
+You are working in a project that uses the EMDD methodology. EMDD organizes research and exploration as a knowledge graph stored in \`graph/\` with Markdown + YAML frontmatter files, tracked by Git.
+
+## Graph Structure
+
+The graph contains 7 node types, each in its own subdirectory:
+
+| Node Type | Directory | Valid Statuses | Purpose |
+|-----------|-----------|----------------|---------|
+| Hypothesis | \`graph/hypotheses/\` | PROPOSED, TESTING, SUPPORTED, REFUTED, REVISED, DEFERRED, CONTESTED | Testable claims with confidence 0.0-1.0 |
+| Experiment | \`graph/experiments/\` | PLANNED, RUNNING, COMPLETED, FAILED, ABANDONED | Work units testing hypotheses |
+| Finding | \`graph/findings/\` | DRAFT, VALIDATED, PROMOTED, RETRACTED | Observations from experiments |
+| Knowledge | \`graph/knowledge/\` | ACTIVE, DISPUTED, SUPERSEDED, RETRACTED | Established facts promoted from findings |
+| Question | \`graph/questions/\` | OPEN, RESOLVED, ANSWERED, DEFERRED | Open questions driving exploration |
+| Decision | \`graph/decisions/\` | PROPOSED, ACCEPTED, SUPERSEDED, REVERTED, CONTESTED | Recorded choices with rationale |
+| Episode | \`graph/episodes/\` | ACTIVE, COMPLETED | Session logs (mandatory: "What I Tried" + "What's Next") |
+
+Nodes are connected by typed edges (answers, confirms, context_for, contradicts, depends_on, extends, informs, part_of, produces, promotes, relates_to, resolves, revises, spawns, supports, tests) declared in YAML frontmatter \`links:\` arrays.
+
+## Node File Format
+
+Every node is a Markdown file with YAML frontmatter:
+
+\`\`\`yaml
+---
+id: hyp-001
+type: hypothesis
+status: PROPOSED
+confidence: 0.4
+created: 2026-03-15
+updated: 2026-03-15
+created_by: human:yourname
+tags: [topic]
+links:
+  - target: knw-001
+    relation: depends_on
+---
+# Title here
+Body content...
+\`\`\`
+
+Required fields vary by type. All nodes need: \`id\`, \`type\`, \`title\`, \`status\`, \`created\`, \`updated\`. Hypotheses, findings, and knowledge also need \`confidence\` (0.0-1.0).
+
+## Node ID Convention
+
+IDs use type prefix + sequential number: \`hyp-001\`, \`exp-001\`, \`fnd-001\`, \`knw-001\`, \`qst-001\`, \`dec-001\`, \`epi-001\`.
+
+## Episode Writing Protocol
+
+Episodes are the primary mechanism for maintaining research continuity. Write an Episode at the end of each work session.
+
+**Mandatory sections:**
+- **What I Tried** — what was done this session
+- **What's Next** — planned next steps with prerequisite reading nodes
+
+**Optional sections:**
+- What Got Stuck — blockers or wrong turns
+- What Was Deliberately Not Done — deferred items with reasons
+- Questions That Arose — new questions for the graph
+
+Each "What's Next" item should list prerequisite reading: the node IDs to load before starting that task. This curates context for the next session.
+
+## Consolidation Protocol
+
+Consolidation is a mandatory maintenance ceremony. Check triggers after creating Episodes or Findings.
+
+**Triggers (run if ANY apply):**
+- 5 or more Finding nodes added since last Consolidation
+- 3 or more Episode nodes added since last Consolidation
+- 0 open Questions (the illusion that research is "done")
+- An Experiment has 5+ Findings attached
+
+**Consolidation steps:**
+1. **Promotion** — promote established Findings to Knowledge nodes
+2. **Splitting** — split bloated Experiments into meaningful units
+3. **Question generation** — convert Episode questions into Question nodes
+4. **Hypothesis update** — update confidence based on evidence
+5. **Orphan cleanup** — add connections to unlinked Findings
+
+Consolidation is an obligation, not optional. Do not record Consolidation as an Episode. Do not start new exploration during Consolidation.
+
+## Key Principles
+
+1. **Graph is source of truth** — the graph, not code, is the project's knowledge structure
+2. **Minimum viable structure** — add structure only when needed; if it feels like bureaucracy, reduce it
+3. **Gap-driven exploration** — the most valuable information is in the empty spaces between nodes
+4. **Temporal evolution** — never delete wrong paths; deprecate them. The history of why something failed is itself knowledge
+5. **Riskiest-first** — validate the most uncertain hypotheses first
+6. **Archive, don't delete** — change status to REFUTED/RETRACTED/SUPERSEDED instead of removing nodes
+
+## AI Agent Role
+
+You are a **gardener** of the graph:
+- Maintain connections, detect duplicates, identify orphans
+- Detect patterns and potential connections the researcher missed
+- Suggest exploration directions based on structural gaps
+- Automate routine tasks (literature search, result summarization)
+- Never make judgment calls — suggest, don't decide
+
+# EMDD Agent Behavior Guidelines
+
+## Session Cycle (MCP Prompts)
+
+Every session follows this prompt cycle:
+
+\`\`\`
+  ┌→ context-loading ──→ [Work] ──→ episode-creation ──┐
+  │    Session Start                  Session End       │
+  └── health-review ◄── consolidation ◄────────────────┘
+       Review             Maintenance (if triggered)
+\`\`\`
+
+Codex skills: \`emdd-open\` (Session Start) and \`emdd-close\` (Session End + Maintenance + Review).
+
+1. **Session Start** → Run the \`context-loading\` prompt (or the \`emdd-open\` skill). It provides graph state, episode arc, backlog, transition-ready nodes, and open questions. Follow the Episode Directive to read specific episodes for deeper context.
+2. **During Work** — Execute experiments, write code, take notes. Mark surprises with [!].
+3. **Session End** → Run the \`episode-creation\` prompt. Record what was tried, create Findings, list next steps with prerequisite node IDs.
+4. **Maintenance** → Run the \`consolidation\` prompt when triggers fire. Promote findings, split experiments, update confidence.
+5. **Review** → Run the \`health-review\` prompt periodically for a full health dashboard with recommendations.
+
+> Steps 3-5 can be run together via the \`emdd-close\` skill. Steps 4-5 are not mandatory every session — run when consolidation triggers fire or on a weekly cadence.
+
+## Intervention Rules
+
+- During deep work: do not interrupt unless a kill criterion is hit or a crash occurs
+- Suggestions are a menu, not an order — the researcher selects what to pursue
+- After a suggestion is rejected: 24-hour cooldown before re-suggesting
+- Never negate an idea still forming in early exploration stages
+
+## Authority Scope
+
+**No approval needed:**
+- Recording experiment metrics as Finding nodes → \`create-node\`, \`create-edge\`
+- Updating Experiment status (PLANNED -> RUNNING -> COMPLETED) → \`update-node\`
+- Time-based attribute updates (updated field) → \`update-node\`
+
+**Approval required:**
+- Changing Hypothesis confidence → \`update-node\`
+- Creating new Hypothesis or Question nodes → \`create-node\`
+- Adding or deleting edges → \`create-edge\`, \`delete-edge\`
+- Changing Knowledge status (DISPUTED/RETRACTED) → \`update-node\`
+- Creating Decision nodes → \`create-node\`
+
+**Forbidden:**
+- Deleting any node (archive/deprecate instead)
+- Modifying kill criteria
+
+## Graph Maintenance Tasks
+
+- After experiments: update related node statuses and confidence scores (with approval) → \`update-node\`, \`confidence-propagate\`
+- Check Consolidation triggers after creating Episodes or Findings → \`check\`
+- Identify orphan nodes (nodes with no outgoing links) → \`graph-gaps\`
+- Detect stale nodes (untested hypotheses older than 3 days) → \`graph-gaps\`
+- Flag structural gaps between clusters → \`graph-gaps\`
+
+## Available MCP Tools
+
+<!-- AUTO:agent-tools -->
+<!-- Generated from command registry — DO NOT EDIT -->
+
+**Read operations:**
+- \`list-nodes\` — List nodes, optionally filtered by type, status, and/or date
+- \`read-node\` — Read a node detail
+- \`read-nodes\` — Read multiple nodes in a single operation (batch)
+- \`graph-neighbors\` — List neighbor nodes within BFS depth
+
+**Write operations:**
+- \`create-node\` — Create a new node
+- \`create-edge\` — Create an edge between two nodes
+- \`delete-edge\` — Remove a link between nodes
+- \`update-node\` — Update frontmatter fields on a node
+- \`mark-done\` — Mark a checklist item as done in an episode
+- \`index-graph\` — Generate the _index.md file
+
+**Analysis operations:**
+- \`graph-gaps\` — Show structural gaps in the graph
+- \`health\` — Show health dashboard
+- \`check\` — Check consolidation readiness
+- \`promote\` — Show promotion candidates
+- \`confidence-propagate\` — Propagate confidence scores through the graph
+- \`status-transitions\` — Detect available status transitions
+- \`kill-check\` — Check kill criteria alerts
+- \`branch-groups\` — List hypothesis branch groups
+- \`lint\` — Lint the graph for schema errors
+- \`backlog\` — Show project backlog (open items, deferred, checklists)
+- \`analyze-refutation\` — Analyze refutation patterns in the graph
+- \`mark-consolidated\` — Record a consolidation date to reset episode counting
+- \`impact-analysis\` — Analyze cascade impact from a node state change
+
+**Prompts:**
+- \`context-loading\` — [Cycle 1/4 · Session Start] Load EMDD graph context — provides a summary of nodes, edges, health, and structural gaps
+- \`episode-creation\` — [Cycle 2/4 · Session End] Step-by-step guide for writing an EMDD Episode node — includes frontmatter template, mandatory sections, and linking instructions
+- \`consolidation\` — [Cycle 3/4 · Maintenance] Consolidation execution guide — checks triggers and provides a step-by-step procedure for promoting findings, generating questions, and updating hypotheses
+- \`health-review\` — [Cycle 4/4 · Review] Full health dashboard with actionable recommendations — analyzes node distribution, structural gaps, and link density
+<!-- /AUTO:agent-tools -->
+"
+`;
+
 exports[`getRulesContent > generates Copilot instructions with EMDD header 1`] = `
 "# EMDD — Evolving Mindmap-Driven Development
 
@@ -1028,6 +1228,41 @@ You are working in an EMDD project. The knowledge graph lives in \`graph/\` as M
 Use MCP prompts in order: \`context-loading\` (start) → work → \`episode-creation\` (end) → \`consolidation\` (if triggered) → \`health-review\` (periodic).
 
 Claude Code shortcuts: \`/emdd-open\` (start) and \`/emdd-close\` (end + maintenance + review).
+
+## Key Rules
+
+1. Write an Episode at end of each session with "What I Tried" and "What's Next" (with prerequisite node IDs)
+2. Run Consolidation when: 5+ Findings, 3+ Episodes, 0 open Questions, or 5+ Findings on one Experiment
+3. Consolidation steps: Promote findings, split experiments, generate questions, update confidence, fix orphans
+4. Never delete nodes — change status to REFUTED/RETRACTED/SUPERSEDED
+5. Graph is source of truth; you are a gardener, not an architect — suggest, don't decide
+"
+`;
+
+exports[`getRulesContent > generates compact Codex rules within 1500 token limit 1`] = `
+"# EMDD — Evolving Mindmap-Driven Development (Compact)
+
+You are working in an EMDD project. The knowledge graph lives in \`graph/\` as Markdown + YAML frontmatter files.
+
+## Node Types
+
+- **Hypothesis** (\`graph/hypotheses/\`) [PROPOSED, TESTING, SUPPORTED, REFUTED, REVISED, DEFERRED, CONTESTED] — testable claims with confidence 0.0-1.0
+- **Experiment** (\`graph/experiments/\`) [PLANNED, RUNNING, COMPLETED, FAILED, ABANDONED] — work units testing hypotheses
+- **Finding** (\`graph/findings/\`) [DRAFT, VALIDATED, PROMOTED, RETRACTED] — observations from experiments
+- **Knowledge** (\`graph/knowledge/\`) [ACTIVE, DISPUTED, SUPERSEDED, RETRACTED] — established facts promoted from findings
+- **Question** (\`graph/questions/\`) [OPEN, RESOLVED, ANSWERED, DEFERRED] — open questions driving exploration
+- **Decision** (\`graph/decisions/\`) [PROPOSED, ACCEPTED, SUPERSEDED, REVERTED, CONTESTED] — recorded choices with rationale
+- **Episode** (\`graph/episodes/\`) [ACTIVE, COMPLETED] — session logs (mandatory: "What I Tried" + "What's Next")
+
+## ID Convention
+
+\`hyp-001\`, \`exp-001\`, \`fnd-001\`, \`knw-001\`, \`qst-001\`, \`dec-001\`, \`epi-001\`
+
+## Session Cycle
+
+Use MCP prompts in order: \`context-loading\` (start) → work → \`episode-creation\` (end) → \`consolidation\` (if triggered) → \`health-review\` (periodic).
+
+Codex skills: \`emdd-open\` (start) and \`emdd-close\` (end + maintenance + review).
 
 ## Key Rules
 

@@ -73,7 +73,7 @@ Not all research happens in 8-hour blocks. For researchers working part-time, in
 
 **Session-based rhythm (no fixed schedule):**
 
-Claude Code shortcuts: `/emdd-open` (Session Start) and `/emdd-close` (Session End + Maintenance + Review).
+Claude Code shortcuts: `/emdd-open` (Session Start) and `/emdd-close` (Session End + Maintenance + Review). Codex skills: `emdd-open` and `emdd-close`.
 
 ```
 Session Start (5 min):
@@ -99,7 +99,7 @@ When multiple researchers share the same EMDD graph, additional coordination mec
 
 #### Ownership and Attribution
 
-- Every node's `created_by` field identifies the author: `human:alice`, `human:bob`, `ai:claude`
+- Every node's `created_by` field identifies the author: `human:alice`, `human:bob`, `ai:claude`, `ai:codex`
 - A new optional field `assigned_to` can be added to Hypothesis and Experiment nodes to indicate responsibility
 - Episodes are always personal — each researcher writes their own Episodes for their own sessions
 - Knowledge, Finding, and Question nodes are shared — anyone can create or modify them
@@ -264,7 +264,7 @@ Anti-bureaucracy rules:
 ### 8.1 Storage Format: Markdown + YAML Frontmatter (Git-backed)
 
 **Rationale:**
-- AI (Claude Code) can directly Read/Edit — no API or driver needed
+- AI coding assistants (Claude Code, Codex) can directly Read/Edit — no API or driver needed
 - Git diffs are meaningful; branching/merging is natural
 - Opening the same files in Obsidian provides a graph view automatically via `[[]]` links
 - Neo4j is overkill (R&D PoC scale = hundreds of nodes)
@@ -310,7 +310,7 @@ sources:
 
 ### 8.2 Visualization: Mermaid (Phase 1) -> Cytoscape.js (Phase 2)
 
-**Why Mermaid is recommended:** native rendering in GitHub/Obsidian/VSCode, Claude Code generates the syntax accurately, `classDef` maps confidence/status to colors. Transition to Cytoscape.js at 50+ nodes.
+**Why Mermaid is recommended:** native rendering in GitHub/Obsidian/VSCode, AI coding assistants generate the syntax accurately, `classDef` maps confidence/status to colors. Transition to Cytoscape.js at 50+ nodes.
 
 **`_graph.mmd` update timing:** `_graph.mmd` is updated at Consolidation Ceremony completion and at Weekly Graph Review. It is not updated on Episode creation (friction budget consideration).
 
@@ -331,20 +331,20 @@ graph TD
     F12 -->|supports| H3
 ```
 
-### 8.3 AI Agent: Direct Use of Claude Code
+### 8.3 AI Agent: Direct Use of AI Coding Assistants
 
 **3-stage maturity model:**
 
 | Mode | Timing | Approach |
 |------|--------|----------|
-| **Manual invocation** | Day 1+ | Researcher directly tells Claude Code "results are in, update the graph" |
-| **Semi-automatic** | Week 2+ | Post-experiment hook triggers Claude automatically on experiment completion |
+| **Manual invocation** | Day 1+ | Researcher directly tells Claude Code or Codex "results are in, update the graph" |
+| **Semi-automatic** | Week 2+ | Post-experiment hook triggers the AI assistant automatically on experiment completion |
 | **Autonomous analysis** | Month 2+ | Periodic full-graph analysis, automatic gap/pattern reporting |
 
 ### 8.4 ML Tool Integration
 
 ```
-DVC exp run -> metrics.json -> post-experiment hook -> Claude Code
+DVC exp run -> metrics.json -> post-experiment hook -> Claude Code/Codex
     -> create graph/experiments/exp-XXX.md
     -> update graph/hypotheses/hyp-YYY.md confidence
     -> update graph/_graph.mmd
@@ -358,7 +358,13 @@ DVC exp run -> metrics.json -> post-experiment hook -> Claude Code
 ```
 project-root/
 +-- .emdd.yml                  # Project config (created by emdd init)
-+-- .claude/
++-- AGENTS.md                  # Codex EMDD rules + agent behavior (created by emdd init --tool codex)
++-- .agents/
+|   +-- skills/
+|       +-- emdd-open/SKILL.md   # Codex session start skill
+|       +-- emdd-close/SKILL.md  # Codex session end skill
+|
++-- .claude/                   # Claude Code rules + skills (created by emdd init --tool claude)
 |   +-- CLAUDE.md              # EMDD rules + agent behavior (created by emdd init)
 |   +-- skills/
 |       +-- emdd-open/SKILL.md   # /emdd-open session start skill

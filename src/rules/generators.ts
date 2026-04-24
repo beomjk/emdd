@@ -12,22 +12,43 @@ import {
   type NodeType,
 } from '../graph/types.js';
 
-export type ToolType = 'claude' | 'cursor' | 'windsurf' | 'cline' | 'copilot' | 'all';
+export type ToolType = 'claude' | 'codex' | 'cursor' | 'windsurf' | 'cline' | 'copilot' | 'all';
+export type SkillToolType = 'claude' | 'codex';
 export type SkillName = 'emdd-open' | 'emdd-close';
 export type RulesVariant = 'full' | 'compact';
+
+// Single source of truth for which tools support repository-local skills.
+export const SKILL_TOOLS = ['claude', 'codex'] as const satisfies readonly SkillToolType[];
+
+// Compile-time exhaustiveness guard: if SkillToolType gains a member that is
+// not listed in SKILL_TOOLS, this type resolves to a non-empty union and the
+// assignment fails. Keeps SKILL_TOOLS and SkillToolType in lockstep.
+type _MissingSkillTools = Exclude<SkillToolType, typeof SKILL_TOOLS[number]>;
+const _skillToolsExhaustive: _MissingSkillTools extends never ? true : never = true;
+void _skillToolsExhaustive;
+
+export function toolSupportsSkills(tool: ToolType): tool is SkillToolType {
+  return (SKILL_TOOLS as readonly ToolType[]).includes(tool);
+}
+
+// Marker written at line 1 of every generated EMDD rules file. Shared between
+// the generator (which writes it) and doctor (which probes for it) so a rename
+// can't silently break detection.
+export const EMDD_RULES_MARKER = '# EMDD';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Tool -> output path mapping (relative to project root)
-const TOOL_PATHS: Record<Exclude<ToolType, 'all'>, string> = {
+export const TOOL_PATHS: Record<Exclude<ToolType, 'all'>, string> = {
   claude: '.claude/CLAUDE.md',
+  codex: 'AGENTS.md',
   cursor: '.cursor/rules/emdd.mdc',
   windsurf: '.windsurf/rules/emdd.md',
   cline: '.clinerules/emdd.md',
   copilot: '.github/copilot-instructions.md',
 };
 
-const ALL_TOOLS: Exclude<ToolType, 'all'>[] = ['claude', 'cursor', 'windsurf', 'cline', 'copilot'];
+const ALL_TOOLS = Object.keys(TOOL_PATHS) as (keyof typeof TOOL_PATHS)[];
 
 // Short descriptions for each node type used in rules output
 const NODE_DESCRIPTIONS: Record<NodeType, string> = {
@@ -44,7 +65,14 @@ function titleCase(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-function makeCompactRules(): string {
+function shortcutGuidance(tool: Exclude<ToolType, 'all'>): string {
+  if (tool === 'codex') {
+    return 'Codex skills: `emdd-open` (start) and `emdd-close` (end + maintenance + review).';
+  }
+  return 'Claude Code shortcuts: `/emdd-open` (start) and `/emdd-close` (end + maintenance + review).';
+}
+
+function makeCompactRules(tool: Exclude<ToolType, 'all'> = 'claude'): string {
   const nodeLines = NODE_DISPLAY_ORDER.map((t) => {
     const desc = NODE_DESCRIPTIONS[t] ?? t;
     const statuses = VALID_STATUSES[t].join(', ');
@@ -71,7 +99,7 @@ ${idExamples}
 
 Use MCP prompts in order: \`context-loading\` (start) → work → \`episode-creation\` (end) → \`consolidation\` (if triggered) → \`health-review\` (periodic).
 
-Claude Code shortcuts: \`/emdd-open\` (start) and \`/emdd-close\` (end + maintenance + review).
+${shortcutGuidance(tool)}
 
 ## Key Rules
 
@@ -200,6 +228,36 @@ function loadAgentMarkdown(): string {
   return fs.readFileSync(path.join(__dirname, 'emdd-agent.md'), 'utf-8');
 }
 
+// Exported for direct unit testing of the drift-guard behavior.
+export function replaceOrThrow(content: string, search: string, replacement: string): string {
+  if (!content.includes(search)) {
+    // Use a head+tail preview so tail-only drift (e.g., a trailing word change)
+    // is visible in the error message instead of being hidden by truncation.
+    const preview =
+      search.length > 100 ? `${search.slice(0, 48)}…${search.slice(-48)}` : search;
+    throw new Error(
+      `adaptAgentMarkdownForTool: expected target not found in emdd-agent.md: "${preview}"`,
+    );
+  }
+  return content.replace(search, replacement);
+}
+
+function adaptAgentMarkdownForTool(content: string, tool: Exclude<ToolType, 'all'>): string {
+  if (tool !== 'codex') {
+    return content;
+  }
+
+  let out = content;
+  out = replaceOrThrow(
+    out,
+    '**Claude Code shortcuts:** `/emdd-open` (Session Start) and `/emdd-close` (Session End + Maintenance + Review).',
+    'Codex skills: `emdd-open` (Session Start) and `emdd-close` (Session End + Maintenance + Review).',
+  );
+  out = replaceOrThrow(out, '(or `/emdd-open`)', '(or the `emdd-open` skill)');
+  out = replaceOrThrow(out, 'via `/emdd-close`', 'via the `emdd-close` skill');
+  return out;
+}
+
 function wrapForCursor(content: string): string {
   return `---
 description: EMDD methodology rules for AI-assisted research graph management
@@ -210,17 +268,23 @@ ${content}`;
 
 /**
  * Get rules content for a specific tool and variant.
- * For 'all', returns claude content (use generateRulesFile for writing all files).
+ * Throws on 'all' — callers that want to write every tool's file should use
+ * generateRulesFile, which iterates and calls getRulesContent per concrete tool.
  */
 export function getRulesContent(tool: ToolType, variant: RulesVariant): string {
-  const resolvedTool = tool === 'all' ? 'claude' : tool;
+  if (tool === 'all') {
+    throw new Error(
+      "getRulesContent: 'all' is not a concrete tool. Use generateRulesFile('all', ...) to write all tool files.",
+    );
+  }
+  const resolvedTool = tool;
 
   let content: string;
   if (variant === 'compact') {
-    content = makeCompactRules();
+    content = makeCompactRules(resolvedTool);
   } else {
     const rules = makeFullRules();
-    const agent = loadAgentMarkdown();
+    const agent = adaptAgentMarkdownForTool(loadAgentMarkdown(), resolvedTool);
     content = `${rules}\n${agent}`;
   }
 
@@ -317,20 +381,25 @@ export function getSkillContent(skillName: SkillName): string {
 }
 
 /**
- * Generate skill files for Claude Code at the given project path.
+ * Generate skill files for AI tools that support repository-local skills.
  */
 export function generateSkillFiles(
   projectPath: string,
-  options: { force?: boolean } = {},
+  options: { force?: boolean; tool?: SkillToolType } = {},
 ): { created: string[]; skipped: string[] } {
   const force = options.force ?? false;
+  const tool = options.tool ?? 'claude';
   const skillNames: SkillName[] = ['emdd-open', 'emdd-close'];
+  const skillRoot: Record<SkillToolType, string> = {
+    claude: path.join('.claude', 'skills'),
+    codex: path.join('.agents', 'skills'),
+  };
 
   const created: string[] = [];
   const skipped: string[] = [];
 
   for (const name of skillNames) {
-    const relativePath = path.join('.claude', 'skills', name, 'SKILL.md');
+    const relativePath = path.join(skillRoot[tool], name, 'SKILL.md');
     const fullPath = path.join(projectPath, relativePath);
 
     if (!force && fs.existsSync(fullPath)) {

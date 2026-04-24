@@ -2,6 +2,7 @@ import { loadGraph } from './loader.js';
 import { buildReverseEdgeIndex } from './utils.js';
 import { EDGE, STATUS, SEVERITY, EVIDENCE_EDGES, type EvidenceEdgeType, type Severity } from './types.js';
 
+// §6.7 confidence propagation weights (distinct from refutation.ts SEVERITY_PENALTIES §6.6).
 const SEVERITY_WEIGHTS: Record<Severity, number> = {
   FATAL: 0.9,
   WEAKENING: 0.6,

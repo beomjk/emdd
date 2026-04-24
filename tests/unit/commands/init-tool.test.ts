@@ -28,6 +28,17 @@ describe('emdd init --tool', () => {
     expect(existsSync(filePath)).toBe(true);
   });
 
+  it('creates AGENTS.md and Codex skills with --tool codex', () => {
+    initCommand(tmpDir, { lang: 'en', tool: 'codex' });
+    const filePath = join(tmpDir, 'AGENTS.md');
+    expect(existsSync(filePath)).toBe(true);
+    const content = readFileSync(filePath, 'utf-8');
+    expect(content).toContain('EMDD');
+    expect(content).toContain('Codex skills');
+    expect(existsSync(join(tmpDir, '.agents', 'skills', 'emdd-open', 'SKILL.md'))).toBe(true);
+    expect(existsSync(join(tmpDir, '.agents', 'skills', 'emdd-close', 'SKILL.md'))).toBe(true);
+  });
+
   it('creates all tool files with --tool all', () => {
     initCommand(tmpDir, { lang: 'en', tool: 'all' });
     expect(existsSync(join(tmpDir, '.claude', 'CLAUDE.md'))).toBe(true);
@@ -35,6 +46,14 @@ describe('emdd init --tool', () => {
     expect(existsSync(join(tmpDir, '.windsurf', 'rules', 'emdd.md'))).toBe(true);
     expect(existsSync(join(tmpDir, '.clinerules', 'emdd.md'))).toBe(true);
     expect(existsSync(join(tmpDir, '.github', 'copilot-instructions.md'))).toBe(true);
+    expect(existsSync(join(tmpDir, 'AGENTS.md'))).toBe(true);
+    // Every skill-capable tool must get its skill dir in the --tool all flow,
+    // not just the last one iterated. Guards against a regression that drops
+    // Claude skill emission while keeping Codex (or vice versa).
+    expect(existsSync(join(tmpDir, '.claude', 'skills', 'emdd-open', 'SKILL.md'))).toBe(true);
+    expect(existsSync(join(tmpDir, '.claude', 'skills', 'emdd-close', 'SKILL.md'))).toBe(true);
+    expect(existsSync(join(tmpDir, '.agents', 'skills', 'emdd-open', 'SKILL.md'))).toBe(true);
+    expect(existsSync(join(tmpDir, '.agents', 'skills', 'emdd-close', 'SKILL.md'))).toBe(true);
   });
 
   it('defaults to claude when --tool is omitted', () => {
@@ -53,6 +72,21 @@ describe('emdd init --tool', () => {
 
     const logged = consoleSpy.mock.calls.map(c => c.join(' ')).join('\n');
     expect(logged).toMatch(/exist|skip|already/i);
+    consoleSpy.mockRestore();
+  });
+
+  it('preserves existing AGENTS.md without --force for --tool codex', () => {
+    // AGENTS.md lives at project root and may be a user's hand-authored file.
+    // Running `--tool codex` must skip, not overwrite, unless --force is set.
+    const existing = '# My Project Agents\nHand-authored content.\n';
+    writeFileSync(join(tmpDir, 'AGENTS.md'), existing);
+
+    const consoleSpy = vi.spyOn(console, 'log');
+    initCommand(tmpDir, { lang: 'en', tool: 'codex' });
+
+    expect(readFileSync(join(tmpDir, 'AGENTS.md'), 'utf-8')).toBe(existing);
+    const logged = consoleSpy.mock.calls.map(c => c.join(' ')).join('\n');
+    expect(logged).toMatch(/Skipped.*AGENTS\.md/);
     consoleSpy.mockRestore();
   });
 

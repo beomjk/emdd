@@ -219,6 +219,47 @@ describe('emdd doctor', () => {
       expect(result.message).toContain('.claude');
     });
 
+    it('returns info when Codex AGENTS.md rules exist', () => {
+      // Must contain EMDD marker; a bare AGENTS.md is a generic cross-tool convention
+      // and should NOT be flagged as an EMDD tool rule.
+      fs.writeFileSync(path.join(tmpDir, 'AGENTS.md'), '# EMDD\n');
+      const result = checkToolRules(tmpDir);
+      expect(result.status).toBe('info');
+      expect(result.message).toContain('AGENTS.md');
+    });
+
+    it('ignores AGENTS.md that lacks the EMDD marker', () => {
+      fs.writeFileSync(path.join(tmpDir, 'AGENTS.md'), '# My Project Agents\nHand-written.\n');
+      const result = checkToolRules(tmpDir);
+      expect(result.status).toBe('info');
+      expect(result.message).toContain('No AI tool rules');
+    });
+
+    it('reports only .claude when AGENTS.md is hand-authored without the EMDD marker', () => {
+      // Common drift: user ran `emdd init --tool claude` but also has a hand-authored AGENTS.md
+      // (for Codex or another tool) at project root. The bare AGENTS.md must NOT be flagged
+      // as an EMDD tool rule; only .claude should appear.
+      fs.mkdirSync(path.join(tmpDir, '.claude'), { recursive: true });
+      fs.writeFileSync(path.join(tmpDir, '.claude', 'CLAUDE.md'), '# EMDD — rules');
+      fs.writeFileSync(path.join(tmpDir, 'AGENTS.md'), '# My Project Agents\nHand-authored.\n');
+      const result = checkToolRules(tmpDir);
+      expect(result.status).toBe('info');
+      expect(result.message).toContain('.claude');
+      expect(result.message).not.toContain('AGENTS.md');
+    });
+
+    it('ignores AGENTS.md whose EMDD mention is inline prose, not a header', () => {
+      // startsWith guard: only the line-1 marker written by the generator counts.
+      // A prose mention like "We reviewed # EMDD..." must not falsely trigger detection.
+      fs.writeFileSync(
+        path.join(tmpDir, 'AGENTS.md'),
+        '# Project Agents\n\nWe considered # EMDD but chose our own convention.\n',
+      );
+      const result = checkToolRules(tmpDir);
+      expect(result.status).toBe('info');
+      expect(result.message).toContain('No AI tool rules');
+    });
+
     it('returns info with "none" when no rules found', () => {
       const result = checkToolRules(tmpDir);
       expect(result.status).toBe('info');
@@ -230,9 +271,11 @@ describe('emdd doctor', () => {
       fs.writeFileSync(path.join(tmpDir, '.claude', 'CLAUDE.md'), '');
       fs.mkdirSync(path.join(tmpDir, '.cursor', 'rules'), { recursive: true });
       fs.writeFileSync(path.join(tmpDir, '.cursor', 'rules', 'emdd.mdc'), '');
+      fs.writeFileSync(path.join(tmpDir, 'AGENTS.md'), '# EMDD\n');
       const result = checkToolRules(tmpDir);
       expect(result.message).toContain('.claude');
       expect(result.message).toContain('.cursor');
+      expect(result.message).toContain('AGENTS.md');
     });
   });
 
