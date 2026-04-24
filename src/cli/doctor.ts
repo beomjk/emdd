@@ -6,6 +6,7 @@ import { loadGraph } from '../graph/loader.js';
 import { lintGraphFromDir } from '../graph/operations.js';
 import { VERSION } from '../version.js';
 import { t } from '../i18n/index.js';
+import { EMDD_RULES_MARKER } from '../rules/generators.js';
 
 export interface DoctorCheckResult {
   name: string;
@@ -119,7 +120,9 @@ type ToolRuleEntry = {
 
 const TOOL_RULES: ToolRuleEntry[] = [
   { name: '.claude', paths: ['.claude/CLAUDE.md'] },
-  { name: 'AGENTS.md', paths: ['AGENTS.md'], contentCheck: (body) => body.includes('# EMDD') },
+  // Generated AGENTS.md always opens with EMDD_RULES_MARKER at line 1;
+  // startsWith (not includes) avoids false positives when user prose mentions EMDD.
+  { name: 'AGENTS.md', paths: ['AGENTS.md'], contentCheck: (body) => body.startsWith(EMDD_RULES_MARKER) },
   { name: '.cursor', paths: ['.cursor/rules/emdd.mdc'] },
   { name: '.windsurf', paths: ['.windsurf/rules/emdd.md'] },
   { name: '.clinerules', paths: ['.clinerules/emdd.md'] },

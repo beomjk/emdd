@@ -18,17 +18,28 @@ export type SkillName = 'emdd-open' | 'emdd-close';
 export type RulesVariant = 'full' | 'compact';
 
 // Single source of truth for which tools support repository-local skills.
-// Kept in sync with SkillToolType via a compile-time check.
 export const SKILL_TOOLS = ['claude', 'codex'] as const satisfies readonly SkillToolType[];
+
+// Compile-time exhaustiveness guard: if SkillToolType gains a member that is
+// not listed in SKILL_TOOLS, this type resolves to a non-empty union and the
+// assignment fails. Keeps SKILL_TOOLS and SkillToolType in lockstep.
+type _MissingSkillTools = Exclude<SkillToolType, typeof SKILL_TOOLS[number]>;
+const _skillToolsExhaustive: _MissingSkillTools extends never ? true : never = true;
+void _skillToolsExhaustive;
 
 export function toolSupportsSkills(tool: ToolType): tool is SkillToolType {
   return (SKILL_TOOLS as readonly ToolType[]).includes(tool);
 }
 
+// Marker written at line 1 of every generated EMDD rules file. Shared between
+// the generator (which writes it) and doctor (which probes for it) so a rename
+// can't silently break detection.
+export const EMDD_RULES_MARKER = '# EMDD';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Tool -> output path mapping (relative to project root)
-const TOOL_PATHS: Record<Exclude<ToolType, 'all'>, string> = {
+export const TOOL_PATHS: Record<Exclude<ToolType, 'all'>, string> = {
   claude: '.claude/CLAUDE.md',
   codex: 'AGENTS.md',
   cursor: '.cursor/rules/emdd.mdc',
@@ -37,7 +48,7 @@ const TOOL_PATHS: Record<Exclude<ToolType, 'all'>, string> = {
   copilot: '.github/copilot-instructions.md',
 };
 
-const ALL_TOOLS: Exclude<ToolType, 'all'>[] = ['claude', 'codex', 'cursor', 'windsurf', 'cline', 'copilot'];
+const ALL_TOOLS = Object.keys(TOOL_PATHS) as (keyof typeof TOOL_PATHS)[];
 
 // Short descriptions for each node type used in rules output
 const NODE_DESCRIPTIONS: Record<NodeType, string> = {
@@ -220,8 +231,12 @@ function loadAgentMarkdown(): string {
 // Exported for direct unit testing of the drift-guard behavior.
 export function replaceOrThrow(content: string, search: string, replacement: string): string {
   if (!content.includes(search)) {
+    // Use a head+tail preview so tail-only drift (e.g., a trailing word change)
+    // is visible in the error message instead of being hidden by truncation.
+    const preview =
+      search.length > 100 ? `${search.slice(0, 48)}…${search.slice(-48)}` : search;
     throw new Error(
-      `adaptAgentMarkdownForTool: expected target not found in emdd-agent.md: "${search.slice(0, 80)}${search.length > 80 ? '…' : ''}"`,
+      `adaptAgentMarkdownForTool: expected target not found in emdd-agent.md: "${preview}"`,
     );
   }
   return content.replace(search, replacement);
@@ -253,10 +268,16 @@ ${content}`;
 
 /**
  * Get rules content for a specific tool and variant.
- * For 'all', returns claude content (use generateRulesFile for writing all files).
+ * Throws on 'all' — callers that want to write every tool's file should use
+ * generateRulesFile, which iterates and calls getRulesContent per concrete tool.
  */
 export function getRulesContent(tool: ToolType, variant: RulesVariant): string {
-  const resolvedTool = tool === 'all' ? 'claude' : tool;
+  if (tool === 'all') {
+    throw new Error(
+      "getRulesContent: 'all' is not a concrete tool. Use generateRulesFile('all', ...) to write all tool files.",
+    );
+  }
+  const resolvedTool = tool;
 
   let content: string;
   if (variant === 'compact') {

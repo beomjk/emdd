@@ -47,7 +47,13 @@ describe('emdd init --tool', () => {
     expect(existsSync(join(tmpDir, '.clinerules', 'emdd.md'))).toBe(true);
     expect(existsSync(join(tmpDir, '.github', 'copilot-instructions.md'))).toBe(true);
     expect(existsSync(join(tmpDir, 'AGENTS.md'))).toBe(true);
+    // Every skill-capable tool must get its skill dir in the --tool all flow,
+    // not just the last one iterated. Guards against a regression that drops
+    // Claude skill emission while keeping Codex (or vice versa).
+    expect(existsSync(join(tmpDir, '.claude', 'skills', 'emdd-open', 'SKILL.md'))).toBe(true);
+    expect(existsSync(join(tmpDir, '.claude', 'skills', 'emdd-close', 'SKILL.md'))).toBe(true);
     expect(existsSync(join(tmpDir, '.agents', 'skills', 'emdd-open', 'SKILL.md'))).toBe(true);
+    expect(existsSync(join(tmpDir, '.agents', 'skills', 'emdd-close', 'SKILL.md'))).toBe(true);
   });
 
   it('defaults to claude when --tool is omitted', () => {
