@@ -17,6 +17,14 @@ export type SkillToolType = 'claude' | 'codex';
 export type SkillName = 'emdd-open' | 'emdd-close';
 export type RulesVariant = 'full' | 'compact';
 
+// Single source of truth for which tools support repository-local skills.
+// Kept in sync with SkillToolType via a compile-time check.
+export const SKILL_TOOLS = ['claude', 'codex'] as const satisfies readonly SkillToolType[];
+
+export function toolSupportsSkills(tool: ToolType): tool is SkillToolType {
+  return (SKILL_TOOLS as readonly ToolType[]).includes(tool);
+}
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Tool -> output path mapping (relative to project root)
@@ -209,18 +217,30 @@ function loadAgentMarkdown(): string {
   return fs.readFileSync(path.join(__dirname, 'emdd-agent.md'), 'utf-8');
 }
 
+// Exported for direct unit testing of the drift-guard behavior.
+export function replaceOrThrow(content: string, search: string, replacement: string): string {
+  if (!content.includes(search)) {
+    throw new Error(
+      `adaptAgentMarkdownForTool: expected target not found in emdd-agent.md: "${search.slice(0, 80)}${search.length > 80 ? '…' : ''}"`,
+    );
+  }
+  return content.replace(search, replacement);
+}
+
 function adaptAgentMarkdownForTool(content: string, tool: Exclude<ToolType, 'all'>): string {
   if (tool !== 'codex') {
     return content;
   }
 
-  return content
-    .replace(
-      '**Claude Code shortcuts:** `/emdd-open` (Session Start) and `/emdd-close` (Session End + Maintenance + Review).',
-      'Codex skills: `emdd-open` (Session Start) and `emdd-close` (Session End + Maintenance + Review).',
-    )
-    .replace('(or `/emdd-open`)', '(or the `emdd-open` skill)')
-    .replace('via `/emdd-close`', 'via the `emdd-close` skill');
+  let out = content;
+  out = replaceOrThrow(
+    out,
+    '**Claude Code shortcuts:** `/emdd-open` (Session Start) and `/emdd-close` (Session End + Maintenance + Review).',
+    'Codex skills: `emdd-open` (Session Start) and `emdd-close` (Session End + Maintenance + Review).',
+  );
+  out = replaceOrThrow(out, '(or `/emdd-open`)', '(or the `emdd-open` skill)');
+  out = replaceOrThrow(out, 'via `/emdd-close`', 'via the `emdd-close` skill');
+  return out;
 }
 
 function wrapForCursor(content: string): string {

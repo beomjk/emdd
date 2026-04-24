@@ -2,7 +2,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { NODE_TYPE_DIRS } from '../graph/types.js';
 import { t } from '../i18n/index.js';
-import { generateRulesFile, generateSkillFiles, type ToolType } from '../rules/generators.js';
+import {
+  generateRulesFile,
+  generateSkillFiles,
+  SKILL_TOOLS,
+  toolSupportsSkills,
+  type SkillToolType,
+  type ToolType,
+} from '../rules/generators.js';
 
 const MCP_SETUP_HINTS: Record<Exclude<ToolType, 'all'>, string> = {
   claude: 'claude mcp add emdd -- npx @beomjk/emdd mcp\n             Windows: claude mcp add emdd -- cmd /c npx @beomjk/emdd mcp',
@@ -72,7 +79,8 @@ export function initCommand(targetPath: string | undefined, options: { lang?: st
   }
 
   // Generate repository-local skills for tools that support them.
-  const skillTools = tool === 'all' ? ['claude', 'codex'] as const : tool === 'claude' || tool === 'codex' ? [tool] as const : [];
+  const skillTools: readonly SkillToolType[] =
+    tool === 'all' ? SKILL_TOOLS : toolSupportsSkills(tool) ? [tool] : [];
   for (const skillTool of skillTools) {
     const skillResult = generateSkillFiles(target, { force: options.force, tool: skillTool });
     for (const created of skillResult.created) {

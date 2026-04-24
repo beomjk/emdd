@@ -133,10 +133,10 @@ Supported tools: `claude` (default), `codex`, `cursor`, `windsurf`, `cline`, `co
 
 For Claude Code, use `/emdd-open` and `/emdd-close`. For Codex, use the generated `emdd-open` and `emdd-close` skills. They map to MCP prompts:
 
-| Skill | Invokes |
-|-------|---------|
-| `/emdd-open` | `context-loading` |
-| `/emdd-close` | `episode-creation` → `consolidation` → `health-review` |
+| Claude Code | Codex skill | Invokes |
+|-------------|-------------|---------|
+| `/emdd-open` | `emdd-open` | `context-loading` |
+| `/emdd-close` | `emdd-close` | `episode-creation` → `consolidation` → `health-review` |
 
 ## What is EMDD?
 

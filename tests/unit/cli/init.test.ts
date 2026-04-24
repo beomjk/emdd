@@ -7,6 +7,8 @@ import path from 'node:path';
 vi.mock('../../../src/rules/generators.js', () => ({
   generateRulesFile: vi.fn(() => ({ created: [], skipped: [] })),
   generateSkillFiles: vi.fn(() => ({ created: ['skills/emdd-open/SKILL.md', 'skills/emdd-close/SKILL.md'], skipped: [] })),
+  SKILL_TOOLS: ['claude', 'codex'] as const,
+  toolSupportsSkills: (tool: string) => tool === 'claude' || tool === 'codex',
 }));
 
 import { initCommand } from '../../../src/cli/init.js';

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, rmSync, existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { getRulesContent, generateRulesFile, getSkillContent, generateSkillFiles } from '../../../src/rules/generators.js';
+import { getRulesContent, generateRulesFile, getSkillContent, generateSkillFiles, replaceOrThrow } from '../../../src/rules/generators.js';
 import { NODE_TYPES, NODE_TYPE_DIRS, ID_PREFIXES, EDGE_TYPES, CEREMONY_TRIGGERS } from '../../../src/graph/types.js';
 
 // Rough token estimator: ~4 chars per token
@@ -62,6 +62,11 @@ describe('getRulesContent', () => {
     expect(content).toContain('Consolidation');
     expect(content).toContain('Codex skills: `emdd-open`');
     expect(content).not.toContain('Claude Code shortcuts');
+    // All three Claude-specific phrasings must be adapted — not just the first.
+    expect(content).not.toContain('(or `/emdd-open`)');
+    expect(content).not.toContain('via `/emdd-close`');
+    expect(content).toContain('(or the `emdd-open` skill)');
+    expect(content).toContain('via the `emdd-close` skill');
     expect(content).toMatchSnapshot();
   });
 
@@ -248,6 +253,16 @@ describe('getSkillContent', () => {
 
   it('emdd-close skill content matches snapshot', () => {
     expect(getSkillContent('emdd-close')).toMatchSnapshot();
+  });
+});
+
+describe('replaceOrThrow', () => {
+  it('replaces when the search string is present', () => {
+    expect(replaceOrThrow('hello world', 'world', 'there')).toBe('hello there');
+  });
+
+  it('throws when the search string is absent (drift guard)', () => {
+    expect(() => replaceOrThrow('hello world', 'missing', 'x')).toThrow(/emdd-agent\.md/);
   });
 });
 

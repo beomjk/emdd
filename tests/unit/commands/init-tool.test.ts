@@ -69,6 +69,21 @@ describe('emdd init --tool', () => {
     consoleSpy.mockRestore();
   });
 
+  it('preserves existing AGENTS.md without --force for --tool codex', () => {
+    // AGENTS.md lives at project root and may be a user's hand-authored file.
+    // Running `--tool codex` must skip, not overwrite, unless --force is set.
+    const existing = '# My Project Agents\nHand-authored content.\n';
+    writeFileSync(join(tmpDir, 'AGENTS.md'), existing);
+
+    const consoleSpy = vi.spyOn(console, 'log');
+    initCommand(tmpDir, { lang: 'en', tool: 'codex' });
+
+    expect(readFileSync(join(tmpDir, 'AGENTS.md'), 'utf-8')).toBe(existing);
+    const logged = consoleSpy.mock.calls.map(c => c.join(' ')).join('\n');
+    expect(logged).toMatch(/Skipped.*AGENTS\.md/);
+    consoleSpy.mockRestore();
+  });
+
   it('generates valid MDC frontmatter for cursor', () => {
     initCommand(tmpDir, { lang: 'en', tool: 'cursor' });
     const filePath = join(tmpDir, '.cursor', 'rules', 'emdd.mdc');
