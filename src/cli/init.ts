@@ -21,13 +21,19 @@ const MCP_SETUP_HINTS: Record<Exclude<ToolType, 'all'>, string> = {
 };
 
 function printNextSteps(tool: ToolType): void {
-  const displayTool = tool === 'all' ? 'claude' : (tool as Exclude<ToolType, 'all'>);
+  // For --tool all, print MCP hints for both skill-capable assistants (claude
+  // and codex) — both are first-class one-liner setups, so showing only one
+  // would silently hide the other from users who picked "all".
+  const hintTools: Array<Exclude<ToolType, 'all'>> =
+    tool === 'all' ? ['claude', 'codex'] : [tool as Exclude<ToolType, 'all'>];
 
   console.log('');
   console.log(`  ${t('init.next_steps_header')}`);
   console.log('');
   console.log(`    ${t('init.ai_recommended')}`);
-  console.log(`      ${MCP_SETUP_HINTS[displayTool]}`);
+  for (const ht of hintTools) {
+    console.log(`      ${MCP_SETUP_HINTS[ht]}`);
+  }
   console.log('');
   console.log(`    ${t('init.ai_then')}`);
   console.log('');

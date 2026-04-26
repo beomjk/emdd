@@ -885,6 +885,8 @@ Branch group이 CONVERGED나 MERGED로 전이되면 `_index.md`를 업데이트�
 
 **최소 요구사항:** 주 1회 이상 Episode 작성. 1주를 건너뛰면 다음 세션의 컨텍스트 로딩에 더 오래 걸린다 — Episode 체인이 끊어진다.
 
+**Claude Code 단축키:** `/emdd-open` (세션 시작) 및 `/emdd-close` (세션 종료 + 유지 보수 + 리뷰). **Codex 스킬:** `emdd-open` (세션 시작) 및 `emdd-close` (세션 종료 + 유지 보수 + 리뷰).
+
 **AI 에이전트 동작:** 동일한 규칙이 적용되지만, "모닝 브리핑"과 "일일 리플렉션"이 세션 시작/종료로 축약된다. 인터럽트 버짓은 일 단위가 아닌 세션 단위로 리셋된다.
 
 ### 7.2b 팀 연구 프로토콜
@@ -1775,7 +1777,7 @@ Zettelkasten을 만든 Niklas Luhmann은 자신의 카드 상자를 "대화 파�
 
 2. **Consolidation Hint Tags (6.2, 7.4)**: Finding의 links에 `extends: know-NNN` 힌트를 공식 허용. Consolidation 승격 단계에서 "hint가 있는 Finding부터 검토" 규칙 추가. 힌트는 승격 판단을 가속하지만 승격 기준(독립 지지 2개+, confidence ≥ 0.9, 사실상 사용 중)을 면제하지 않음.
 
-3. **CLI-Slash 통합**: MCP 프롬프트(`context-loading`, `episode-creation`, `consolidation`, `health-review`)가 CLI 커맨드를 직접 호출하도록 템플릿 재작성. Claude Code에서는 저장소 로컬 스킬로 노출됨: `/emdd-open`은 `context-loading`을 호출하고, `/emdd-close`는 `episode-creation` → `consolidation` → `health-review`를 순차 호출. Codex에서도 동일한 저장소 로컬 스킬(`emdd-open`, `emdd-close`)이 생성되지만, Codex는 아직 MCP 프롬프트를 노출하지 않으므로([openai/codex#5059](https://github.com/openai/codex/issues/5059)) Codex 스킬은 동일한 결과를 얻기 위해 대응되는 MCP **도구**(`health`, `list-nodes`, `read-node`, `check`, `backlog`, `transitions`, `create-node`, `mark-consolidated`)를 순차 호출함. 새 CLI 커맨드 4개 추가:
+3. **CLI-Slash 통합**: MCP 프롬프트(`context-loading`, `episode-creation`, `consolidation`, `health-review`)가 CLI 커맨드를 직접 호출하도록 템플릿 재작성. Claude Code에서는 저장소 로컬 스킬로 노출됨: `/emdd-open`은 `context-loading`을 호출하고, `/emdd-close`는 `episode-creation` → `consolidation` → `health-review`를 순차 호출. Codex에서도 동일한 저장소 로컬 스킬(`emdd-open`, `emdd-close`)이 생성되지만, Codex는 아직 MCP 프롬프트를 노출하지 않으므로([openai/codex#5059](https://github.com/openai/codex/issues/5059)) Codex 스킬은 동일한 결과를 얻기 위해 대응되는 MCP **도구**(`health`, `list-nodes`, `read-node`, `check`, `backlog`, `status-transitions`, `create-node`, `mark-consolidated`)를 순차 호출함. 새 CLI 커맨드 4개 추가:
    - `emdd update <node-id> --set key=value`: frontmatter 필드 업데이트 (confidence 범위 검증 포함)
    - `emdd link <source-id> <target-id> <relation>`: 노드 간 링크 추가 (relation 검증, 중복 skip)
    - `emdd done <episode-id> "<item>" [--marker <done|deferred|superseded>]`: Episode "다음에 할 것" 항목의 상태 마커 변경 (기본값: done)

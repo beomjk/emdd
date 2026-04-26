@@ -138,7 +138,7 @@ For Claude Code, use `/emdd-open` and `/emdd-close`. For Codex, use the generate
 | `/emdd-open` | `emdd-open` | Loads graph context (Claude calls the `context-loading` MCP prompt; Codex walks the equivalent MCP tools — see note below) |
 | `/emdd-close` | `emdd-close` | Writes Episode → checks consolidation → reviews health (Claude calls the matching MCP prompts; Codex walks the equivalent MCP tools) |
 
-> **Codex note**: Codex does not yet expose MCP prompts ([openai/codex#5059](https://github.com/openai/codex/issues/5059)). The generated Codex skills therefore call MCP **tools** (`health`, `list-nodes`, `read-node`, `check`, `backlog`, `transitions`, `create-node`, `mark-consolidated`) instead of prompts to achieve the same result. When Codex adds prompt support, the skills will switch to calling prompts directly.
+> **Codex note**: Codex does not yet expose MCP prompts ([openai/codex#5059](https://github.com/openai/codex/issues/5059)). The generated Codex skills therefore call MCP **tools** (`health`, `list-nodes`, `read-node`, `check`, `backlog`, `status-transitions`, `create-node`, `mark-consolidated`) instead of prompts to achieve the same result. When Codex adds prompt support, the skills will switch to calling prompts directly.
 
 ## What is EMDD?
 

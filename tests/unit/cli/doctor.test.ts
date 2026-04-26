@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -276,6 +276,35 @@ describe('emdd doctor', () => {
       expect(result.message).toContain('.claude');
       expect(result.message).toContain('.cursor');
       expect(result.message).toContain('AGENTS.md');
+    });
+
+    it('skips AGENTS.md gracefully when readFileSync throws (e.g., permission denied)', () => {
+      // Covers the try/catch in checkToolRules: a present-but-unreadable AGENTS.md
+      // must not crash the entire doctor run; it should fall through as if the
+      // contentCheck failed and the rest of the diagnostics still report.
+      fs.mkdirSync(path.join(tmpDir, '.claude'), { recursive: true });
+      fs.writeFileSync(path.join(tmpDir, '.claude', 'CLAUDE.md'), '# EMDD — rules');
+      fs.writeFileSync(path.join(tmpDir, 'AGENTS.md'), '# EMDD\n');
+
+      const realReadFileSync = fs.readFileSync;
+      const spy = vi.spyOn(fs, 'readFileSync').mockImplementation(((p: fs.PathOrFileDescriptor, ...rest: unknown[]) => {
+        if (typeof p === 'string' && p.endsWith(`${path.sep}AGENTS.md`)) {
+          const err = new Error('EACCES: permission denied') as NodeJS.ErrnoException;
+          err.code = 'EACCES';
+          throw err;
+        }
+        // Cast through unknown to satisfy the readFileSync overload signature in the spy callback.
+        return (realReadFileSync as unknown as (...a: unknown[]) => Buffer | string)(p, ...rest);
+      }) as typeof fs.readFileSync);
+
+      try {
+        const result = checkToolRules(tmpDir);
+        expect(result.status).toBe('info');
+        expect(result.message).toContain('.claude');
+        expect(result.message).not.toContain('AGENTS.md');
+      } finally {
+        spy.mockRestore();
+      }
     });
   });
 

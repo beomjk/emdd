@@ -126,10 +126,25 @@ describe('initCommand next steps output', () => {
     expect(generateSkillFiles).toHaveBeenCalledWith(target, { force: undefined, tool: 'claude' });
   });
 
-  it('does not call generateSkillFiles for non-claude tools', () => {
-    const target = path.join(tmpDir, 'proj-skills-cursor');
-    (generateSkillFiles as ReturnType<typeof vi.fn>).mockClear();
-    initCommand(target, { tool: 'cursor' });
-    expect(generateSkillFiles).not.toHaveBeenCalled();
+  it('does not call generateSkillFiles for tools without skill support', () => {
+    // Skill-capable tools are claude + codex (see SKILL_TOOLS); every other
+    // entry in TOOL_PATHS must NOT trigger generateSkillFiles.
+    for (const nonSkillTool of ['cursor', 'windsurf', 'cline', 'copilot'] as const) {
+      const target = path.join(tmpDir, `proj-skills-${nonSkillTool}`);
+      (generateSkillFiles as ReturnType<typeof vi.fn>).mockClear();
+      initCommand(target, { tool: nonSkillTool });
+      expect(generateSkillFiles).not.toHaveBeenCalled();
+    }
+  });
+
+  it('prints both claude and codex MCP hints for --tool all', () => {
+    // --tool all writes both .claude/CLAUDE.md and AGENTS.md and both
+    // assistants have a first-class one-liner; the next-steps banner must
+    // surface both, not silently fall back to only one.
+    const target = path.join(tmpDir, 'proj-all-hints');
+    initCommand(target, { tool: 'all' });
+    const output = logSpy.mock.calls.map(c => String(c[0])).join('\n');
+    expect(output).toContain('claude mcp add emdd');
+    expect(output).toContain('codex mcp add emdd');
   });
 });

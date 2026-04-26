@@ -93,7 +93,7 @@ const SHORTCUT_LINE = {
   },
   codex: {
     compact: 'Codex skills: `emdd-open` (start) and `emdd-close` (end + maintenance + review).',
-    full: 'Codex skills: `emdd-open` (Session Start) and `emdd-close` (Session End + Maintenance + Review).',
+    full: '**Codex skills:** `emdd-open` (Session Start) and `emdd-close` (Session End + Maintenance + Review).',
   },
 } as const;
 
@@ -112,6 +112,12 @@ function makeCompactRules(tool: Exclude<ToolType, 'all'> = 'claude'): string {
 
   const triggers = CEREMONY_TRIGGERS.consolidation;
 
+  // Codex cannot invoke MCP prompts (openai/codex#5059), so direct it to the
+  // skills that wrap the equivalent MCP tools instead.
+  const cycleLine = tool === 'codex'
+    ? 'Run the `emdd-open` skill at session start; run the `emdd-close` skill at session end (it writes the Episode, runs Consolidation if triggered, and reviews health).'
+    : 'Use MCP prompts in order: `context-loading` (start) → work → `episode-creation` (end) → `consolidation` (if triggered) → `health-review` (periodic).';
+
   return `# EMDD — Evolving Mindmap-Driven Development (Compact)
 
 You are working in an EMDD project. The knowledge graph lives in \`graph/\` as Markdown + YAML frontmatter files.
@@ -126,7 +132,7 @@ ${idExamples}
 
 ## Session Cycle
 
-Use MCP prompts in order: \`context-loading\` (start) → work → \`episode-creation\` (end) → \`consolidation\` (if triggered) → \`health-review\` (periodic).
+${cycleLine}
 
 ${shortcutGuidance(tool)}
 
@@ -288,6 +294,29 @@ function adaptAgentMarkdownForTool(content: string, tool: Exclude<ToolType, 'all
   out = replaceOrThrow(out, SHORTCUT_LINE.claude.full, SHORTCUT_LINE.codex.full);
   out = replaceOrThrow(out, '(or `/emdd-open`)', '(or the `emdd-open` skill)');
   out = replaceOrThrow(out, 'via `/emdd-close`', 'via the `emdd-close` skill');
+
+  // Steps 3-5 of the Session Cycle direct the agent to invoke MCP prompts
+  // (`episode-creation`, `consolidation`, `health-review`) — but Codex cannot
+  // run MCP prompts (openai/codex#5059). Redirect each step to the matching
+  // step inside the `emdd-close` skill, which walks the equivalent MCP tools.
+  // Without this rewrite the rules file (loaded as agent context every session)
+  // contradicts the SKILL.md disclaimer and tells Codex to do something it can't.
+  out = replaceOrThrow(
+    out,
+    'Run the `episode-creation` prompt.',
+    'Run the `emdd-close` skill (Episode step).',
+  );
+  out = replaceOrThrow(
+    out,
+    'Run the `consolidation` prompt when triggers fire.',
+    'Run the `emdd-close` skill (Consolidation step) when triggers fire.',
+  );
+  out = replaceOrThrow(
+    out,
+    'Run the `health-review` prompt periodically',
+    'Run the `emdd-close` skill (Health Review step) periodically',
+  );
+
   return out;
 }
 
@@ -402,7 +431,7 @@ context manually by calling the equivalent MCP tools from the \`emdd\` server in
 3. Call the \`read-node\` tool on the most recent episode for prior session context.
 4. Call the \`check\` tool — see whether consolidation triggers are due (run \`emdd-close\` if so).
 5. Call the \`backlog\` tool with \`status=pending\` — list pending follow-ups.
-6. Call the \`transitions\` tool — list nodes ready for status changes.
+6. Call the \`status-transitions\` tool — list nodes ready for status changes.
 7. Call the \`list-nodes\` tool with \`type=question\` and \`status=OPEN\` — find blocking/high-urgency questions.
 8. Synthesize the results into session priorities (BLOCKING questions, overdue consolidation, transition-ready nodes, blocked streak) and pick one to start.
 `,
@@ -432,7 +461,7 @@ session manually by calling the equivalent MCP tools from the \`emdd\` server in
 ## Instructions
 
 1. **Episode** — Call the \`create-node\` tool with \`type=episode\` to record this session.
-   - Frontmatter: \`trigger\` (what initiated this session), \`outcome\` (\`made_progress\` | \`blocked\` | \`shipped\`), and \`links\` with \`relation: produces\` for each node created or updated this session.
+   - Frontmatter: \`trigger\` (what initiated this session), \`outcome\` (\`success\` | \`partial\` | \`blocked\`), and \`links\` with \`relation: produces\` for each node created or updated this session.
    - Body must include "What I Tried" and "What's Next" (with prerequisite reading node IDs).
 2. **Consolidation check** — Call the \`check\` tool to review consolidation triggers.
    - If any trigger is met, run consolidation now: promote established findings to knowledge, split bloated experiments, convert episode questions into Question nodes, update hypothesis confidence based on evidence, and add edges to orphan findings. Then call \`mark-consolidated\`.

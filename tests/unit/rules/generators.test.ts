@@ -12,6 +12,7 @@ import {
   toolSupportsSkills,
   TOOL_PATHS,
   EMDD_RULES_MARKER,
+  getToolEnumerationString,
 } from '../../../src/rules/generators.js';
 import { NODE_TYPES, NODE_TYPE_DIRS, ID_PREFIXES, EDGE_TYPES, CEREMONY_TRIGGERS } from '../../../src/graph/types.js';
 
@@ -75,13 +76,23 @@ describe('getRulesContent', () => {
     expect(content).toContain('# EMDD');
     expect(content).toContain('Episode');
     expect(content).toContain('Consolidation');
-    expect(content).toContain('Codex skills: `emdd-open`');
+    // Lead-in is bolded for visual parity with the Claude variant.
+    expect(content).toContain('**Codex skills:** `emdd-open`');
     expect(content).not.toContain('Claude Code shortcuts');
-    // All three Claude-specific phrasings must be adapted — not just the first.
+    // All Claude-specific phrasings must be adapted — not just the first.
     expect(content).not.toContain('(or `/emdd-open`)');
     expect(content).not.toContain('via `/emdd-close`');
     expect(content).toContain('(or the `emdd-open` skill)');
     expect(content).toContain('via the `emdd-close` skill');
+    // Steps 3-5 must redirect to the `emdd-close` skill — Codex cannot run
+    // MCP prompts (openai/codex#5059), so the original prompt-invocation
+    // sentences would tell it to do something it can't.
+    expect(content).not.toContain('Run the `episode-creation` prompt');
+    expect(content).not.toContain('Run the `consolidation` prompt');
+    expect(content).not.toContain('Run the `health-review` prompt');
+    expect(content).toContain('Run the `emdd-close` skill (Episode step)');
+    expect(content).toContain('Run the `emdd-close` skill (Consolidation step)');
+    expect(content).toContain('Run the `emdd-close` skill (Health Review step)');
     expect(content).toMatchSnapshot();
   });
 
@@ -118,6 +129,11 @@ describe('getRulesContent', () => {
     expect(content).toContain('EMDD');
     expect(content).toContain('Codex skills: `emdd-open`');
     expect(content).not.toContain('Claude Code shortcuts');
+    // Compact Session Cycle line must redirect to skills, not MCP prompts —
+    // Codex cannot invoke MCP prompts (openai/codex#5059).
+    expect(content).not.toContain('Use MCP prompts in order');
+    expect(content).toContain('`emdd-open` skill at session start');
+    expect(content).toContain('`emdd-close` skill at session end');
     expect(content).toMatchSnapshot();
   });
 
@@ -366,6 +382,35 @@ describe('EMDD_RULES_MARKER', () => {
   });
 });
 
+// getToolEnumerationString is consumed by CLI help text (cli.ts) and the
+// generated --tool flag row in doc-tables.ts. Both rely on it staying in sync
+// with TOOL_PATHS; without direct coverage, a regression that returned only a
+// subset of tools or changed the separator would slip past the substring
+// assertions in the consumer tests.
+describe('getToolEnumerationString', () => {
+  it('includes every concrete tool plus "all" with the default | separator', () => {
+    const result = getToolEnumerationString();
+    expect(result).toBe('claude|codex|cursor|windsurf|cline|copilot|all');
+  });
+
+  it('uses the provided separator when given', () => {
+    expect(getToolEnumerationString(',')).toBe('claude,codex,cursor,windsurf,cline,copilot,all');
+  });
+
+  it('preserves TOOL_PATHS key order with "all" appended last', () => {
+    const parts = getToolEnumerationString().split('|');
+    expect(parts.slice(0, -1)).toEqual(Object.keys(TOOL_PATHS));
+    expect(parts[parts.length - 1]).toBe('all');
+  });
+
+  it('contains every SKILL_TOOLS entry', () => {
+    const parts = getToolEnumerationString().split('|');
+    for (const tool of SKILL_TOOLS) {
+      expect(parts).toContain(tool);
+    }
+  });
+});
+
 describe('getSkillContent (per-tool body)', () => {
   it('Claude emdd-open body invokes the context-loading MCP prompt', () => {
     const content = getSkillContent('emdd-open', 'claude');
@@ -386,7 +431,11 @@ describe('getSkillContent (per-tool body)', () => {
     expect(content).toContain('`read-node` tool');
     expect(content).toContain('`check` tool');
     expect(content).toContain('`backlog` tool');
-    expect(content).toContain('`transitions` tool');
+    // The MCP tool is registered as `status-transitions` (see
+    // src/registry/commands/transitions.ts). Codex skill bodies MUST use the
+    // registered name — calling the bare `transitions` tool would fail at runtime.
+    expect(content).toContain('`status-transitions` tool');
+    expect(content).not.toContain('`transitions` tool');
   });
 
   it('Codex emdd-close body invokes MCP tools (create-node, check, mark-consolidated, health)', () => {
