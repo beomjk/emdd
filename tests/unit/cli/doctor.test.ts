@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -219,6 +219,61 @@ describe('emdd doctor', () => {
       expect(result.message).toContain('.claude');
     });
 
+    it('returns info when Codex AGENTS.md rules exist', () => {
+      // Must contain EMDD marker; a bare AGENTS.md is a generic cross-tool convention
+      // and should NOT be flagged as an EMDD tool rule.
+      fs.writeFileSync(path.join(tmpDir, 'AGENTS.md'), '# EMDD\n');
+      const result = checkToolRules(tmpDir);
+      expect(result.status).toBe('info');
+      expect(result.message).toContain('AGENTS.md');
+    });
+
+    it('detects EMDD AGENTS.md even when prefixed with a UTF-8 BOM (Windows Notepad save)', () => {
+      // Editors like Windows Notepad re-save UTF-8 files with a leading BOM
+      // (U+FEFF / EF BB BF). The contentCheck strips it before the startsWith
+      // probe; without that strip, EMDD-generated AGENTS.md falls through as
+      // "no AI tool rules" the moment the user opens it once in such an editor.
+      // Pin the BOM byte sequence here so a regression that drops the strip
+      // (e.g., the regex anchor changed, or the strip moved client-side) fails
+      // this test instead of silently breaking detection on Windows.
+      fs.writeFileSync(path.join(tmpDir, 'AGENTS.md'), '﻿# EMDD — rules\n');
+      const result = checkToolRules(tmpDir);
+      expect(result.status).toBe('info');
+      expect(result.message).toContain('AGENTS.md');
+    });
+
+    it('ignores AGENTS.md that lacks the EMDD marker', () => {
+      fs.writeFileSync(path.join(tmpDir, 'AGENTS.md'), '# My Project Agents\nHand-written.\n');
+      const result = checkToolRules(tmpDir);
+      expect(result.status).toBe('info');
+      expect(result.message).toContain('No AI tool rules');
+    });
+
+    it('reports only .claude when AGENTS.md is hand-authored without the EMDD marker', () => {
+      // Common drift: user ran `emdd init --tool claude` but also has a hand-authored AGENTS.md
+      // (for Codex or another tool) at project root. The bare AGENTS.md must NOT be flagged
+      // as an EMDD tool rule; only .claude should appear.
+      fs.mkdirSync(path.join(tmpDir, '.claude'), { recursive: true });
+      fs.writeFileSync(path.join(tmpDir, '.claude', 'CLAUDE.md'), '# EMDD — rules');
+      fs.writeFileSync(path.join(tmpDir, 'AGENTS.md'), '# My Project Agents\nHand-authored.\n');
+      const result = checkToolRules(tmpDir);
+      expect(result.status).toBe('info');
+      expect(result.message).toContain('.claude');
+      expect(result.message).not.toContain('AGENTS.md');
+    });
+
+    it('ignores AGENTS.md whose EMDD mention is inline prose, not a header', () => {
+      // startsWith guard: only the line-1 marker written by the generator counts.
+      // A prose mention like "We reviewed # EMDD..." must not falsely trigger detection.
+      fs.writeFileSync(
+        path.join(tmpDir, 'AGENTS.md'),
+        '# Project Agents\n\nWe considered # EMDD but chose our own convention.\n',
+      );
+      const result = checkToolRules(tmpDir);
+      expect(result.status).toBe('info');
+      expect(result.message).toContain('No AI tool rules');
+    });
+
     it('returns info with "none" when no rules found', () => {
       const result = checkToolRules(tmpDir);
       expect(result.status).toBe('info');
@@ -230,9 +285,46 @@ describe('emdd doctor', () => {
       fs.writeFileSync(path.join(tmpDir, '.claude', 'CLAUDE.md'), '');
       fs.mkdirSync(path.join(tmpDir, '.cursor', 'rules'), { recursive: true });
       fs.writeFileSync(path.join(tmpDir, '.cursor', 'rules', 'emdd.mdc'), '');
+      fs.writeFileSync(path.join(tmpDir, 'AGENTS.md'), '# EMDD\n');
       const result = checkToolRules(tmpDir);
       expect(result.message).toContain('.claude');
       expect(result.message).toContain('.cursor');
+      expect(result.message).toContain('AGENTS.md');
+    });
+
+    it('skips AGENTS.md gracefully when readFileSync throws (e.g., permission denied)', () => {
+      // Covers the try/catch in checkToolRules: a present-but-unreadable AGENTS.md
+      // must not crash the entire doctor run; it should fall through as if the
+      // contentCheck failed and the rest of the diagnostics still report.
+      fs.mkdirSync(path.join(tmpDir, '.claude'), { recursive: true });
+      fs.writeFileSync(path.join(tmpDir, '.claude', 'CLAUDE.md'), '# EMDD — rules');
+      fs.writeFileSync(path.join(tmpDir, 'AGENTS.md'), '# EMDD\n');
+
+      const realReadFileSync = fs.readFileSync;
+      const spy = vi.spyOn(fs, 'readFileSync').mockImplementation(((p: fs.PathOrFileDescriptor, ...rest: unknown[]) => {
+        if (typeof p === 'string' && p.endsWith(`${path.sep}AGENTS.md`)) {
+          const err = new Error('EACCES: permission denied') as NodeJS.ErrnoException;
+          err.code = 'EACCES';
+          throw err;
+        }
+        // Cast through unknown to satisfy the readFileSync overload signature in the spy callback.
+        return (realReadFileSync as unknown as (...a: unknown[]) => Buffer | string)(p, ...rest);
+      }) as typeof fs.readFileSync);
+
+      try {
+        const result = checkToolRules(tmpDir);
+        // Pin that the spy actually intercepted the AGENTS.md read — without
+        // this the assertions below could pass tautologically (e.g., if a
+        // future refactor switched to fs.promises.readFile, the spy never
+        // matches and the EACCES branch is no longer exercised, yet the
+        // .claude-only assertions would still hold).
+        expect(spy).toHaveBeenCalled();
+        expect(result.status).toBe('info');
+        expect(result.message).toContain('.claude');
+        expect(result.message).not.toContain('AGENTS.md');
+      } finally {
+        spy.mockRestore();
+      }
     });
   });
 

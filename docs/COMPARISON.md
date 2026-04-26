@@ -6,7 +6,7 @@ This document compares EMDD (Evolving Mindmap-Driven Development) with existing 
 
 - **You are doing exploratory R&D** where the destination is unknown -- investigating novel architectures, analyzing complex visual inspection pipelines, or running open-ended experiments without a fixed spec.
 - **You need to track how your understanding evolved**, not just what you currently know. The history of failed hypotheses and dead ends is as valuable as the successes.
-- **You work with AI assistants** (e.g., Claude Code) and want the AI to maintain the knowledge structure, detect gaps, and suggest next steps -- while you retain judgment.
+- **You work with AI assistants** (e.g., Claude Code, Codex) and want the AI to maintain the knowledge structure, detect gaps, and suggest next steps -- while you retain judgment.
 - **Your project has a defined scope and lifetime.** EMDD is designed for a single research project's working memory, not for accumulating lifetime knowledge.
 - **You want structure without bureaucracy.** You need more rigor than a scratchpad but less overhead than a full project management system.
 

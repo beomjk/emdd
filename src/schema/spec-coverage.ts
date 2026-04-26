@@ -36,8 +36,8 @@ export interface CoverageReport {
 
 // ── Parsing ────────────────────────────────────────────────────────
 
-const ASSERT_REGEX = /<!--\s*ASSERT\s+(§[\d.]+):\s*(.+?)\s*-->/g;
-const SPEC_TAG_REGEX = /\/\/\s*@spec\s+(§[\d.]+)/g;
+const ASSERT_REGEX = /<!--\s*ASSERT\s+(§[\d.]+[a-z]?(?:\.[\d]+)*):\s*(.+?)\s*-->/g;
+const SPEC_TAG_REGEX = /\/\/\s*@spec\s+(§[\d.]+[a-z]?(?:\.[\d]+)*)/g;
 
 export async function parseAssertMarkers(specPath: string): Promise<AssertMarker[]> {
   const content = await readFile(specPath, 'utf-8');

@@ -26,6 +26,7 @@ describe('checkKillCriteria', () => {
     writeFileSync(join(graphDir, subdir, filename), matter.stringify('', fm));
   }
 
+  // @spec §6.5a.1
   it('flags hypothesis when confidence < 0.3 and kill_criterion exists', async () => {
     writeNode('hypotheses', 'hyp-001-test.md', {
       id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'TESTING',

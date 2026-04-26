@@ -12,22 +12,69 @@ import {
   type NodeType,
 } from '../graph/types.js';
 
-export type ToolType = 'claude' | 'cursor' | 'windsurf' | 'cline' | 'copilot' | 'all';
+export type ToolType = 'claude' | 'codex' | 'cursor' | 'windsurf' | 'cline' | 'copilot' | 'all';
+export type SkillToolType = 'claude' | 'codex';
 export type SkillName = 'emdd-open' | 'emdd-close';
 export type RulesVariant = 'full' | 'compact';
+
+// Single source of truth for which tools support repository-local skills.
+export const SKILL_TOOLS = ['claude', 'codex'] as const satisfies readonly SkillToolType[];
+
+// Compile-time exhaustiveness guard: if SkillToolType gains a member that is
+// not listed in SKILL_TOOLS, this type resolves to a non-empty union and the
+// assignment fails. Keeps SKILL_TOOLS and SkillToolType in lockstep.
+type _MissingSkillTools = Exclude<SkillToolType, typeof SKILL_TOOLS[number]>;
+const _skillToolsExhaustive: _MissingSkillTools extends never ? true : never = true;
+void _skillToolsExhaustive;
+
+export function toolSupportsSkills(tool: ToolType): tool is SkillToolType {
+  return (SKILL_TOOLS as readonly ToolType[]).includes(tool);
+}
+
+// Marker written at line 1 of every generated EMDD rules file. Shared between
+// the generator (which writes it) and doctor (which probes for it) so a rename
+// can't silently break detection.
+export const EMDD_RULES_MARKER = '# EMDD';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Tool -> output path mapping (relative to project root)
-const TOOL_PATHS: Record<Exclude<ToolType, 'all'>, string> = {
+export const TOOL_PATHS: Record<Exclude<ToolType, 'all'>, string> = {
   claude: '.claude/CLAUDE.md',
+  codex: 'AGENTS.md',
   cursor: '.cursor/rules/emdd.mdc',
   windsurf: '.windsurf/rules/emdd.md',
   cline: '.clinerules/emdd.md',
   copilot: '.github/copilot-instructions.md',
 };
 
-const ALL_TOOLS: Exclude<ToolType, 'all'>[] = ['claude', 'cursor', 'windsurf', 'cline', 'copilot'];
+// Compile-time guard: every SkillToolType must also be a key of TOOL_PATHS so
+// generateSkillFiles can resolve a writable destination for it. Without this,
+// adding a tool to SkillToolType but forgetting it in TOOL_PATHS would only
+// surface at the use-site `skillRoot[tool]`, not at the type declaration.
+type _SkillToolsHavePaths = Exclude<SkillToolType, keyof typeof TOOL_PATHS>;
+const _skillToolsHavePaths: _SkillToolsHavePaths extends never ? true : never = true;
+void _skillToolsHavePaths;
+
+const ALL_TOOLS = Object.keys(TOOL_PATHS) as Array<Exclude<ToolType, 'all'>>;
+
+// Single-source list of every accepted `--tool` value (concrete tools + 'all').
+// Used by the CLI to validate input before any filesystem work, and by
+// getToolEnumerationString to build the help/docs enumeration.
+const ALL_TOOL_CHOICES: readonly ToolType[] = [...ALL_TOOLS, 'all'];
+
+export function isValidTool(value: string): value is ToolType {
+  return (ALL_TOOL_CHOICES as readonly string[]).includes(value);
+}
+
+/**
+ * Build the "claude|codex|cursor|...|all" enumeration string for CLI help text
+ * and generated docs. Single source — derived from TOOL_PATHS so adding a new
+ * tool requires no manual edits to help strings or doc tables.
+ */
+export function getToolEnumerationString(separator = '|'): string {
+  return ALL_TOOL_CHOICES.join(separator);
+}
 
 // Short descriptions for each node type used in rules output
 const NODE_DESCRIPTIONS: Record<NodeType, string> = {
@@ -44,7 +91,26 @@ function titleCase(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-function makeCompactRules(): string {
+// Single source of truth for the session-shortcut sentence rendered into rules.
+// The Title-Case form is what `emdd-agent.md` (full variant) uses verbatim — see
+// adaptAgentMarkdownForTool — so changing `Session Start` / `Session End` here
+// requires updating `emdd-agent.md` in lockstep (the drift guard will fire if not).
+const SHORTCUT_LINE = {
+  claude: {
+    compact: 'Claude Code shortcuts: `/emdd-open` (start) and `/emdd-close` (end + maintenance + review).',
+    full: '**Claude Code shortcuts:** `/emdd-open` (Session Start) and `/emdd-close` (Session End + Maintenance + Review).',
+  },
+  codex: {
+    compact: 'Codex skills: `emdd-open` (start) and `emdd-close` (end + maintenance + review).',
+    full: '**Codex skills:** `emdd-open` (Session Start) and `emdd-close` (Session End + Maintenance + Review).',
+  },
+} as const;
+
+function shortcutGuidance(tool: Exclude<ToolType, 'all'>): string {
+  return tool === 'codex' ? SHORTCUT_LINE.codex.compact : SHORTCUT_LINE.claude.compact;
+}
+
+function makeCompactRules(tool: Exclude<ToolType, 'all'> = 'claude'): string {
   const nodeLines = NODE_DISPLAY_ORDER.map((t) => {
     const desc = NODE_DESCRIPTIONS[t] ?? t;
     const statuses = VALID_STATUSES[t].join(', ');
@@ -55,7 +121,13 @@ function makeCompactRules(): string {
 
   const triggers = CEREMONY_TRIGGERS.consolidation;
 
-  return `# EMDD — Evolving Mindmap-Driven Development (Compact)
+  // Codex cannot invoke MCP prompts (openai/codex#5059), so direct it to the
+  // skills that wrap the equivalent MCP tools instead.
+  const cycleLine = tool === 'codex'
+    ? 'Run the `emdd-open` skill at session start; run the `emdd-close` skill at session end (it writes the Episode, runs Consolidation if triggered, and reviews health).'
+    : 'Use MCP prompts in order: `context-loading` (start) → work → `episode-creation` (end) → `consolidation` (if triggered) → `health-review` (periodic).';
+
+  return `${EMDD_RULES_MARKER} — Evolving Mindmap-Driven Development (Compact)
 
 You are working in an EMDD project. The knowledge graph lives in \`graph/\` as Markdown + YAML frontmatter files.
 
@@ -69,9 +141,9 @@ ${idExamples}
 
 ## Session Cycle
 
-Use MCP prompts in order: \`context-loading\` (start) → work → \`episode-creation\` (end) → \`consolidation\` (if triggered) → \`health-review\` (periodic).
+${cycleLine}
 
-Claude Code shortcuts: \`/emdd-open\` (start) and \`/emdd-close\` (end + maintenance + review).
+${shortcutGuidance(tool)}
 
 ## Key Rules
 
@@ -100,7 +172,7 @@ function makeFullRules(): string {
   // Ceremony triggers
   const triggers = CEREMONY_TRIGGERS.consolidation;
 
-  return `# EMDD — Evolving Mindmap-Driven Development
+  return `${EMDD_RULES_MARKER} — Evolving Mindmap-Driven Development
 
 You are working in a project that uses the EMDD methodology. EMDD organizes research and exploration as a knowledge graph stored in \`graph/\` with Markdown + YAML frontmatter files, tracked by Git.
 
@@ -200,6 +272,73 @@ function loadAgentMarkdown(): string {
   return fs.readFileSync(path.join(__dirname, 'emdd-agent.md'), 'utf-8');
 }
 
+// Exported for direct unit testing of the drift-guard behavior.
+//
+// We deliberately avoid `String.prototype.replace`: it interprets `$&`, `$1`,
+// `$$`, "$`" and `$'` in the replacement string, which would silently corrupt
+// any future replacement containing those tokens. Splice via indexOf instead.
+export function replaceOrThrow(content: string, search: string, replacement: string): string {
+  if (search.length === 0) {
+    throw new Error('replaceOrThrow: search string must be non-empty');
+  }
+  const i = content.indexOf(search);
+  if (i === -1) {
+    // Use a head+tail preview so tail-only drift (e.g., a trailing word change)
+    // is visible in the error message instead of being hidden by truncation.
+    const preview =
+      search.length > 100 ? `${search.slice(0, 48)}…${search.slice(-48)}` : search;
+    throw new Error(
+      `adaptAgentMarkdownForTool: expected target not found in emdd-agent.md: "${preview}"`,
+    );
+  }
+  return content.slice(0, i) + replacement + content.slice(i + search.length);
+}
+
+function adaptAgentMarkdownForTool(content: string, tool: Exclude<ToolType, 'all'>): string {
+  if (tool !== 'codex') {
+    return content;
+  }
+
+  let out = content;
+  out = replaceOrThrow(out, SHORTCUT_LINE.claude.full, SHORTCUT_LINE.codex.full);
+  // Step 1 of the Session Cycle directs the agent to "Run the `context-loading`
+  // prompt (or `/emdd-open`)". Codex cannot run MCP prompts (openai/codex#5059),
+  // so the prompt is unreachable for Codex — only the skill is. Rewrite the
+  // primary directive to the skill, dropping the now-redundant fallback clause.
+  // Keeps Step 1 consistent with the Steps 3-5 rewrite below; otherwise the
+  // rules file contradicts itself.
+  out = replaceOrThrow(
+    out,
+    'Run the `context-loading` prompt (or `/emdd-open`).',
+    'Run the `emdd-open` skill.',
+  );
+  out = replaceOrThrow(out, 'via `/emdd-close`', 'via the `emdd-close` skill');
+
+  // Steps 3-5 of the Session Cycle direct the agent to invoke MCP prompts
+  // (`episode-creation`, `consolidation`, `health-review`) — but Codex cannot
+  // run MCP prompts (openai/codex#5059). Redirect each step to the matching
+  // step inside the `emdd-close` skill, which walks the equivalent MCP tools.
+  // Without this rewrite the rules file (loaded as agent context every session)
+  // contradicts the SKILL.md disclaimer and tells Codex to do something it can't.
+  out = replaceOrThrow(
+    out,
+    'Run the `episode-creation` prompt.',
+    'Run the `emdd-close` skill (Episode step).',
+  );
+  out = replaceOrThrow(
+    out,
+    'Run the `consolidation` prompt when triggers fire.',
+    'Run the `emdd-close` skill (Consolidation step) when triggers fire.',
+  );
+  out = replaceOrThrow(
+    out,
+    'Run the `health-review` prompt periodically',
+    'Run the `emdd-close` skill (Health Review step) periodically',
+  );
+
+  return out;
+}
+
 function wrapForCursor(content: string): string {
   return `---
 description: EMDD methodology rules for AI-assisted research graph management
@@ -210,17 +349,23 @@ ${content}`;
 
 /**
  * Get rules content for a specific tool and variant.
- * For 'all', returns claude content (use generateRulesFile for writing all files).
+ * Throws on 'all' — callers that want to write every tool's file should use
+ * generateRulesFile, which iterates and calls getRulesContent per concrete tool.
  */
 export function getRulesContent(tool: ToolType, variant: RulesVariant): string {
-  const resolvedTool = tool === 'all' ? 'claude' : tool;
+  if (tool === 'all') {
+    throw new Error(
+      "getRulesContent: 'all' is not a concrete tool. Use generateRulesFile('all', ...) to write all tool files.",
+    );
+  }
+  const resolvedTool = tool;
 
   let content: string;
   if (variant === 'compact') {
-    content = makeCompactRules();
+    content = makeCompactRules(resolvedTool);
   } else {
     const rules = makeFullRules();
-    const agent = loadAgentMarkdown();
+    const agent = adaptAgentMarkdownForTool(loadAgentMarkdown(), resolvedTool);
     content = `${rules}\n${agent}`;
   }
 
@@ -273,10 +418,17 @@ export function generateRulesFile(
 
 // ── Skill Generation ───────────────────────────────────────────────
 
-const SKILL_CONTENT: Record<SkillName, { description: string; body: string }> = {
+// Per-tool skill bodies. Claude invokes MCP prompts directly; Codex (which does
+// not yet expose MCP prompts — tracked in openai/codex#5059) walks the equivalent
+// MCP tools manually so the same SKILL.md works in both runtimes.
+const SKILL_CONTENT: Record<SkillName, {
+  description: string;
+  body: Record<SkillToolType, string>;
+}> = {
   'emdd-open': {
     description: 'EMDD 세션을 시작합니다. 그래프 컨텍스트를 로드하고 세션 우선순위를 안내합니다.',
-    body: `# EMDD Session Open
+    body: {
+      claude: `# EMDD Session Open
 
 Use the \`context-loading\` MCP prompt from the \`emdd\` server to load graph context.
 
@@ -286,10 +438,28 @@ Use the \`context-loading\` MCP prompt from the \`emdd\` server to load graph co
 2. Read the returned context — it contains graph state, episode arc, backlog, transition-ready nodes, and open questions.
 3. Follow the Session Priorities and Episode Directive sections in the output.
 `,
+      codex: `# EMDD Session Open
+
+Codex does not yet expose MCP prompts (tracked in openai/codex#5059), so load session
+context manually by calling the equivalent MCP tools from the \`emdd\` server in order.
+
+## Instructions
+
+1. Call the \`health\` tool — get totals, structural gaps, and average confidence.
+2. Call the \`list-nodes\` tool with \`type=episode\` — find recent episodes (sort by date desc, take top 5).
+3. Call the \`read-node\` tool on the most recent episode for prior session context.
+4. Call the \`check\` tool — see whether consolidation triggers are due (run \`emdd-close\` if so).
+5. Call the \`backlog\` tool with \`status=pending\` — list pending follow-ups.
+6. Call the \`status-transitions\` tool — list nodes ready for status changes.
+7. Call the \`list-nodes\` tool with \`type=question\` and \`status=OPEN\` — find blocking/high-urgency questions.
+8. Synthesize the results into session priorities (BLOCKING questions, overdue consolidation, transition-ready nodes, blocked streak) and pick one to start.
+`,
+    },
   },
   'emdd-close': {
     description: 'EMDD 세션을 마무리합니다. 에피소드 작성, 컨솔리데이션 체크, 헬스 리뷰를 순서대로 진행합니다.',
-    body: `# EMDD Session Close
+    body: {
+      claude: `# EMDD Session Close
 
 End the EMDD session by running the closing prompts in sequence.
 
@@ -302,35 +472,59 @@ End the EMDD session by running the closing prompts in sequence.
 Each prompt requires no arguments (graphDir is auto-resolved).
 If the consolidation prompt reports that no triggers are met, note that consolidation is not needed and proceed to step 3.
 `,
+      codex: `# EMDD Session Close
+
+Codex does not yet expose MCP prompts (tracked in openai/codex#5059), so close the
+session manually by calling the equivalent MCP tools from the \`emdd\` server in order.
+
+## Instructions
+
+1. **Episode** — Call the \`create-node\` tool with \`type=episode\` to record this session.
+   - Frontmatter: \`trigger\` (what initiated this session), \`outcome\` (\`success\` | \`partial\` | \`blocked\`), and \`links\` with \`relation: produces\` for each node created or updated this session.
+   - Body must include "What I Tried" and "What's Next" (with prerequisite reading node IDs).
+2. **Consolidation check** — Call the \`check\` tool to review consolidation triggers.
+   - If any trigger is met, run consolidation now: promote established findings to knowledge, split bloated experiments, convert episode questions into Question nodes, update hypothesis confidence based on evidence, and add edges to orphan findings. Then call \`mark-consolidated\`.
+   - If no trigger is met, skip to the next step.
+3. **Health review** — Call the \`health\` tool to surface structural gaps and confidence trends. Capture recommendations for the next session.
+`,
+    },
   },
 };
 
 /**
- * Get SKILL.md content for a given skill name.
+ * Get SKILL.md content for a given skill name and tool.
+ *
+ * Claude and Codex receive different bodies because Codex does not yet expose MCP
+ * prompts (openai/codex#5059); the Codex variant invokes equivalent MCP tools instead.
  */
-export function getSkillContent(skillName: SkillName): string {
+export function getSkillContent(skillName: SkillName, tool: SkillToolType = 'claude'): string {
   const skill = SKILL_CONTENT[skillName];
   if (!skill) {
     throw new Error(`Unknown skill: ${skillName}`);
   }
-  return `---\nname: ${skillName}\ndescription: >-\n  ${skill.description}\n---\n\n${skill.body}`;
+  return `---\nname: ${skillName}\ndescription: >-\n  ${skill.description}\n---\n\n${skill.body[tool]}`;
 }
 
 /**
- * Generate skill files for Claude Code at the given project path.
+ * Generate skill files for AI tools that support repository-local skills.
  */
 export function generateSkillFiles(
   projectPath: string,
-  options: { force?: boolean } = {},
+  options: { force?: boolean; tool?: SkillToolType } = {},
 ): { created: string[]; skipped: string[] } {
   const force = options.force ?? false;
+  const tool = options.tool ?? 'claude';
   const skillNames: SkillName[] = ['emdd-open', 'emdd-close'];
+  const skillRoot: Record<SkillToolType, string> = {
+    claude: path.join('.claude', 'skills'),
+    codex: path.join('.agents', 'skills'),
+  };
 
   const created: string[] = [];
   const skipped: string[] = [];
 
   for (const name of skillNames) {
-    const relativePath = path.join('.claude', 'skills', name, 'SKILL.md');
+    const relativePath = path.join(skillRoot[tool], name, 'SKILL.md');
     const fullPath = path.join(projectPath, relativePath);
 
     if (!force && fs.existsSync(fullPath)) {
@@ -339,7 +533,7 @@ export function generateSkillFiles(
     }
 
     fs.mkdirSync(path.dirname(fullPath), { recursive: true });
-    fs.writeFileSync(fullPath, getSkillContent(name), 'utf-8');
+    fs.writeFileSync(fullPath, getSkillContent(name, tool), 'utf-8');
     created.push(relativePath);
   }
 

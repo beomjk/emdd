@@ -132,3 +132,23 @@ describe('schema.config referential integrity', () => {
     }
   });
 });
+
+describe('edge type catalogue (§6.4)', () => {
+  // @spec §6.4.1
+  it('defines exactly 16 forward edge types', () => {
+    expect(forwardEdges).toHaveLength(16);
+  });
+
+  // @spec §6.4.2
+  it('reverse labels map to canonical forward edges', () => {
+    expect(reverseEdges).toEqual({
+      answered_by: 'answers',
+      confirmed_by: 'confirms',
+      produced_by: 'produces',
+      resolved_by: 'resolves',
+      spawned_from: 'spawns',
+      supported_by: 'supports',
+      tested_by: 'tests',
+    });
+  });
+});

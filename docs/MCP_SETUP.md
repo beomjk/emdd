@@ -52,6 +52,24 @@ This registers the EMDD MCP server with Claude Code. Tools and prompts become av
 
 ---
 
+## Codex
+
+**macOS / Linux:**
+
+```bash
+codex mcp add emdd -- npx @beomjk/emdd mcp
+```
+
+**Windows:**
+
+```bash
+codex mcp add emdd -- cmd /c npx @beomjk/emdd mcp
+```
+
+This registers the EMDD MCP server with Codex. Tools become available immediately in your next session. (Codex does not yet expose MCP prompts — see [openai/codex#5059](https://github.com/openai/codex/issues/5059); the generated `emdd-open` / `emdd-close` skills walk the equivalent MCP tools instead.)
+
+---
+
 ## Cursor
 
 Create `.cursor/mcp.json` in your project root:
@@ -274,7 +292,7 @@ The four prompts form a recurring session cycle:
 
 Steps 1-2 happen every session. Steps 3-4 are triggered by graph state or run on a weekly cadence.
 
-Prompts are available in tools that support MCP prompts (e.g., Claude Code).
+Prompts are available in tools that support MCP prompts (e.g., Claude Code). Codex does not yet expose MCP prompts ([openai/codex#5059](https://github.com/openai/codex/issues/5059)); the generated Codex skills (`emdd-open`, `emdd-close`) walk the equivalent MCP tools instead and produce the same outcome.
 
 ---
 

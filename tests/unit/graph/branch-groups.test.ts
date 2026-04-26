@@ -26,6 +26,7 @@ describe('listBranchGroups', () => {
     writeFileSync(join(graphDir, subdir, filename), matter.stringify('', fm));
   }
 
+  // @spec §6.10.1
   it('listBranchGroups returns groups with candidates', async () => {
     writeNode('hypotheses', 'hyp-001-test.md', {
       id: 'hyp-001', type: 'hypothesis', title: 'H1', status: 'TESTING',

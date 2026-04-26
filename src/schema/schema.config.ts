@@ -340,6 +340,11 @@ export const edgeAttributes = {
 } as const;
 
 // ── Edge Attribute Affinity ─────────────────────────────────────────
+// Maps edge types to the scalar/enum attributes they may carry (§6.4).
+// Only the 6 edge types listed below carry attributes; the remaining 10
+// (revises, promotes, spawns, produces, extends, relates_to, part_of,
+// context_for, resolves, tests) are intentionally attribute-free — they
+// express pure structural relations without quantitative modifiers.
 
 export const edgeAttributeAffinity = {
   supports: ['strength'] as const,

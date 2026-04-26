@@ -128,6 +128,7 @@ describe('type-specific template fields', () => {
     expect(parsed.data.urgency).toBe('MEDIUM');
   });
 
+  // @spec §6.3.1
   it('episode template includes trigger, outcome', () => {
     const output = renderTemplate('episode', 'test', { locale: 'en' });
     const parsed = matter(output);

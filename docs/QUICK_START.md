@@ -7,7 +7,7 @@
 ## Prerequisites
 
 - A project directory (new or existing)
-- An AI coding assistant (Claude Code, Cursor, Windsurf, or any tool that can read/write Markdown files)
+- An AI coding assistant (Claude Code, Codex, Cursor, Windsurf, or any tool that can read/write Markdown files)
 - That's it. No installation required.
 
 ## Step 1: Create the Graph Directory (1 minute)

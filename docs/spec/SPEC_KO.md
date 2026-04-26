@@ -138,10 +138,10 @@ AI agent는 그래프의 **정원사(gardener)**이지 건축가(architect)가 �
 | 타입 | 색상 | 의미 | 핵심 속성 |
 |------|------|------|----------|
 | **Knowledge** | 파랑 | 확인된 사실, 문헌, 도메인 규칙 | `knowledge_type`, `source`, `confidence` |
-| **Hypothesis** | 주황 | 검증 가능한 주장 | `confidence`, `risk_level`, `priority`, `status`, `kill_criterion` |
+| **Hypothesis** | 주황 | 검증 가능한 주장 | `confidence`, `risk_level`, `priority`, `status`, `kill_criterion`, `branch_group`, `branch_role` (§6.10 참조) |
 | **Experiment** | 초록 | 가설 검증을 위한 실험 단위 | `config`, `status`, `results`, `inputs`, `outputs` |
 | **Finding** | 청록 | 실험/분석에서 나온 사실 또는 노드 간 패턴 발견 | `finding_type`, `confidence`, `sources` |
-| **Question** | 노랑 | 열린 연구 질문 | `question_type`, `urgency`, `answer_summary` |
+| **Question** | 노랑 | 열린 연구 질문 | `question_type`, `urgency`, `answer_summary`, `spawns_branch_group` (§6.10 참조) |
 | **Decision** | 검정 | 내린 결정과 근거 | `alternatives_considered`, `rationale`, `reversibility` |
 | **Episode** | 회색 | 하나의 탐구 루프 기록 | `trigger`, `duration`, `outcome`, `spawned`, `dead_ends` |
 
@@ -170,6 +170,8 @@ Knowledge = "확정되어 재사용 가능한 사실"
 ```
 
 **승격 경로**: `Finding → (Consolidation 승격) → Knowledge`. Finding은 중간 산출물이고, Knowledge는 확정된 재사용 가능 사실이다.
+
+**Source 필드 규칙:** Finding은 `sources`(배열)를 사용한다 — 단일 Finding이 여러 실험/분석을 종합할 수 있기 때문이다. Knowledge는 `source`(단수 문자열)를 사용한다 — 승격된 사실은 보통 하나의 정식 출처(논문, 데이터셋, 또는 승격 근거가 된 Finding)를 기재하기 때문이다. 복수 출처를 가진 Knowledge는 드물며, 그 경우 frontmatter가 아닌 본문에 기재한다.
 
 <!-- v0.4: Consolidation Hint Tags -->
 **Consolidation Hint**: Finding의 links에 `extends: know-NNN` 힌트를 기재할 수 있다. 이 힌트는 해당 Finding이 특정 Knowledge를 확장하거나 보강한다는 의미이며, Consolidation 승격 단계에서 "hint가 있는 Finding부터 검토"하여 판단을 가속한다. 단, 힌트는 승격 기준을 면제하지 않는다 — 승격 기준(독립 지지 2개+, confidence ≥ 0.9, 사실상 사용 중)은 동일하게 적용한다.
@@ -883,6 +885,8 @@ Branch group이 CONVERGED나 MERGED로 전이되면 `_index.md`를 업데이트�
 
 **최소 요구사항:** 주 1회 이상 Episode 작성. 1주를 건너뛰면 다음 세션의 컨텍스트 로딩에 더 오래 걸린다 — Episode 체인이 끊어진다.
 
+**Claude Code 단축키:** `/emdd-open` (세션 시작) 및 `/emdd-close` (세션 종료 + 유지 보수 + 리뷰). **Codex 스킬:** `emdd-open` (세션 시작) 및 `emdd-close` (세션 종료 + 유지 보수 + 리뷰).
+
 **AI 에이전트 동작:** 동일한 규칙이 적용되지만, "모닝 브리핑"과 "일일 리플렉션"이 세션 시작/종료로 축약된다. 인터럽트 버짓은 일 단위가 아닌 세션 단위로 리셋된다.
 
 ### 7.2b 팀 연구 프로토콜
@@ -891,7 +895,7 @@ Branch group이 CONVERGED나 MERGED로 전이되면 `_index.md`를 업데이트�
 
 #### 소유권과 귀속
 
-- 모든 노드의 `created_by` 필드가 작성자를 식별: `human:alice`, `human:bob`, `ai:claude`
+- 모든 노드의 `created_by` 필드가 작성자를 식별: `human:alice`, `human:bob`, `ai:claude`, `ai:codex`
 - 새로운 선택적 필드 `assigned_to`를 Hypothesis와 Experiment 노드에 추가하여 책임자 표시 가능
 - Episode는 항상 개인적 — 각 연구자가 자신의 세션에 대해 자신의 Episode를 작성
 - Knowledge, Finding, Question 노드는 공유 — 누구나 생성 또는 수정 가능
@@ -1058,7 +1062,7 @@ CONTESTED → REVISED     : 절충 — 수정된 가설
 ### 8.1 저장 포맷: Markdown + YAML Frontmatter (Git 저장)
 
 **선택 근거:**
-- AI(Claude Code)가 직접 Read/Edit 가능, API/드라이버 불필요
+- AI 코딩 어시스턴트(Claude Code, Codex)가 직접 Read/Edit 가능, API/드라이버 불필요
 - Git diff가 의미 있고, 브랜치/머지 자연스러움
 - 같은 파일을 Obsidian에서 열면 `[[]]` 링크로 그래프 뷰 자동 제공
 - Neo4j는 오버킬 (R&D PoC에서 노드 수 = 수백 단위)
@@ -1105,7 +1109,7 @@ sources:
 <!-- v0.3: _graph.mmd 갱신 시점 명확화 -->
 ### 8.2 시각화: Mermaid (Phase 1) → Cytoscape.js (Phase 2)
 
-**Mermaid 추천 이유:** GitHub/Obsidian/VSCode 네이티브 렌더링, Claude Code가 문법 정확히 생성, `classDef`로 confidence/status 색상 매핑. 노드 50개 이상에서 Cytoscape.js로 전환.
+**Mermaid 추천 이유:** GitHub/Obsidian/VSCode 네이티브 렌더링, AI 코딩 어시스턴트가 문법을 정확히 생성, `classDef`로 confidence/status 색상 매핑. 노드 50개 이상에서 Cytoscape.js로 전환.
 
 **`_graph.mmd` 갱신 시점:** `_graph.mmd`는 Consolidation 세러모니 완료 시, 그리고 주간 그래프 리뷰 시 갱신한다. Episode 생성 시에는 갱신하지 않는다 (마찰 예산 고려).
 
@@ -1126,20 +1130,20 @@ graph TD
     F12 -->|supports| H3
 ```
 
-### 8.3 AI 에이전트: Claude Code 직접 활용
+### 8.3 AI 에이전트: AI 코딩 어시스턴트 직접 활용
 
 **3단계 성숙도 모델:**
 
 | Mode | 시기 | 방식 |
 |------|------|------|
-| **수동 호출** | Day 1~ | 연구자가 Claude Code에 직접 "결과 나왔다, 그래프 업데이트해줘" |
-| **반자동** | Week 2~ | 실험 완료 시 post-experiment hook → Claude 자동 호출 |
+| **수동 호출** | Day 1~ | 연구자가 Claude Code 또는 Codex에 직접 "결과 나왔다, 그래프 업데이트해줘" |
+| **반자동** | Week 2~ | 실험 완료 시 post-experiment hook → AI 어시스턴트 자동 호출 |
 | **자율 분석** | Month 2~ | 주기적 그래프 전체 분석, 공백/패턴 자동 보고 |
 
 ### 8.4 ML 도구 통합
 
 ```
-DVC exp run → metrics.json → post-experiment hook → Claude Code
+DVC exp run → metrics.json → post-experiment hook → Claude Code/Codex
     → graph/experiments/exp-XXX.md 생성
     → graph/hypotheses/hyp-YYY.md confidence 업데이트
     → graph/_graph.mmd 갱신
@@ -1153,7 +1157,13 @@ DVC exp run → metrics.json → post-experiment hook → Claude Code
 ```
 project-root/
 ├── .emdd.yml                  # 프로젝트 설정 (emdd init으로 생성)
-├── .claude/
+├── AGENTS.md                  # Codex EMDD 규칙 + 에이전트 행동 (emdd init --tool codex)
+├── .agents/                   # Codex 스킬 디렉토리 (emdd init --tool codex)
+│   └── skills/
+│       ├── emdd-open/SKILL.md   # Codex 세션 시작 스킬
+│       └── emdd-close/SKILL.md  # Codex 세션 종료 스킬
+│
+├── .claude/                   # Claude Code 규칙 + 스킬 (emdd init --tool claude)
 │   ├── CLAUDE.md              # EMDD 규칙 + 에이전트 행동 (emdd init으로 생성)
 │   └── skills/
 │       ├── emdd-open/SKILL.md   # /emdd-open 세션 시작 스킬
@@ -1357,13 +1367,13 @@ integrations:
 mkdir -p graph/{hypotheses,experiments,findings,knowledge,questions,decisions,episodes,_analysis}
 mkdir -p scratchpad
 
-# 2. Claude Code에 요청:
+# 2. Claude Code 또는 Codex에 요청:
 # "현재 프로젝트의 연구 질문과 가정을 정리해서
 #  graph/ 디렉토리에 EMDD 노드로 만들어줘.
 #  이 문서의 포맷을 따라."
 ```
 
-**필요한 것: 없음.** 마크다운 파일과 Claude Code만 있으면 된다.
+**필요한 것: 없음.** 마크다운 파일과 AI 코딩 어시스턴트만 있으면 된다.
 
 ### Week 2: Mermaid 자동 생성 + post-experiment hook
 
@@ -1397,6 +1407,18 @@ mkdir -p scratchpad
 #   analyze-refutation() → 반증 영향 분석
 #   impact-analysis(nodeId, whatIf?) → 노드 상태 변경의 연쇄 영향 분석
 #     채점 알고리즘 상세는 IMPACT_ANALYSIS.md 참조.
+#
+# Prompts (가이디드 워크플로우):
+#   context-loading(graphDir?, lang?) → 세션 시작 컨텍스트 요약
+#   episode-creation(graphDir?, lang?) → Episode 작성 가이드
+#   consolidation(graphDir?, lang?) → Consolidation 실행 가이드
+#   health-review(graphDir?, lang?) → 권장사항을 포함한 전체 헬스 대시보드
+#
+# 공통 선택 파라미터:
+#   모든 도구와 프롬프트는 `graphDir?`(graph/ 경로, 생략 시 cwd에서 자동 탐색)와
+#   `lang?`('en' 또는 'ko', 기본값은 EMDD_LANG 환경변수 또는 'en')를 수용한다.
+#   위 시그니처에서 `graphDir`는 관례적으로 명시된 경우에만 표기했으며,
+#   MCP 어댑터가 모든 도구에 `graphDir?`, `lang?`를 자동 주입한다.
 ```
 
 ### Week 4+: Cytoscape.js 시각화, 시간 슬라이더, 자율 분석
@@ -1755,7 +1777,7 @@ Zettelkasten을 만든 Niklas Luhmann은 자신의 카드 상자를 "대화 파�
 
 2. **Consolidation Hint Tags (6.2, 7.4)**: Finding의 links에 `extends: know-NNN` 힌트를 공식 허용. Consolidation 승격 단계에서 "hint가 있는 Finding부터 검토" 규칙 추가. 힌트는 승격 판단을 가속하지만 승격 기준(독립 지지 2개+, confidence ≥ 0.9, 사실상 사용 중)을 면제하지 않음.
 
-3. **CLI-Slash 통합**: 슬래시 커맨드(`emdd-episode`, `emdd-context`, `emdd-consolidation`, `emdd-health`)가 CLI 커맨드를 직접 호출하도록 템플릿 재작성. 새 CLI 커맨드 4개 추가:
+3. **CLI-Slash 통합**: MCP 프롬프트(`context-loading`, `episode-creation`, `consolidation`, `health-review`)가 CLI 커맨드를 직접 호출하도록 템플릿 재작성. Claude Code에서는 저장소 로컬 스킬로 노출됨: `/emdd-open`은 `context-loading`을 호출하고, `/emdd-close`는 `episode-creation` → `consolidation` → `health-review`를 순차 호출. Codex에서도 동일한 저장소 로컬 스킬(`emdd-open`, `emdd-close`)이 생성되지만, Codex는 아직 MCP 프롬프트를 노출하지 않으므로([openai/codex#5059](https://github.com/openai/codex/issues/5059)) Codex 스킬은 동일한 결과를 얻기 위해 대응되는 MCP **도구**(`health`, `list-nodes`, `read-node`, `check`, `backlog`, `status-transitions`, `create-node`, `mark-consolidated`)를 순차 호출함. 새 CLI 커맨드 4개 추가:
    - `emdd update <node-id> --set key=value`: frontmatter 필드 업데이트 (confidence 범위 검증 포함)
    - `emdd link <source-id> <target-id> <relation>`: 노드 간 링크 추가 (relation 검증, 중복 skip)
    - `emdd done <episode-id> "<item>" [--marker <done|deferred|superseded>]`: Episode "다음에 할 것" 항목의 상태 마커 변경 (기본값: done)
