@@ -1,7 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, rmSync, existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 import {
   getRulesContent,
   generateRulesFile,
@@ -292,6 +295,35 @@ describe('getSkillContent', () => {
 
   it('emdd-close skill content matches snapshot', () => {
     expect(getSkillContent('emdd-close')).toMatchSnapshot();
+  });
+});
+
+// Each Codex-targeted replaceOrThrow search string in adaptAgentMarkdownForTool
+// must appear EXACTLY ONCE in emdd-agent.md. replaceOrThrow uses indexOf, which
+// only rewrites the first occurrence — if a future edit duplicates one of these
+// strings, the second copy stays in the original Claude phrasing and Codex
+// AGENTS.md ships half-adapted with no error. This test pins uniqueness so the
+// regression fails loudly rather than slipping past the drift guard.
+describe('emdd-agent.md uniqueness invariant for Codex drift guard', () => {
+  it('every Codex replacement search string appears exactly once in emdd-agent.md', () => {
+    // src is one level above tests/unit/rules; resolve relative to this test file.
+    const agentMdPath = join(__dirname, '..', '..', '..', 'src', 'rules', 'emdd-agent.md');
+    const agentMd = readFileSync(agentMdPath, 'utf-8');
+    // Mirrors the exact strings passed to replaceOrThrow inside
+    // adaptAgentMarkdownForTool. Keep this list in sync if those calls change.
+    const searchStrings = [
+      '**Claude Code shortcuts:** `/emdd-open` (Session Start) and `/emdd-close` (Session End + Maintenance + Review).',
+      '(or `/emdd-open`)',
+      'via `/emdd-close`',
+      'Run the `episode-creation` prompt.',
+      'Run the `consolidation` prompt when triggers fire.',
+      'Run the `health-review` prompt periodically',
+    ];
+    for (const s of searchStrings) {
+      const occurrences = agentMd.split(s).length - 1;
+      const preview = s.length > 60 ? `${s.slice(0, 30)}…${s.slice(-20)}` : s;
+      expect(occurrences, `Expected exactly 1 occurrence of "${preview}" in emdd-agent.md`).toBe(1);
+    }
   });
 });
 

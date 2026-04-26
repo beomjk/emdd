@@ -58,13 +58,22 @@ void _skillToolsHavePaths;
 
 const ALL_TOOLS = Object.keys(TOOL_PATHS) as Array<Exclude<ToolType, 'all'>>;
 
+// Single-source list of every accepted `--tool` value (concrete tools + 'all').
+// Used by the CLI to validate input before any filesystem work, and by
+// getToolEnumerationString to build the help/docs enumeration.
+const ALL_TOOL_CHOICES: readonly ToolType[] = [...ALL_TOOLS, 'all'];
+
+export function isValidTool(value: string): value is ToolType {
+  return (ALL_TOOL_CHOICES as readonly string[]).includes(value);
+}
+
 /**
  * Build the "claude|codex|cursor|...|all" enumeration string for CLI help text
  * and generated docs. Single source — derived from TOOL_PATHS so adding a new
  * tool requires no manual edits to help strings or doc tables.
  */
 export function getToolEnumerationString(separator = '|'): string {
-  return [...ALL_TOOLS, 'all'].join(separator);
+  return ALL_TOOL_CHOICES.join(separator);
 }
 
 // Short descriptions for each node type used in rules output
@@ -118,7 +127,7 @@ function makeCompactRules(tool: Exclude<ToolType, 'all'> = 'claude'): string {
     ? 'Run the `emdd-open` skill at session start; run the `emdd-close` skill at session end (it writes the Episode, runs Consolidation if triggered, and reviews health).'
     : 'Use MCP prompts in order: `context-loading` (start) → work → `episode-creation` (end) → `consolidation` (if triggered) → `health-review` (periodic).';
 
-  return `# EMDD — Evolving Mindmap-Driven Development (Compact)
+  return `${EMDD_RULES_MARKER} — Evolving Mindmap-Driven Development (Compact)
 
 You are working in an EMDD project. The knowledge graph lives in \`graph/\` as Markdown + YAML frontmatter files.
 
@@ -163,7 +172,7 @@ function makeFullRules(): string {
   // Ceremony triggers
   const triggers = CEREMONY_TRIGGERS.consolidation;
 
-  return `# EMDD — Evolving Mindmap-Driven Development
+  return `${EMDD_RULES_MARKER} — Evolving Mindmap-Driven Development
 
 You are working in a project that uses the EMDD methodology. EMDD organizes research and exploration as a knowledge graph stored in \`graph/\` with Markdown + YAML frontmatter files, tracked by Git.
 

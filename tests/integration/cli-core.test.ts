@@ -84,6 +84,36 @@ describe('emdd init', () => {
     const result = run(`doctor`, tmpDir);
     expect(result).toContain('AGENTS.md');
   });
+
+  it('--tool all (real CLI) writes every tool file and prints both claude+codex MCP one-liners', () => {
+    // End-to-end protection for --tool all: catches commander wiring regressions
+    // (e.g., the option default getting dropped or an invalid `choices()` slipping
+    // in) and proves printNextSteps walks SKILL_TOOLS to surface every first-class
+    // one-liner — not just the first one. Unit tests mock printNextSteps, so this
+    // is the only place the real stdout shape is verified.
+    const result = run(`init ${tmpDir} --tool all`);
+    expect(existsSync(join(tmpDir, '.claude', 'CLAUDE.md'))).toBe(true);
+    expect(existsSync(join(tmpDir, '.cursor', 'rules', 'emdd.mdc'))).toBe(true);
+    expect(existsSync(join(tmpDir, '.windsurf', 'rules', 'emdd.md'))).toBe(true);
+    expect(existsSync(join(tmpDir, '.clinerules', 'emdd.md'))).toBe(true);
+    expect(existsSync(join(tmpDir, '.github', 'copilot-instructions.md'))).toBe(true);
+    expect(existsSync(join(tmpDir, 'AGENTS.md'))).toBe(true);
+    expect(existsSync(join(tmpDir, '.claude', 'skills', 'emdd-open', 'SKILL.md'))).toBe(true);
+    expect(existsSync(join(tmpDir, '.agents', 'skills', 'emdd-open', 'SKILL.md'))).toBe(true);
+    expect(result).toContain('claude mcp add emdd');
+    expect(result).toContain('codex mcp add emdd');
+    expect(result).toContain('MCP_SETUP.md');
+  });
+
+  it('--tool <invalid> (real CLI) fails fast with a clear error and no partial init', () => {
+    // Pre-fix, an invalid --tool would create graph/, print "undefined" as the
+    // MCP hint, and then crash with `path argument must be string`. Validate that
+    // input is rejected up-front and the project root stays clean.
+    const { stdout, exitCode } = runMayFail(`init ${tmpDir} --tool nope`);
+    expect(exitCode).not.toBe(0);
+    expect(stdout + '').not.toContain('undefined');
+    expect(existsSync(join(tmpDir, 'graph'))).toBe(false);
+  });
 });
 
 describe('emdd new', () => {

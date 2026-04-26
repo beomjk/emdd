@@ -118,14 +118,20 @@ type ToolRuleEntry = {
   contentCheck?: (body: string) => boolean;
 };
 
-// Keyed by ToolType so that adding a new tool to ToolType is a compile-time error
-// here until a corresponding rule entry is added — this is the place we missed
-// when codex was first added in this branch and had to be back-filled.
+// Keyed by ToolType so adding a new tool fails to compile here until a rule
+// entry is added — guards against the registry-drift failure mode where the
+// generator knows about a tool but doctor doesn't detect it.
 const TOOL_RULES: Record<Exclude<ToolType, 'all'>, ToolRuleEntry> = {
   claude: { name: '.claude', paths: ['.claude/CLAUDE.md'] },
   // Generated AGENTS.md always opens with EMDD_RULES_MARKER at line 1;
   // startsWith (not includes) avoids false positives when user prose mentions EMDD.
-  codex: { name: 'AGENTS.md', paths: ['AGENTS.md'], contentCheck: (body) => body.startsWith(EMDD_RULES_MARKER) },
+  // Strip a leading UTF-8 BOM first: editors like Windows Notepad add one on save,
+  // which would otherwise shift the marker off byte 0 and silently drop detection.
+  codex: {
+    name: 'AGENTS.md',
+    paths: ['AGENTS.md'],
+    contentCheck: (body) => body.replace(/^\uFEFF/, '').startsWith(EMDD_RULES_MARKER),
+  },
   cursor: { name: '.cursor', paths: ['.cursor/rules/emdd.mdc'] },
   windsurf: { name: '.windsurf', paths: ['.windsurf/rules/emdd.md'] },
   cline: { name: '.clinerules', paths: ['.clinerules/emdd.md'] },

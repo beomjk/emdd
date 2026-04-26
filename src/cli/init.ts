@@ -5,6 +5,8 @@ import { t } from '../i18n/index.js';
 import {
   generateRulesFile,
   generateSkillFiles,
+  getToolEnumerationString,
+  isValidTool,
   SKILL_TOOLS,
   toolSupportsSkills,
   type SkillToolType,
@@ -21,11 +23,13 @@ const MCP_SETUP_HINTS: Record<Exclude<ToolType, 'all'>, string> = {
 };
 
 function printNextSteps(tool: ToolType): void {
-  // For --tool all, print MCP hints for both skill-capable assistants (claude
-  // and codex) — both are first-class one-liner setups, so showing only one
-  // would silently hide the other from users who picked "all".
+  // For --tool all, print MCP hints for every skill-capable assistant — they are
+  // the first-class one-liner setups, while non-skill tools (cursor/windsurf/...)
+  // need multi-line config and are covered by the MCP_SETUP.md link below.
+  // Deriving from SKILL_TOOLS (rather than a literal list) means a future
+  // skill-capable tool flows through automatically — no second source to update.
   const hintTools: Array<Exclude<ToolType, 'all'>> =
-    tool === 'all' ? ['claude', 'codex'] : [tool as Exclude<ToolType, 'all'>];
+    tool === 'all' ? [...SKILL_TOOLS] : [tool as Exclude<ToolType, 'all'>];
 
   console.log('');
   console.log(`  ${t('init.next_steps_header')}`);
@@ -50,7 +54,16 @@ export function initCommand(targetPath: string | undefined, options: { lang?: st
   const graphDir = path.join(target, 'graph');
   const configPath = path.join(target, '.emdd.yml');
   const lang = options.lang ?? 'en';
-  const tool: ToolType = (options.tool as ToolType) ?? 'claude';
+  // Validate --tool BEFORE any filesystem mutation so an invalid value fails
+  // fast with a clear message instead of crashing mid-init (after creating
+  // graph/) with a TypeError when MCP_SETUP_HINTS[tool] resolves to undefined.
+  const rawTool = options.tool ?? 'claude';
+  if (!isValidTool(rawTool)) {
+    throw new Error(
+      `Invalid --tool value: "${rawTool}". Valid values: ${getToolEnumerationString(', ')}`,
+    );
+  }
+  const tool: ToolType = rawTool;
 
   // Check if already initialized (graph dir check)
   if (fs.existsSync(graphDir)) {

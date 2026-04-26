@@ -3,12 +3,18 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-// Mock generators to avoid side effects
+// Mock generators to avoid side effects.
+// Keep the mocked `isValidTool` predicate aligned with the real ToolType union;
+// initCommand validates input through it before any FS work, so the mock must
+// accept every concrete tool plus 'all' or unrelated unit tests would throw.
+const VALID_TOOL_VALUES = new Set(['claude', 'codex', 'cursor', 'windsurf', 'cline', 'copilot', 'all']);
 vi.mock('../../../src/rules/generators.js', () => ({
   generateRulesFile: vi.fn(() => ({ created: [], skipped: [] })),
   generateSkillFiles: vi.fn(() => ({ created: ['skills/emdd-open/SKILL.md', 'skills/emdd-close/SKILL.md'], skipped: [] })),
   SKILL_TOOLS: ['claude', 'codex'] as const,
   toolSupportsSkills: (tool: string) => tool === 'claude' || tool === 'codex',
+  isValidTool: (value: string) => VALID_TOOL_VALUES.has(value),
+  getToolEnumerationString: (sep = '|') => ['claude', 'codex', 'cursor', 'windsurf', 'cline', 'copilot', 'all'].join(sep),
 }));
 
 import { initCommand } from '../../../src/cli/init.js';
@@ -35,6 +41,16 @@ describe('init.test.ts mock vs real generators surface', () => {
     const mocked = await import('../../../src/rules/generators.js');
     for (const t of ['claude', 'codex', 'cursor', 'windsurf', 'cline', 'copilot'] as const) {
       expect(mocked.toolSupportsSkills(t)).toBe(real.toolSupportsSkills(t));
+    }
+  });
+
+  it('mocked isValidTool agrees with the real predicate for every concrete tool, "all", and a sample bogus value', async () => {
+    const real = await vi.importActual<typeof import('../../../src/rules/generators.js')>(
+      '../../../src/rules/generators.js',
+    );
+    const mocked = await import('../../../src/rules/generators.js');
+    for (const t of ['claude', 'codex', 'cursor', 'windsurf', 'cline', 'copilot', 'all', 'bogus']) {
+      expect(mocked.isValidTool(t)).toBe(real.isValidTool(t));
     }
   });
 });
