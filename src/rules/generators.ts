@@ -48,7 +48,24 @@ export const TOOL_PATHS: Record<Exclude<ToolType, 'all'>, string> = {
   copilot: '.github/copilot-instructions.md',
 };
 
-const ALL_TOOLS = Object.keys(TOOL_PATHS) as (keyof typeof TOOL_PATHS)[];
+// Compile-time guard: every SkillToolType must also be a key of TOOL_PATHS so
+// generateSkillFiles can resolve a writable destination for it. Without this,
+// adding a tool to SkillToolType but forgetting it in TOOL_PATHS would only
+// surface at the use-site `skillRoot[tool]`, not at the type declaration.
+type _SkillToolsHavePaths = Exclude<SkillToolType, keyof typeof TOOL_PATHS>;
+const _skillToolsHavePaths: _SkillToolsHavePaths extends never ? true : never = true;
+void _skillToolsHavePaths;
+
+const ALL_TOOLS = Object.keys(TOOL_PATHS) as Array<Exclude<ToolType, 'all'>>;
+
+/**
+ * Build the "claude|codex|cursor|...|all" enumeration string for CLI help text
+ * and generated docs. Single source — derived from TOOL_PATHS so adding a new
+ * tool requires no manual edits to help strings or doc tables.
+ */
+export function getToolEnumerationString(separator = '|'): string {
+  return [...ALL_TOOLS, 'all'].join(separator);
+}
 
 // Short descriptions for each node type used in rules output
 const NODE_DESCRIPTIONS: Record<NodeType, string> = {
@@ -65,11 +82,23 @@ function titleCase(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+// Single source of truth for the session-shortcut sentence rendered into rules.
+// The Title-Case form is what `emdd-agent.md` (full variant) uses verbatim — see
+// adaptAgentMarkdownForTool — so changing `Session Start` / `Session End` here
+// requires updating `emdd-agent.md` in lockstep (the drift guard will fire if not).
+const SHORTCUT_LINE = {
+  claude: {
+    compact: 'Claude Code shortcuts: `/emdd-open` (start) and `/emdd-close` (end + maintenance + review).',
+    full: '**Claude Code shortcuts:** `/emdd-open` (Session Start) and `/emdd-close` (Session End + Maintenance + Review).',
+  },
+  codex: {
+    compact: 'Codex skills: `emdd-open` (start) and `emdd-close` (end + maintenance + review).',
+    full: 'Codex skills: `emdd-open` (Session Start) and `emdd-close` (Session End + Maintenance + Review).',
+  },
+} as const;
+
 function shortcutGuidance(tool: Exclude<ToolType, 'all'>): string {
-  if (tool === 'codex') {
-    return 'Codex skills: `emdd-open` (start) and `emdd-close` (end + maintenance + review).';
-  }
-  return 'Claude Code shortcuts: `/emdd-open` (start) and `/emdd-close` (end + maintenance + review).';
+  return tool === 'codex' ? SHORTCUT_LINE.codex.compact : SHORTCUT_LINE.claude.compact;
 }
 
 function makeCompactRules(tool: Exclude<ToolType, 'all'> = 'claude'): string {
@@ -229,8 +258,16 @@ function loadAgentMarkdown(): string {
 }
 
 // Exported for direct unit testing of the drift-guard behavior.
+//
+// We deliberately avoid `String.prototype.replace`: it interprets `$&`, `$1`,
+// `$$`, "$`" and `$'` in the replacement string, which would silently corrupt
+// any future replacement containing those tokens. Splice via indexOf instead.
 export function replaceOrThrow(content: string, search: string, replacement: string): string {
-  if (!content.includes(search)) {
+  if (search.length === 0) {
+    throw new Error('replaceOrThrow: search string must be non-empty');
+  }
+  const i = content.indexOf(search);
+  if (i === -1) {
     // Use a head+tail preview so tail-only drift (e.g., a trailing word change)
     // is visible in the error message instead of being hidden by truncation.
     const preview =
@@ -239,7 +276,7 @@ export function replaceOrThrow(content: string, search: string, replacement: str
       `adaptAgentMarkdownForTool: expected target not found in emdd-agent.md: "${preview}"`,
     );
   }
-  return content.replace(search, replacement);
+  return content.slice(0, i) + replacement + content.slice(i + search.length);
 }
 
 function adaptAgentMarkdownForTool(content: string, tool: Exclude<ToolType, 'all'>): string {
@@ -248,11 +285,7 @@ function adaptAgentMarkdownForTool(content: string, tool: Exclude<ToolType, 'all
   }
 
   let out = content;
-  out = replaceOrThrow(
-    out,
-    '**Claude Code shortcuts:** `/emdd-open` (Session Start) and `/emdd-close` (Session End + Maintenance + Review).',
-    'Codex skills: `emdd-open` (Session Start) and `emdd-close` (Session End + Maintenance + Review).',
-  );
+  out = replaceOrThrow(out, SHORTCUT_LINE.claude.full, SHORTCUT_LINE.codex.full);
   out = replaceOrThrow(out, '(or `/emdd-open`)', '(or the `emdd-open` skill)');
   out = replaceOrThrow(out, 'via `/emdd-close`', 'via the `emdd-close` skill');
   return out;
@@ -337,10 +370,17 @@ export function generateRulesFile(
 
 // ── Skill Generation ───────────────────────────────────────────────
 
-const SKILL_CONTENT: Record<SkillName, { description: string; body: string }> = {
+// Per-tool skill bodies. Claude invokes MCP prompts directly; Codex (which does
+// not yet expose MCP prompts — tracked in openai/codex#5059) walks the equivalent
+// MCP tools manually so the same SKILL.md works in both runtimes.
+const SKILL_CONTENT: Record<SkillName, {
+  description: string;
+  body: Record<SkillToolType, string>;
+}> = {
   'emdd-open': {
     description: 'EMDD 세션을 시작합니다. 그래프 컨텍스트를 로드하고 세션 우선순위를 안내합니다.',
-    body: `# EMDD Session Open
+    body: {
+      claude: `# EMDD Session Open
 
 Use the \`context-loading\` MCP prompt from the \`emdd\` server to load graph context.
 
@@ -350,10 +390,28 @@ Use the \`context-loading\` MCP prompt from the \`emdd\` server to load graph co
 2. Read the returned context — it contains graph state, episode arc, backlog, transition-ready nodes, and open questions.
 3. Follow the Session Priorities and Episode Directive sections in the output.
 `,
+      codex: `# EMDD Session Open
+
+Codex does not yet expose MCP prompts (tracked in openai/codex#5059), so load session
+context manually by calling the equivalent MCP tools from the \`emdd\` server in order.
+
+## Instructions
+
+1. Call the \`health\` tool — get totals, structural gaps, and average confidence.
+2. Call the \`list-nodes\` tool with \`type=episode\` — find recent episodes (sort by date desc, take top 5).
+3. Call the \`read-node\` tool on the most recent episode for prior session context.
+4. Call the \`check\` tool — see whether consolidation triggers are due (run \`emdd-close\` if so).
+5. Call the \`backlog\` tool with \`status=pending\` — list pending follow-ups.
+6. Call the \`transitions\` tool — list nodes ready for status changes.
+7. Call the \`list-nodes\` tool with \`type=question\` and \`status=OPEN\` — find blocking/high-urgency questions.
+8. Synthesize the results into session priorities (BLOCKING questions, overdue consolidation, transition-ready nodes, blocked streak) and pick one to start.
+`,
+    },
   },
   'emdd-close': {
     description: 'EMDD 세션을 마무리합니다. 에피소드 작성, 컨솔리데이션 체크, 헬스 리뷰를 순서대로 진행합니다.',
-    body: `# EMDD Session Close
+    body: {
+      claude: `# EMDD Session Close
 
 End the EMDD session by running the closing prompts in sequence.
 
@@ -366,18 +424,37 @@ End the EMDD session by running the closing prompts in sequence.
 Each prompt requires no arguments (graphDir is auto-resolved).
 If the consolidation prompt reports that no triggers are met, note that consolidation is not needed and proceed to step 3.
 `,
+      codex: `# EMDD Session Close
+
+Codex does not yet expose MCP prompts (tracked in openai/codex#5059), so close the
+session manually by calling the equivalent MCP tools from the \`emdd\` server in order.
+
+## Instructions
+
+1. **Episode** — Call the \`create-node\` tool with \`type=episode\` to record this session.
+   - Frontmatter: \`trigger\` (what initiated this session), \`outcome\` (\`made_progress\` | \`blocked\` | \`shipped\`), and \`links\` with \`relation: produces\` for each node created or updated this session.
+   - Body must include "What I Tried" and "What's Next" (with prerequisite reading node IDs).
+2. **Consolidation check** — Call the \`check\` tool to review consolidation triggers.
+   - If any trigger is met, run consolidation now: promote established findings to knowledge, split bloated experiments, convert episode questions into Question nodes, update hypothesis confidence based on evidence, and add edges to orphan findings. Then call \`mark-consolidated\`.
+   - If no trigger is met, skip to the next step.
+3. **Health review** — Call the \`health\` tool to surface structural gaps and confidence trends. Capture recommendations for the next session.
+`,
+    },
   },
 };
 
 /**
- * Get SKILL.md content for a given skill name.
+ * Get SKILL.md content for a given skill name and tool.
+ *
+ * Claude and Codex receive different bodies because Codex does not yet expose MCP
+ * prompts (openai/codex#5059); the Codex variant invokes equivalent MCP tools instead.
  */
-export function getSkillContent(skillName: SkillName): string {
+export function getSkillContent(skillName: SkillName, tool: SkillToolType = 'claude'): string {
   const skill = SKILL_CONTENT[skillName];
   if (!skill) {
     throw new Error(`Unknown skill: ${skillName}`);
   }
-  return `---\nname: ${skillName}\ndescription: >-\n  ${skill.description}\n---\n\n${skill.body}`;
+  return `---\nname: ${skillName}\ndescription: >-\n  ${skill.description}\n---\n\n${skill.body[tool]}`;
 }
 
 /**
@@ -408,7 +485,7 @@ export function generateSkillFiles(
     }
 
     fs.mkdirSync(path.dirname(fullPath), { recursive: true });
-    fs.writeFileSync(fullPath, getSkillContent(name), 'utf-8');
+    fs.writeFileSync(fullPath, getSkillContent(name, tool), 'utf-8');
     created.push(relativePath);
   }
 

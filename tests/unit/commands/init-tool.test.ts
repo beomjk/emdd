@@ -56,10 +56,56 @@ describe('emdd init --tool', () => {
     expect(existsSync(join(tmpDir, '.agents', 'skills', 'emdd-close', 'SKILL.md'))).toBe(true);
   });
 
-  it('defaults to claude when --tool is omitted', () => {
+  it('defaults to claude when --tool is omitted (rules + skills both emitted)', () => {
     initCommand(tmpDir, { lang: 'en' });
-    const filePath = join(tmpDir, '.claude', 'CLAUDE.md');
-    expect(existsSync(filePath)).toBe(true);
+    expect(existsSync(join(tmpDir, '.claude', 'CLAUDE.md'))).toBe(true);
+    // Default flow must also emit Claude skill files, not just the rules file —
+    // a regression where only rules but no skills are emitted would silently
+    // break the /emdd-open and /emdd-close shortcuts in Claude Code.
+    expect(existsSync(join(tmpDir, '.claude', 'skills', 'emdd-open', 'SKILL.md'))).toBe(true);
+    expect(existsSync(join(tmpDir, '.claude', 'skills', 'emdd-close', 'SKILL.md'))).toBe(true);
+  });
+
+  it('--force --tool all overwrites every existing rules and skill file', () => {
+    // Pre-seed sentinel content in every file the --tool all flow writes. After
+    // running with `force: true`, none of these sentinels may survive — both
+    // skill roots (.claude/skills + .agents/skills) must be overwritten, not
+    // just the rules files. Guards against `force` being dropped on the path
+    // through the all-branch skill loop.
+    const sentinel = 'SENTINEL-PRE-EXISTING-CONTENT';
+    const seed = (rel: string) => {
+      mkdirSync(join(tmpDir, ...rel.split('/').slice(0, -1)), { recursive: true });
+      writeFileSync(join(tmpDir, rel), sentinel);
+    };
+    seed('.claude/CLAUDE.md');
+    seed('AGENTS.md');
+    seed('.cursor/rules/emdd.mdc');
+    seed('.windsurf/rules/emdd.md');
+    seed('.clinerules/emdd.md');
+    seed('.github/copilot-instructions.md');
+    seed('.claude/skills/emdd-open/SKILL.md');
+    seed('.claude/skills/emdd-close/SKILL.md');
+    seed('.agents/skills/emdd-open/SKILL.md');
+    seed('.agents/skills/emdd-close/SKILL.md');
+
+    initCommand(tmpDir, { lang: 'en', tool: 'all', force: true });
+
+    const checks = [
+      '.claude/CLAUDE.md',
+      'AGENTS.md',
+      '.cursor/rules/emdd.mdc',
+      '.windsurf/rules/emdd.md',
+      '.clinerules/emdd.md',
+      '.github/copilot-instructions.md',
+      '.claude/skills/emdd-open/SKILL.md',
+      '.claude/skills/emdd-close/SKILL.md',
+      '.agents/skills/emdd-open/SKILL.md',
+      '.agents/skills/emdd-close/SKILL.md',
+    ];
+    for (const rel of checks) {
+      const body = readFileSync(join(tmpDir, rel), 'utf-8');
+      expect(body, `expected ${rel} to be overwritten by --force`).not.toContain(sentinel);
+    }
   });
 
   it('warns when target file already exists', () => {

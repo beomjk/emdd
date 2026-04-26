@@ -1775,7 +1775,7 @@ Zettelkasten을 만든 Niklas Luhmann은 자신의 카드 상자를 "대화 파�
 
 2. **Consolidation Hint Tags (6.2, 7.4)**: Finding의 links에 `extends: know-NNN` 힌트를 공식 허용. Consolidation 승격 단계에서 "hint가 있는 Finding부터 검토" 규칙 추가. 힌트는 승격 판단을 가속하지만 승격 기준(독립 지지 2개+, confidence ≥ 0.9, 사실상 사용 중)을 면제하지 않음.
 
-3. **CLI-Slash 통합**: MCP 프롬프트(`context-loading`, `episode-creation`, `consolidation`, `health-review`)가 CLI 커맨드를 직접 호출하도록 템플릿 재작성. Claude Code와 Codex에서는 저장소 로컬 스킬로 노출됨: Claude Code의 `/emdd-open` 및 Codex의 `emdd-open`은 `context-loading`을 호출하고, Claude Code의 `/emdd-close` 및 Codex의 `emdd-close`는 `episode-creation` → `consolidation` → `health-review`를 순차 호출. 새 CLI 커맨드 4개 추가:
+3. **CLI-Slash 통합**: MCP 프롬프트(`context-loading`, `episode-creation`, `consolidation`, `health-review`)가 CLI 커맨드를 직접 호출하도록 템플릿 재작성. Claude Code에서는 저장소 로컬 스킬로 노출됨: `/emdd-open`은 `context-loading`을 호출하고, `/emdd-close`는 `episode-creation` → `consolidation` → `health-review`를 순차 호출. Codex에서도 동일한 저장소 로컬 스킬(`emdd-open`, `emdd-close`)이 생성되지만, Codex는 아직 MCP 프롬프트를 노출하지 않으므로([openai/codex#5059](https://github.com/openai/codex/issues/5059)) Codex 스킬은 동일한 결과를 얻기 위해 대응되는 MCP **도구**(`health`, `list-nodes`, `read-node`, `check`, `backlog`, `transitions`, `create-node`, `mark-consolidated`)를 순차 호출함. 새 CLI 커맨드 4개 추가:
    - `emdd update <node-id> --set key=value`: frontmatter 필드 업데이트 (confidence 범위 검증 포함)
    - `emdd link <source-id> <target-id> <relation>`: 노드 간 링크 추가 (relation 검증, 중복 skip)
    - `emdd done <episode-id> "<item>" [--marker <done|deferred|superseded>]`: Episode "다음에 할 것" 항목의 상태 마커 변경 (기본값: done)

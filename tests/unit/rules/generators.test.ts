@@ -288,6 +288,23 @@ describe('replaceOrThrow', () => {
     expect(() => replaceOrThrow('hello world', 'missing', 'x')).toThrow(/emdd-agent\.md/);
   });
 
+  it('throws on empty search string (degenerate input)', () => {
+    // String.prototype.replace('') silently prepends; we want a hard failure instead.
+    expect(() => replaceOrThrow('any content', '', 'x')).toThrow(/non-empty/);
+  });
+
+  it('treats $-bearing replacements literally (no regex-style $& / $1 expansion)', () => {
+    // String.prototype.replace would interpret these tokens; replaceOrThrow must not.
+    expect(replaceOrThrow('foo bar', 'bar', '$&')).toBe('foo $&');
+    expect(replaceOrThrow('foo bar', 'bar', "$'")).toBe("foo $'");
+    expect(replaceOrThrow('foo bar', 'bar', '$1')).toBe('foo $1');
+    expect(replaceOrThrow('foo bar', 'bar', '$$')).toBe('foo $$');
+  });
+
+  it('replaces only the first occurrence (deterministic indexOf-based splicing)', () => {
+    expect(replaceOrThrow('a b a b', 'a', 'X')).toBe('X b a b');
+  });
+
   it('surfaces both head and tail of long search strings in the error (tail drift diagnostic)', () => {
     const head = 'BEGIN-SENTINEL-' + 'a'.repeat(80);
     const tail = 'b'.repeat(80) + '-END-SENTINEL';
@@ -333,6 +350,62 @@ describe('EMDD_RULES_MARKER', () => {
       expect(getRulesContent(t, 'compact').startsWith(EMDD_RULES_MARKER)).toBe(true);
     }
   });
+
+  it('cursor wraps in MDC frontmatter so it does NOT startsWith the marker (designed exemption)', () => {
+    // Doctor's `contentCheck` is intentionally only applied to AGENTS.md — cursor
+    // is excluded because wrapForCursor prepends a `---` frontmatter block. This
+    // test pins that documented design choice; if wrapForCursor changes, this
+    // test fires and forces a re-evaluation of doctor's TOOL_RULES entries.
+    for (const variant of ['full', 'compact'] as const) {
+      const cursor = getRulesContent('cursor', variant);
+      expect(cursor.startsWith('---')).toBe(true);
+      expect(cursor.startsWith(EMDD_RULES_MARKER)).toBe(false);
+      // The marker still appears later in the body.
+      expect(cursor).toContain(EMDD_RULES_MARKER);
+    }
+  });
+});
+
+describe('getSkillContent (per-tool body)', () => {
+  it('Claude emdd-open body invokes the context-loading MCP prompt', () => {
+    const content = getSkillContent('emdd-open', 'claude');
+    expect(content).toContain('context-loading');
+    expect(content).toContain('MCP prompt');
+  });
+
+  it('Codex emdd-open body invokes MCP tools and references the upstream issue', () => {
+    const content = getSkillContent('emdd-open', 'codex');
+    // Codex cannot call MCP prompts (openai/codex#5059) — must walk MCP tools instead.
+    expect(content).toContain('openai/codex#5059');
+    // The disclaimer mentions "MCP prompts" generically, but the body must NOT
+    // contain the prompt-invocation instruction "Call the MCP prompt …" — Codex
+    // can't execute that, which is the entire reason for this branch.
+    expect(content).not.toContain('Call the MCP prompt');
+    expect(content).toContain('`health` tool');
+    expect(content).toContain('`list-nodes` tool');
+    expect(content).toContain('`read-node` tool');
+    expect(content).toContain('`check` tool');
+    expect(content).toContain('`backlog` tool');
+    expect(content).toContain('`transitions` tool');
+  });
+
+  it('Codex emdd-close body invokes MCP tools (create-node, check, mark-consolidated, health)', () => {
+    const content = getSkillContent('emdd-close', 'codex');
+    expect(content).toContain('openai/codex#5059');
+    // The disclaimer mentions "MCP prompts" generically, but the body must NOT
+    // contain the prompt-invocation instruction "Call the MCP prompt …" — Codex
+    // can't execute that, which is the entire reason for this branch.
+    expect(content).not.toContain('Call the MCP prompt');
+    expect(content).toContain('`create-node` tool');
+    expect(content).toContain('`check` tool');
+    expect(content).toContain('`mark-consolidated`');
+    expect(content).toContain('`health` tool');
+  });
+
+  it('default tool argument is "claude" (backwards-compatible signature)', () => {
+    expect(getSkillContent('emdd-open')).toBe(getSkillContent('emdd-open', 'claude'));
+    expect(getSkillContent('emdd-close')).toBe(getSkillContent('emdd-close', 'claude'));
+  });
 });
 
 describe('generateSkillFiles', () => {
@@ -360,6 +433,25 @@ describe('generateSkillFiles', () => {
       join('.agents', 'skills', 'emdd-open', 'SKILL.md'),
       join('.agents', 'skills', 'emdd-close', 'SKILL.md'),
     ]);
+  });
+
+  it('Codex SKILL files on disk contain the tool-walking body, not the prompt-invoking body', () => {
+    generateSkillFiles(tmpDir, { tool: 'codex' });
+    const open = readFileSync(join(tmpDir, '.agents', 'skills', 'emdd-open', 'SKILL.md'), 'utf-8');
+    const close = readFileSync(join(tmpDir, '.agents', 'skills', 'emdd-close', 'SKILL.md'), 'utf-8');
+    // Codex body — tools, not the prompt-invocation instruction.
+    expect(open).toContain('`health` tool');
+    expect(open).not.toContain('Call the MCP prompt');
+    expect(close).toContain('`create-node` tool');
+    expect(close).not.toContain('Call the MCP prompt');
+  });
+
+  it('Claude SKILL files on disk still contain the prompt-invoking body', () => {
+    generateSkillFiles(tmpDir, { tool: 'claude' });
+    const open = readFileSync(join(tmpDir, '.claude', 'skills', 'emdd-open', 'SKILL.md'), 'utf-8');
+    const close = readFileSync(join(tmpDir, '.claude', 'skills', 'emdd-close', 'SKILL.md'), 'utf-8');
+    expect(open).toContain('context-loading');
+    expect(close).toContain('episode-creation');
   });
 
   it('skips existing Codex skill files when force is false', () => {

@@ -73,7 +73,7 @@ Not all research happens in 8-hour blocks. For researchers working part-time, in
 
 **Session-based rhythm (no fixed schedule):**
 
-Claude Code shortcuts: `/emdd-open` (Session Start) and `/emdd-close` (Session End + Maintenance + Review). Codex skills: `emdd-open` and `emdd-close`.
+**Claude Code shortcuts:** `/emdd-open` (Session Start) and `/emdd-close` (Session End + Maintenance + Review). **Codex skills:** `emdd-open` (Session Start) and `emdd-close` (Session End + Maintenance + Review).
 
 ```
 Session Start (5 min):

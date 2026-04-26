@@ -67,6 +67,23 @@ describe('emdd init', () => {
     const result = run(`init ${tmpDir}`);
     expect(result.toLowerCase()).toMatch(/already|exist/);
   });
+
+  it('--tool codex (real CLI) creates AGENTS.md and .agents/skills', () => {
+    // End-to-end: spawn the real CLI binary, not just initCommand(). Catches
+    // commander wiring and option-parser regressions that unit tests miss.
+    run(`init ${tmpDir} --tool codex`);
+    expect(existsSync(join(tmpDir, 'AGENTS.md'))).toBe(true);
+    expect(existsSync(join(tmpDir, '.agents', 'skills', 'emdd-open', 'SKILL.md'))).toBe(true);
+    expect(existsSync(join(tmpDir, '.agents', 'skills', 'emdd-close', 'SKILL.md'))).toBe(true);
+    const agents = readFileSync(join(tmpDir, 'AGENTS.md'), 'utf-8');
+    expect(agents.startsWith('# EMDD')).toBe(true);
+  });
+
+  it('emdd doctor (real CLI) reports AGENTS.md after --tool codex init', () => {
+    run(`init ${tmpDir} --tool codex`);
+    const result = run(`doctor`, tmpDir);
+    expect(result).toContain('AGENTS.md');
+  });
 });
 
 describe('emdd new', () => {

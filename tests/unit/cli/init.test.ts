@@ -15,6 +15,30 @@ import { initCommand } from '../../../src/cli/init.js';
 import { generateSkillFiles } from '../../../src/rules/generators.js';
 import { setLocale } from '../../../src/i18n/index.js';
 
+// Pin the mock against the real module surface. If SkillToolType / SKILL_TOOLS
+// drifts (e.g. a 3rd skill-capable tool is added), the assertions below fail
+// here so the mock factory above is updated in lockstep — without this, the
+// init mock could silently keep stale literals while every other test passes.
+describe('init.test.ts mock vs real generators surface', () => {
+  it('mocked SKILL_TOOLS matches the real module export', async () => {
+    const real = await vi.importActual<typeof import('../../../src/rules/generators.js')>(
+      '../../../src/rules/generators.js',
+    );
+    const mocked = await import('../../../src/rules/generators.js');
+    expect([...mocked.SKILL_TOOLS]).toEqual([...real.SKILL_TOOLS]);
+  });
+
+  it('mocked toolSupportsSkills agrees with the real predicate for every ToolType value', async () => {
+    const real = await vi.importActual<typeof import('../../../src/rules/generators.js')>(
+      '../../../src/rules/generators.js',
+    );
+    const mocked = await import('../../../src/rules/generators.js');
+    for (const t of ['claude', 'codex', 'cursor', 'windsurf', 'cline', 'copilot'] as const) {
+      expect(mocked.toolSupportsSkills(t)).toBe(real.toolSupportsSkills(t));
+    }
+  });
+});
+
 describe('initCommand next steps output', () => {
   let tmpDir: string;
   let logSpy: ReturnType<typeof vi.spyOn>;

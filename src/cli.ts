@@ -10,6 +10,7 @@ import { startMcpServer } from './mcp-server/index.js';
 import { VERSION } from './version.js';
 import { CliAdapter } from './registry/cli-adapter.js';
 import { createDefaultRegistry } from './registry/all-commands.js';
+import { getToolEnumerationString } from './rules/generators.js';
 import { t, getLocale, setLocale } from './i18n/index.js';
 
 function withCliErrorHandling<T extends unknown[]>(
@@ -43,7 +44,7 @@ program
   .command('init [path]')
   .description('Initialize EMDD project')
   .option('--lang <locale>', 'Language (en|ko)', 'en')
-  .option('--tool <tool>', 'AI tool rules to generate (claude|codex|cursor|windsurf|cline|copilot|all)', 'claude')
+  .option('--tool <tool>', `AI tool rules to generate (${getToolEnumerationString()})`, 'claude')
   .option('--force', 'Overwrite existing rules files')
   .action(withCliErrorHandling(async (path, options) => {
     initCommand(path, options);

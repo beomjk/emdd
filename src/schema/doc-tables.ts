@@ -8,6 +8,7 @@ import type { CommandDef } from '../registry/types.js';
 import type { z } from 'zod';
 import { runAutoMarkerCli } from './spec-tables.js';
 import { PROMPT_META } from '../mcp-server/prompts/meta.js';
+import { getToolEnumerationString } from '../rules/generators.js';
 
 // ── Non-Registry Commands (defined in src/cli.ts) ──────────────────
 
@@ -19,7 +20,7 @@ interface NonRegistryCommand {
 }
 
 const NON_REGISTRY_COMMANDS: NonRegistryCommand[] = [
-  { cliName: 'init', description: 'Initialize a new EMDD project', positional: '[path]', options: '`--tool claude\\|codex\\|cursor\\|windsurf\\|cline\\|copilot\\|all`, `--lang en\\|ko`, `--force`' },
+  { cliName: 'init', description: 'Initialize a new EMDD project', positional: '[path]', options: `\`--tool ${getToolEnumerationString('\\|')}\`, \`--lang en\\|ko\`, \`--force\`` },
   { cliName: 'serve', description: 'Start web dashboard server', positional: '[path]', options: '`-p, --port`, `--no-open`' },
   { cliName: 'export-html', description: 'Export graph as standalone HTML file', positional: '[output]', options: '`--layout force\\|hierarchical`, `--types`, `--statuses`' },
   { cliName: 'graph', description: 'Generate `_graph.mmd` (Mermaid diagram)', positional: '[path]', options: '' },

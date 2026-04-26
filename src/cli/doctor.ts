@@ -6,7 +6,7 @@ import { loadGraph } from '../graph/loader.js';
 import { lintGraphFromDir } from '../graph/operations.js';
 import { VERSION } from '../version.js';
 import { t } from '../i18n/index.js';
-import { EMDD_RULES_MARKER } from '../rules/generators.js';
+import { EMDD_RULES_MARKER, type ToolType } from '../rules/generators.js';
 
 export interface DoctorCheckResult {
   name: string;
@@ -118,25 +118,37 @@ type ToolRuleEntry = {
   contentCheck?: (body: string) => boolean;
 };
 
-const TOOL_RULES: ToolRuleEntry[] = [
-  { name: '.claude', paths: ['.claude/CLAUDE.md'] },
+// Keyed by ToolType so that adding a new tool to ToolType is a compile-time error
+// here until a corresponding rule entry is added — this is the place we missed
+// when codex was first added in this branch and had to be back-filled.
+const TOOL_RULES: Record<Exclude<ToolType, 'all'>, ToolRuleEntry> = {
+  claude: { name: '.claude', paths: ['.claude/CLAUDE.md'] },
   // Generated AGENTS.md always opens with EMDD_RULES_MARKER at line 1;
   // startsWith (not includes) avoids false positives when user prose mentions EMDD.
-  { name: 'AGENTS.md', paths: ['AGENTS.md'], contentCheck: (body) => body.startsWith(EMDD_RULES_MARKER) },
-  { name: '.cursor', paths: ['.cursor/rules/emdd.mdc'] },
-  { name: '.windsurf', paths: ['.windsurf/rules/emdd.md'] },
-  { name: '.clinerules', paths: ['.clinerules/emdd.md'] },
-  { name: '.github/copilot', paths: ['.github/copilot-instructions.md'] },
-];
+  codex: { name: 'AGENTS.md', paths: ['AGENTS.md'], contentCheck: (body) => body.startsWith(EMDD_RULES_MARKER) },
+  cursor: { name: '.cursor', paths: ['.cursor/rules/emdd.mdc'] },
+  windsurf: { name: '.windsurf', paths: ['.windsurf/rules/emdd.md'] },
+  cline: { name: '.clinerules', paths: ['.clinerules/emdd.md'] },
+  copilot: { name: '.github/copilot', paths: ['.github/copilot-instructions.md'] },
+};
 
 export function checkToolRules(projectDir: string): DoctorCheckResult {
   const found: string[] = [];
-  for (const tool of TOOL_RULES) {
+  for (const tool of Object.values(TOOL_RULES)) {
     for (const p of tool.paths) {
       const fullPath = path.join(projectDir, p);
       if (!fs.existsSync(fullPath)) continue;
       if (tool.contentCheck) {
-        const body = fs.readFileSync(fullPath, 'utf-8');
+        let body: string;
+        try {
+          body = fs.readFileSync(fullPath, 'utf-8');
+        } catch {
+          // File exists but is unreadable (e.g., permission denied). Treat as
+          // "not detected" rather than crashing the entire doctor run, since
+          // checkToolRules is one of several diagnostics and others should
+          // still report.
+          continue;
+        }
         if (!tool.contentCheck(body)) continue;
       }
       found.push(tool.name);
