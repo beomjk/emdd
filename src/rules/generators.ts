@@ -301,7 +301,17 @@ function adaptAgentMarkdownForTool(content: string, tool: Exclude<ToolType, 'all
 
   let out = content;
   out = replaceOrThrow(out, SHORTCUT_LINE.claude.full, SHORTCUT_LINE.codex.full);
-  out = replaceOrThrow(out, '(or `/emdd-open`)', '(or the `emdd-open` skill)');
+  // Step 1 of the Session Cycle directs the agent to "Run the `context-loading`
+  // prompt (or `/emdd-open`)". Codex cannot run MCP prompts (openai/codex#5059),
+  // so the prompt is unreachable for Codex — only the skill is. Rewrite the
+  // primary directive to the skill, dropping the now-redundant fallback clause.
+  // Keeps Step 1 consistent with the Steps 3-5 rewrite below; otherwise the
+  // rules file contradicts itself.
+  out = replaceOrThrow(
+    out,
+    'Run the `context-loading` prompt (or `/emdd-open`).',
+    'Run the `emdd-open` skill.',
+  );
   out = replaceOrThrow(out, 'via `/emdd-close`', 'via the `emdd-close` skill');
 
   // Steps 3-5 of the Session Cycle direct the agent to invoke MCP prompts

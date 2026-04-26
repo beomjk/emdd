@@ -19,12 +19,16 @@ function run(args: string, cwd?: string): string {
   });
 }
 
-function runMayFail(args: string, cwd?: string): { stdout: string; exitCode: number } {
+function runMayFail(args: string, cwd?: string): { stdout: string; stderr: string; exitCode: number } {
   try {
     const stdout = run(args, cwd);
-    return { stdout, exitCode: 0 };
+    return { stdout, stderr: '', exitCode: 0 };
   } catch (e: any) {
-    return { stdout: e.stdout ?? '', exitCode: e.status ?? 1 };
+    // execSync throws an Error whose .stdout / .stderr buffers carry the child's
+    // captured streams. Surface stderr too — the CLI writes its `Error: ...`
+    // banner via console.error (stderr), so any test asserting on the error
+    // message must read this stream, not stdout.
+    return { stdout: e.stdout ?? '', stderr: e.stderr ?? '', exitCode: e.status ?? 1 };
   }
 }
 
@@ -68,7 +72,7 @@ describe('emdd init', () => {
     expect(result.toLowerCase()).toMatch(/already|exist/);
   });
 
-  it('--tool codex (real CLI) creates AGENTS.md and .agents/skills', () => {
+  it('--tool codex (real CLI) creates AGENTS.md and .agents/skills', async () => {
     // End-to-end: spawn the real CLI binary, not just initCommand(). Catches
     // commander wiring and option-parser regressions that unit tests miss.
     run(`init ${tmpDir} --tool codex`);
@@ -77,6 +81,12 @@ describe('emdd init', () => {
     expect(existsSync(join(tmpDir, '.agents', 'skills', 'emdd-close', 'SKILL.md'))).toBe(true);
     const agents = readFileSync(join(tmpDir, 'AGENTS.md'), 'utf-8');
     expect(agents.startsWith('# EMDD')).toBe(true);
+    // Pin the on-disk file to the canonical generator output. Without this,
+    // any post-write transformation in generateRulesFile (a stray .replace,
+    // accidental trim, BOM injection) that left "# EMDD" intact would slip
+    // past the substring assertions above.
+    const { getRulesContent } = await import('../../src/rules/generators.js');
+    expect(agents).toBe(getRulesContent('codex', 'full'));
   });
 
   it('emdd doctor (real CLI) reports AGENTS.md after --tool codex init', () => {
@@ -109,9 +119,15 @@ describe('emdd init', () => {
     // Pre-fix, an invalid --tool would create graph/, print "undefined" as the
     // MCP hint, and then crash with `path argument must be string`. Validate that
     // input is rejected up-front and the project root stays clean.
-    const { stdout, exitCode } = runMayFail(`init ${tmpDir} --tool nope`);
+    const { stdout, stderr, exitCode } = runMayFail(`init ${tmpDir} --tool nope`);
     expect(exitCode).not.toBe(0);
-    expect(stdout + '').not.toContain('undefined');
+    // The CLI prints `Error: Invalid --tool value: "nope"...` via console.error
+    // in withCliErrorHandling — that's stderr, not stdout. Assert on the
+    // actual error stream, not the empty stdout that the pre-fix assertion
+    // was tautologically not-containing 'undefined' on.
+    expect(stderr).toContain('Invalid --tool value: "nope"');
+    expect(stderr).toContain('Valid values:');
+    expect(stdout).not.toContain('undefined');
     expect(existsSync(join(tmpDir, 'graph'))).toBe(false);
   });
 });

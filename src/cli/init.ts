@@ -22,6 +22,14 @@ const MCP_SETUP_HINTS: Record<Exclude<ToolType, 'all'>, string> = {
   copilot: 'Add to .vscode/mcp.json: {"servers":{"emdd":{"command":"npx","args":["@beomjk/emdd","mcp"]}}}\n             Windows: {"servers":{"emdd":{"command":"cmd","args":["/c","npx","@beomjk/emdd","mcp"]}}}',
 };
 
+// Compile-time guard: every SkillToolType must appear as a key of MCP_SETUP_HINTS
+// because printNextSteps iterates SKILL_TOOLS and indexes into MCP_SETUP_HINTS.
+// Without this, a new SkillToolType would only blow up at runtime as
+// `MCP_SETUP_HINTS[ht] === undefined` printed under the next-steps banner.
+type _SkillToolsHaveHints = Exclude<SkillToolType, keyof typeof MCP_SETUP_HINTS>;
+const _skillToolsHaveHints: _SkillToolsHaveHints extends never ? true : never = true;
+void _skillToolsHaveHints;
+
 function printNextSteps(tool: ToolType): void {
   // For --tool all, print MCP hints for every skill-capable assistant — they are
   // the first-class one-liner setups, while non-skill tools (cursor/windsurf/...)
@@ -66,7 +74,8 @@ export function initCommand(targetPath: string | undefined, options: { lang?: st
   const tool: ToolType = rawTool;
 
   // Check if already initialized (graph dir check)
-  if (fs.existsSync(graphDir)) {
+  const isNewProject = !fs.existsSync(graphDir);
+  if (!isNewProject) {
     console.log(t('init.already_exists', { path: target }));
   } else {
     // Create graph/ and all subdirectories
@@ -84,7 +93,6 @@ export function initCommand(targetPath: string | undefined, options: { lang?: st
     fs.writeFileSync(configPath, config, 'utf-8');
 
     console.log(t('init.success', { path: target }));
-    printNextSteps(tool);
   }
 
   // Generate tool-specific rules files
@@ -100,6 +108,7 @@ export function initCommand(targetPath: string | undefined, options: { lang?: st
   // Generate repository-local skills for tools that support them.
   const skillTools: readonly SkillToolType[] =
     tool === 'all' ? SKILL_TOOLS : toolSupportsSkills(tool) ? [tool] : [];
+  let skillsCreated = 0;
   for (const skillTool of skillTools) {
     const skillResult = generateSkillFiles(target, { force: options.force, tool: skillTool });
     for (const created of skillResult.created) {
@@ -108,5 +117,16 @@ export function initCommand(targetPath: string | undefined, options: { lang?: st
     for (const skipped of skillResult.skipped) {
       console.log(`Skipped (already exists): ${skipped}`);
     }
+    skillsCreated += skillResult.created.length;
+  }
+
+  // Print MCP-add next steps when (a) a fresh project was just initialized, OR
+  // (b) at least one new rules/skills file was written this run. The second
+  // case covers `emdd init . --tool codex` re-run on an existing claude project:
+  // without it, the codex MCP-add hint was never shown, leaving Codex installed
+  // but unconfigured. Stays quiet on a pure no-op re-run where everything was
+  // already in place (avoids spamming the banner on every invocation).
+  if (isNewProject || result.created.length > 0 || skillsCreated > 0) {
+    printNextSteps(tool);
   }
 }

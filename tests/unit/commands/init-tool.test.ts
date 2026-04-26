@@ -117,7 +117,11 @@ describe('emdd init --tool', () => {
     initCommand(tmpDir, { lang: 'en', tool: 'claude' });
 
     const logged = consoleSpy.mock.calls.map(c => c.join(' ')).join('\n');
-    expect(logged).toMatch(/exist|skip|already/i);
+    // Tighten to the actual "Skipped (already exists): .claude/CLAUDE.md" message.
+    // The previous regex /exist|skip|already/i also matched the unrelated
+    // "already initialized" banner, so a regression that dropped the per-file
+    // Skipped log would still pass — pin the file path here to close that gap.
+    expect(logged).toMatch(/Skipped.*\.claude.CLAUDE\.md/);
     consoleSpy.mockRestore();
   });
 

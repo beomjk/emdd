@@ -85,11 +85,15 @@ describe('getRulesContent', () => {
     // All Claude-specific phrasings must be adapted — not just the first.
     expect(content).not.toContain('(or `/emdd-open`)');
     expect(content).not.toContain('via `/emdd-close`');
-    expect(content).toContain('(or the `emdd-open` skill)');
     expect(content).toContain('via the `emdd-close` skill');
-    // Steps 3-5 must redirect to the `emdd-close` skill — Codex cannot run
-    // MCP prompts (openai/codex#5059), so the original prompt-invocation
-    // sentences would tell it to do something it can't.
+    // Step 1: Codex cannot invoke MCP prompts (openai/codex#5059), so the
+    // primary "Run the `context-loading` prompt" directive must be rewritten to
+    // the skill — not left with the prompt as primary and the skill as a
+    // parenthetical fallback. Without this, the rules file (loaded as agent
+    // context every session) contradicts the SKILL.md disclaimer.
+    expect(content).not.toContain('Run the `context-loading` prompt');
+    expect(content).toContain('Run the `emdd-open` skill');
+    // Steps 3-5 must redirect to the `emdd-close` skill — same reason.
     expect(content).not.toContain('Run the `episode-creation` prompt');
     expect(content).not.toContain('Run the `consolidation` prompt');
     expect(content).not.toContain('Run the `health-review` prompt');
@@ -313,7 +317,7 @@ describe('emdd-agent.md uniqueness invariant for Codex drift guard', () => {
     // adaptAgentMarkdownForTool. Keep this list in sync if those calls change.
     const searchStrings = [
       '**Claude Code shortcuts:** `/emdd-open` (Session Start) and `/emdd-close` (Session End + Maintenance + Review).',
-      '(or `/emdd-open`)',
+      'Run the `context-loading` prompt (or `/emdd-open`).',
       'via `/emdd-close`',
       'Run the `episode-creation` prompt.',
       'Run the `consolidation` prompt when triggers fire.',
@@ -439,6 +443,104 @@ describe('getToolEnumerationString', () => {
     const parts = getToolEnumerationString().split('|');
     for (const tool of SKILL_TOOLS) {
       expect(parts).toContain(tool);
+    }
+  });
+});
+
+// Pin the README prose enumeration ("Supported tools: `claude` (default),
+// `codex`, ..., `all`.") to the SSOT — without this, adding a 7th tool to
+// TOOL_PATHS quietly leaves README:132 stale even though the AUTO-marker CLI
+// table at README:230+ updates automatically.
+describe('README documents every supported tool', () => {
+  it('the "Supported tools" sentence enumerates every entry from getToolEnumerationString', () => {
+    const readme = readFileSync(join(__dirname, '..', '..', '..', 'README.md'), 'utf-8');
+    const tools = getToolEnumerationString().split('|');
+    for (const t of tools) {
+      expect(readme, `README is missing \`${t}\` from the Supported tools enumeration`).toMatch(
+        new RegExp(`Supported tools:[^\\n]*\`${t}\``),
+      );
+    }
+  });
+});
+
+// Contract tests pinning generated content against the registries that own the
+// canonical names. Both the Codex skill bodies (which name MCP tools inline as
+// "`<name>` tool") and the agent rules / closing skill (which name MCP prompts
+// inline as `\`<name>\``) hardcode strings that must stay in sync with their
+// SSOT. Without these tests, renaming a tool in src/registry/commands/ or a
+// prompt in src/mcp-server/prompts/meta.ts would silently leave the generated
+// rules/skill files telling agents to call something that no longer exists.
+describe('generated content references existing registry entries (drift guard)', () => {
+  it('every MCP tool name in Codex skill bodies resolves to a real registered tool', async () => {
+    const { createDefaultRegistry } = await import('../../../src/registry/all-commands.js');
+    const registry = createDefaultRegistry();
+    const mcpToolNames = new Set(
+      registry
+        .getAll()
+        .filter((c) => c.mcp !== false)
+        .map((c) => (c.mcp && typeof c.mcp === 'object' && c.mcp.toolName) || c.name),
+    );
+    const codexOpen = getSkillContent('emdd-open', 'codex');
+    const codexClose = getSkillContent('emdd-close', 'codex');
+    // Match `<name>` tool — pulls each backticked identifier the skill body
+    // tells Codex to "Call". This is the actual coupling surface.
+    const referenced = new Set<string>();
+    for (const body of [codexOpen, codexClose]) {
+      for (const m of body.matchAll(/`([a-z][a-z0-9-]*)`\s+tool/g)) {
+        referenced.add(m[1]);
+      }
+    }
+    expect(referenced.size).toBeGreaterThan(0); // sanity: regex must capture
+    for (const name of referenced) {
+      expect(mcpToolNames, `Codex skill body references \`${name}\` tool but no such MCP tool exists in the registry`).toContain(name);
+    }
+  });
+
+  it('also covers `mark-consolidated` (referenced as a bare backtick, not "tool" suffixed)', async () => {
+    const { createDefaultRegistry } = await import('../../../src/registry/all-commands.js');
+    const mcpToolNames = new Set(
+      createDefaultRegistry()
+        .getAll()
+        .filter((c) => c.mcp !== false)
+        .map((c) => (c.mcp && typeof c.mcp === 'object' && c.mcp.toolName) || c.name),
+    );
+    // The Codex emdd-close body says "Then call `mark-consolidated`." (no
+    // trailing "tool" word) — make sure that bare reference also tracks the
+    // registry. Add new bare names here when the skill body grows.
+    const bareReferences = ['mark-consolidated'];
+    const codexClose = getSkillContent('emdd-close', 'codex');
+    for (const name of bareReferences) {
+      expect(codexClose).toContain(`\`${name}\``);
+      expect(mcpToolNames, `Codex skill body references \`${name}\` but no such MCP tool exists`).toContain(name);
+    }
+  });
+
+  it('every MCP prompt name referenced in Claude rules/skills exists in PROMPT_META', async () => {
+    const { PROMPT_META } = await import('../../../src/mcp-server/prompts/meta.js');
+    const promptNames = new Set(PROMPT_META.map((p) => p.name));
+    // The Claude rules + skill bodies hardcode all four session-cycle prompt
+    // names. If any literal here drifts from PROMPT_META, this test fires.
+    const sources = [
+      getRulesContent('claude', 'compact'),
+      getRulesContent('claude', 'full'),
+      getSkillContent('emdd-open', 'claude'),
+      getSkillContent('emdd-close', 'claude'),
+    ];
+    const referenced = new Set<string>();
+    for (const body of sources) {
+      // Match any backticked identifier that is followed by ` prompt` (with
+      // space) — pulls every "Run the `<name>` prompt" / "Use ... `<name>`
+      // (start)" wording without false-matching unrelated backticks.
+      for (const m of body.matchAll(/`([a-z][a-z-]*)`\s+(?:prompt|MCP prompt)/gi)) {
+        referenced.add(m[1]);
+      }
+    }
+    // Also pin the four prompt names appear at all (sanity).
+    for (const name of ['context-loading', 'episode-creation', 'consolidation', 'health-review']) {
+      expect(referenced, `prompt name "${name}" not referenced in any Claude rules/skill body`).toContain(name);
+    }
+    for (const name of referenced) {
+      expect(promptNames, `Claude rules/skill body references \`${name}\` prompt but no such PROMPT_META entry exists`).toContain(name);
     }
   });
 });

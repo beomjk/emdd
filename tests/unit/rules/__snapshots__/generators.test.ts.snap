@@ -516,7 +516,7 @@ Every session follows this prompt cycle:
 
 **Codex skills:** \`emdd-open\` (Session Start) and \`emdd-close\` (Session End + Maintenance + Review).
 
-1. **Session Start** → Run the \`context-loading\` prompt (or the \`emdd-open\` skill). It provides graph state, episode arc, backlog, transition-ready nodes, and open questions. Follow the Episode Directive to read specific episodes for deeper context.
+1. **Session Start** → Run the \`emdd-open\` skill. It provides graph state, episode arc, backlog, transition-ready nodes, and open questions. Follow the Episode Directive to read specific episodes for deeper context.
 2. **During Work** — Execute experiments, write code, take notes. Mark surprises with [!].
 3. **Session End** → Run the \`emdd-close\` skill (Episode step). Record what was tried, create Findings, list next steps with prerequisite node IDs.
 4. **Maintenance** → Run the \`emdd-close\` skill (Consolidation step) when triggers fire. Promote findings, split experiments, update confidence.

@@ -1158,7 +1158,7 @@ DVC exp run → metrics.json → post-experiment hook → Claude Code/Codex
 project-root/
 ├── .emdd.yml                  # 프로젝트 설정 (emdd init으로 생성)
 ├── AGENTS.md                  # Codex EMDD 규칙 + 에이전트 행동 (emdd init --tool codex)
-├── .agents/
+├── .agents/                   # Codex 스킬 디렉토리 (emdd init --tool codex)
 │   └── skills/
 │       ├── emdd-open/SKILL.md   # Codex 세션 시작 스킬
 │       └── emdd-close/SKILL.md  # Codex 세션 종료 스킬

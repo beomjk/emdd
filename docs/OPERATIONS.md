@@ -359,7 +359,7 @@ DVC exp run -> metrics.json -> post-experiment hook -> Claude Code/Codex
 project-root/
 +-- .emdd.yml                  # Project config (created by emdd init)
 +-- AGENTS.md                  # Codex EMDD rules + agent behavior (created by emdd init --tool codex)
-+-- .agents/
++-- .agents/                   # Codex skills directory (created by emdd init --tool codex)
 |   +-- skills/
 |       +-- emdd-open/SKILL.md   # Codex session start skill
 |       +-- emdd-close/SKILL.md  # Codex session end skill

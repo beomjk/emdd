@@ -6,7 +6,7 @@ import { loadGraph } from '../graph/loader.js';
 import { lintGraphFromDir } from '../graph/operations.js';
 import { VERSION } from '../version.js';
 import { t } from '../i18n/index.js';
-import { EMDD_RULES_MARKER, type ToolType } from '../rules/generators.js';
+import { EMDD_RULES_MARKER, TOOL_PATHS, type ToolType } from '../rules/generators.js';
 
 export interface DoctorCheckResult {
   name: string;
@@ -110,10 +110,12 @@ export function checkConfig(graphDir: string): DoctorCheckResult {
   };
 }
 
-type ToolRuleEntry = {
+// Per-tool detection metadata: a human-readable display name plus an optional
+// content predicate. The path itself is NOT stored here — it is derived from
+// TOOL_PATHS so the writer (rules generator) and reader (doctor) cannot drift.
+type ToolRuleMeta = {
   name: string;
-  paths: string[];
-  // Optional content check: path is only counted when the file matches this predicate.
+  // Optional content check: file is only counted when its body matches this predicate.
   // Used for AGENTS.md because the filename is shared with a non-EMDD cross-tool convention.
   contentCheck?: (body: string) => boolean;
 };
@@ -121,45 +123,43 @@ type ToolRuleEntry = {
 // Keyed by ToolType so adding a new tool fails to compile here until a rule
 // entry is added — guards against the registry-drift failure mode where the
 // generator knows about a tool but doctor doesn't detect it.
-const TOOL_RULES: Record<Exclude<ToolType, 'all'>, ToolRuleEntry> = {
-  claude: { name: '.claude', paths: ['.claude/CLAUDE.md'] },
+const TOOL_RULES_META: Record<Exclude<ToolType, 'all'>, ToolRuleMeta> = {
+  claude: { name: '.claude' },
   // Generated AGENTS.md always opens with EMDD_RULES_MARKER at line 1;
   // startsWith (not includes) avoids false positives when user prose mentions EMDD.
   // Strip a leading UTF-8 BOM first: editors like Windows Notepad add one on save,
   // which would otherwise shift the marker off byte 0 and silently drop detection.
   codex: {
     name: 'AGENTS.md',
-    paths: ['AGENTS.md'],
     contentCheck: (body) => body.replace(/^\uFEFF/, '').startsWith(EMDD_RULES_MARKER),
   },
-  cursor: { name: '.cursor', paths: ['.cursor/rules/emdd.mdc'] },
-  windsurf: { name: '.windsurf', paths: ['.windsurf/rules/emdd.md'] },
-  cline: { name: '.clinerules', paths: ['.clinerules/emdd.md'] },
-  copilot: { name: '.github/copilot', paths: ['.github/copilot-instructions.md'] },
+  cursor: { name: '.cursor' },
+  windsurf: { name: '.windsurf' },
+  cline: { name: '.clinerules' },
+  copilot: { name: '.github/copilot' },
 };
 
 export function checkToolRules(projectDir: string): DoctorCheckResult {
   const found: string[] = [];
-  for (const tool of Object.values(TOOL_RULES)) {
-    for (const p of tool.paths) {
-      const fullPath = path.join(projectDir, p);
-      if (!fs.existsSync(fullPath)) continue;
-      if (tool.contentCheck) {
-        let body: string;
-        try {
-          body = fs.readFileSync(fullPath, 'utf-8');
-        } catch {
-          // File exists but is unreadable (e.g., permission denied). Treat as
-          // "not detected" rather than crashing the entire doctor run, since
-          // checkToolRules is one of several diagnostics and others should
-          // still report.
-          continue;
-        }
-        if (!tool.contentCheck(body)) continue;
+  for (const [tool, meta] of Object.entries(TOOL_RULES_META) as Array<
+    [Exclude<ToolType, 'all'>, ToolRuleMeta]
+  >) {
+    const fullPath = path.join(projectDir, TOOL_PATHS[tool]);
+    if (!fs.existsSync(fullPath)) continue;
+    if (meta.contentCheck) {
+      let body: string;
+      try {
+        body = fs.readFileSync(fullPath, 'utf-8');
+      } catch {
+        // File exists but is unreadable (e.g., permission denied). Treat as
+        // "not detected" rather than crashing the entire doctor run, since
+        // checkToolRules is one of several diagnostics and others should
+        // still report.
+        continue;
       }
-      found.push(tool.name);
-      break;
+      if (!meta.contentCheck(body)) continue;
     }
+    found.push(meta.name);
   }
   if (found.length === 0) {
     return { name: 'tool-rules', status: 'info', message: t('doctor.tool_none') };

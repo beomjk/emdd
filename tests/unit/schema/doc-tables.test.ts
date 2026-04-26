@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { DOC_GENERATORS } from '../../../src/schema/doc-tables.js';
+import { getToolEnumerationString } from '../../../src/rules/generators.js';
 
 // ── readme-cli-core ──────────────────────────────────────────────────
 
@@ -16,7 +17,11 @@ describe('readme-cli-core', () => {
   });
 
   it('documents codex as a supported init tool', () => {
-    expect(gen()).toContain('claude\\|codex\\|cursor');
+    // Couple to the SSOT (getToolEnumerationString) rather than a frozen literal.
+    // If TOOL_PATHS gains a 7th tool or the order changes, the generator output
+    // updates automatically and so does this assertion — no manual sync needed.
+    // The `\\|` separator escapes the pipe for the README markdown table cell.
+    expect(gen()).toContain(`--tool ${getToolEnumerationString('\\|')}`);
   });
 
   it('uses CLI command names', () => {

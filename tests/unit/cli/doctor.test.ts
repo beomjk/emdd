@@ -228,6 +228,20 @@ describe('emdd doctor', () => {
       expect(result.message).toContain('AGENTS.md');
     });
 
+    it('detects EMDD AGENTS.md even when prefixed with a UTF-8 BOM (Windows Notepad save)', () => {
+      // Editors like Windows Notepad re-save UTF-8 files with a leading BOM
+      // (U+FEFF / EF BB BF). The contentCheck strips it before the startsWith
+      // probe; without that strip, EMDD-generated AGENTS.md falls through as
+      // "no AI tool rules" the moment the user opens it once in such an editor.
+      // Pin the BOM byte sequence here so a regression that drops the strip
+      // (e.g., the regex anchor changed, or the strip moved client-side) fails
+      // this test instead of silently breaking detection on Windows.
+      fs.writeFileSync(path.join(tmpDir, 'AGENTS.md'), '﻿# EMDD — rules\n');
+      const result = checkToolRules(tmpDir);
+      expect(result.status).toBe('info');
+      expect(result.message).toContain('AGENTS.md');
+    });
+
     it('ignores AGENTS.md that lacks the EMDD marker', () => {
       fs.writeFileSync(path.join(tmpDir, 'AGENTS.md'), '# My Project Agents\nHand-written.\n');
       const result = checkToolRules(tmpDir);
@@ -299,6 +313,12 @@ describe('emdd doctor', () => {
 
       try {
         const result = checkToolRules(tmpDir);
+        // Pin that the spy actually intercepted the AGENTS.md read — without
+        // this the assertions below could pass tautologically (e.g., if a
+        // future refactor switched to fs.promises.readFile, the spy never
+        // matches and the EACCES branch is no longer exercised, yet the
+        // .claude-only assertions would still hold).
+        expect(spy).toHaveBeenCalled();
         expect(result.status).toBe('info');
         expect(result.message).toContain('.claude');
         expect(result.message).not.toContain('AGENTS.md');
