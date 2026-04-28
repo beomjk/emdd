@@ -89,12 +89,13 @@ test.describe('US6: Standalone Export', () => {
     await page.waitForTimeout(700);
     await clickCyNode(page, 'hyp-001');
     await expect(page.locator(sel.detailPanelOpen)).toBeVisible();
-    const liveSelectedBorderWidth = await page.evaluate(() => {
+    await expect.poll(async () => page.evaluate(() => {
       const cy = (document.querySelector('.cy-container') as any)?._cyreg?.cy;
       if (!cy) return 0;
-      return Number.parseFloat(cy.getElementById('hyp-001').style('border-width'));
-    });
-    expect(liveSelectedBorderWidth).toBeGreaterThanOrEqual(4);
+      const node = cy.getElementById('hyp-001');
+      if (node.empty() || !node.hasClass('selected-node')) return 0;
+      return Number.parseFloat(node.style('border-width')) || 0;
+    })).toBeGreaterThanOrEqual(4);
 
     const downloadPromise = page.waitForEvent('download');
     await page.locator(sel.exportBtn).click();
