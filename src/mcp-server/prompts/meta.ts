@@ -2,7 +2,7 @@
 // Canonical prompt names, descriptions, and parameter info.
 // Used by prompt registration files and doc-tables generator.
 
-import type { CeremonyRhythm } from '../../graph/types.js';
+import { CEREMONIES, type CeremonyRhythm } from '../../graph/types.js';
 
 export interface PromptMeta {
   name: string;
@@ -19,6 +19,13 @@ export interface PromptMeta {
   execution_point?: string;
 }
 
+const ceremonyMeta = {
+  'context-loading': CEREMONIES.context_loading,
+  'episode-creation': CEREMONIES.episode_creation,
+  consolidation: CEREMONIES.consolidation,
+  'health-review': CEREMONIES.health_review,
+} as const;
+
 export const PROMPT_META: PromptMeta[] = [
   {
     name: 'context-loading',
@@ -27,8 +34,8 @@ export const PROMPT_META: PromptMeta[] = [
     hasLang: true,
     group: 'session-cycle',
     order: 1,
-    rhythm: 'PER_SESSION',
-    execution_point: '/emdd-open',
+    rhythm: ceremonyMeta['context-loading'].rhythm,
+    execution_point: ceremonyMeta['context-loading'].execution_point,
   },
   {
     name: 'episode-creation',
@@ -37,8 +44,8 @@ export const PROMPT_META: PromptMeta[] = [
     hasLang: true,
     group: 'session-cycle',
     order: 2,
-    rhythm: 'PER_SESSION',
-    execution_point: '/emdd-close',
+    rhythm: ceremonyMeta['episode-creation'].rhythm,
+    execution_point: ceremonyMeta['episode-creation'].execution_point,
   },
   {
     name: 'consolidation',
@@ -47,8 +54,8 @@ export const PROMPT_META: PromptMeta[] = [
     hasLang: true,
     group: 'session-cycle',
     order: 3,
-    rhythm: 'PER_SESSION',
-    execution_point: '/emdd-close',
+    rhythm: ceremonyMeta.consolidation.rhythm,
+    execution_point: ceremonyMeta.consolidation.execution_point,
   },
   {
     name: 'health-review',
@@ -57,7 +64,7 @@ export const PROMPT_META: PromptMeta[] = [
     hasLang: true,
     group: 'session-cycle',
     order: 4,
-    rhythm: 'PERIODIC',
-    execution_point: 'manual_or_scheduler',
+    rhythm: ceremonyMeta['health-review'].rhythm,
+    execution_point: ceremonyMeta['health-review'].execution_point,
   },
 ];

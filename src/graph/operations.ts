@@ -30,7 +30,15 @@ export { checkKillCriteria } from './kill-criterion.js';
 export { listBranchGroups } from './branch-groups.js';
 export { traceImpact } from './impact.js';
 export { generateIndex } from './index-generator.js';
-export { getBacklog } from './backlog.js';
+export {
+  deriveBacklog,
+  detectGitUser,
+  getBacklog,
+  loadBacklogMeta,
+  mergeWithMeta,
+  pinBacklogItem,
+  regenerateBacklog,
+} from './backlog.js';
 
 // ── Re-exports from newly extracted modules ────────────────────────
 
@@ -46,3 +54,6 @@ export { planCreateEdge, createEdge, deleteEdge } from './edge-crud.js';
 export { getHealth } from './health.js';
 
 export { checkConsolidation, getPromotionCandidates } from './consolidation.js';
+export { amendEpisode } from './episode-amend.js';
+export { checkpointEpisode } from './episode-checkpoint.js';
+export { closeEpisode } from './episode-close.js';

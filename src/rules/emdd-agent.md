@@ -8,7 +8,7 @@ Every session follows this prompt cycle:
   ┌→ context-loading ──→ [Work] ──→ episode-creation ──┐
   │    Session Start                  Session End       │
   └── health-review ◄── consolidation ◄────────────────┘
-       Review             Maintenance (if triggered)
+       Review             Maintenance (every close)
 ```
 
 **Claude Code shortcuts:** `/emdd-open` (Session Start) and `/emdd-close` (Session End + Maintenance + Review).
@@ -16,10 +16,10 @@ Every session follows this prompt cycle:
 1. **Session Start** → Run the `context-loading` prompt (or `/emdd-open`). It provides graph state, episode arc, backlog, transition-ready nodes, and open questions. Follow the Episode Directive to read specific episodes for deeper context.
 2. **During Work** — Execute experiments, write code, take notes. Mark surprises with [!].
 3. **Session End** → Run the `episode-creation` prompt. Record what was tried, create Findings, list next steps with prerequisite node IDs.
-4. **Maintenance** → Run the `consolidation` prompt when triggers fire. Promote findings, split experiments, update confidence.
+4. **Maintenance** → Run the `consolidation` prompt every close. Triggers are depth hints for how much consolidation is needed; promote findings, split experiments, update confidence as appropriate.
 5. **Review** → Run the `health-review` prompt periodically for a full health dashboard with recommendations.
 
-> Steps 3-5 can be run together via `/emdd-close`. Steps 4-5 are not mandatory every session — run when consolidation triggers fire or on a weekly cadence.
+> Steps 3-5 can be run together via `/emdd-close`. Consolidation is part of every close; health review remains periodic or explicit.
 
 ## Intervention Rules
 
@@ -49,7 +49,7 @@ Every session follows this prompt cycle:
 ## Graph Maintenance Tasks
 
 - After experiments: update related node statuses and confidence scores (with approval) → `update-node`, `confidence-propagate`
-- Check Consolidation triggers after creating Episodes or Findings → `check`
+- Review Consolidation depth hints after creating Episodes or Findings → `check`
 - Identify orphan nodes (nodes with no outgoing links) → `graph-gaps`
 - Detect stale nodes (untested hypotheses older than 3 days) → `graph-gaps`
 - Flag structural gaps between clusters → `graph-gaps`

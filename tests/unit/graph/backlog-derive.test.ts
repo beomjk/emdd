@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -8,6 +8,7 @@ import {
   mergeWithMeta,
   renderBacklogMarkdown,
   regenerateBacklog,
+  getBacklog,
   loadBacklogMeta,
   saveBacklogMeta,
   type BacklogMeta,
@@ -84,6 +85,22 @@ describe('deriveBacklog — extracts pending items from episode bodies', () => {
     expect(items.map(i => i.slug).sort()).toEqual(['SHARED', 'SHARED-2']);
   });
 
+  it('3d. repeated collided item reuses suffixed key so completion clears it', async () => {
+    writeEpisode(graphDir, 'epi-1', '2026-05-10', '## Next\n- [ ] [SHARED] First version\n');
+    writeEpisode(graphDir, 'epi-2', '2026-05-11', '## Next\n- [ ] [SHARED] Second version\n');
+    writeEpisode(graphDir, 'epi-3', '2026-05-12', '## Next\n- [done] [SHARED] Second version\n');
+    const items = await deriveBacklog(graphDir);
+    expect(items.map(i => i.slug)).toEqual(['SHARED']);
+  });
+
+  it('3e. legacy backlog reader strips explicit slug from item text', async () => {
+    writeEpisode(graphDir, 'epi-1', '2026-05-10', '## Next\n- [ ] [API_RETRY] Add retry logic\n');
+    const result = await getBacklog(graphDir, 'pending');
+    expect(result.items).toEqual([
+      { text: 'Add retry logic', episodeId: 'epi-1', marker: 'pending' },
+    ]);
+  });
+
   it('4. meta override: pin P0 moves item to top', async () => {
     writeEpisode(graphDir, 'epi-1', '2026-05-10', '## Next\n- [ ] [API_RETRY] Add retry logic\n- [ ] [BENCH] Establish benchmark\n');
     const meta: BacklogMeta = { version: 1, items: { API_RETRY: { priority: 'P0', pinned_by: 'human:test', pinned_at: '2026-05-13' } } };
@@ -113,6 +130,36 @@ describe('deriveBacklog — extracts pending items from episode bodies', () => {
     const reloaded = loadBacklogMeta(graphDir);
     expect(reloaded.items.FUTURE).toBeDefined();
     expect(reloaded.items.FUTURE.priority).toBe('P0');
+  });
+
+  it('5c. invalid meta priority falls back to P1 without crashing render', async () => {
+    writeEpisode(graphDir, 'epi-1', '2026-05-10', '## Next\n- [ ] [API_RETRY] Add retry logic\n');
+    fs.writeFileSync(path.join(graphDir, '_backlog.meta.yml'), 'version: 1\nitems:\n  API_RETRY:\n    priority: P9\n', 'utf-8');
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      await regenerateBacklog(graphDir);
+    } finally {
+      warn.mockRestore();
+    }
+    const md = fs.readFileSync(path.join(graphDir, '_backlog.md'), 'utf-8');
+    expect(md).toContain('## P1');
+    expect(md).toContain('API_RETRY');
+  });
+
+  it('5d. malformed episode frontmatter is skipped with a warning', async () => {
+    fs.writeFileSync(
+      path.join(graphDir, 'episodes', 'epi-bad.md'),
+      '---\nid: epi-bad\ntype: episode\nbad: [\n---\n## Next\n- [ ] [BAD] hidden\n',
+      'utf-8',
+    );
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const items = await deriveBacklog(graphDir);
+      expect(items).toEqual([]);
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('Skipped'));
+    } finally {
+      warn.mockRestore();
+    }
   });
 
   it('6. determinism: two consecutive regens produce byte-identical output', async () => {

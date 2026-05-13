@@ -320,7 +320,7 @@ describe('emdd-agent.md uniqueness invariant for Codex drift guard', () => {
       'Run the `context-loading` prompt (or `/emdd-open`).',
       'via `/emdd-close`',
       'Run the `episode-creation` prompt.',
-      'Run the `consolidation` prompt when triggers fire.',
+      'Run the `consolidation` prompt every close.',
       'Run the `health-review` prompt periodically',
     ];
     for (const s of searchStrings) {

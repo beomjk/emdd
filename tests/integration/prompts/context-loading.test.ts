@@ -218,4 +218,39 @@ describe('context-loading prompt — Gap Directive contract (§P-2)', () => {
     // Korean
     expect(text).toMatch(/건너뛰|수렴|먼저/);
   });
+
+  it('renders derived backlog priorities from _backlog.meta.yml', async () => {
+    const graphDir = makeEmptyGraph('cl-backlog');
+    const today = new Date().toISOString().slice(0, 10);
+    writeNode(graphDir, 'hypotheses', 'hyp-x', {
+      id: 'hyp-x',
+      type: 'hypothesis',
+      title: 'x',
+      status: 'SUPPORTED',
+      confidence: 0.9,
+      created: today,
+      updated: today,
+    });
+    writeNode(graphDir, 'episodes', 'epi-001', {
+      id: 'epi-001',
+      type: 'episode',
+      title: 'old',
+      status: 'COMPLETED',
+      created: '2026-05-10',
+      updated: '2026-05-10',
+    }, '## What\'s Next\n- [ ] [OLD] Older task\n');
+    writeNode(graphDir, 'episodes', 'epi-002', {
+      id: 'epi-002',
+      type: 'episode',
+      title: 'late',
+      status: 'COMPLETED',
+      created: '2026-05-12',
+      updated: '2026-05-12',
+    }, '## What\'s Next\n- [ ] [LATE] Pinned late task\n');
+    fs.writeFileSync(path.join(graphDir, '_backlog.meta.yml'), 'version: 1\nitems:\n  LATE:\n    priority: P0\n    pinned_at: 2026-05-13\n', 'utf-8');
+
+    const text = await getPrompt(client, graphDir);
+    expect(text).toContain('[P0] [LATE] Pinned late task');
+    expect(text.indexOf('[P0] [LATE]')).toBeLessThan(text.indexOf('[P1] [OLD]'));
+  });
 });

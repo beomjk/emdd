@@ -117,6 +117,8 @@ export const messages: Record<MessageKey, string> = {
   'gap.disconnected_cluster': '{count}개 단절된 클러스터, inter-cluster 에지 {edges}개만 존재',
   'gap.stale_in_progress': '{count}개 IN_PROGRESS 에피소드가 {days}일 이상 정체됨',
   'gap.soft_violations': '{count}개 에피소드에 soft append-only 위반 {threshold}건 이상 누적',
+  'gap.stale_in_progress_item': '정체된 IN_PROGRESS 에피소드: {id} (나이 > {days}일)',
+  'gap.soft_violation_item': '에피소드 {id}에 soft append-only 위반 {count}건 누적',
   'gap.trigger_days': '{days}일 이상',
   'gap.trigger_episodes': '{episodes}개 이상 에피소드',
   'gap.trigger_both': '{days}일 이상 및/또는 {episodes}개 이상 에피소드',

@@ -56,10 +56,12 @@ export async function getBacklog(graphDir: string, statusFilter?: string): Promi
     const body = parsed.content;
 
     for (const line of body.split('\n')) {
-      const match = line.match(CHECKLIST_RE);
+      const slugged = line.match(SLUG_PATTERN);
+      const match = slugged ?? line.match(CHECKLIST_RE);
       if (match) {
         const marker = parseMarker(match[1]);
-        items.push({ text: match[2].trim(), episodeId, marker });
+        const text = slugged ? slugged[3] : match[2];
+        items.push({ text: text.trim(), episodeId, marker });
       }
     }
   }
@@ -84,6 +86,11 @@ export async function getBacklog(graphDir: string, statusFilter?: string): Promi
 // and data-model.md §E-4.
 
 export type Priority = 'P0' | 'P1' | 'P2';
+const PRIORITIES = ['P0', 'P1', 'P2'] as const;
+
+function isPriority(value: unknown): value is Priority {
+  return typeof value === 'string' && (PRIORITIES as readonly string[]).includes(value);
+}
 
 export interface BacklogMetaItem {
   priority?: Priority;
@@ -202,13 +209,15 @@ async function loadEpisodes(graphDir: string): Promise<Array<{ id: string; date:
     let raw: string;
     try {
       raw = fs.readFileSync(file, 'utf-8');
-    } catch {
+    } catch (err) {
+      console.warn(`Skipped ${file}: ${err instanceof Error ? err.message : String(err)}`);
       continue;
     }
     let parsed: matter.GrayMatterFile<string>;
     try {
       parsed = matter(raw);
-    } catch {
+    } catch (err) {
+      console.warn(`Skipped ${file}: ${err instanceof Error ? err.message : String(err)}`);
       continue;
     }
     const id = String(parsed.data?.id ?? '');
@@ -239,28 +248,30 @@ export async function deriveBacklog(graphDir: string): Promise<DerivedBacklogIte
     isPending: boolean;
   }
 
-  // We'll track all observations grouped by their canonical slug-key.
-  // For collisions, the canonical key gets the first-seen entry; later entries get -2/-3.
-  const seenSlugs = new Set<string>();
-  const collisionCount = new Map<string, number>();
+  // Same slug+text is one logical item across episodes. Same slug with
+  // different text gets a deterministic suffix and must reuse it later.
+  const keyByIdentity = new Map<string, string>();
+  const slugUseCount = new Map<string, number>();
   const aggregates = new Map<string, Aggregate>();
 
   for (const ep of episodes) {
     const items = parseEpisodeChecklist(ep.content, ep.id, ep.date);
     for (const it of items) {
       const baseSlug = it.rawSlug ?? autoSlugify(it.text, it.episodeId, it.lineNumber);
-      let key = baseSlug;
-      if (seenSlugs.has(key) && !aggregates.has(`${baseSlug}::${it.episodeId}`)) {
-        // Disambiguate: same slug appearing in a different episode
-        const existing = aggregates.get(baseSlug);
-        if (existing && existing.text !== it.text) {
-          // Distinct item with same slug — suffix
-          const n = (collisionCount.get(baseSlug) ?? 1) + 1;
-          collisionCount.set(baseSlug, n);
+      const identity = `${baseSlug}\0${it.text}`;
+      let key = keyByIdentity.get(identity);
+      if (!key) {
+        key = baseSlug;
+        if (aggregates.has(key)) {
+          let n = (slugUseCount.get(baseSlug) ?? 1) + 1;
+          while (aggregates.has(`${baseSlug}-${n}`)) n++;
+          slugUseCount.set(baseSlug, n);
           key = `${baseSlug}-${n}`;
+        } else {
+          slugUseCount.set(baseSlug, 1);
         }
+        keyByIdentity.set(identity, key);
       }
-      seenSlugs.add(key);
 
       const existing = aggregates.get(key);
       if (!existing) {
@@ -322,7 +333,29 @@ export function loadBacklogMeta(graphDir: string): BacklogMeta {
     const raw = fs.readFileSync(file, 'utf-8');
     const parsed = yaml.load(raw) as BacklogMeta | null;
     if (!parsed || typeof parsed !== 'object') return { version: 1, items: {} };
-    return { version: 1, items: parsed.items ?? {} };
+    const rawItems = parsed.items && typeof parsed.items === 'object' && !Array.isArray(parsed.items)
+      ? parsed.items as Record<string, unknown>
+      : {};
+    const items: Record<string, BacklogMetaItem> = {};
+    for (const [slug, value] of Object.entries(rawItems)) {
+      if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        console.warn(`Warning: ignored invalid ${BACKLOG_META} entry for ${slug}`);
+        continue;
+      }
+      const rawItem = value as Record<string, unknown>;
+      const item: BacklogMetaItem = {};
+      if (rawItem.priority !== undefined) {
+        if (isPriority(rawItem.priority)) {
+          item.priority = rawItem.priority;
+        } else {
+          console.warn(`Warning: ignored invalid priority for ${slug}: ${String(rawItem.priority)}`);
+        }
+      }
+      if (typeof rawItem.pinned_by === 'string') item.pinned_by = rawItem.pinned_by;
+      if (typeof rawItem.pinned_at === 'string') item.pinned_at = rawItem.pinned_at;
+      items[slug] = item;
+    }
+    return { version: 1, items };
   } catch (err) {
     console.warn(`Warning: failed to parse ${BACKLOG_META}: ${err instanceof Error ? err.message : String(err)}`);
     return { version: 1, items: {} };
@@ -355,7 +388,7 @@ export function mergeWithMeta(
 
   const items: RenderedBacklogItem[] = derived.map(d => {
     const m = cleanedItems[d.slug];
-    const priority: Priority = (m?.priority as Priority | undefined) ?? 'P1';
+    const priority: Priority = m && isPriority(m.priority) ? m.priority : 'P1';
     return { ...d, priority };
   });
 

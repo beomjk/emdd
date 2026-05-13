@@ -2,7 +2,15 @@ import { z } from 'zod';
 import fs from 'node:fs';
 import path from 'node:path';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { getHealth, checkConsolidation, listNodes, getBacklog, detectTransitions } from '../../graph/operations.js';
+import {
+  checkConsolidation,
+  deriveBacklog,
+  detectTransitions,
+  getHealth,
+  listNodes,
+  loadBacklogMeta,
+  mergeWithMeta,
+} from '../../graph/operations.js';
 import { resolveGraphDir } from '../../graph/loader.js';
 import { getLocale, setLocale } from '../../i18n/index.js';
 import { nodeDate } from '../../graph/date-utils.js';
@@ -10,7 +18,7 @@ import { VALID_URGENCIES } from '../../graph/types.js';
 import { PROMPT_LIMITS } from './prompt-limits.js';
 import { PROMPT_META } from './meta.js';
 import type { HealthReport, CheckResult, Node } from '../../graph/types.js';
-import type { BacklogItem } from '../../graph/backlog.js';
+import type { Priority, RenderedBacklogItem } from '../../graph/backlog.js';
 import type { TransitionRecommendation } from '../../graph/transitions.js';
 
 // NOTE: Prompt text is intentionally NOT localized via t().
@@ -28,7 +36,7 @@ interface SessionData {
   nodes: Node[];
   consolidation: CheckResult;
   episodes: Node[];
-  backlogItems: BacklogItem[];
+  backlogItems: RenderedBacklogItem[];
   transitions: TransitionRecommendation[];
   openQuestions: Node[];
   inProgressEpisodes: Node[];
@@ -218,11 +226,19 @@ function buildOutcomeStreak(episodes: Node[]): string {
 Last ${outcomes.length} outcomes: ${outcomeStr}${annotation}`;
 }
 
-function buildBacklogDigest(items: BacklogItem[]): string {
+const PRIORITY_ORDER: Record<Priority, number> = { P0: 0, P1: 1, P2: 2 };
+
+function buildBacklogDigest(items: RenderedBacklogItem[]): string {
   if (items.length === 0) return '';
 
-  const shown = items.slice(0, PROMPT_LIMITS.backlogDigest);
-  const lines = shown.map(item => `- [ ] ${item.text} (from ${item.episodeId})`);
+  const sorted = [...items].sort((a, b) => {
+    const priorityDelta = PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
+    if (priorityDelta !== 0) return priorityDelta;
+    if (a.first_seen !== b.first_seen) return a.first_seen.localeCompare(b.first_seen);
+    return a.slug.localeCompare(b.slug);
+  });
+  const shown = sorted.slice(0, PROMPT_LIMITS.backlogDigest);
+  const lines = shown.map(item => `- [${item.priority}] [${item.slug}] ${item.text} (first ${item.first_seen_id}, last ${item.last_seen_id})`);
   const summary = items.length > PROMPT_LIMITS.backlogDigest
     ? `\n(showing ${PROMPT_LIMITS.backlogDigest} of ${items.length} pending items)`
     : '';
@@ -426,12 +442,13 @@ export function registerContextLoading(server: McpServer): void {
         if (health.totalNodes === 0) {
           text = buildFirstSessionGuide();
         } else {
-          const [nodes, consolidation, backlogResult, transitions] = await Promise.all([
+          const [nodes, consolidation, derivedBacklog, transitions] = await Promise.all([
             listNodes(graphDir),
             checkConsolidation(graphDir),
-            getBacklog(graphDir, 'pending'),
+            deriveBacklog(graphDir),
             detectTransitions(graphDir),
           ]);
+          const { items: backlogItems } = mergeWithMeta(derivedBacklog, loadBacklogMeta(graphDir));
 
           const episodes = nodes
             .filter(n => n.type === 'episode')
@@ -448,7 +465,7 @@ export function registerContextLoading(server: McpServer): void {
             nodes,
             consolidation,
             episodes,
-            backlogItems: backlogResult.items,
+            backlogItems,
             transitions,
             openQuestions,
             inProgressEpisodes,

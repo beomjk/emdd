@@ -1,6 +1,5 @@
 import { z } from 'zod';
-import { markConsolidated } from '../../graph/operations.js';
-import { regenerateBacklog } from '../../graph/backlog.js';
+import { markConsolidated, regenerateBacklog } from '../../graph/operations.js';
 import type { MarkConsolidatedResult } from '../../graph/types.js';
 import { t } from '../../i18n/index.js';
 import type { CommandDef } from '../types.js';

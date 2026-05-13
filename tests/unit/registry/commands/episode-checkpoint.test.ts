@@ -94,6 +94,26 @@ describe('episode-checkpoint command', () => {
     expect(violations.some(v => v.severity === 'soft' && v.detected_by === 'checkpoint_diff')).toBe(true);
   });
 
+  it('does not report drift for two legitimate consecutive checkpoints', async () => {
+    const file = writeEpisode(graphDir, 'epi-clean', 'IN_PROGRESS');
+    await call(graphDir, { episodeId: 'epi-clean', note: 'first' });
+    const result = await call(graphDir, { episodeId: 'epi-clean', note: 'second' }) as { warnings: string[] };
+    expect(result.warnings).toEqual([]);
+    const parsed = matter(fs.readFileSync(file, 'utf-8'));
+    expect(parsed.data.append_only_violations).toBeUndefined();
+  });
+
+  it('preserves existing checkpoint section formatting while appending', async () => {
+    const body = '## Checkpoints\n- 2026-05-01T00:00:00.000Z — first\n\n## Notes\nkeep me\n';
+    const file = writeEpisode(graphDir, 'epi-format', 'IN_PROGRESS', body, {
+      checkpoints: [{ timestamp: '2026-05-01T00:00:00.000Z', note: 'first' }],
+    });
+    await call(graphDir, { episodeId: 'epi-format', note: 'second' });
+    const raw = fs.readFileSync(file, 'utf-8');
+    expect(raw).toMatch(/first\n\n- \d{4}-\d{2}-\d{2}T[^\n]+ — second\n## Notes/);
+    expect(raw).toContain('keep me');
+  });
+
   it('records ISO8601 timestamp shape', async () => {
     writeEpisode(graphDir, 'epi-t', 'IN_PROGRESS');
     const result = await call(graphDir, { episodeId: 'epi-t', note: 'x' }) as { checkpointTimestamp: string };

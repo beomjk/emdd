@@ -43,6 +43,16 @@ describe('countEpisodesSince', () => {
     const graph = makeGraph([{ id: 'find-001', type: 'finding', created: '2026-05-01' }]);
     expect(countEpisodesSince(graph, new Date('2026-04-01'))).toBe(0);
   });
+
+  it('excludes IN_PROGRESS by default but can include it for health gap counts', () => {
+    const graph = makeGraph([
+      { id: 'epi-001', type: 'episode', created: '2026-04-10', status: 'IN_PROGRESS' },
+      { id: 'epi-002', type: 'episode', created: '2026-04-11', status: 'COMPLETED' },
+    ]);
+    const since = new Date('2026-04-05');
+    expect(countEpisodesSince(graph, since)).toBe(1);
+    expect(countEpisodesSince(graph, since, { includeInProgress: true })).toBe(2);
+  });
 });
 
 describe('resolveConsolidationAnchor', () => {

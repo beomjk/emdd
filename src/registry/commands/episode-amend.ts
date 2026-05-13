@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { amendEpisode, type AmendResult } from '../../graph/episode-amend.js';
+import { amendEpisode } from '../../graph/operations.js';
+import type { AmendResult } from '../../graph/episode-amend.js';
 import type { CommandDef } from '../types.js';
 
 const schema = z.object({

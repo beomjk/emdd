@@ -29,12 +29,24 @@ export interface CheckpointResult {
 
 const CHECKPOINTS_HEADING = '## Checkpoints';
 
-function extractCheckpointSection(body: string): { before: string; lines: string[]; after: string } | null {
+function extractCheckpointSection(body: string): {
+  before: string;
+  heading: string;
+  sectionBody: string;
+  lines: string[];
+  after: string;
+} | null {
   const headingIdx = body.indexOf(CHECKPOINTS_HEADING);
   if (headingIdx < 0) return null;
   const lineStart = body.indexOf('\n', headingIdx);
   if (lineStart < 0) {
-    return { before: body.slice(0, headingIdx), lines: [], after: '' };
+    return {
+      before: body.slice(0, headingIdx),
+      heading: body.slice(headingIdx),
+      sectionBody: '',
+      lines: [],
+      after: '',
+    };
   }
   const rest = body.slice(lineStart + 1);
   const nextHeadingMatch = rest.match(/^## /m);
@@ -45,6 +57,8 @@ function extractCheckpointSection(body: string): { before: string; lines: string
   const lines = sectionBody.split('\n').filter(l => l.trim().length > 0);
   return {
     before: body.slice(0, headingIdx),
+    heading: body.slice(headingIdx, lineStart + 1),
+    sectionBody,
     lines,
     after: body.slice(sectionEnd),
   };
@@ -116,8 +130,9 @@ export async function checkpointEpisode(
   const newLine = `- ${now} — ${note}`;
   let newBody: string;
   if (section) {
-    const newLines = [...section.lines, newLine].join('\n');
-    newBody = `${section.before}${CHECKPOINTS_HEADING}\n${newLines}${section.after.length > 0 ? `\n${section.after.replace(/^\n+/, '')}` : '\n'}`;
+    const existing = `${section.before}${section.heading}${section.sectionBody}`;
+    const separator = existing.endsWith('\n') ? '' : '\n';
+    newBody = `${existing}${separator}${newLine}\n${section.after}`;
   } else {
     const prefix = parsed.content.endsWith('\n') ? parsed.content : parsed.content + '\n';
     newBody = `${prefix}\n${CHECKPOINTS_HEADING}\n${newLine}\n`;

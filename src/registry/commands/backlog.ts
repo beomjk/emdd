@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { getBacklog } from '../../graph/operations.js';
-import { pinBacklogItem, detectGitUser, type BacklogResult } from '../../graph/backlog.js';
+import { pinBacklogItem, detectGitUser } from '../../graph/operations.js';
+import type { BacklogResult } from '../../graph/backlog.js';
 import { t } from '../../i18n/index.js';
 import type { CommandDef } from '../types.js';
 

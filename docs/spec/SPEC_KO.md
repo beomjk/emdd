@@ -644,9 +644,9 @@ Untested Hypotheses와 Blocking Questions는 이중 트리거 시스템을 사�
 3. 열린 Question 중 관련된 것을 확인한다
    → 탐구 도중 답을 발견할 수 있는 질문이 있는가?
 
-4. Consolidation 트리거 체크 (숫자만)
+4. Consolidation 깊이 힌트 체크 (숫자만)
    → Finding 미승격 수, Episode 축적 수를 확인
-   → 트리거 충족 시 "[Consolidation 권장]" 메시지 출력
+   → 세션 close 시 필요한 Consolidation 깊이를 보고
 ```
 
 AI 에이전트의 경우, 이 프로토콜은 **세션 시작 시 자동으로 실행**한다. 인간 연구자의 경우, 모닝 브리핑에서 수행한다.
@@ -848,7 +848,7 @@ Branch group이 CONVERGED나 MERGED로 전이되면 `_index.md`를 업데이트�
 13:00~17:00  [4시간] 딥 워크 블록 2
 17:00~17:30  [30분] 일일 리플렉션:
              ① Episode 작성 (오늘 한 루프 기록)
-             ② 정리 트리거 체크 (해당 시 Consolidation 실행)
+                  ② 정리 깊이 체크 (Consolidation은 매 close 실행, 트리거는 깊이 힌트)
              ③ AI와 내일 방향 탐색
 
 총 그래프 유지 오버헤드: ~45분/일 (전체의 ~10%)
@@ -894,7 +894,7 @@ Branch group이 CONVERGED나 MERGED로 전이되면 `_index.md`를 업데이트�
 ```
 세션 시작 (5분):
   1. 마지막 Episode의 "다음에 할 것" + 전제 읽기 노드 읽기
-  2. Consolidation 트리거 확인 (숫자만)
+  2. Consolidation 깊이 힌트 확인 (숫자만)
   3. 오늘의 방향 결정
 
 세션 작업:
@@ -902,7 +902,7 @@ Branch group이 CONVERGED나 MERGED로 전이되면 `_index.md`를 업데이트�
 
 세션 종료 (10분):
   1. Episode 작성 (골격: "시도한 것" + "다음에 할 것"은 필수)
-  2. Consolidation 트리거 충족 시 → 실행 또는 예약
+  2. Consolidation 실행, 트리거는 깊이 힌트로 사용
 ```
 
 **최소 요구사항:** 주 1회 이상 Episode 작성. 1주를 건너뛰면 다음 세션의 컨텍스트 로딩에 더 오래 걸린다 — Episode 체인이 끊어진다.
@@ -1021,7 +1021,7 @@ CONTESTED → REVISED     : 절충 — 수정된 가설
 연구가 진행되면 Finding은 빠르게 축적되지만, 그래프의 다른 레이어(Knowledge, Question, Hypothesis)는 정체된다. 이것은 자연스러운 현상이지만, 방치하면 그래프가 "발견의 무덤"이 된다 — 사실은 쌓여 있지만 구조화되지 않아 재사용 불가능한 상태. 정리 세러모니는 이 축적을 구조화한다.
 
 ```
-정리 트리거 (하나라도 해당되면 실행):
+정리 트리거 (실행 여부가 아니라 깊이를 결정하는 힌트):
   - Finding 노드가 마지막 정리 이후 5개 이상 추가됨
   - Episode 노드가 마지막 정리 이후 3개 이상 추가됨
   - 열린 Question이 0개임 (연구가 "끝났다"는 환각)
@@ -1042,7 +1042,7 @@ CONTESTED → REVISED     : 절충 — 수정된 가설
 **Health 대시보드와 Negative Decisions 동기화:** 건강도 점검에서 `not-pursued:` 태그를 수집할 때, 숫자뿐 아니라 항목 목록도 표시하여 과거 기각 사유를 빠르게 확인할 수 있게 한다. `_index.md`의 Negative Decisions 섹션과 동기화를 확인한다.
 
 **정리의 원칙:**
-- **정리는 선택이 아니라 의무다.** Episode나 Finding을 만들었으면 정리 트리거를 확인한다.
+- **정리는 선택이 아니라 의무다.** Episode나 Finding을 만들었으면 정리 패스를 실행하고 트리거를 깊이 힌트로 사용한다.
 - **정리 자체를 Episode로 기록하지 않는다.** 정리는 메타 활동이지 연구 활동이 아니다.
 - **정리 중 새 탐구를 시작하지 않는다.** 정리는 garden tending이다. 새 씨앗은 다음 세션에.
 
@@ -1765,7 +1765,7 @@ Zettelkasten을 만든 Niklas Luhmann은 자신의 카드 상자를 "대화 파�
 
 3. **Knowledge Status 전이 신설 (6.6)**: Knowledge의 `ACTIVE → DISPUTED → SUPERSEDED/RETRACTED` 상태 전이와 각 전이 시 수행 사항(confidence penalty, 클러스터 진입점 교체, 피벗 트리거 등)을 정의.
 
-4. **컨텍스트 로딩에 Consolidation 트리거 체크 추가 (6.9)**: 탐구 시작 전 프로토콜에 4번째 단계로 "Finding 미승격 수, Episode 축적 수 확인 → 트리거 충족 시 Consolidation 권장 메시지" 추가.
+4. **컨텍스트 로딩에 Consolidation 깊이 힌트 체크 추가 (6.9)**: 탐구 시작 전 프로토콜에 4번째 단계로 "Finding 미승격 수, Episode 축적 수 확인 → 세션 close 시 필요한 Consolidation 깊이 보고" 추가.
 
 5. **Episode 상태 마커 테이블화 (6.3)**: "다음에 할 것"의 상태 마커(`[ ]`, `[done]`, `[deferred]`, `[superseded]`)를 테이블로 정리하여 가독성 향상.
 

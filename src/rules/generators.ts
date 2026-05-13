@@ -124,8 +124,8 @@ function makeCompactRules(tool: Exclude<ToolType, 'all'> = 'claude'): string {
   // Codex cannot invoke MCP prompts (openai/codex#5059), so direct it to the
   // skills that wrap the equivalent MCP tools instead.
   const cycleLine = tool === 'codex'
-    ? 'Run the `emdd-open` skill at session start; run the `emdd-close` skill at session end (it writes the Episode, runs Consolidation if triggered, and reviews health).'
-    : 'Use MCP prompts in order: `context-loading` (start) → work → `episode-creation` (end) → `consolidation` (if triggered) → `health-review` (periodic).';
+    ? 'Run the `emdd-open` skill at session start; run the `emdd-close` skill at session end (it writes the Episode, runs Consolidation every close with triggers as depth hints, and reviews health).'
+    : 'Use MCP prompts in order: `context-loading` (start) → work → `episode-creation` (end) → `consolidation` (every close; triggers are depth hints) → `health-review` (periodic).';
 
   return `${EMDD_RULES_MARKER} — Evolving Mindmap-Driven Development (Compact)
 
@@ -327,8 +327,8 @@ function adaptAgentMarkdownForTool(content: string, tool: Exclude<ToolType, 'all
   );
   out = replaceOrThrow(
     out,
-    'Run the `consolidation` prompt when triggers fire.',
-    'Run the `emdd-close` skill (Consolidation step) when triggers fire.',
+    'Run the `consolidation` prompt every close.',
+    'Run the `emdd-close` skill (Consolidation step) every close.',
   );
   out = replaceOrThrow(
     out,
@@ -448,11 +448,11 @@ context manually by calling the equivalent MCP tools from the \`emdd\` server in
 1. Call the \`health\` tool — get totals, structural gaps, and average confidence.
 2. Call the \`list-nodes\` tool with \`type=episode\` — find recent episodes (sort by date desc, take top 5).
 3. Call the \`read-node\` tool on the most recent episode for prior session context.
-4. Call the \`check\` tool — see whether consolidation triggers are due (run \`emdd-close\` if so).
+4. Call the \`check\` tool — compute consolidation depth hints for the next close.
 5. Call the \`backlog\` tool with \`status=pending\` — list pending follow-ups.
 6. Call the \`status-transitions\` tool — list nodes ready for status changes.
 7. Call the \`list-nodes\` tool with \`type=question\` and \`status=OPEN\` — find blocking/high-urgency questions.
-8. Synthesize the results into session priorities (BLOCKING questions, overdue consolidation, transition-ready nodes, blocked streak) and pick one to start.
+8. Synthesize the results into session priorities (BLOCKING questions, consolidation depth, transition-ready nodes, blocked streak) and pick one to start.
 `,
     },
   },
@@ -466,11 +466,11 @@ End the EMDD session by running the closing prompts in sequence.
 ## Instructions
 
 1. Call the MCP prompt \`episode-creation\` — write an Episode node recording this session's work.
-2. Call the MCP prompt \`consolidation\` — check if consolidation triggers are met and execute if needed.
+2. Call the MCP prompt \`consolidation\` — run the maintenance pass every close; triggers are depth hints, not gates.
 3. Call the MCP prompt \`health-review\` — review graph health and note recommendations for next session.
 
 Each prompt requires no arguments (graphDir is auto-resolved).
-If the consolidation prompt reports that no triggers are met, note that consolidation is not needed and proceed to step 3.
+If the consolidation prompt reports no active triggers, run the lightweight pass and record that no deep consolidation was needed before step 3.
 `,
       codex: `# EMDD Session Close
 
@@ -482,9 +482,7 @@ session manually by calling the equivalent MCP tools from the \`emdd\` server in
 1. **Episode** — Call the \`create-node\` tool with \`type=episode\` to record this session.
    - Frontmatter: \`trigger\` (what initiated this session), \`outcome\` (\`success\` | \`partial\` | \`blocked\`), and \`links\` with \`relation: produces\` for each node created or updated this session.
    - Body must include "What I Tried" and "What's Next" (with prerequisite reading node IDs).
-2. **Consolidation check** — Call the \`check\` tool to review consolidation triggers.
-   - If any trigger is met, run consolidation now: promote established findings to knowledge, split bloated experiments, convert episode questions into Question nodes, update hypothesis confidence based on evidence, and add edges to orphan findings. Then call \`mark-consolidated\`.
-   - If no trigger is met, skip to the next step.
+2. **Consolidation** — Run the consolidation maintenance pass every close. Call the \`check\` tool for depth hints, then review promotion/splitting/question/confidence/orphan-edge work at the appropriate depth. Call \`mark-consolidated\` when the pass is complete.
 3. **Health review** — Call the \`health\` tool to surface structural gaps and confidence trends. Capture recommendations for the next session.
 `,
     },

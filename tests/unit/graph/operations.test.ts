@@ -839,6 +839,27 @@ describe('getHealth — structural gaps §6.8', () => {
     expect(gap!.triggerType).toBe('episodes');
   });
 
+  it('health episode trigger includes IN_PROGRESS episodes', async () => {
+    const recentDate = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'Test', status: 'PROPOSED',
+      confidence: 0.5, created: recentDate, updated: recentDate, tags: [], links: [],
+    });
+    const afterDate = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    for (let i = 1; i <= 3; i++) {
+      writeNode(tmpDir, 'episodes', `epi-00${i}-test.md`, {
+        id: `epi-00${i}`, type: 'episode', title: `Ep ${i}`, status: 'IN_PROGRESS',
+        created: afterDate, updated: afterDate, tags: [], links: [],
+      });
+    }
+    writeFileSync(join(tmpDir, '.emdd.yml'), 'gaps:\n  untested_episodes: 3\n  untested_days: 5\n');
+
+    const report = await getHealth(join(tmpDir, 'graph'));
+    const gap = report.gapDetails.find(g => g.type === 'untested_hypothesis');
+    expect(gap).toBeDefined();
+    expect(gap!.triggerType).toBe('episodes');
+  });
+
   it('detects untested_hypothesis via day trigger only (no episodes)', async () => {
     const oldDate = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
     writeNode(tmpDir, 'hypotheses', 'hyp-001-test.md', {
@@ -2202,6 +2223,31 @@ describe('updateNode — transition policy', () => {
     setupInvalidTransition();
     const result = await updateNode(join(tmpDir, 'graph'), 'hyp-001', { status: 'DEFERRED' }, { transitionPolicy: 'strict' });
     expect(result.updatedFields).toContain('status');
+  });
+
+  it('strict: enforces episode manual transition IN_PROGRESS→COMPLETED', async () => {
+    writeNode(tmpDir, 'episodes', 'epi-001-test.md', {
+      id: 'epi-001', type: 'episode', title: 'Test',
+      status: 'IN_PROGRESS',
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+
+    const result = await updateNode(join(tmpDir, 'graph'), 'epi-001', { status: 'COMPLETED' }, { transitionPolicy: 'strict' });
+    expect(result.updatedFields).toContain('status');
+  });
+
+  it('strict: rejects episode status changes outside manual lifecycle', async () => {
+    writeNode(tmpDir, 'episodes', 'epi-001-test.md', {
+      id: 'epi-001', type: 'episode', title: 'Test',
+      status: 'COMPLETED',
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    });
+
+    await expect(
+      updateNode(join(tmpDir, 'graph'), 'epi-001', { status: 'IN_PROGRESS' }, { transitionPolicy: 'strict' })
+    ).rejects.toThrow(/No valid transition|No transition rule|transition/i);
   });
 
   // ── node types without transition rules ──

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import matter from 'gray-matter';
 
@@ -267,6 +267,22 @@ describe('command execute() wiring — write commands', () => {
       date: '2026-03-01',
     });
     expect(result.date).toBe('2026-03-01');
+  });
+
+  it('mark-consolidated regenerates _backlog.md as a close side effect', async () => {
+    writeNode(tmpDir, 'episodes', 'epi-001-test.md', {
+      id: 'epi-001', type: 'episode', title: 'Test Episode',
+      status: 'COMPLETED',
+      created: '2026-01-01', updated: '2026-01-01',
+      tags: [], links: [],
+    }, '## What\'s Next\n\n- [ ] [FOLLOWUP] follow up\n');
+
+    const result = await markConsolidatedDef.execute({
+      graphDir,
+      date: '2026-03-01',
+    });
+    expect(result.backlog).toMatchObject({ totalItems: 1, written: true });
+    expect(readFileSync(join(graphDir, '_backlog.md'), 'utf-8')).toContain('FOLLOWUP');
   });
 
   it('index-graph generates index file', async () => {

@@ -2,17 +2,21 @@ import { EDGE } from './types.js';
 import type { Graph } from './types.js';
 import type { EmddConfig } from './config.js';
 
-/** Count closed (non-IN_PROGRESS) episodes in the graph created after `sinceDate`.
+/** Count episodes in the graph created after `sinceDate`.
  *
  * FR-018a: IN_PROGRESS episodes do not count toward `episodes_threshold`
  * — only sessions that explicitly closed contribute to the depth signal.
  * Legacy `ACTIVE` episodes (default before 010-ceremony-rhythm) still count
  * as closed sessions, so pre-existing graphs are not silently demoted.
  */
-export function countEpisodesSince(graph: Graph, sinceDate: Date): number {
+export function countEpisodesSince(
+  graph: Graph,
+  sinceDate: Date,
+  options: { includeInProgress?: boolean } = {},
+): number {
   let count = 0;
   for (const node of graph.nodes.values()) {
-    if (node.type === 'episode' && node.status !== 'IN_PROGRESS') {
+    if (node.type === 'episode' && (options.includeInProgress || node.status !== 'IN_PROGRESS')) {
       const created = node.meta.created ? new Date(String(node.meta.created)) : null;
       if (created && created > sinceDate) count++;
     }

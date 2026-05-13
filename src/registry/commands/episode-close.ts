@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { closeEpisode, type EpisodeCloseResult } from '../../graph/episode-close.js';
+import { closeEpisode } from '../../graph/operations.js';
+import type { EpisodeCloseResult } from '../../graph/episode-close.js';
 import type { CommandDef } from '../types.js';
 
 const schema = z.object({

@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { checkpointEpisode, type CheckpointResult } from '../../graph/episode-checkpoint.js';
+import { checkpointEpisode } from '../../graph/operations.js';
+import type { CheckpointResult } from '../../graph/episode-checkpoint.js';
 import type { CommandDef } from '../types.js';
 
 const schema = z.object({

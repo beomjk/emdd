@@ -30,7 +30,7 @@
 13:00-17:00  [4 hours] Deep Work Block 2
 17:00-17:30  [30 min] Daily Reflection:
              1. Write Episode (record today's loop)
-             2. Consolidation trigger check (run Consolidation if triggered)
+             2. Consolidation depth check (run Consolidation every close; triggers guide depth)
              3. Explore tomorrow's direction with AI
 
 Total graph maintenance overhead: ~45 min/day (~10% of total)
@@ -78,7 +78,7 @@ Not all research happens in 8-hour blocks. For researchers working part-time, in
 ```
 Session Start (5 min):
   1. Read the last Episode's "What's Next" + prerequisite reading nodes
-  2. Check Consolidation trigger (numbers only)
+  2. Check Consolidation depth hints (numbers only)
   3. Decide today's direction
 
 Session Work:
@@ -86,7 +86,7 @@ Session Work:
 
 Session End (10 min):
   1. Write Episode (skeleton: "What Was Tried" + "What's Next" are mandatory)
-  2. If Consolidation trigger met -> run it or schedule it
+  2. Run Consolidation; use triggers as depth hints
 ```
 
 **Minimum requirement:** At least one Episode per week. If you skip a week, the next session's context loading takes longer — the Episode chain breaks.
@@ -203,7 +203,7 @@ CONTESTED -> REVISED     : compromise — revised hypothesis
 As research progresses, Findings accumulate rapidly while the other graph layers (Knowledge, Questions, Hypotheses) stagnate. This is natural, but left unaddressed, the graph becomes a "Finding cemetery" — facts pile up but are unstructured and unreusable. The Consolidation Ceremony structures this accumulation.
 
 ```
-Consolidation triggers (run if any apply):
+Consolidation triggers (depth hints, not execution gates):
   - 5 or more Finding nodes added since last Consolidation
   - 3 or more Episode nodes added since last Consolidation
   - 0 open Questions (the illusion that research is "done")
@@ -223,7 +223,7 @@ Consolidation triggers (run if any apply):
 **Health dashboard and Negative Decisions sync:** When collecting `not-pursued:` tags during the health check, display the item list (not just the count) so past rejection reasons can be reviewed quickly. Verify synchronization with the Negative Decisions section in `_index.md`.
 
 **Consolidation principles:**
-- **Consolidation is an obligation, not optional.** After creating Episodes or Findings, check the Consolidation trigger.
+- **Consolidation is an obligation, not optional.** After creating Episodes or Findings, run the Consolidation pass and use triggers as depth hints.
 - **Do not record Consolidation itself as an Episode.** Consolidation is a meta-activity, not research.
 - **Do not start new exploration during Consolidation.** Consolidation is garden tending. Plant new seeds in the next session.
 

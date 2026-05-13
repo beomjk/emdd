@@ -291,10 +291,10 @@ The four prompts form a recurring session cycle:
 
 1. **`context-loading`** — Run at session start to load graph state and identify next steps.
 2. **`episode-creation`** — Run at session end to record what happened and plan next steps.
-3. **`consolidation`** — Run when triggers are met to promote findings and maintain the graph.
+3. **`consolidation`** — Run every session close to promote findings and maintain the graph; triggers indicate depth, not whether to run.
 4. **`health-review`** — Run periodically for a full health dashboard with recommendations.
 
-Steps 1-2 happen every session. Steps 3-4 are triggered by graph state or run on a weekly cadence.
+Steps 1-3 happen every session cycle. Step 4 is periodic or explicit.
 
 Prompts are available in tools that support MCP prompts (e.g., Claude Code). Codex does not yet expose MCP prompts ([openai/codex#5059](https://github.com/openai/codex/issues/5059)); the generated Codex skills (`emdd-open`, `emdd-close`) walk the equivalent MCP tools instead and produce the same outcome.
 

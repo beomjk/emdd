@@ -115,6 +115,8 @@ export const messages = {
   'gap.disconnected_cluster': '{count} disconnected clusters with only {edges} inter-cluster edge(s)',
   'gap.stale_in_progress': '{count} IN_PROGRESS episode(s) stale for {days}+ days',
   'gap.soft_violations': '{count} episode(s) with {threshold}+ soft append-only violations',
+  'gap.stale_in_progress_item': 'stale in-progress episode: {id} (age > {days}d)',
+  'gap.soft_violation_item': 'episode {id} has {count} soft append-only violations',
   'gap.trigger_days': '{days}+ days',
   'gap.trigger_episodes': '{episodes}+ episodes',
   'gap.trigger_both': '{days}+ days and/or {episodes}+ episodes',

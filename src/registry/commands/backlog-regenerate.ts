@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { regenerateBacklog, type RegenerateBacklogResult } from '../../graph/backlog.js';
+import { regenerateBacklog } from '../../graph/operations.js';
+import type { RegenerateBacklogResult } from '../../graph/backlog.js';
 import type { CommandDef } from '../types.js';
 
 const schema = z.object({});

@@ -87,6 +87,13 @@ describe('renderTemplate', () => {
     const output = renderTemplate('episode', 'test', { locale: 'en' });
     expect(output).toContain('- [ ]');
   });
+
+  it('episode template uses mandatory session-memory sections', () => {
+    const output = renderTemplate('episode', 'test', { locale: 'en' });
+    expect(output).toContain('## What I Tried');
+    expect(output).toContain('## What\'s Next');
+    expect(output).toContain('Prerequisite reading:');
+  });
 });
 
 describe('type-specific template fields', () => {

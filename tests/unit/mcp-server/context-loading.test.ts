@@ -5,14 +5,16 @@ vi.mock('../../../src/graph/operations.js', () => ({
   getHealth: vi.fn(),
   listNodes: vi.fn(),
   checkConsolidation: vi.fn(),
-  getBacklog: vi.fn(),
+  deriveBacklog: vi.fn(),
+  loadBacklogMeta: vi.fn(),
+  mergeWithMeta: vi.fn(),
   detectTransitions: vi.fn(),
 }));
 
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
-import { getHealth, listNodes, checkConsolidation, getBacklog, detectTransitions } from '../../../src/graph/operations.js';
+import { getHealth, listNodes, checkConsolidation, deriveBacklog, loadBacklogMeta, mergeWithMeta, detectTransitions } from '../../../src/graph/operations.js';
 import { registerContextLoading } from '../../../src/mcp-server/prompts/context-loading.js';
 import type { HealthReport } from '../../../src/graph/types.js';
 
@@ -94,6 +96,21 @@ function makeQuestionNode(id: string, urgency: string, title: string) {
   };
 }
 
+function makeBacklogItem(slug: string, text: string, episodeId = 'epi-001') {
+  return {
+    slug,
+    text,
+    source_episode_id: episodeId,
+    first_seen: '2026-03-01',
+    first_seen_id: episodeId,
+    last_seen: '2026-03-01',
+    last_seen_id: episodeId,
+    deferred_count: 0,
+    prerequisite_reading: [],
+    priority: 'P1',
+  };
+}
+
 /** Set up default mocks for non-empty graph scenario */
 function setupDefaultMocks() {
   (getHealth as Mock).mockResolvedValue(makeHealth());
@@ -101,7 +118,9 @@ function setupDefaultMocks() {
     { id: 'hyp-001', title: 'Test Hyp', type: 'hypothesis', status: 'PROPOSED', created: '2026-03-01', updated: '2026-03-01', tags: [], links: [], meta: {} },
   ]);
   (checkConsolidation as Mock).mockResolvedValue({ triggers: [], promotionCandidates: [], orphanFindings: [], deferredItems: [] });
-  (getBacklog as Mock).mockResolvedValue({ items: [] });
+  (deriveBacklog as Mock).mockResolvedValue([]);
+  (loadBacklogMeta as Mock).mockReturnValue({ version: 1, items: {} });
+  (mergeWithMeta as Mock).mockImplementation((items) => ({ items, cleanedMeta: { version: 1, items: {} } }));
   (detectTransitions as Mock).mockResolvedValue([]);
 }
 
@@ -177,11 +196,11 @@ describe('context-loading prompt (unit)', () => {
     expect(checkConsolidation).not.toHaveBeenCalled();
   });
 
-  it('calls listNodes, checkConsolidation, getBacklog, and detectTransitions for non-empty graph', async () => {
+  it('calls listNodes, checkConsolidation, deriveBacklog, and detectTransitions for non-empty graph', async () => {
     setupDefaultMocks();
     (listNodes as Mock).mockClear();
     (checkConsolidation as Mock).mockClear();
-    (getBacklog as Mock).mockClear();
+    (deriveBacklog as Mock).mockClear();
     (detectTransitions as Mock).mockClear();
 
     await client.getPrompt({
@@ -191,7 +210,7 @@ describe('context-loading prompt (unit)', () => {
 
     expect(listNodes).toHaveBeenCalledOnce();
     expect(checkConsolidation).toHaveBeenCalledOnce();
-    expect(getBacklog).toHaveBeenCalledOnce();
+    expect(deriveBacklog).toHaveBeenCalledOnce();
     expect(detectTransitions).toHaveBeenCalledOnce();
   });
 
@@ -213,7 +232,7 @@ describe('context-loading prompt (unit)', () => {
         }),
       ]);
       (checkConsolidation as Mock).mockResolvedValue({ triggers: [], promotionCandidates: [], orphanFindings: [], deferredItems: [] });
-      (getBacklog as Mock).mockResolvedValue({ items: [] });
+      (deriveBacklog as Mock).mockResolvedValue([]);
       (detectTransitions as Mock).mockResolvedValue([]);
 
       const result = await client.getPrompt({ name: 'context-loading', arguments: { graphDir: '/any' } });
@@ -232,7 +251,7 @@ describe('context-loading prompt (unit)', () => {
         { id: 'hyp-001', title: 'Hyp', type: 'hypothesis', status: 'PROPOSED', created: '2026-03-01', updated: '2026-03-01', tags: [], links: [], meta: {} },
       ]);
       (checkConsolidation as Mock).mockResolvedValue({ triggers: [], promotionCandidates: [], orphanFindings: [], deferredItems: [] });
-      (getBacklog as Mock).mockResolvedValue({ items: [] });
+      (deriveBacklog as Mock).mockResolvedValue([]);
       (detectTransitions as Mock).mockResolvedValue([]);
 
       const result = await client.getPrompt({ name: 'context-loading', arguments: { graphDir: '/any' } });
@@ -253,7 +272,7 @@ describe('context-loading prompt (unit)', () => {
         makeEpisodeNode('epi-001', { created: '2026-03-16', updated: '2026-03-16', meta: { outcome: 'success' } }),
       ]);
       (checkConsolidation as Mock).mockResolvedValue({ triggers: [], promotionCandidates: [], orphanFindings: [], deferredItems: [] });
-      (getBacklog as Mock).mockResolvedValue({ items: [] });
+      (deriveBacklog as Mock).mockResolvedValue([]);
       (detectTransitions as Mock).mockResolvedValue([]);
 
       const result = await client.getPrompt({ name: 'context-loading', arguments: { graphDir: '/any' } });
@@ -268,12 +287,10 @@ describe('context-loading prompt (unit)', () => {
   describe('Backlog Digest', () => {
     it('shows pending backlog items', async () => {
       setupDefaultMocks();
-      (getBacklog as Mock).mockResolvedValue({
-        items: [
-          { text: 'Run baseline experiment', episodeId: 'epi-001', marker: 'pending' },
-          { text: 'Compare with baseline', episodeId: 'epi-003', marker: 'pending' },
-        ],
-      });
+      (deriveBacklog as Mock).mockResolvedValue([
+        makeBacklogItem('BASELINE', 'Run baseline experiment', 'epi-001'),
+        makeBacklogItem('COMPARE', 'Compare with baseline', 'epi-003'),
+      ]);
 
       const result = await client.getPrompt({ name: 'context-loading', arguments: { graphDir: '/any' } });
       const text = getPromptText(result);
@@ -286,7 +303,7 @@ describe('context-loading prompt (unit)', () => {
 
     it('omits backlog section when no pending items', async () => {
       setupDefaultMocks();
-      (getBacklog as Mock).mockResolvedValue({ items: [] });
+      (deriveBacklog as Mock).mockResolvedValue([]);
 
       const result = await client.getPrompt({ name: 'context-loading', arguments: { graphDir: '/any' } });
       const text = getPromptText(result);
@@ -334,7 +351,7 @@ describe('context-loading prompt (unit)', () => {
         makeQuestionNode('qst-002', 'BLOCKING', 'Can we handle multi-GPU?'),
       ]);
       (checkConsolidation as Mock).mockResolvedValue({ triggers: [], promotionCandidates: [], orphanFindings: [], deferredItems: [] });
-      (getBacklog as Mock).mockResolvedValue({ items: [] });
+      (deriveBacklog as Mock).mockResolvedValue([]);
       (detectTransitions as Mock).mockResolvedValue([]);
 
       const result = await client.getPrompt({ name: 'context-loading', arguments: { graphDir: '/any' } });
@@ -370,7 +387,7 @@ describe('context-loading prompt (unit)', () => {
         makeEpisodeNode('epi-002', { created: '2026-03-18', updated: '2026-03-18', meta: { outcome: 'partial' } }),
       ]);
       (checkConsolidation as Mock).mockResolvedValue({ triggers: [], promotionCandidates: [], orphanFindings: [], deferredItems: [] });
-      (getBacklog as Mock).mockResolvedValue({ items: [] });
+      (deriveBacklog as Mock).mockResolvedValue([]);
       (detectTransitions as Mock).mockResolvedValue([]);
 
       const result = await client.getPrompt({ name: 'context-loading', arguments: { graphDir: '/any' } });
@@ -405,7 +422,7 @@ describe('context-loading prompt (unit)', () => {
         makeQuestionNode('qst-001', 'BLOCKING', 'Critical question'),
       ]);
       (checkConsolidation as Mock).mockResolvedValue({ triggers: [], promotionCandidates: [], orphanFindings: [], deferredItems: [] });
-      (getBacklog as Mock).mockResolvedValue({ items: [] });
+      (deriveBacklog as Mock).mockResolvedValue([]);
       (detectTransitions as Mock).mockResolvedValue([]);
 
       const result = await client.getPrompt({ name: 'context-loading', arguments: { graphDir: '/any' } });
@@ -428,13 +445,11 @@ describe('context-loading prompt (unit)', () => {
 
     it('adaptive instructions mention pending backlog', async () => {
       setupDefaultMocks();
-      (getBacklog as Mock).mockResolvedValue({
-        items: [
-          { text: 'Run experiment', episodeId: 'epi-001', marker: 'pending' },
-          { text: 'Write findings', episodeId: 'epi-002', marker: 'pending' },
-          { text: 'Review hypothesis', episodeId: 'epi-003', marker: 'pending' },
-        ],
-      });
+      (deriveBacklog as Mock).mockResolvedValue([
+        makeBacklogItem('RUN', 'Run experiment', 'epi-001'),
+        makeBacklogItem('WRITE', 'Write findings', 'epi-002'),
+        makeBacklogItem('REVIEW', 'Review hypothesis', 'epi-003'),
+      ]);
 
       const result = await client.getPrompt({ name: 'context-loading', arguments: { graphDir: '/any' } });
       const text = getPromptText(result);
@@ -449,7 +464,7 @@ describe('context-loading prompt (unit)', () => {
         makeEpisodeNode('epi-001', { created: '2026-03-16', updated: '2026-03-16', meta: { outcome: 'blocked' } }),
       ]);
       (checkConsolidation as Mock).mockResolvedValue({ triggers: [], promotionCandidates: [], orphanFindings: [], deferredItems: [] });
-      (getBacklog as Mock).mockResolvedValue({ items: [] });
+      (deriveBacklog as Mock).mockResolvedValue([]);
       (detectTransitions as Mock).mockResolvedValue([]);
 
       const result = await client.getPrompt({ name: 'context-loading', arguments: { graphDir: '/any' } });
@@ -473,7 +488,7 @@ describe('context-loading prompt (unit)', () => {
         makeEpisodeNode('epi-003', { created: '2026-03-20', updated: '2026-03-20', meta: { outcome: 'success' } }),
       ]);
       (checkConsolidation as Mock).mockResolvedValue({ triggers: [], promotionCandidates: [], orphanFindings: [], deferredItems: [] });
-      (getBacklog as Mock).mockResolvedValue({ items: [] });
+      (deriveBacklog as Mock).mockResolvedValue([]);
       (detectTransitions as Mock).mockResolvedValue([]);
 
       const result = await client.getPrompt({ name: 'context-loading', arguments: { graphDir: '/any' } });
@@ -490,7 +505,7 @@ describe('context-loading prompt (unit)', () => {
       (getHealth as Mock).mockRejectedValue(new Error('disk read failed'));
       (listNodes as Mock).mockResolvedValue([]);
       (checkConsolidation as Mock).mockResolvedValue({ triggers: [], promotionCandidates: [], orphanFindings: [], deferredItems: [] });
-      (getBacklog as Mock).mockResolvedValue({ items: [] });
+      (deriveBacklog as Mock).mockResolvedValue([]);
       (detectTransitions as Mock).mockResolvedValue([]);
 
       const result = await client.getPrompt({ name: 'context-loading', arguments: { graphDir: '/any' } });
@@ -517,7 +532,7 @@ describe('context-loading prompt (unit)', () => {
       });
       (listNodes as Mock).mockResolvedValue(episodes);
       (checkConsolidation as Mock).mockResolvedValue({ triggers: [], promotionCandidates: [], orphanFindings: [], deferredItems: [] });
-      (getBacklog as Mock).mockResolvedValue({ items: [] });
+      (deriveBacklog as Mock).mockResolvedValue([]);
       (detectTransitions as Mock).mockResolvedValue([]);
 
       const result = await client.getPrompt({ name: 'context-loading', arguments: { graphDir: '/any' } });

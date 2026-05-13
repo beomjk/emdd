@@ -26,7 +26,7 @@ const BODY_TEMPLATES: Record<string, Record<NodeType, string>> = {
     knowledge: '## Content\n\n\n\n## Source\n\n',
     question: '## Question\n\n\n\n## Context\n\n',
     decision: '## Decision\n\n\n\n## Rationale\n\n## Alternatives\n\n',
-    episode: '## Goals\n\n- [ ] \n\n## Notes\n\n',
+    episode: '## What I Tried\n\n\n\n## What\'s Next\n\n- [ ] \n  - Prerequisite reading: \n\n',
   },
   ko: {
     hypothesis: '## 가설\n\n\n\n## 근거\n\n',
@@ -35,7 +35,7 @@ const BODY_TEMPLATES: Record<string, Record<NodeType, string>> = {
     knowledge: '## 내용\n\n\n\n## 출처\n\n',
     question: '## 질문\n\n\n\n## 맥락\n\n',
     decision: '## 결정\n\n\n\n## 근거\n\n## 대안\n\n',
-    episode: '## 목표\n\n- [ ] \n\n## 메모\n\n',
+    episode: '## 시도한 것\n\n\n\n## 다음에 할 것\n\n- [ ] \n  - Prerequisite reading: \n\n',
   },
 };
 

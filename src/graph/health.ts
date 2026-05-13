@@ -98,7 +98,7 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
       if (updated) {
         const daysElapsed = Math.floor((now.getTime() - updated.getTime()) / (1000 * 60 * 60 * 24));
         const daysMet = daysElapsed >= config.gaps.untested_days;
-        const episodesMet = countEpisodesSince(graph, updated) >= config.gaps.untested_episodes;
+        const episodesMet = countEpisodesSince(graph, updated, { includeInProgress: true }) >= config.gaps.untested_episodes;
         if (daysMet || episodesMet) {
           untestedIds.push(node.id);
           if (daysMet) untestedAnyDays = true;
@@ -130,7 +130,7 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
       if (updated) {
         const daysElapsed = Math.floor((now.getTime() - updated.getTime()) / (1000 * 60 * 60 * 24));
         const daysMet = daysElapsed >= config.gaps.blocking_days;
-        const episodesMet = countEpisodesSince(graph, updated) >= config.gaps.blocking_episodes;
+        const episodesMet = countEpisodesSince(graph, updated, { includeInProgress: true }) >= config.gaps.blocking_episodes;
         if (daysMet || episodesMet) {
           blockingIds.push(node.id);
           if (daysMet) blockingAnyDays = true;
@@ -252,7 +252,7 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
       : [];
     const softCount = violations.filter(v => v?.severity === 'soft').length;
     if (softCount >= SOFT_VIOLATION_THRESHOLD) {
-      gaps.push(`episode ${node.id} has ${softCount} soft append-only violations`);
+      gaps.push(t('gap.soft_violation_item', { id: node.id, count: String(softCount) }));
       softViolationIds.push(node.id);
     }
 
@@ -262,7 +262,7 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
       if (updated) {
         const daysElapsed = Math.floor((now.getTime() - updated.getTime()) / (1000 * 60 * 60 * 24));
         if (daysElapsed > STALE_DAYS) {
-          gaps.push(`stale in-progress episode: ${node.id} (age > ${STALE_DAYS}d)`);
+          gaps.push(t('gap.stale_in_progress_item', { id: node.id, days: String(STALE_DAYS) }));
           staleInProgressIds.push(node.id);
         }
       }

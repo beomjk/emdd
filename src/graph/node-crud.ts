@@ -154,9 +154,9 @@ export async function updateNode(
 
       // Transition policy enforcement
       if (value !== node.status && policy !== 'off' && node.status) {
-        const transitionRules = TRANSITION_TABLE[node.type];
-        if (transitionRules) {
-          const manualRules = MANUAL_TRANSITIONS[node.type];
+        const transitionRules = TRANSITION_TABLE[node.type] ?? [];
+        const manualRules = MANUAL_TRANSITIONS[node.type];
+        if (transitionRules.length > 0 || (manualRules?.length ?? 0) > 0) {
           const result = engine.validate(node as NodeWithStatus, graph, transitionRules, value, manualRules);
           if (!result.valid) {
             // Determine violation type: no rule exists vs conditions unmet
@@ -186,7 +186,7 @@ export async function updateNode(
             }
           }
         }
-        // Node types without transition rules (decision, episode) → enum-only, no rejection
+        // Node types without transition model (e.g. decision) → enum-only, no rejection
       }
 
       data[key] = value;

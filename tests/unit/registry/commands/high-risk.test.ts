@@ -58,6 +58,22 @@ describe('create-node command', () => {
     expect(res.id).toMatch(/^hyp-/);
   });
 
+  it('execute creates an IN_PROGRESS episode when --status is provided', async () => {
+    const res = await createNodeDef.execute({ type: 'episode', slug: 'long-run', status: 'IN_PROGRESS', graphDir } as never);
+    expect(res.type).toBe('episode');
+    const raw = readFileSync(res.path, 'utf-8');
+    const parsed = matter(raw);
+    expect(parsed.data.status).toBe('IN_PROGRESS');
+    expect(raw).toContain('## What I Tried');
+    expect(raw).toContain('## What\'s Next');
+  });
+
+  it('execute rejects --status for non-episode nodes', async () => {
+    await expect(
+      createNodeDef.execute({ type: 'hypothesis', slug: 'bad-status', status: 'IN_PROGRESS', graphDir } as never)
+    ).rejects.toThrow(/--status is only valid/);
+  });
+
   it('format renders creation message', async () => {
     const res = await createNodeDef.execute({ type: 'finding', slug: 'f', graphDir } as never);
     const out = createNodeDef.format!(res, { graphDir } as never);
