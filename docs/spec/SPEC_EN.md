@@ -130,7 +130,7 @@ The AI agent is a **gardener** of the graph, not an architect:
 | knowledge | knw | knowledge | 4 |
 | question | qst | questions | 4 |
 | decision | dec | decisions | 5 |
-| episode | epi | episodes | 2 |
+| episode | epi | episodes | 3 |
 <!-- /AUTO:node-types -->
 
 <!-- AUTO:statuses -->
@@ -143,7 +143,7 @@ The AI agent is a **gardener** of the graph, not an architect:
 | knowledge | ACTIVE, DISPUTED, SUPERSEDED, RETRACTED |
 | question | OPEN, RESOLVED, ANSWERED, DEFERRED |
 | decision | PROPOSED, ACCEPTED, SUPERSEDED, REVERTED, CONTESTED |
-| episode | ACTIVE, COMPLETED |
+| episode | IN_PROGRESS, ACTIVE, COMPLETED |
 <!-- /AUTO:statuses -->
 
 | Type | Color | Meaning | Key Attributes |
@@ -415,6 +415,11 @@ During Consolidation, if 3 or more `[deferred]` items have accumulated, conduct 
 
 <!-- AUTO:manual-transitions -->
 <!-- Generated via @beomjk/state-engine — DO NOT EDIT -->
+**episode**
+| From | To |
+|------|----|
+| IN_PROGRESS | COMPLETED |
+
 **hypothesis**
 | From | To |
 |------|----|
@@ -849,6 +854,23 @@ When a branch group transitions to CONVERGED or MERGED, update `_index.md` to re
 - **Structural gap detection (section 6.8):** The "Untested Hypotheses" gap type applies to each candidate individually. A branch group where all candidates are PROPOSED for 5+ days should surface in the gap report.
 - **Consolidation (section 7.4):** Branch group candidates count toward the Finding/Episode accumulation triggers like any other node. During Consolidation, review branch group health alongside the standard 5 steps.
 - **Pivot Ceremony (section 7.4):** If an entire branch group is ABANDONED, this counts as evidence toward a Pivot Ceremony trigger ("all paths BLOCKED").
+
+---
+
+### 6.9 Ceremony Rhythm Table
+
+Each ceremony is classified by *when* it runs (`rhythm`) and *what* triggers it. `PER_SESSION` ceremonies always run inside the session cycle; `CONDITIONAL` ceremonies require an open precondition; `PERIODIC` ceremonies run on a separate cadence.
+
+<!-- AUTO:ceremony-rhythm -->
+<!-- Generated from schema.config.ts — DO NOT EDIT -->
+| Ceremony | Rhythm | Trigger / Threshold | Execution Point |
+|----------|--------|---------------------|-----------------|
+| consolidation | PER_SESSION | unpromoted_findings_threshold≥5, episodes_threshold≥3, all_questions_resolved, experiment_overload_threshold≥5 | /emdd-close |
+| context-loading | PER_SESSION | — | /emdd-open |
+| episode-creation | PER_SESSION | — | /emdd-close |
+| health-review | PERIODIC | interval_days≥7 | manual_or_scheduler |
+| gap-acknowledgment | CONDITIONAL | has_open_gaps | first_converge_after_open |
+<!-- /AUTO:ceremony-rhythm -->
 
 ---
 

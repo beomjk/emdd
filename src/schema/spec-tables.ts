@@ -17,6 +17,7 @@ import {
   impactThreshold,
   maxCascadeDepth,
   reverseDirectionEdges,
+  ceremonies,
   type NodeTypeName,
 } from './schema.config.js';
 import { ALL_PRESET_FNS } from './preset-names.js';
@@ -49,6 +50,7 @@ const GENERATORS: Record<string, () => string> = {
   'impact-edge-classification': generateImpactEdgeClassificationTable,
   'impact-attribute-modifiers': generateImpactAttributeModifiersTable,
   'impact-config': generateImpactConfigTable,
+  'ceremony-rhythm': generateCeremonyRhythmTable,
 };
 
 function generateNodeTypesTable(): string {
@@ -164,6 +166,34 @@ function generateImpactAttributeModifiersTable(): string {
   for (const [attr, values] of Object.entries(attributeModifiers)) {
     const parts = Object.entries(values).map(([k, v]) => `${k} (${v})`).join(', ');
     lines.push(`| **${attr}** | ${parts} | |`);
+  }
+  return lines.join('\n');
+}
+
+function generateCeremonyRhythmTable(): string {
+  // Stable ordering: schema.config.ts declaration order
+  const entries = Object.entries(ceremonies);
+  const lines = [
+    '<!-- Generated from schema.config.ts — DO NOT EDIT -->',
+    '| Ceremony | Rhythm | Trigger / Threshold | Execution Point |',
+    '|----------|--------|---------------------|-----------------|',
+  ];
+  for (const [name, def] of entries) {
+    const displayName = name.replace(/_/g, '-');
+    const rhythm = def.rhythm;
+    const triggerKeys = Object.keys(def.triggers);
+    let triggerDesc: string;
+    if (triggerKeys.length === 0) {
+      triggerDesc = '—';
+    } else {
+      triggerDesc = triggerKeys
+        .map(k => {
+          const v = (def.triggers as Record<string, number | boolean>)[k];
+          return typeof v === 'boolean' ? k : `${k}≥${v}`;
+        })
+        .join(', ');
+    }
+    lines.push(`| ${displayName} | ${rhythm} | ${triggerDesc} | ${def.execution_point} |`);
   }
   return lines.join('\n');
 }

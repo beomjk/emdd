@@ -47,8 +47,8 @@ describe('NODE_TYPES', () => {
   });
 
   // @spec §6.2.8
-  it('episode has 2 statuses', () => {
-    expect(VALID_STATUSES.episode).toEqual(['ACTIVE', 'COMPLETED']);
+  it('episode has 3 statuses', () => {
+    expect(VALID_STATUSES.episode).toEqual(['IN_PROGRESS', 'ACTIVE', 'COMPLETED']);
   });
 
   it('every type has NODE_TYPE_DIRS entry', () => {

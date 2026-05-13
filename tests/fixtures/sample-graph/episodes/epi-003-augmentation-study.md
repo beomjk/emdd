@@ -2,7 +2,7 @@
 id: epi-003
 type: episode
 title: "Augmentation Strategy Study"
-status: ACTIVE
+status: COMPLETED
 created: 2026-02-22
 updated: 2026-02-22
 tags: [augmentation]

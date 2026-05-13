@@ -288,6 +288,18 @@ export const CEREMONY_TRIGGERS = Object.fromEntries(
   }
 } satisfies Record<string, Record<string, number | boolean>>;
 
+// ── Ceremonies (full superset incl. rhythm/execution_point) ──────────
+
+export type { CeremonyRhythm } from '../schema/schema.config.js';
+
+export const CEREMONIES = ceremonies;
+
+export const CEREMONY_RHYTHMS = Object.fromEntries(
+  Object.entries(ceremonies).map(([key, val]) => [key, val.rhythm])
+) as {
+  readonly [K in keyof typeof ceremonies]: (typeof ceremonies)[K]['rhythm']
+};
+
 // ── Impact Analysis Constants ───────────────────────────────────────
 
 export type PropagationClass = keyof typeof impactClassification;

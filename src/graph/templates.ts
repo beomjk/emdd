@@ -51,17 +51,21 @@ const CONFIDENCE_TYPES: Partial<Record<NodeType, number>> = {
 export function renderTemplate(
   type: NodeType,
   slug: string,
-  options?: { locale?: Locale; user?: string; id?: string; title?: string; body?: string },
+  options?: { locale?: Locale; user?: string; id?: string; title?: string; body?: string; status?: string },
 ): string {
   const locale = options?.locale ?? 'en';
   const today = new Date().toISOString().slice(0, 10);
-  const defaultStatus = VALID_STATUSES[type][0];
+  // Episode statuses now include IN_PROGRESS (first); but the default for
+  // `emdd new episode <slug>` remains COMPLETED for backward compat —
+  // multi-session experiments must opt in with `--status IN_PROGRESS`.
+  const defaultStatus = type === 'episode' ? 'COMPLETED' : VALID_STATUSES[type][0];
+  const status = options?.status ?? defaultStatus;
 
   // Build frontmatter data
   const data: Record<string, unknown> = {
     type,
     title: options?.title ?? slug,
-    status: defaultStatus,
+    status,
     created: today,
     updated: today,
     tags: [],

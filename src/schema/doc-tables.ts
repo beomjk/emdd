@@ -203,11 +203,15 @@ function generateMcpToolTable(): string {
 }
 
 function generateMcpPromptTable(): string {
-  const rows = PROMPT_META.map(p => `| \`${p.name}\` | ${promptParams(p)} | ${p.description} |`);
+  const rows = PROMPT_META.map(p => {
+    const rhythm = p.rhythm ?? '—';
+    const executionPoint = p.execution_point ?? '—';
+    return `| \`${p.name}\` | ${promptParams(p)} | ${rhythm} | ${executionPoint} | ${p.description} |`;
+  });
   const lines = [
     '<!-- Generated from command registry — DO NOT EDIT -->',
-    '| Prompt | Parameters | Description |',
-    '|--------|-----------|-------------|',
+    '| Prompt | Parameters | Rhythm | Execution Point | Description |',
+    '|--------|-----------|--------|-----------------|-------------|',
     ...rows,
   ];
   return lines.join('\n');

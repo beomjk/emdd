@@ -238,6 +238,33 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
   // Deferred items (OPERATIONS.md §7.4: display not-pursued items in health report)
   const deferredItems = collectDeferredIds(graph);
 
+  // IN_PROGRESS episode warnings (010-ceremony-rhythm)
+  const STALE_DAYS = 7;
+  const SOFT_VIOLATION_THRESHOLD = 3;
+  for (const node of graph.nodes.values()) {
+    if (node.type !== 'episode') continue;
+
+    // Soft append-only violations ≥ 3
+    const violations = Array.isArray(node.meta.append_only_violations)
+      ? (node.meta.append_only_violations as Array<{ severity?: string }>)
+      : [];
+    const softCount = violations.filter(v => v?.severity === 'soft').length;
+    if (softCount >= SOFT_VIOLATION_THRESHOLD) {
+      gaps.push(`episode ${node.id} has ${softCount} soft append-only violations`);
+    }
+
+    // Stale IN_PROGRESS episode (> 7 days since updated)
+    if (node.status === 'IN_PROGRESS') {
+      const updated = nodeDate(node);
+      if (updated) {
+        const daysElapsed = Math.floor((now.getTime() - updated.getTime()) / (1000 * 60 * 60 * 24));
+        if (daysElapsed > STALE_DAYS) {
+          gaps.push(`stale in-progress episode: ${node.id} (age > ${STALE_DAYS}d)`);
+        }
+      }
+    }
+  }
+
   // Edge attribute affinity violations
   const affinityViolations: string[] = [];
   for (const node of graph.nodes.values()) {

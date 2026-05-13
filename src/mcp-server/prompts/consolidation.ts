@@ -13,6 +13,12 @@ import { PROMPT_META } from './meta.js';
 // setLocale() is called so downstream operations respect the user's locale.
 const meta = PROMPT_META.find(p => p.name === 'consolidation')!;
 
+function depthLabel(triggerCount: number): 'shallow' | 'normal' | 'deep' {
+  if (triggerCount === 0) return 'shallow';
+  if (triggerCount === 1) return 'normal';
+  return 'deep';
+}
+
 export function registerConsolidation(server: McpServer): void {
   server.prompt(
     meta.name,
@@ -33,26 +39,34 @@ export function registerConsolidation(server: McpServer): void {
           deltaNodes = await listNodes(graphDir, { since: sinceDate });
         }
 
-        const triggersSection = checkResult.triggers.length > 0
-          ? checkResult.triggers.map(t => `  - [TRIGGERED] ${t.message}`).join('\n')
-          : '  No triggers active — consolidation is optional but you may still run it proactively.';
+        // ── Depth Hint (replaces Current Trigger Status) ────────────
+        const triggerCount = checkResult.triggers.length;
+        const label = depthLabel(triggerCount);
+        let depthLine: string;
+        if (triggerCount === 0) {
+          depthLine = `- depth: ${label} — no trigger thresholds reached.`;
+        } else if (triggerCount === 1) {
+          const t = checkResult.triggers[0];
+          depthLine = `- depth: ${label} — ${t.type} reached${t.count !== undefined ? ` (${t.count})` : ''}`;
+        } else {
+          const names = checkResult.triggers.map(t => t.type).sort().join(', ');
+          depthLine = `- depth: ${label} — ${triggerCount} triggers active (${names})`;
+        }
 
-        // Promotion Candidates table
+        // ── Step content with fallback labels (FR-007) ─────────────
         const promotionSection = checkResult.promotionCandidates.length > 0
           ? `### Promotion Candidates\n| Finding | Confidence | Supports | Reason |\n|---------|-----------|----------|--------|\n${checkResult.promotionCandidates.map(c => `| ${c.id} | ${c.confidence.toFixed(2)} | ${c.supports} | ${c.reason} |`).join('\n')}`
           : '### Promotion Candidates\nNo findings currently meet promotion criteria.';
 
-        // Orphan Findings list
         const orphanSection = checkResult.orphanFindings.length > 0
           ? `### Orphan Findings (no forward edges)\n${checkResult.orphanFindings.map(id => `- ${id}`).join('\n')}`
-          : '';
+          : '### Orphan Findings\nno orphans — all findings have outgoing edges.';
 
-        // Deferred Items list
         const deferredSection = checkResult.deferredItems.length > 0
           ? `### Deferred Items\n${checkResult.deferredItems.map(id => `- ${id}`).join('\n')}`
           : '';
 
-        // Delta Since Last Consolidation
+        // ── Delta Since Last Consolidation (informational only, FR-024) ──
         let deltaSection: string;
         if (sinceDate) {
           const typeCounts = new Map<string, number>();
@@ -67,8 +81,11 @@ export function registerConsolidation(server: McpServer): void {
 
         const text = `# EMDD Consolidation Guide
 
-## Current Trigger Status
-${triggersSection}
+> **Rhythm**: PER_SESSION — this ceremony runs at every \`/emdd-close\` regardless of trigger state.
+> Triggers below are *depth hints*, not execution gates.
+
+## Depth Hint
+${depthLine}
 
 ## Graph State
 - Total nodes: ${health.totalNodes}
@@ -77,12 +94,6 @@ ${triggersSection}
 - Average confidence: ${health.avgConfidence !== null ? health.avgConfidence.toFixed(2) : 'N/A'}
 
 ${deltaSection}
-
-## Consolidation Triggers (run if any apply)
-- ${ct.unpromoted_findings_threshold} or more Finding nodes added since last Consolidation
-- ${ct.episodes_threshold} or more Episode nodes added since last Consolidation
-- 0 open Questions (the illusion that research is "done")
-- An Experiment has become a catch-all with ${ct.experiment_overload_threshold}+ Findings attached
 
 ## Step-by-Step Consolidation Procedure
 
@@ -100,23 +111,27 @@ ${promotionSection}
 Review Experiments with many attached Findings (${ct.experiment_overload_threshold}+):
 - Split bloated Experiments into focused sub-experiments.
 - Reassign Findings to the appropriate sub-experiment.
+- If no candidates apply: no candidates — proceed to Step 3.
 
 ### Step 3: Question Generation
 Review Episode "Questions That Arose" sections:
 - Convert unrecorded questions into Question nodes using \`create-node\` (type: question).
 - Link new Questions to their source Episodes with \`spawns\`.
+- If no candidates apply: no candidates — proceed to Step 4.
 
 ### Step 4: Hypothesis Update
 Review all active Hypotheses:
 - Update confidence values based on new Finding evidence.
 - Create new Hypotheses if patterns suggest unexplored directions.
 - Check kill criteria — mark REFUTED if a kill criterion is met.
+- If no candidates apply: no candidates — proceed to Step 5.
 
 ### Step 5: Orphan Cleanup
 Find Findings without outgoing links:
 - Add \`supports\`, \`contradicts\`, or \`spawns\` edges as appropriate.
 - Every Finding should connect to at least one Hypothesis or Question.
-${orphanSection ? '\n' + orphanSection : ''}
+
+${orphanSection}
 
 ### Step 6: Record Consolidation
 Mark this consolidation as complete so future checks only count new episodes:
@@ -124,9 +139,21 @@ Mark this consolidation as complete so future checks only count new episodes:
 ${deferredSection ? '\n' + deferredSection : ''}
 
 ## Consolidation Principles
-- Consolidation is an obligation, not optional — check triggers after creating Episodes or Findings.
+- Consolidation is PER_SESSION — it runs every session-close regardless of trigger state.
 - Do not record Consolidation itself as an Episode — it is a meta-activity.
-- Do not start new exploration during Consolidation — this is garden tending, not planting.`;
+- Do not start new exploration during Consolidation — this is garden tending, not planting.
+
+## Recording Skipped Steps
+If the user explicitly requests skipping any Consolidation step (e.g., "Skip Step 2", "step 3은 건너뛰자"),
+the skip is permitted but MUST be recorded. You MUST append a \`## Skipped Consolidation Steps\` heading
+to the current session's episode body (created by the \`episode-creation\` prompt) with one bullet per skip:
+
+\`\`\`markdown
+## Skipped Consolidation Steps
+- Step <N>: <user-provided reason>
+\`\`\`
+
+Every skip MUST be recorded — silent omissions are forbidden. If the user does not state a reason, ask once before recording.`;
 
         return {
           messages: [{ role: 'user' as const, content: { type: 'text' as const, text } }],

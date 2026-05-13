@@ -29,7 +29,10 @@ export async function checkConsolidation(graphDir: string): Promise<CheckResult>
         findings.push(id);
         break;
       case 'episode':
-        episodes.push(id);
+        // FR-018a: episodes_threshold counts COMPLETED only (IN_PROGRESS excluded).
+        if (node.status === 'COMPLETED') {
+          episodes.push(id);
+        }
         break;
       case 'experiment':
         experiments.push(id);

@@ -14,6 +14,9 @@ import { deleteEdgeDef } from './commands/delete-edge.js';
 import { updateNodeDef } from './commands/update-node.js';
 import { markDoneDef } from './commands/mark-done.js';
 import { indexGraphDef } from './commands/index-graph.js';
+import { episodeCheckpointDef } from './commands/episode-checkpoint.js';
+import { episodeCloseDef } from './commands/episode-close.js';
+import { episodeAmendDef } from './commands/episode-amend.js';
 
 // Analysis commands
 import { healthDef } from './commands/health.js';
@@ -25,6 +28,7 @@ import { killCheckDef } from './commands/kill-check.js';
 import { branchGroupsDef } from './commands/branch-groups.js';
 import { lintDef } from './commands/lint.js';
 import { backlogDef } from './commands/backlog.js';
+import { backlogRegenerateDef } from './commands/backlog-regenerate.js';
 import { analyzeRefutationDef } from './commands/analyze-refutation.js';
 import { markConsolidatedDef } from './commands/mark-consolidated.js';
 import { impactDef } from './commands/impact.js';
@@ -47,6 +51,11 @@ export function createDefaultRegistry(): CommandRegistry {
   registry.register(markDoneDef);
   registry.register(indexGraphDef);
 
+  // Episode lifecycle (010-ceremony-rhythm)
+  registry.register(episodeCheckpointDef);
+  registry.register(episodeCloseDef);
+  registry.register(episodeAmendDef);
+
   // Analysis commands
   registry.register(healthDef);
   registry.register(checkDef);
@@ -57,6 +66,7 @@ export function createDefaultRegistry(): CommandRegistry {
   registry.register(branchGroupsDef);
   registry.register(lintDef);
   registry.register(backlogDef);
+  registry.register(backlogRegenerateDef);
   registry.register(analyzeRefutationDef);
   registry.register(markConsolidatedDef);
   registry.register(impactDef);

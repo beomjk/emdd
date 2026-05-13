@@ -130,7 +130,10 @@ export const decisionEntity = define.entity({
 
 export const episodeEntity = define.entity({
   name: 'episode',
-  statuses: ['ACTIVE', 'COMPLETED'] as const,
+  statuses: ['IN_PROGRESS', 'ACTIVE', 'COMPLETED'] as const,
+  manualTransitions: [
+    { from: 'IN_PROGRESS', to: 'COMPLETED' },
+  ],
 });
 
 export const experimentEntity = define.entity({
@@ -241,7 +244,7 @@ export const edgeCategories = {
 export const statusCategories = {
   positive: ['SUPPORTED', 'VALIDATED', 'ACCEPTED', 'ACTIVE', 'ANSWERED', 'COMPLETED', 'PROMOTED'] as const,
   negative: ['REFUTED', 'RETRACTED', 'REVERTED', 'FAILED', 'ABANDONED'] as const,
-  in_progress: ['TESTING', 'RUNNING', 'CONTESTED', 'DISPUTED'] as const,
+  in_progress: ['TESTING', 'RUNNING', 'CONTESTED', 'DISPUTED', 'IN_PROGRESS'] as const,
   terminal: ['DEFERRED', 'SUPERSEDED', 'REVISED', 'RESOLVED'] as const,
   initial: ['PROPOSED', 'DRAFT', 'OPEN', 'PLANNED'] as const,
 } as const;
@@ -281,14 +284,43 @@ export const transitionPolicy = {
 
 // ── Ceremonies ──────────────────────────────────────────────────────
 
+export type CeremonyRhythm = 'PER_SESSION' | 'CONDITIONAL' | 'PERIODIC';
+
 export const ceremonies = {
   consolidation: {
+    rhythm: 'PER_SESSION' as CeremonyRhythm,
+    execution_point: '/emdd-close',
     triggers: {
       unpromoted_findings_threshold: 5,
       episodes_threshold: 3,
       all_questions_resolved: true,
       experiment_overload_threshold: 5,
     },
+    trigger_role: 'depth_hint' as const,
+  },
+  context_loading: {
+    rhythm: 'PER_SESSION' as CeremonyRhythm,
+    execution_point: '/emdd-open',
+    triggers: {},
+    trigger_role: 'none' as const,
+  },
+  episode_creation: {
+    rhythm: 'PER_SESSION' as CeremonyRhythm,
+    execution_point: '/emdd-close',
+    triggers: {},
+    trigger_role: 'none' as const,
+  },
+  health_review: {
+    rhythm: 'PERIODIC' as CeremonyRhythm,
+    execution_point: 'manual_or_scheduler',
+    triggers: { interval_days: 7 },
+    trigger_role: 'schedule' as const,
+  },
+  gap_acknowledgment: {
+    rhythm: 'CONDITIONAL' as CeremonyRhythm,
+    execution_point: 'first_converge_after_open',
+    triggers: { has_open_gaps: true },
+    trigger_role: 'prompt_guard' as const,
   },
 } as const;
 

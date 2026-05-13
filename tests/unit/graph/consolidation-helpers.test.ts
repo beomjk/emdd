@@ -3,14 +3,17 @@ import { countEpisodesSince, resolveConsolidationAnchor } from '../../../src/gra
 import type { Graph } from '../../../src/graph/types.js';
 import type { EmddConfig } from '../../../src/graph/config.js';
 
-function makeGraph(nodes: Array<{ id: string; type: string; created?: string; links?: { target: string; relation: string }[] }>): Graph {
+function makeGraph(nodes: Array<{ id: string; type: string; created?: string; status?: string; links?: { target: string; relation: string }[] }>): Graph {
   const map = new Map<string, import('../../../src/graph/types.js').Node>();
   for (const n of nodes) {
+    // Episodes default to COMPLETED so they participate in countEpisodesSince
+    // (FR-018a: only COMPLETED episodes contribute). Non-episode nodes keep ACTIVE.
+    const defaultStatus = n.type === 'episode' ? 'COMPLETED' : 'ACTIVE';
     map.set(n.id, {
       id: n.id,
       type: n.type as import('../../../src/graph/types.js').NodeType,
       title: n.id,
-      status: 'ACTIVE',
+      status: n.status ?? defaultStatus,
       path: `/tmp/${n.id}.md`,
       links: n.links ?? [],
       tags: [],

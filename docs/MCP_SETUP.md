@@ -8,7 +8,7 @@ The EMDD MCP server exposes the knowledge graph to any MCP-compatible AI coding 
 
 <!-- AUTO:mcp-tool-count -->
 <!-- Generated from command registry — DO NOT EDIT -->
-- **23 tools** for reading, creating, updating, and analyzing graph nodes and edges
+- **27 tools** for reading, creating, updating, and analyzing graph nodes and edges
 - **4 prompts** for guided workflows (context loading, episode creation, consolidation, health review)
 <!-- /AUTO:mcp-tool-count -->
 
@@ -222,12 +222,15 @@ All tools accept a `graphDir` parameter — the path to your EMDD `graph/` direc
 | `read-nodes` | Read multiple nodes in a single operation (batch) | `graphDir`, `nodeIds` |
 | `graph-neighbors` | List neighbor nodes within BFS depth | `graphDir`, `nodeId`, `depth?` |
 | `graph-gaps` | Show structural gaps in the graph | `graphDir` |
-| `create-node` | Create a new node | `graphDir`, `type`, `slug`, `title?`, `body?`, `lang?` |
+| `create-node` | Create a new node | `graphDir`, `type`, `slug`, `title?`, `body?`, `lang?`, `status?` |
 | `create-edge` | Create an edge between two nodes | `graphDir`, `source`, `target`, `relation`, `strength?`, `severity?`, `completeness?`, `dependencyType?`, `impact?`, `force?` |
 | `delete-edge` | Remove a link between nodes | `graphDir`, `source`, `target`, `relation?` |
 | `update-node` | Update frontmatter fields on a node | `graphDir`, `nodeId`, `set`, `transitionPolicy?` |
 | `mark-done` | Mark a checklist item as done in an episode | `graphDir`, `episodeId`, `item`, `marker?` |
 | `index-graph` | Generate the _index.md file | `graphDir` |
+| `episode-checkpoint` | Append a progress note to an IN_PROGRESS episode | `graphDir`, `episodeId`, `note` |
+| `episode-close` | Transition an IN_PROGRESS episode to COMPLETED | `graphDir`, `episodeId` |
+| `episode-amend` | Record a justified append-only violation on an episode | `graphDir`, `episodeId`, `reason` |
 | `health` | Show health dashboard | `graphDir`, `all?` |
 | `check` | Check consolidation readiness | `graphDir` |
 | `promote` | Show promotion candidates | `graphDir` |
@@ -236,9 +239,10 @@ All tools accept a `graphDir` parameter — the path to your EMDD `graph/` direc
 | `kill-check` | Check kill criteria alerts | `graphDir` |
 | `branch-groups` | List hypothesis branch groups | `graphDir` |
 | `lint` | Lint the graph for schema errors | `graphDir` |
-| `backlog` | Show project backlog (open items, deferred, checklists) | `graphDir`, `status?` |
+| `backlog` | Show project backlog or pin an item priority | `graphDir`, `status?`, `pin?`, `priority?` |
+| `backlog-regenerate` | Regenerate graph/_backlog.md from episode bodies + _backlog.meta.yml | `graphDir` |
 | `analyze-refutation` | Analyze refutation patterns in the graph | `graphDir` |
-| `mark-consolidated` | Record a consolidation date to reset episode counting | `graphDir`, `date?` |
+| `mark-consolidated` | Record a consolidation date and regenerate _backlog.md | `graphDir`, `date?` |
 | `impact-analysis` | Analyze cascade impact from a node state change | `graphDir`, `nodeId`, `whatIf?` |
 <!-- /AUTO:mcp-tool-table -->
 
@@ -273,12 +277,12 @@ All tools accept a `graphDir` parameter — the path to your EMDD `graph/` direc
 
 <!-- AUTO:mcp-prompt-table -->
 <!-- Generated from command registry — DO NOT EDIT -->
-| Prompt | Parameters | Description |
-|--------|-----------|-------------|
-| `context-loading` | `graphDir?`, `lang?` | [Cycle 1/4 · Session Start] Load EMDD graph context — provides a summary of nodes, edges, health, and structural gaps |
-| `episode-creation` | `graphDir?`, `lang?` | [Cycle 2/4 · Session End] Step-by-step guide for writing an EMDD Episode node — includes frontmatter template, mandatory sections, and linking instructions |
-| `consolidation` | `graphDir?`, `lang?` | [Cycle 3/4 · Maintenance] Consolidation execution guide — checks triggers and provides a step-by-step procedure for promoting findings, generating questions, and updating hypotheses |
-| `health-review` | `graphDir?`, `lang?` | [Cycle 4/4 · Review] Full health dashboard with actionable recommendations — analyzes node distribution, structural gaps, and link density |
+| Prompt | Parameters | Rhythm | Execution Point | Description |
+|--------|-----------|--------|-----------------|-------------|
+| `context-loading` | `graphDir?`, `lang?` | PER_SESSION | /emdd-open | [Cycle 1/4 · Session Start] Load EMDD graph context — provides a summary of nodes, edges, health, and structural gaps |
+| `episode-creation` | `graphDir?`, `lang?` | PER_SESSION | /emdd-close | [Cycle 2/4 · Session End] Step-by-step guide for writing an EMDD Episode node — includes frontmatter template, mandatory sections, and linking instructions |
+| `consolidation` | `graphDir?`, `lang?` | PER_SESSION | /emdd-close | [Cycle 3/4 · Maintenance] Consolidation execution guide — checks triggers and provides a step-by-step procedure for promoting findings, generating questions, and updating hypotheses |
+| `health-review` | `graphDir?`, `lang?` | PERIODIC | manual_or_scheduler | [Cycle 4/4 · Review] Full health dashboard with actionable recommendations — analyzes node distribution, structural gaps, and link density |
 <!-- /AUTO:mcp-prompt-table -->
 
 ### Session Cycle

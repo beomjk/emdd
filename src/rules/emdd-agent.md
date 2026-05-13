@@ -72,6 +72,10 @@ Every session follows this prompt cycle:
 - `update-node` — Update frontmatter fields on a node
 - `mark-done` — Mark a checklist item as done in an episode
 - `index-graph` — Generate the _index.md file
+- `episode-checkpoint` — Append a progress note to an IN_PROGRESS episode
+- `episode-close` — Transition an IN_PROGRESS episode to COMPLETED
+- `episode-amend` — Record a justified append-only violation on an episode
+- `backlog-regenerate` — Regenerate graph/_backlog.md from episode bodies + _backlog.meta.yml
 
 **Analysis operations:**
 - `graph-gaps` — Show structural gaps in the graph
@@ -83,9 +87,9 @@ Every session follows this prompt cycle:
 - `kill-check` — Check kill criteria alerts
 - `branch-groups` — List hypothesis branch groups
 - `lint` — Lint the graph for schema errors
-- `backlog` — Show project backlog (open items, deferred, checklists)
+- `backlog` — Show project backlog or pin an item priority
 - `analyze-refutation` — Analyze refutation patterns in the graph
-- `mark-consolidated` — Record a consolidation date to reset episode counting
+- `mark-consolidated` — Record a consolidation date and regenerate _backlog.md
 - `impact-analysis` — Analyze cascade impact from a node state change
 
 **Prompts:**

@@ -239,7 +239,7 @@ describe('Edge category sets', () => {
 describe('Status category sets', () => {
   it('IN_PROGRESS_STATUSES contains correct members', () => {
     expect([...IN_PROGRESS_STATUSES].sort()).toEqual(
-      ['CONTESTED', 'DISPUTED', 'RUNNING', 'TESTING'].sort(),
+      ['CONTESTED', 'DISPUTED', 'IN_PROGRESS', 'RUNNING', 'TESTING'].sort(),
     );
   });
 

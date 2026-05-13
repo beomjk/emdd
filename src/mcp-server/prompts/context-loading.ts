@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import fs from 'node:fs';
+import path from 'node:path';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { getHealth, checkConsolidation, listNodes, getBacklog, detectTransitions } from '../../graph/operations.js';
 import { resolveGraphDir } from '../../graph/loader.js';
@@ -29,6 +31,8 @@ interface SessionData {
   backlogItems: BacklogItem[];
   transitions: TransitionRecommendation[];
   openQuestions: Node[];
+  inProgressEpisodes: Node[];
+  graphDir: string;
 }
 
 function buildFirstSessionGuide(): string {
@@ -85,6 +89,60 @@ the Episode curates the context for your next session.
 }
 
 // ── Section Builders ────────────────────────────────────────────────
+
+const GAP_TYPE_LABELS: Record<string, string> = {
+  untested_hypothesis: 'untested hypothesis',
+  blocking_question: 'blocking question',
+  orphan_finding: 'orphan finding',
+  stale_knowledge: 'stale knowledge',
+  disconnected_cluster: 'disconnected cluster',
+};
+
+function buildGapDirective(health: HealthReport): string {
+  const details = health.gapDetails;
+  if (!details || details.length === 0) {
+    return `## Gap Directive
+No structural gaps — divergent exploration recommended.`;
+  }
+
+  const bullets = details.map(d => {
+    const label = GAP_TYPE_LABELS[d.type] ?? d.type;
+    const ids = d.nodeIds.join(', ');
+    return `- ${label} (${d.nodeIds.length}): ${ids}`;
+  }).join('\n');
+
+  return `## Gap Directive
+
+⚠️ This graph has open structural gaps. **Address at least one before converging on new spec work.**
+
+${bullets}
+
+### Acknowledgment protocol
+
+If the user requests convergent work (e.g., "implement <spec>", "add <feature>")
+while gaps are open, **YOU MUST**:
+
+1. Restate the open gaps above.
+2. Ask: "Do you want to address a gap first, or proceed with convergent work and defer the gaps?"
+3. Wait for the user's explicit acknowledgment.
+4. If the user defers, proceed once and do NOT request acknowledgment again this session.
+
+Acknowledgment is tracked by **AI in-context memory only** for this feature —
+remember within the conversation that the user already deferred. No persistent
+storage (e.g., \`.emdd.yml\` \`session_state\`) is used in this feature; that is
+deferred to a future RFC.
+
+#### Response classification (AI guidance)
+
+Classify the user's acknowledgment response into one of two outcomes; if neither
+matches, ask once more rather than guessing:
+
+| Response intent | Example phrases (en/ko) | Outcome |
+|-----------------|--------------------------|---------|
+| **Defer gaps, proceed with convergent** | "proceed", "go ahead", "skip", "defer", "건너뛰", "수렴 진행", "그냥 진행" | Mark deferred-in-context; do NOT ask again this session. |
+| **Address a gap first** | "address gap", "let's tackle <id>", "gap 먼저", "먼저 처리", pointing to a specific gap id | Switch to gap-driven mode for that gap. |
+| Anything else (vague / off-topic) | "maybe", "later", "음...", silence | Re-ask once with the same protocol; do NOT proceed silently. |`;
+}
 
 function buildGraphOverview(health: HealthReport): string {
   const typeBreakdown = Object.entries(health.byType)
@@ -200,6 +258,44 @@ function buildOpenQuestions(questions: Node[]): string {
 ${lines.join('\n')}`;
 }
 
+function findLatestHandoff(graphDir: string, episodeId: string): string | null {
+  // graphDir often ends in '/graph'; handoffs/ lives next to graph/ at the project root.
+  const repoRoot = path.dirname(graphDir);
+  const handoffDir = path.join(repoRoot, 'handoffs');
+  if (!fs.existsSync(handoffDir)) return null;
+  const prefix = `episode-${episodeId}-`;
+  let files: string[];
+  try {
+    files = fs.readdirSync(handoffDir).filter(f => f.startsWith(prefix) && f.endsWith('.md'));
+  } catch {
+    return null;
+  }
+  if (files.length === 0) return null;
+  files.sort(); // YYMMDD suffix makes lexical sort = chronological
+  const latest = files[files.length - 1];
+  return path.relative(repoRoot, path.join(handoffDir, latest));
+}
+
+function buildResumingInProgress(graphDir: string, inProgressEpisodes: Node[]): string {
+  if (inProgressEpisodes.length === 0) return '';
+  const lines: string[] = ['## Resuming In-Progress', ''];
+  for (const ep of inProgressEpisodes) {
+    lines.push(`Resuming in-progress episode: ${ep.id} — "${ep.title}"`);
+    const handoff = findLatestHandoff(graphDir, ep.id);
+    if (handoff) {
+      lines.push(`  - Handoff: ${handoff}`);
+    }
+    const checkpoints = Array.isArray(ep.meta.checkpoints)
+      ? (ep.meta.checkpoints as Array<{ timestamp: string }>)
+      : [];
+    if (checkpoints.length > 0) {
+      const last = checkpoints[checkpoints.length - 1];
+      lines.push(`  - Last checkpoint: ${last.timestamp}`);
+    }
+  }
+  return lines.join('\n');
+}
+
 function buildEpisodeDirective(episodes: Node[]): string {
   if (episodes.length === 0) return '';
 
@@ -268,8 +364,13 @@ function buildSessionContext(data: SessionData): string {
   const sections: string[] = [
     '# EMDD Graph Context — Session Start',
     '',
-    buildGraphOverview(data.health),
+    buildGapDirective(data.health),
   ];
+
+  const resuming = buildResumingInProgress(data.graphDir, data.inProgressEpisodes);
+  if (resuming) sections.push('', resuming);
+
+  sections.push('', buildGraphOverview(data.health));
 
   // Episode Arc
   const episodeArc = buildEpisodeArc(data.episodes);
@@ -334,6 +435,8 @@ export function registerContextLoading(server: McpServer): void {
             .filter(n => n.type === 'episode')
             .sort((a, b) => (nodeDate(b)?.getTime() ?? 0) - (nodeDate(a)?.getTime() ?? 0));
 
+          const inProgressEpisodes = episodes.filter(ep => ep.status === 'IN_PROGRESS');
+
           const openQuestions = nodes
             .filter(n => n.type === 'question' && n.status === 'OPEN')
             .sort((a, b) => (URGENCY_ORDER[String(a.meta?.urgency)] ?? 99) - (URGENCY_ORDER[String(b.meta?.urgency)] ?? 99));
@@ -346,6 +449,8 @@ export function registerContextLoading(server: McpServer): void {
             backlogItems: backlogResult.items,
             transitions,
             openQuestions,
+            inProgressEpisodes,
+            graphDir,
           });
         }
 

@@ -11,6 +11,8 @@ const schema = z.object({
   title: z.string().optional().describe('Human-readable title (default: slug)'),
   body: z.string().optional().describe('Custom body content (default: type-specific template)'),
   lang: z.string().optional().describe('Language locale (default: en)'),
+  status: z.enum(['IN_PROGRESS', 'COMPLETED']).optional()
+    .describe('Initial status (episode only). Default: COMPLETED'),
 });
 
 export const createNodeDef: CommandDef<typeof schema, CreateNodeResult> = {
@@ -21,7 +23,10 @@ export const createNodeDef: CommandDef<typeof schema, CreateNodeResult> = {
   cli: { commandName: 'new', positional: ['type', 'slug'] },
 
   async execute(input) {
-    return createNode(input.graphDir, input.type, input.slug, input.lang, input.title, input.body);
+    if (input.status !== undefined && input.type !== 'episode') {
+      throw new Error('--status is only valid for type=episode');
+    }
+    return createNode(input.graphDir, input.type, input.slug, input.lang, input.title, input.body, input.status);
   },
 
   format(result) {

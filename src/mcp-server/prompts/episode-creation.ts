@@ -69,7 +69,7 @@ ${recentSection}
 ---
 id: ${nextEpisodeId}
 type: episode
-status: COMPLETED
+status: COMPLETED   # use IN_PROGRESS for multi-session experiments
 trigger: "Description of what prompted this session"
 created: ${today}
 updated: ${today}
@@ -79,7 +79,21 @@ created_by: human:yourname
 tags: []
 ${linksYaml}
 ---
-\`\`\``;
+\`\`\`
+
+## When to use IN_PROGRESS
+
+For experiments that span multiple sessions (e.g., 24h+ training, multi-day validation):
+
+1. Create the episode in IN_PROGRESS state explicitly with the \`--status\` option:
+   \`emdd new episode <slug> --status IN_PROGRESS [--title "..."]\`
+   (Default \`emdd new episode <slug>\` creates a COMPLETED episode.)
+2. Each subsequent session, use \`emdd episode-checkpoint <id> "<note>"\` to append progress.
+   The command refuses to checkpoint a non-IN_PROGRESS episode — there is NO auto status transition.
+3. When done, run \`emdd episode-close <id>\` to transition to COMPLETED.
+
+Volatile cross-session context (notes for the next session) goes in
+\`handoffs/episode-<id>-<YYMMDD>.md\`, not in the episode body.`;
 }
 
 // ── Static guide (reference) ─────────────────────────────────────────

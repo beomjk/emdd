@@ -119,7 +119,7 @@ AI agent는 그래프의 **정원사(gardener)**이지 건축가(architect)가 �
 | knowledge | knw | knowledge | 4 |
 | question | qst | questions | 4 |
 | decision | dec | decisions | 5 |
-| episode | epi | episodes | 2 |
+| episode | epi | episodes | 3 |
 <!-- /AUTO:node-types -->
 
 <!-- AUTO:statuses -->
@@ -132,7 +132,7 @@ AI agent는 그래프의 **정원사(gardener)**이지 건축가(architect)가 �
 | knowledge | ACTIVE, DISPUTED, SUPERSEDED, RETRACTED |
 | question | OPEN, RESOLVED, ANSWERED, DEFERRED |
 | decision | PROPOSED, ACCEPTED, SUPERSEDED, REVERTED, CONTESTED |
-| episode | ACTIVE, COMPLETED |
+| episode | IN_PROGRESS, ACTIVE, COMPLETED |
 <!-- /AUTO:statuses -->
 
 | 타입 | 색상 | 의미 | 핵심 속성 |
@@ -397,6 +397,11 @@ Consolidation에서 `[deferred]` 항목이 3개 이상 누적되면 별도 검�
 
 <!-- AUTO:manual-transitions -->
 <!-- Generated via @beomjk/state-engine — DO NOT EDIT -->
+**episode**
+| From | To |
+|------|----|
+| IN_PROGRESS | COMPLETED |
+
 **hypothesis**
 | From | To |
 |------|----|
@@ -797,6 +802,23 @@ Branch group이 CONVERGED나 MERGED로 전이되면 `_index.md`를 업데이트�
 - **구조적 공백 탐지 (§6.8):** "Untested Hypotheses" 갭 타입은 각 후보에 개별적으로 적용된다. 모든 후보가 5일 이상 PROPOSED인 branch group은 갭 리포트에 표시되어야 한다.
 - **Consolidation (§7.4):** Branch group 후보는 다른 노드와 마찬가지로 Finding/Episode 축적 트리거에 포함된다. Consolidation 시 표준 5단계와 함께 branch group 건강도를 검토한다.
 - **Pivot 세러모니 (§7.4):** 전체 branch group이 ABANDONED되면 Pivot 세러모니 트리거("모든 경로 BLOCKED")의 증거로 간주된다.
+
+---
+
+### 6.9 Ceremony Rhythm 표
+
+각 세러모니는 *언제* 실행되는지(`rhythm`)와 *어떤* 조건이 trigger인지에 따라 분류된다. `PER_SESSION`은 세션 cycle 내부에서 항상 실행되고, `CONDITIONAL`은 열린 전제 조건이 있을 때만 실행되며, `PERIODIC`은 별도 주기로 실행된다.
+
+<!-- AUTO:ceremony-rhythm -->
+<!-- Generated from schema.config.ts — DO NOT EDIT -->
+| Ceremony | Rhythm | Trigger / Threshold | Execution Point |
+|----------|--------|---------------------|-----------------|
+| consolidation | PER_SESSION | unpromoted_findings_threshold≥5, episodes_threshold≥3, all_questions_resolved, experiment_overload_threshold≥5 | /emdd-close |
+| context-loading | PER_SESSION | — | /emdd-open |
+| episode-creation | PER_SESSION | — | /emdd-close |
+| health-review | PERIODIC | interval_days≥7 | manual_or_scheduler |
+| gap-acknowledgment | CONDITIONAL | has_open_gaps | first_converge_after_open |
+<!-- /AUTO:ceremony-rhythm -->
 
 ---
 

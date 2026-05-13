@@ -2,6 +2,8 @@
 // Canonical prompt names, descriptions, and parameter info.
 // Used by prompt registration files and doc-tables generator.
 
+import type { CeremonyRhythm } from '../../graph/types.js';
+
 export interface PromptMeta {
   name: string;
   description: string;
@@ -11,6 +13,10 @@ export interface PromptMeta {
   group?: string;
   /** Display order within a group (1-based). Used by doc-tables and future prompt-listing UIs. */
   order?: number;
+  /** Ceremony rhythm classification — informational signal for AI agents. */
+  rhythm?: CeremonyRhythm;
+  /** Human-readable execution point (e.g., '/emdd-open', 'manual_or_scheduler'). */
+  execution_point?: string;
 }
 
 export const PROMPT_META: PromptMeta[] = [
@@ -21,6 +27,8 @@ export const PROMPT_META: PromptMeta[] = [
     hasLang: true,
     group: 'session-cycle',
     order: 1,
+    rhythm: 'PER_SESSION',
+    execution_point: '/emdd-open',
   },
   {
     name: 'episode-creation',
@@ -29,6 +37,8 @@ export const PROMPT_META: PromptMeta[] = [
     hasLang: true,
     group: 'session-cycle',
     order: 2,
+    rhythm: 'PER_SESSION',
+    execution_point: '/emdd-close',
   },
   {
     name: 'consolidation',
@@ -37,6 +47,8 @@ export const PROMPT_META: PromptMeta[] = [
     hasLang: true,
     group: 'session-cycle',
     order: 3,
+    rhythm: 'PER_SESSION',
+    execution_point: '/emdd-close',
   },
   {
     name: 'health-review',
@@ -45,5 +57,7 @@ export const PROMPT_META: PromptMeta[] = [
     hasLang: true,
     group: 'session-cycle',
     order: 4,
+    rhythm: 'PERIODIC',
+    execution_point: 'manual_or_scheduler',
   },
 ];

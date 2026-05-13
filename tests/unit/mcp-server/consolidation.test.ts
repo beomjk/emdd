@@ -173,7 +173,7 @@ describe('consolidation prompt (unit)', () => {
     expect(text).toContain('- fnd-007');
   });
 
-  it('omits orphan findings section when empty', async () => {
+  it('shows no-orphans fallback when orphan list is empty', async () => {
     setupMocks(
       makeCheckResult({ orphanFindings: [] }),
     );
@@ -184,7 +184,10 @@ describe('consolidation prompt (unit)', () => {
     });
 
     const text = getPromptText(result);
-    expect(text).not.toContain('### Orphan Findings');
+    // PER_SESSION rewrite: all steps display a fallback line instead of
+    // omitting the heading entirely (FR-007).
+    expect(text).toContain('### Orphan Findings');
+    expect(text).toContain('no orphans');
   });
 
   // --- Delta View ---
@@ -308,12 +311,12 @@ describe('consolidation prompt (unit)', () => {
 
   // --- Existing trigger display preserved ---
 
-  it('preserves existing trigger display', async () => {
+  it('depth label reflects 2+ active triggers (depth: deep)', async () => {
     setupMocks(
       makeCheckResult({
         triggers: [
-          { type: 'unpromoted_findings', message: '5 unpromoted findings since last consolidation' },
-          { type: 'episodes', message: '3 episodes since last consolidation' },
+          { type: 'unpromoted_findings', message: '5 unpromoted findings since last consolidation', count: 5 },
+          { type: 'episodes', message: '3 episodes since last consolidation', count: 3 },
         ],
       }),
     );
@@ -324,7 +327,9 @@ describe('consolidation prompt (unit)', () => {
     });
 
     const text = getPromptText(result);
-    expect(text).toContain('[TRIGGERED] 5 unpromoted findings since last consolidation');
-    expect(text).toContain('[TRIGGERED] 3 episodes since last consolidation');
+    // PER_SESSION rewrite: Depth Hint exposes trigger state without "[TRIGGERED]" gating.
+    expect(text).toContain('depth: deep');
+    expect(text).toContain('episodes');
+    expect(text).toContain('unpromoted_findings');
   });
 });

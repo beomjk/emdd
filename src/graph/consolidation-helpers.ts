@@ -2,11 +2,15 @@ import { EDGE } from './types.js';
 import type { Graph } from './types.js';
 import type { EmddConfig } from './config.js';
 
-/** Count episodes in the graph created after `sinceDate`. */
+/** Count COMPLETED episodes in the graph created after `sinceDate`.
+ *
+ * FR-018a: IN_PROGRESS episodes do not count toward `episodes_threshold`
+ * — only sessions that explicitly closed contribute to the depth signal.
+ */
 export function countEpisodesSince(graph: Graph, sinceDate: Date): number {
   let count = 0;
   for (const node of graph.nodes.values()) {
-    if (node.type === 'episode') {
+    if (node.type === 'episode' && node.status === 'COMPLETED') {
       const created = node.meta.created ? new Date(String(node.meta.created)) : null;
       if (created && created > sinceDate) count++;
     }

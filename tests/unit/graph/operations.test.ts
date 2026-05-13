@@ -827,7 +827,7 @@ describe('getHealth — structural gaps §6.8', () => {
     const afterDate = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
     for (let i = 1; i <= 4; i++) {
       writeNode(tmpDir, 'episodes', `ep-00${i}-test.md`, {
-        id: `ep-00${i}`, type: 'episode', title: `Ep ${i}`,
+        id: `ep-00${i}`, type: 'episode', title: `Ep ${i}`, status: 'COMPLETED',
         created: afterDate, updated: afterDate, tags: [], links: [],
       });
     }
@@ -862,7 +862,7 @@ describe('getHealth — structural gaps §6.8', () => {
     const afterDate = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
     for (let i = 1; i <= 4; i++) {
       writeNode(tmpDir, 'episodes', `ep-00${i}-test.md`, {
-        id: `ep-00${i}`, type: 'episode', title: `Ep ${i}`,
+        id: `ep-00${i}`, type: 'episode', title: `Ep ${i}`, status: 'COMPLETED',
         created: afterDate, updated: afterDate, tags: [], links: [],
       });
     }
@@ -882,7 +882,7 @@ describe('getHealth — structural gaps §6.8', () => {
     });
     // 1 episode (below threshold of 5)
     writeNode(tmpDir, 'episodes', 'ep-001-test.md', {
-      id: 'ep-001', type: 'episode', title: 'Ep 1',
+      id: 'ep-001', type: 'episode', title: 'Ep 1', status: 'COMPLETED',
       created: recentDate, updated: recentDate, tags: [], links: [],
     });
     writeFileSync(join(tmpDir, '.emdd.yml'), 'gaps:\n  untested_episodes: 5\n  untested_days: 5\n');
@@ -900,7 +900,7 @@ describe('getHealth — structural gaps §6.8', () => {
     const afterDate = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
     for (let i = 1; i <= 4; i++) {
       writeNode(tmpDir, 'episodes', `ep-00${i}-test.md`, {
-        id: `ep-00${i}`, type: 'episode', title: `Ep ${i}`,
+        id: `ep-00${i}`, type: 'episode', title: `Ep ${i}`, status: 'COMPLETED',
         created: afterDate, updated: afterDate, tags: [], links: [],
       });
     }
@@ -942,7 +942,7 @@ describe('getHealth — structural gaps §6.8', () => {
     const afterDate = new Date().toISOString().slice(0, 10);
     for (let i = 1; i <= 4; i++) {
       writeNode(tmpDir, 'episodes', `ep-00${i}-test.md`, {
-        id: `ep-00${i}`, type: 'episode', title: `Ep ${i}`,
+        id: `ep-00${i}`, type: 'episode', title: `Ep ${i}`, status: 'COMPLETED',
         created: afterDate, updated: afterDate, tags: [], links: [],
       });
     }
@@ -961,7 +961,7 @@ describe('getHealth — structural gaps §6.8', () => {
     const afterDate = new Date().toISOString().slice(0, 10);
     for (let i = 1; i <= 2; i++) {
       writeNode(tmpDir, 'episodes', `ep-00${i}-test.md`, {
-        id: `ep-00${i}`, type: 'episode', title: `Ep ${i}`,
+        id: `ep-00${i}`, type: 'episode', title: `Ep ${i}`, status: 'COMPLETED',
         created: afterDate, updated: afterDate, tags: [], links: [],
       });
     }
@@ -980,14 +980,14 @@ describe('getHealth — structural gaps §6.8', () => {
     // 1 episode BEFORE updated date
     const beforeDate = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
     writeNode(tmpDir, 'episodes', 'ep-001-old.md', {
-      id: 'ep-001', type: 'episode', title: 'Old Ep',
+      id: 'ep-001', type: 'episode', title: 'Old Ep', status: 'COMPLETED',
       created: beforeDate, updated: beforeDate, tags: [], links: [],
     });
     // 2 episodes AFTER updated date
     const afterDate = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
     for (let i = 2; i <= 3; i++) {
       writeNode(tmpDir, 'episodes', `ep-00${i}-new.md`, {
-        id: `ep-00${i}`, type: 'episode', title: `New Ep ${i}`,
+        id: `ep-00${i}`, type: 'episode', title: `New Ep ${i}`, status: 'COMPLETED',
         created: afterDate, updated: afterDate, tags: [], links: [],
       });
     }

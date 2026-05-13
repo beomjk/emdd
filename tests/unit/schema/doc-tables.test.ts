@@ -7,9 +7,9 @@ import { getToolEnumerationString } from '../../../src/rules/generators.js';
 describe('readme-cli-core', () => {
   const gen = () => DOC_GENERATORS['readme-cli-core']();
 
-  it('produces a table with 10 data rows', () => {
+  it('produces a table with 14 data rows', () => {
     const lines = gen().split('\n').filter(l => l.startsWith('| `emdd'));
-    expect(lines).toHaveLength(10);
+    expect(lines).toHaveLength(14);
   });
 
   it('contains init (non-registry)', () => {
@@ -93,8 +93,8 @@ describe('readme-cli-export', () => {
 describe('mcp-tool-count', () => {
   const gen = () => DOC_GENERATORS['mcp-tool-count']();
 
-  it('contains "23 tools"', () => {
-    expect(gen()).toContain('23 tools');
+  it('contains "27 tools"', () => {
+    expect(gen()).toContain('27 tools');
   });
 
   it('contains "4 prompts"', () => {
@@ -107,9 +107,9 @@ describe('mcp-tool-count', () => {
 describe('mcp-tool-table', () => {
   const gen = () => DOC_GENERATORS['mcp-tool-table']();
 
-  it('produces a table with 23 data rows', () => {
+  it('produces a table with 27 data rows', () => {
     const lines = gen().split('\n').filter(l => l.startsWith('| `'));
-    expect(lines).toHaveLength(23);
+    expect(lines).toHaveLength(27);
   });
 
   it('uses MCP tool name overrides', () => {
