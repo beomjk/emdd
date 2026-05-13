@@ -55,4 +55,18 @@ describe('episode-close command', () => {
   it('errors on episode not found', async () => {
     await expect(episodeCloseDef.execute({ graphDir, episodeId: 'epi-zzz' })).rejects.toThrow(/epi-zzz/);
   });
+
+  it('rejects non-IN_PROGRESS status (only IN_PROGRESS → COMPLETED is valid)', async () => {
+    writeEpisode(graphDir, 'epi-a', 'ACTIVE');
+    await expect(episodeCloseDef.execute({ graphDir, episodeId: 'epi-a' })).rejects.toThrow(/IN_PROGRESS/);
+  });
+
+  it('preserves YYYY-MM-DD date format in frontmatter (no ISO timestamp drift)', async () => {
+    const file = writeEpisode(graphDir, 'epi-date', 'IN_PROGRESS');
+    await episodeCloseDef.execute({ graphDir, episodeId: 'epi-date' });
+    const raw = fs.readFileSync(file, 'utf-8');
+    expect(raw).toMatch(/^created: '?\d{4}-\d{2}-\d{2}'?$/m);
+    expect(raw).toMatch(/^updated: '?\d{4}-\d{2}-\d{2}'?$/m);
+    expect(raw).not.toMatch(/created:.*T\d{2}:\d{2}:\d{2}/);
+  });
 });

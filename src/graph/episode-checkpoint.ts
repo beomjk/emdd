@@ -4,8 +4,8 @@
 
 import fs from 'node:fs';
 import matter from 'gray-matter';
-import yaml from 'js-yaml';
 import { loadGraph } from './loader.js';
+import { normalizeDateFields } from './date-utils.js';
 import { t } from '../i18n/index.js';
 
 export interface CheckpointEntry {
@@ -96,6 +96,12 @@ export async function checkpointEpisode(
         break;
       }
     }
+    // Also flag drift when body has more checkpoint lines than the frontmatter
+    // anchor records — covers the case where a user appends a fabricated entry
+    // after the last legitimate line, which the per-index loop above misses.
+    if (!driftDetected && section.lines.length > priorCheckpoints.length) {
+      driftDetected = true;
+    }
     if (driftDetected) {
       violations.push({
         timestamp: now,
@@ -125,8 +131,8 @@ export async function checkpointEpisode(
     data.append_only_violations = violations;
   }
 
-  const yamlDump = yaml.dump(data, { lineWidth: -1, sortKeys: false });
-  const out = `---\n${yamlDump}---\n${newBody}`;
+  normalizeDateFields(data);
+  const out = matter.stringify(newBody, data);
   fs.writeFileSync(filePath, out, 'utf-8');
 
   return {

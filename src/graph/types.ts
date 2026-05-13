@@ -92,7 +92,14 @@ export interface MarkConsolidatedResult {
 }
 
 export interface GapDetail {
-  type: 'untested_hypothesis' | 'blocking_question' | 'stale_knowledge' | 'orphan_finding' | 'disconnected_cluster';
+  type:
+    | 'untested_hypothesis'
+    | 'blocking_question'
+    | 'stale_knowledge'
+    | 'orphan_finding'
+    | 'disconnected_cluster'
+    | 'stale_in_progress'
+    | 'soft_violations';
   nodeIds: string[];
   message: string;
   triggerType?: 'days' | 'episodes' | 'both';

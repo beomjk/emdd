@@ -241,6 +241,8 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
   // IN_PROGRESS episode warnings (010-ceremony-rhythm)
   const STALE_DAYS = 7;
   const SOFT_VIOLATION_THRESHOLD = 3;
+  const softViolationIds: string[] = [];
+  const staleInProgressIds: string[] = [];
   for (const node of graph.nodes.values()) {
     if (node.type !== 'episode') continue;
 
@@ -251,6 +253,7 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
     const softCount = violations.filter(v => v?.severity === 'soft').length;
     if (softCount >= SOFT_VIOLATION_THRESHOLD) {
       gaps.push(`episode ${node.id} has ${softCount} soft append-only violations`);
+      softViolationIds.push(node.id);
     }
 
     // Stale IN_PROGRESS episode (> 7 days since updated)
@@ -260,9 +263,26 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
         const daysElapsed = Math.floor((now.getTime() - updated.getTime()) / (1000 * 60 * 60 * 24));
         if (daysElapsed > STALE_DAYS) {
           gaps.push(`stale in-progress episode: ${node.id} (age > ${STALE_DAYS}d)`);
+          staleInProgressIds.push(node.id);
         }
       }
     }
+  }
+  // Surface IN_PROGRESS warnings to gapDetails so the Gap Directive in
+  // context-loading prompts picks them up alongside other structural gaps.
+  if (staleInProgressIds.length > 0) {
+    gapDetails.push({
+      type: 'stale_in_progress',
+      nodeIds: staleInProgressIds,
+      message: t('gap.stale_in_progress', { count: String(staleInProgressIds.length), days: String(STALE_DAYS) }),
+    });
+  }
+  if (softViolationIds.length > 0) {
+    gapDetails.push({
+      type: 'soft_violations',
+      nodeIds: softViolationIds,
+      message: t('gap.soft_violations', { count: String(softViolationIds.length), threshold: String(SOFT_VIOLATION_THRESHOLD) }),
+    });
   }
 
   // Edge attribute affinity violations

@@ -164,4 +164,55 @@ describe('getHealth — §6.8 structural gap detection', () => {
     const r = await getHealth(graphDir);
     expect(r.affinityViolations.length).toBeGreaterThan(0);
   });
+
+  it('surfaces stale IN_PROGRESS episodes to both gaps and gapDetails', async () => {
+    writeNode(graphDir, 'episodes', 'epi-001-stale.md', {
+      id: 'epi-001', type: 'episode', title: 'Stale', status: 'IN_PROGRESS',
+      created: dateDaysAgo(30), updated: dateDaysAgo(30), tags: [], links: [],
+    });
+    const r = await getHealth(graphDir);
+    expect(r.gaps.some(g => g.includes('stale in-progress episode: epi-001'))).toBe(true);
+    const stale = r.gapDetails.find(g => g.type === 'stale_in_progress');
+    expect(stale).toBeDefined();
+    expect(stale!.nodeIds).toContain('epi-001');
+  });
+
+  it('does NOT flag a fresh IN_PROGRESS episode (≤ 7 days)', async () => {
+    writeNode(graphDir, 'episodes', 'epi-002-fresh.md', {
+      id: 'epi-002', type: 'episode', title: 'Fresh', status: 'IN_PROGRESS',
+      created: dateDaysAgo(3), updated: dateDaysAgo(3), tags: [], links: [],
+    });
+    const r = await getHealth(graphDir);
+    expect(r.gapDetails.some(g => g.type === 'stale_in_progress')).toBe(false);
+  });
+
+  it('surfaces ≥3 soft append-only violations to both gaps and gapDetails', async () => {
+    writeNode(graphDir, 'episodes', 'epi-003-violations.md', {
+      id: 'epi-003', type: 'episode', title: 'Violations', status: 'IN_PROGRESS',
+      created: dateDaysAgo(1), updated: dateDaysAgo(1), tags: [], links: [],
+      append_only_violations: [
+        { severity: 'soft', timestamp: 't1', detected_by: 'checkpoint_diff' },
+        { severity: 'soft', timestamp: 't2', detected_by: 'checkpoint_diff' },
+        { severity: 'soft', timestamp: 't3', detected_by: 'checkpoint_diff' },
+      ],
+    });
+    const r = await getHealth(graphDir);
+    expect(r.gaps.some(g => g.includes('3 soft append-only violations'))).toBe(true);
+    const soft = r.gapDetails.find(g => g.type === 'soft_violations');
+    expect(soft).toBeDefined();
+    expect(soft!.nodeIds).toContain('epi-003');
+  });
+
+  it('does NOT flag fewer than 3 soft violations', async () => {
+    writeNode(graphDir, 'episodes', 'epi-004-under.md', {
+      id: 'epi-004', type: 'episode', title: 'Under', status: 'IN_PROGRESS',
+      created: dateDaysAgo(1), updated: dateDaysAgo(1), tags: [], links: [],
+      append_only_violations: [
+        { severity: 'soft', timestamp: 't1', detected_by: 'checkpoint_diff' },
+        { severity: 'soft', timestamp: 't2', detected_by: 'checkpoint_diff' },
+      ],
+    });
+    const r = await getHealth(graphDir);
+    expect(r.gapDetails.some(g => g.type === 'soft_violations')).toBe(false);
+  });
 });

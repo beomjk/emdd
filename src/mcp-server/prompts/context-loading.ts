@@ -96,6 +96,8 @@ const GAP_TYPE_LABELS: Record<string, string> = {
   orphan_finding: 'orphan finding',
   stale_knowledge: 'stale knowledge',
   disconnected_cluster: 'disconnected cluster',
+  stale_in_progress: 'stale IN_PROGRESS episode',
+  soft_violations: 'soft append-only violations',
 };
 
 function buildGapDirective(health: HealthReport): string {

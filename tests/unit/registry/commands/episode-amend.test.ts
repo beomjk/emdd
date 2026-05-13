@@ -61,4 +61,13 @@ describe('episode-amend command', () => {
     const result = episodeAmendDef.schema.safeParse({ episodeId: 'epi-1', reason: 'x'.repeat(201) });
     expect(result.success).toBe(false);
   });
+
+  it('preserves YYYY-MM-DD date format in frontmatter (no ISO timestamp drift)', async () => {
+    const file = writeEpisode(graphDir, 'epi-date', 'IN_PROGRESS');
+    await episodeAmendDef.execute({ graphDir, episodeId: 'epi-date', reason: 'just because reason' });
+    const raw = fs.readFileSync(file, 'utf-8');
+    expect(raw).toMatch(/^created: '?\d{4}-\d{2}-\d{2}'?$/m);
+    expect(raw).toMatch(/^updated: '?\d{4}-\d{2}-\d{2}'?$/m);
+    expect(raw).not.toMatch(/created:.*T\d{2}:\d{2}:\d{2}/);
+  });
 });

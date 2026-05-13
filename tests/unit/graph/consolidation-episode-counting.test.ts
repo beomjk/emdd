@@ -60,4 +60,14 @@ describe('consolidation episode counting — FR-018a', () => {
     expect(fired).toBeDefined();
     expect(fired!.count).toBeGreaterThanOrEqual(3);
   });
+
+  it('legacy ACTIVE episodes still count as closed sessions (pre-010 graphs not silently demoted)', async () => {
+    writeEpisode(graphDir, 'epi-1', 'ACTIVE', 3);
+    writeEpisode(graphDir, 'epi-2', 'ACTIVE', 2);
+    writeEpisode(graphDir, 'epi-3', 'ACTIVE', 1);
+    const result = await checkConsolidation(graphDir);
+    const fired = result.triggers.find(t => t.type === 'episodes');
+    expect(fired).toBeDefined();
+    expect(fired!.count).toBeGreaterThanOrEqual(3);
+  });
 });

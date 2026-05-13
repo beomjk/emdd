@@ -99,4 +99,27 @@ describe('episode-checkpoint command', () => {
     const result = await call(graphDir, { episodeId: 'epi-t', note: 'x' }) as { checkpointTimestamp: string };
     expect(result.checkpointTimestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
   });
+
+  it('preserves YYYY-MM-DD date format in frontmatter (no ISO timestamp drift)', async () => {
+    const file = writeEpisode(graphDir, 'epi-date', 'IN_PROGRESS');
+    await call(graphDir, { episodeId: 'epi-date', note: 'x' });
+    const raw = fs.readFileSync(file, 'utf-8');
+    expect(raw).toMatch(/^created: '?\d{4}-\d{2}-\d{2}'?$/m);
+    expect(raw).toMatch(/^updated: '?\d{4}-\d{2}-\d{2}'?$/m);
+    expect(raw).not.toMatch(/created:.*T\d{2}:\d{2}:\d{2}/);
+  });
+
+  it('detects drift when a fabricated checkpoint line is appended after the last legit entry', async () => {
+    const file = writeEpisode(graphDir, 'epi-append', 'IN_PROGRESS');
+    await call(graphDir, { episodeId: 'epi-append', note: 'real' });
+    // Tamper: append an extra line AFTER the legitimate checkpoint
+    const raw = fs.readFileSync(file, 'utf-8');
+    const withExtra = raw.replace(/(- \d{4}-\d{2}-\d{2}T[^\n]+\n)/, '$1- 1999-01-01T00:00:00.000Z — fabricated\n');
+    fs.writeFileSync(file, withExtra, 'utf-8');
+    const result = await call(graphDir, { episodeId: 'epi-append', note: 'next' }) as { warnings: string[] };
+    expect(result.warnings.length).toBeGreaterThan(0);
+    const parsed = matter(fs.readFileSync(file, 'utf-8'));
+    const violations = parsed.data.append_only_violations as Array<{ severity: string; detected_by: string }>;
+    expect(violations.some(v => v.severity === 'soft' && v.detected_by === 'checkpoint_diff')).toBe(true);
+  });
 });

@@ -113,6 +113,8 @@ export const messages = {
   'gap.orphan_finding': '{count} finding(s) with no outgoing value-producing edges',
   'gap.stale_knowledge': '{count} knowledge node(s) stale for {days}+ days',
   'gap.disconnected_cluster': '{count} disconnected clusters with only {edges} inter-cluster edge(s)',
+  'gap.stale_in_progress': '{count} IN_PROGRESS episode(s) stale for {days}+ days',
+  'gap.soft_violations': '{count} episode(s) with {threshold}+ soft append-only violations',
   'gap.trigger_days': '{days}+ days',
   'gap.trigger_episodes': '{episodes}+ episodes',
   'gap.trigger_both': '{days}+ days and/or {episodes}+ episodes',

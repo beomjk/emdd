@@ -4,8 +4,8 @@
 
 import fs from 'node:fs';
 import matter from 'gray-matter';
-import yaml from 'js-yaml';
 import { loadGraph } from './loader.js';
+import { normalizeDateFields } from './date-utils.js';
 import { t } from '../i18n/index.js';
 
 export interface EpisodeCloseResult {
@@ -29,6 +29,9 @@ export async function closeEpisode(
   if (node.status === 'COMPLETED') {
     throw new Error(`episode ${episodeId} is already COMPLETED`);
   }
+  if (node.status !== 'IN_PROGRESS') {
+    throw new Error(`episode ${episodeId} is not IN_PROGRESS (current: ${node.status ?? 'unknown'}) — only IN_PROGRESS → COMPLETED is a valid manual transition`);
+  }
 
   const filePath = node.path;
   const raw = fs.readFileSync(filePath, 'utf-8');
@@ -39,8 +42,8 @@ export async function closeEpisode(
   data.status = 'COMPLETED';
   data.updated = new Date().toISOString().slice(0, 10);
 
-  const yamlDump = yaml.dump(data, { lineWidth: -1, sortKeys: false });
-  const out = `---\n${yamlDump}---\n${parsed.content}`;
+  normalizeDateFields(data);
+  const out = matter.stringify(parsed.content, data);
   fs.writeFileSync(filePath, out, 'utf-8');
 
   return { episodeId, fromStatus, toStatus: 'COMPLETED' };

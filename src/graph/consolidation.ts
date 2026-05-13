@@ -29,8 +29,9 @@ export async function checkConsolidation(graphDir: string): Promise<CheckResult>
         findings.push(id);
         break;
       case 'episode':
-        // FR-018a: episodes_threshold counts COMPLETED only (IN_PROGRESS excluded).
-        if (node.status === 'COMPLETED') {
+        // FR-018a: episodes_threshold excludes IN_PROGRESS only.
+        // ACTIVE (legacy default) and COMPLETED both count as closed sessions.
+        if (node.status !== 'IN_PROGRESS') {
           episodes.push(id);
         }
         break;

@@ -4,8 +4,8 @@
 
 import fs from 'node:fs';
 import matter from 'gray-matter';
-import yaml from 'js-yaml';
 import { loadGraph } from './loader.js';
+import { normalizeDateFields } from './date-utils.js';
 import { t } from '../i18n/index.js';
 import type { AppendOnlyViolation } from './episode-checkpoint.js';
 
@@ -50,8 +50,8 @@ export async function amendEpisode(
   data.append_only_violations = violations;
   data.updated = today;
 
-  const yamlDump = yaml.dump(data, { lineWidth: -1, sortKeys: false });
-  const out = `---\n${yamlDump}---\n${parsed.content}`;
+  normalizeDateFields(data);
+  const out = matter.stringify(parsed.content, data);
   fs.writeFileSync(filePath, out, 'utf-8');
 
   return {

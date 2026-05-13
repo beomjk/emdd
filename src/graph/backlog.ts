@@ -1,6 +1,5 @@
 import fs from 'node:fs';
-import path from 'node:path';
-import { join, sep } from 'node:path';
+import path, { join, sep } from 'node:path';
 import { execSync } from 'node:child_process';
 import { glob } from 'glob';
 import matter from 'gray-matter';
@@ -66,9 +65,7 @@ export async function getBacklog(graphDir: string, statusFilter?: string): Promi
   }
 
   // Apply status filter
-  if (!statusFilter || statusFilter === 'pending') {
-    return { items: items.filter(i => i.marker === 'pending') };
-  } else if (statusFilter === 'all') {
+  if (statusFilter === 'all') {
     return { items };
   } else if (statusFilter === 'done') {
     return { items: items.filter(i => i.marker === 'done') };
@@ -78,7 +75,6 @@ export async function getBacklog(graphDir: string, statusFilter?: string): Promi
     return { items: items.filter(i => i.marker === 'superseded') };
   }
 
-  // Default: unchecked only
   return { items: items.filter(i => i.marker === 'pending') };
 }
 
