@@ -10,6 +10,9 @@ export interface GapThresholds {
   blocking_days: number;
   blocking_episodes: number;
   min_cluster_edges: number;
+  structural_min_cluster_size: number; // min nodes for a "developed" community (default 3)
+  structural_max_bridges: number;      // max bridges between two communities to count as a gap (default 1)
+  structural_max_gaps: number;         // report cap; excess surfaced as truncated count (default 5)
 }
 
 export interface EmddConfig {
@@ -30,8 +33,21 @@ export const DEFAULT_CONFIG: EmddConfig = {
     blocking_days: 7,
     blocking_episodes: 3,
     min_cluster_edges: 2,
+    structural_min_cluster_size: 3,
+    structural_max_bridges: 1,
+    structural_max_gaps: 5,
   },
 };
+
+/**
+ * Validate a config value as a finite positive number, else fall back to default.
+ * Used only for the structural_* keys, which require ≥1 to be meaningful. The
+ * existing 7 keys keep their typeof-only pattern (notably orphan_min_outgoing,
+ * whose default 0 is a valid value that a positive check would wrongly reject).
+ */
+function finitePositive(v: unknown, fallback: number): number {
+  return typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : fallback;
+}
 
 export function loadConfig(graphDir: string): EmddConfig {
   const configPath = path.join(path.dirname(graphDir), '.emdd.yml');
@@ -66,6 +82,9 @@ export function loadConfig(graphDir: string): EmddConfig {
       blocking_days: typeof gaps.blocking_days === 'number' ? gaps.blocking_days : DEFAULT_CONFIG.gaps.blocking_days,
       blocking_episodes: typeof gaps.blocking_episodes === 'number' ? gaps.blocking_episodes : DEFAULT_CONFIG.gaps.blocking_episodes,
       min_cluster_edges: typeof gaps.min_cluster_edges === 'number' ? gaps.min_cluster_edges : DEFAULT_CONFIG.gaps.min_cluster_edges,
+      structural_min_cluster_size: finitePositive(gaps.structural_min_cluster_size, DEFAULT_CONFIG.gaps.structural_min_cluster_size),
+      structural_max_bridges: finitePositive(gaps.structural_max_bridges, DEFAULT_CONFIG.gaps.structural_max_bridges),
+      structural_max_gaps: finitePositive(gaps.structural_max_gaps, DEFAULT_CONFIG.gaps.structural_max_gaps),
     },
     last_consolidation_date: typeof parsed.last_consolidation_date === 'string'
       ? parsed.last_consolidation_date : undefined,

@@ -586,7 +586,9 @@ Step 2: CONTRADICTS 에지 도착
 최종 confidence: 0.42 (반올림)
 ```
 
-### 6.8 구조적 공백 탐지 (5종)
+### 6.8 구조적 공백 탐지 (6종)
+
+> **용어 구분:** "구조적 공백 탐지"는 이 절 전체(아래 표의 모든 gap 종류)를 가리키는 우산 용어다. 011에서 추가된 `structural_gap` *타입*(표 마지막 행 — betweenness/bridge 기반으로, 약한 다리 하나로만 이어진 두 발달 커뮤니티를 표면화)과는 구분된다.
 
 | Gap Type | 탐지 방법 | 출력 |
 |----------|----------|------|
@@ -595,17 +597,20 @@ Step 2: CONTRADICTS 에지 도착
 | **Blocking Questions** | OPEN + urgency=BLOCKING + (N일 경과 **또는** updated 이후 M개 에피소드) | 즉시 해소 촉구 |
 | **Stale Knowledge** | N개월 된 source + 같은 클러스터에 새 Knowledge 추가 (일수 기반만) | 업데이트 필요 경고 |
 | **Orphan Findings** | Finding 노드에 outgoing `edgeCategories.value_producing` 에지 없음 (12종) | 새 질문/가설 연결 제안 |
+| **Structural Gap** (`structural_gap`) | 각 ≥ `structural_min_cluster_size` 노드인 두 Louvain 커뮤니티가 1..`structural_max_bridges`개의 무방향 다리로만 연결됨; betweenness로 후보 순위 | 다리 후보 노드 쌍 제안(betweenness 상위·미연결) |
 
 **Dual-Trigger 탐지 (일수 + 에피소드):**
 
 Untested Hypotheses와 Blocking Questions는 이중 트리거 시스템을 사용한다: 일수 임계값 **또는** 에피소드 임계값 중 하나라도 충족되면 발동한다. 에피소드 수는 대상 노드의 `updated` 날짜 *이후*에 생성된 Episode 노드 수로 측정한다 (strict `>` 비교, 같은 날 생성된 에피소드는 제외).
 
 - `stale_knowledge`는 외부 소스의 실제 노후화를 측정하므로 일수 기반만 유지한다.
-- `orphan_finding`과 `disconnected_cluster`는 시간이나 세션과 무관한 구조적 공백이다.
+- `orphan_finding`·`disconnected_cluster`·`structural_gap`은 시간이나 세션과 무관한 구조적 공백이다(`triggerType` 없음).
 
 각 탐지된 gap에는 `triggerType` 필드 (`'days'`, `'episodes'`, `'both'`)가 포함되어 어떤 트리거가 발동했는지 표시한다.
 
 기본 에피소드 임계값: `untested_episodes: 3`, `blocking_episodes: 3` (Consolidation 케이던스와 동일).
+
+구조적 공백 기본값: `structural_min_cluster_size: 3` / `structural_max_bridges: 1` / `structural_max_gaps: 5`. (config 임계값 표·`.emdd.yml` 예시는 SPEC_EN.md가 canonical.)
 
 ### 6.9 토픽 클러스터와 컨텍스트 로딩
 

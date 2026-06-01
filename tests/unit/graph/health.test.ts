@@ -216,3 +216,89 @@ describe('getHealth — §6.8 structural gap detection', () => {
     expect(r.gapDetails.some(g => g.type === 'soft_violations')).toBe(false);
   });
 });
+
+// @spec §6.8.1
+describe('getHealth — structural_gap integration (011)', () => {
+  let tmpDir: string;
+  let graphDir: string;
+
+  beforeEach(() => ({ tmpDir, graphDir } = setupTmpGraph()));
+  afterEach(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+  const TODAY = dateDaysAgo(0);
+
+  /** Write a dense clique (K_n) of nodes into a type subdir, with optional extra cross-links. */
+  function writeClique(
+    subdir: string,
+    nodeIds: string[],
+    type: string,
+    status: string,
+    extraLinks: Record<string, string[]> = {},
+  ): void {
+    for (const id of nodeIds) {
+      const links = nodeIds
+        .filter(x => x !== id)
+        .map(target => ({ target, relation: 'relates_to' }));
+      for (const target of extraLinks[id] ?? []) {
+        links.push({ target, relation: 'relates_to' });
+      }
+      writeNode(graphDir, subdir, `${id}-x.md`, {
+        id, type, title: id, status, created: TODAY, updated: TODAY, tags: [], links,
+      });
+    }
+  }
+
+  it('SC-001: flags exactly one structural_gap, clusterA=hyp / clusterB=know, no disconnected_cluster', async () => {
+    // two dense K4 clusters joined by one bridge (know-001 — hyp-001)
+    writeClique('hypotheses', ['hyp-001', 'hyp-002', 'hyp-003', 'hyp-004'], 'hypothesis', 'TESTING');
+    writeClique('knowledge', ['know-001', 'know-002', 'know-003', 'know-004'], 'knowledge', 'ACTIVE', {
+      'know-001': ['hyp-001'],
+    });
+    const r = await getHealth(graphDir);
+    const sgs = r.gapDetails.filter(g => g.type === 'structural_gap');
+    expect(sgs).toHaveLength(1);
+    expect(sgs[0].structuralGap!.clusterA).toEqual(['hyp-001', 'hyp-002', 'hyp-003', 'hyp-004']);
+    expect(sgs[0].structuralGap!.clusterB).toEqual(['know-001', 'know-002', 'know-003', 'know-004']);
+    expect(sgs[0].structuralGap!.candidates.length).toBeGreaterThanOrEqual(1);
+    // mutual exclusion: one bridge ⇒ single connected component ⇒ no disconnected_cluster
+    expect(r.gapDetails.some(g => g.type === 'disconnected_cluster')).toBe(false);
+    expect(r.structuralGapTruncated).toBeUndefined();
+  });
+
+  it('SC-002: two nodes / single cluster → no structural_gap', async () => {
+    writeNode(graphDir, 'hypotheses', 'hyp-001-x.md', {
+      id: 'hyp-001', type: 'hypothesis', title: 'X', status: 'TESTING',
+      created: TODAY, updated: TODAY, tags: [], links: [],
+    });
+    writeNode(graphDir, 'knowledge', 'know-001-y.md', {
+      id: 'know-001', type: 'knowledge', title: 'Y', status: 'ACTIVE',
+      created: TODAY, updated: TODAY, tags: [], links: [],
+    });
+    const r = await getHealth(graphDir);
+    expect(r.gapDetails.some(g => g.type === 'structural_gap')).toBe(false);
+  });
+
+  it('FR-006: fully separated clusters (0 bridges) → disconnected_cluster only, no structural_gap', async () => {
+    writeClique('hypotheses', ['hyp-001', 'hyp-002', 'hyp-003', 'hyp-004'], 'hypothesis', 'TESTING');
+    writeClique('knowledge', ['know-001', 'know-002', 'know-003', 'know-004'], 'knowledge', 'ACTIVE');
+    const r = await getHealth(graphDir);
+    expect(r.gapDetails.some(g => g.type === 'structural_gap')).toBe(false);
+    expect(r.gapDetails.some(g => g.type === 'disconnected_cluster')).toBe(true);
+  });
+
+  it('FR-009: 6 candidate pairs with max_gaps=5 → 5 reported + structuralGapTruncated===1', async () => {
+    // 4 dense K4 clusters, each pair joined by exactly one bridge → C(4,2)=6 pairs.
+    const a = ['aaa-001', 'aaa-002', 'aaa-003', 'aaa-004'];
+    const b = ['bbb-001', 'bbb-002', 'bbb-003', 'bbb-004'];
+    const c = ['ccc-001', 'ccc-002', 'ccc-003', 'ccc-004'];
+    const d = ['ddd-001', 'ddd-002', 'ddd-003', 'ddd-004'];
+    writeClique('knowledge', a, 'knowledge', 'ACTIVE', { 'aaa-001': ['bbb-001'], 'aaa-002': ['ccc-001'], 'aaa-003': ['ddd-001'] });
+    writeClique('knowledge', b, 'knowledge', 'ACTIVE', { 'bbb-002': ['ccc-002'], 'bbb-003': ['ddd-002'] });
+    writeClique('knowledge', c, 'knowledge', 'ACTIVE', { 'ccc-003': ['ddd-003'] });
+    writeClique('knowledge', d, 'knowledge', 'ACTIVE');
+    const r = await getHealth(graphDir);
+    const sgs = r.gapDetails.filter(g => g.type === 'structural_gap');
+    expect(sgs).toHaveLength(5);
+    expect(r.structuralGapTruncated).toBe(1);
+  });
+});

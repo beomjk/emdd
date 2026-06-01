@@ -106,6 +106,7 @@ const GAP_TYPE_LABELS: Record<string, string> = {
   disconnected_cluster: 'disconnected cluster',
   stale_in_progress: 'stale IN_PROGRESS episode',
   soft_violations: 'soft append-only violations',
+  structural_gap: 'structural gap',
 };
 
 function buildGapDirective(health: HealthReport): string {
@@ -116,16 +117,27 @@ No structural gaps — divergent exploration recommended.`;
   }
 
   const bullets = details.map(d => {
+    if (d.type === 'structural_gap') {
+      // Preserve the full message (areas + bridge candidates) — the generic
+      // "- label (count): ids" form would drop the actionable candidate pairs.
+      return `- ${d.message}`;
+    }
     const label = GAP_TYPE_LABELS[d.type] ?? d.type;
     const ids = d.nodeIds.join(', ');
     return `- ${label} (${d.nodeIds.length}): ${ids}`;
   }).join('\n');
 
+  // Hardcoded English: this prompt is intentionally not localized (see header).
+  // Mirrors the en.ts `gap.structural_truncated` wording.
+  const truncationNote = health.structuralGapTruncated
+    ? `\n(+${health.structuralGapTruncated} more structural gap(s) not shown — raise config.gaps.structural_max_gaps to see them)`
+    : '';
+
   return `## Gap Directive
 
 ⚠️ This graph has open structural gaps. **Address at least one before converging on new spec work.**
 
-${bullets}
+${bullets}${truncationNote}
 
 ### Acknowledgment protocol
 
