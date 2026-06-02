@@ -531,6 +531,8 @@ Every session follows this prompt cycle:
 5. **Review** → Run the \`emdd-close\` skill (Health Review step) periodically for a full health dashboard with recommendations.
 
 > Steps 3-5 can be run together via the \`emdd-close\` skill. Consolidation is part of every close; health review remains periodic or explicit.
+>
+> **User-driven:** Invoke the \`emdd-close\` skill only when the user explicitly ends the session (\`$emdd-close\` or an equivalent request); do not auto-run it just because work appears finished.
 
 ## Intervention Rules
 
@@ -1284,7 +1286,7 @@ You are working in an EMDD project. The knowledge graph lives in \`graph/\` as M
 
 ## Session Cycle
 
-Run the \`emdd-open\` skill at session start; run the \`emdd-close\` skill at session end (it writes the Episode, runs Consolidation every close with triggers as depth hints, and reviews health).
+Run the \`emdd-open\` skill at session start; run the \`emdd-close\` skill at session end (it writes the Episode, runs Consolidation every close with triggers as depth hints, and reviews health). Invoke them only when the user explicitly starts or ends the session — do not auto-run \`emdd-close\` because work looks finished.
 
 Codex skills: \`emdd-open\` (start) and \`emdd-close\` (end + maintenance + review).
 
@@ -1341,7 +1343,7 @@ exports[`getSkillContent > emdd-close skill content matches snapshot 1`] = `
 "---
 name: emdd-close
 description: >-
-  EMDD 세션을 마무리합니다. 에피소드 작성, 컨솔리데이션 체크, 헬스 리뷰를 순서대로 진행합니다.
+  EMDD 세션을 마무리합니다. 사용자가 세션 종료를 명시적으로 요청할 때에만 사용하세요. 에피소드 작성 → 컨솔리데이션 → 헬스 리뷰를 순서대로 진행합니다. 작업이 끝난 것처럼 보여도 사용자 요청 없이 자동으로 실행하지 마세요.
 ---
 
 # EMDD Session Close
@@ -1363,7 +1365,7 @@ exports[`getSkillContent > emdd-open skill content matches snapshot 1`] = `
 "---
 name: emdd-open
 description: >-
-  EMDD 세션을 시작합니다. 그래프 컨텍스트를 로드하고 세션 우선순위를 안내합니다.
+  EMDD 세션을 시작합니다. 사용자가 세션을 새로 시작하거나 이전 작업을 이어서 재개할 때에만 사용하세요. 그래프 컨텍스트를 로드하고 세션 우선순위를 안내합니다. 작업 도중 사용자 요청 없이 자동으로 실행하지 마세요.
 ---
 
 # EMDD Session Open

@@ -124,7 +124,7 @@ function makeCompactRules(tool: Exclude<ToolType, 'all'> = 'claude'): string {
   // Codex cannot invoke MCP prompts (openai/codex#5059), so direct it to the
   // skills that wrap the equivalent MCP tools instead.
   const cycleLine = tool === 'codex'
-    ? 'Run the `emdd-open` skill at session start; run the `emdd-close` skill at session end (it writes the Episode, runs Consolidation every close with triggers as depth hints, and reviews health).'
+    ? 'Run the `emdd-open` skill at session start; run the `emdd-close` skill at session end (it writes the Episode, runs Consolidation every close with triggers as depth hints, and reviews health). Invoke them only when the user explicitly starts or ends the session — do not auto-run `emdd-close` because work looks finished.'
     : 'Use MCP prompts in order: `context-loading` (start) → work → `episode-creation` (end) → `consolidation` (every close; triggers are depth hints) → `health-review` (periodic).';
 
   return `${EMDD_RULES_MARKER} — Evolving Mindmap-Driven Development (Compact)
@@ -336,6 +336,19 @@ function adaptAgentMarkdownForTool(content: string, tool: Exclude<ToolType, 'all
     'Run the `emdd-close` skill (Health Review step) periodically',
   );
 
+  // Codex skills auto-run when a task matches their description
+  // (allow_implicit_invocation defaults to true — see the generated
+  // agents/openai.yaml, which we pin to false). The rules file is always-on
+  // context, so its imperative "Run the `emdd-close` skill" steps read as a
+  // standing order to close whenever work looks done. Append a user-driven
+  // guard so the always-on context agrees with the pinned policy: the close
+  // ceremony is pull (user invokes `$emdd-close`), not push.
+  out = replaceOrThrow(
+    out,
+    'health review remains periodic or explicit.',
+    'health review remains periodic or explicit.\n>\n> **User-driven:** Invoke the `emdd-close` skill only when the user explicitly ends the session (`$emdd-close` or an equivalent request); do not auto-run it just because work appears finished.',
+  );
+
   return out;
 }
 
@@ -426,7 +439,7 @@ const SKILL_CONTENT: Record<SkillName, {
   body: Record<SkillToolType, string>;
 }> = {
   'emdd-open': {
-    description: 'EMDD 세션을 시작합니다. 그래프 컨텍스트를 로드하고 세션 우선순위를 안내합니다.',
+    description: 'EMDD 세션을 시작합니다. 사용자가 세션을 새로 시작하거나 이전 작업을 이어서 재개할 때에만 사용하세요. 그래프 컨텍스트를 로드하고 세션 우선순위를 안내합니다. 작업 도중 사용자 요청 없이 자동으로 실행하지 마세요.',
     body: {
       claude: `# EMDD Session Open
 
@@ -457,7 +470,7 @@ context manually by calling the equivalent MCP tools from the \`emdd\` server in
     },
   },
   'emdd-close': {
-    description: 'EMDD 세션을 마무리합니다. 에피소드 작성, 컨솔리데이션 체크, 헬스 리뷰를 순서대로 진행합니다.',
+    description: 'EMDD 세션을 마무리합니다. 사용자가 세션 종료를 명시적으로 요청할 때에만 사용하세요. 에피소드 작성 → 컨솔리데이션 → 헬스 리뷰를 순서대로 진행합니다. 작업이 끝난 것처럼 보여도 사용자 요청 없이 자동으로 실행하지 마세요.',
     body: {
       claude: `# EMDD Session Close
 
@@ -504,6 +517,24 @@ export function getSkillContent(skillName: SkillName, tool: SkillToolType = 'cla
 }
 
 /**
+ * Codex skill invocation policy, written to `<skill>/agents/openai.yaml`.
+ *
+ * Codex's `allow_implicit_invocation` defaults to `true`, meaning Codex auto-runs
+ * a skill whenever the current task matches the skill description
+ * (https://developers.openai.com/codex/skills). For EMDD that makes `emdd-close`
+ * fire unprompted the moment work *looks* finished. Pinning it to `false` keeps
+ * the session ceremonies user-driven: the user invokes them explicitly via
+ * `$emdd-open` / `$emdd-close`, mirroring Claude Code's slash-command model.
+ *
+ * Claude skills are NOT given this file — it is a Codex-specific config key.
+ *
+ * Exported so the unit test asserts against this exact source (drift guard).
+ */
+export function getCodexSkillPolicy(): string {
+  return 'policy:\n  allow_implicit_invocation: false\n';
+}
+
+/**
  * Generate skill files for AI tools that support repository-local skills.
  */
 export function generateSkillFiles(
@@ -527,12 +558,26 @@ export function generateSkillFiles(
 
     if (!force && fs.existsSync(fullPath)) {
       skipped.push(relativePath);
-      continue;
+    } else {
+      fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+      fs.writeFileSync(fullPath, getSkillContent(name, tool), 'utf-8');
+      created.push(relativePath);
     }
 
-    fs.mkdirSync(path.dirname(fullPath), { recursive: true });
-    fs.writeFileSync(fullPath, getSkillContent(name, tool), 'utf-8');
-    created.push(relativePath);
+    // Codex-only: write the invocation policy so the skill never auto-runs.
+    // See getCodexSkillPolicy. Tracked alongside SKILL.md (same force/skip rules)
+    // so re-running init is idempotent and `--force` rewrites both.
+    if (tool === 'codex') {
+      const policyRelPath = path.join(skillRoot[tool], name, 'agents', 'openai.yaml');
+      const policyFullPath = path.join(projectPath, policyRelPath);
+      if (!force && fs.existsSync(policyFullPath)) {
+        skipped.push(policyRelPath);
+      } else {
+        fs.mkdirSync(path.dirname(policyFullPath), { recursive: true });
+        fs.writeFileSync(policyFullPath, getCodexSkillPolicy(), 'utf-8');
+        created.push(policyRelPath);
+      }
+    }
   }
 
   return { created, skipped };
