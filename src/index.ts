@@ -55,6 +55,8 @@ export type {
   MarkConsolidatedResult,
   HealthReport,
   GapDetail,
+  BridgeCandidate,
+  StructuralGapInfo,
   CheckResult,
   CheckTrigger,
   PromoteCandidate,

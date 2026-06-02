@@ -6,6 +6,7 @@ import { collectDeferredIds, buildNodeToComponent, getConnectedComponents } from
 import { nodeDate } from './date-utils.js';
 import { loadConfig } from './config.js';
 import { countEpisodesSince } from './consolidation-helpers.js';
+import { detectStructuralGaps } from './structural-gap.js';
 import { t } from '../i18n/index.js';
 
 // ── getHealth ───────────────────────────────────────────────────────
@@ -299,6 +300,14 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
     }
   }
 
+  // Structural gaps (011): Louvain communities with weak bridges.
+  // Runs after all other gap producers so structural_gap entries land at the
+  // tail of gapDetails (deterministic render order) and the truncated count
+  // is scoped next to the return.
+  const sg = detectStructuralGaps(graph, config.gaps);
+  gapDetails.push(...sg.gaps);
+  const structuralGapTruncated = sg.truncated > 0 ? sg.truncated : undefined;
+
   return {
     totalNodes,
     totalEdges,
@@ -311,5 +320,6 @@ export async function getHealth(graphDir: string): Promise<HealthReport> {
     gapDetails,
     deferredItems,
     affinityViolations,
+    structuralGapTruncated,
   };
 }

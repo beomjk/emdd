@@ -9,6 +9,7 @@ const schema = z.object({});
 interface GapsResult {
   gaps: string[];
   gapDetails: GapDetail[];
+  structuralGapTruncated?: number;
 }
 
 export const gapsDef: CommandDef<typeof schema, GapsResult> = {
@@ -20,7 +21,11 @@ export const gapsDef: CommandDef<typeof schema, GapsResult> = {
 
   async execute(input) {
     const report = await getHealth(input.graphDir);
-    return { gaps: report.gaps, gapDetails: report.gapDetails };
+    return {
+      gaps: report.gaps,
+      gapDetails: report.gapDetails,
+      structuralGapTruncated: report.structuralGapTruncated,
+    };
   },
 
   format(result) {
@@ -30,6 +35,9 @@ export const gapsDef: CommandDef<typeof schema, GapsResult> = {
     for (const detail of result.gapDetails) {
       lines.push(`[${detail.type}] ${detail.message}`);
       lines.push(`  ${t('health.nodes')}: ${detail.nodeIds.join(', ')}`);
+    }
+    if (result.structuralGapTruncated) {
+      lines.push(t('gap.structural_truncated', { count: String(result.structuralGapTruncated) }));
     }
     return lines.join('\n');
   },

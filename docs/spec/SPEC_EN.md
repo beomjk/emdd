@@ -610,8 +610,10 @@ Step 2: CONTRADICTS edge arrives
 Final confidence: 0.42 (rounded)
 ```
 
-<!-- ASSERT §6.8.1: there are exactly 5 structural gap types -->
-### 6.8 Structural Gap Detection (5 Types)
+<!-- ASSERT §6.8.1: there are exactly 6 structural gap types -->
+### 6.8 Structural Gap Detection (6 Types)
+
+> **Terminology:** "Structural Gap Detection" is the umbrella name for this entire section (every gap type in the table below). It is distinct from the `structural_gap` *type* added in feature 011 — the betweenness/bridge-based gap in the last row, which surfaces two well-developed communities joined by only a weak bridge.
 
 | Gap Type | Detection Method | Output |
 |----------|-----------------|--------|
@@ -620,6 +622,7 @@ Final confidence: 0.42 (rounded)
 | **Blocking Questions** | OPEN + urgency=BLOCKING + (N days **OR** M episodes since updated) | Urge immediate resolution |
 | **Stale Knowledge** | Source is N months old + newer Knowledge added to same cluster (day-only) | Warn that update is needed |
 | **Orphan Findings** | Finding node has no outgoing `edgeCategories.value_producing` edges (12 types) | Suggest new Question/Hypothesis connections |
+| **Structural Gap** (`structural_gap`) | Two Louvain communities (each ≥ `structural_min_cluster_size` nodes) joined by only 1..`structural_max_bridges` undirected bridges; betweenness centrality ranks the candidates | Suggest bridge-candidate node pairs (high-betweenness, not-yet-connected) |
 
 **Default Thresholds and Configuration:**
 
@@ -632,6 +635,9 @@ Final confidence: 0.42 (rounded)
 | Blocking Questions | 7 days at `urgency=BLOCKING` | `gaps.blocking_days` | One week is long enough to confirm the block is real, short enough to prevent stalls |
 | Blocking Questions | 3 episodes since `updated` | `gaps.blocking_episodes` | Same episode-based cadence as untested hypotheses |
 | Disconnected Clusters | < 2 inter-cluster edges | `gaps.min_cluster_edges` | Below 2 edges, clusters are effectively independent research threads |
+| Structural Gap | 3 minimum nodes per community | `gaps.structural_min_cluster_size` | Below 3, a community is too small to be a developed topic area — suppresses false positives |
+| Structural Gap | ≤ 1 bridge between two communities | `gaps.structural_max_bridges` | One bridge is the strongest "almost disconnected" signal; high precision by default. Raise it to widen detection |
+| Structural Gap | report at most 5 gaps | `gaps.structural_max_gaps` | Always-applied report cap (largest gaps first); the truncated count is surfaced, never silently dropped |
 
 These thresholds are defaults. Override them per-project by creating a `.emdd.yml` config file in the graph root:
 
@@ -645,6 +651,9 @@ gaps:
   blocking_days: 5
   blocking_episodes: 3
   min_cluster_edges: 3
+  structural_min_cluster_size: 3
+  structural_max_bridges: 1
+  structural_max_gaps: 5
 ```
 
 **Dual-Trigger Detection (Day + Episode):**
@@ -652,7 +661,7 @@ gaps:
 Untested Hypotheses and Blocking Questions use a dual-trigger system: a gap fires when **either** the day threshold **or** the episode threshold is met. Episode count is measured as the number of Episode nodes created *after* the target node's `updated` date (using strict `>` comparison, so episodes created on the same day are excluded).
 
 - `stale_knowledge` remains day-only because it measures real-world source aging, not session activity.
-- `orphan_finding` and `disconnected_cluster` are structural gaps independent of time or sessions.
+- `orphan_finding`, `disconnected_cluster`, and `structural_gap` are structural gaps independent of time or sessions (no `triggerType`).
 
 Each detected gap includes a `triggerType` field (`'days'`, `'episodes'`, or `'both'`) indicating which trigger(s) fired.
 

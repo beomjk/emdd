@@ -17,7 +17,7 @@ import { nodeDate } from '../../graph/date-utils.js';
 import { VALID_URGENCIES } from '../../graph/types.js';
 import { PROMPT_LIMITS } from './prompt-limits.js';
 import { PROMPT_META } from './meta.js';
-import type { HealthReport, CheckResult, Node } from '../../graph/types.js';
+import type { HealthReport, CheckResult, GapDetail, Node } from '../../graph/types.js';
 import type { Priority, RenderedBacklogItem } from '../../graph/backlog.js';
 import type { TransitionRecommendation } from '../../graph/transitions.js';
 
@@ -106,7 +106,23 @@ const GAP_TYPE_LABELS: Record<string, string> = {
   disconnected_cluster: 'disconnected cluster',
   stale_in_progress: 'stale IN_PROGRESS episode',
   soft_violations: 'soft append-only violations',
+  structural_gap: 'structural gap',
 };
+
+function renderStructuralGapForPrompt(detail: GapDetail): string {
+  const sg = detail.structuralGap;
+  // The detector always sets `structuralGap` on structural_gap entries, so this
+  // fallback only guards a malformed detail. It must stay hardcoded-English:
+  // `detail.message` is locale-dependent (t()) and this prompt is machine-facing
+  // and never localized — returning it would leak Korean when lang=ko.
+  if (!sg) return `Structural gap: ${detail.nodeIds.join(', ')}`;
+
+  const first = sg.candidates[0];
+  const left = first?.from ?? sg.clusterA[0] ?? 'cluster A';
+  const right = first?.to ?? sg.clusterB[0] ?? 'cluster B';
+  const candidates = sg.candidates.map((c) => `${c.from} ↔ ${c.to}`).join(', ');
+  return `Structural gap: ${left} ↔ ${right} (${sg.bridgeCount} bridge(s)) — connect: ${candidates}`;
+}
 
 function buildGapDirective(health: HealthReport): string {
   const details = health.gapDetails;
@@ -116,16 +132,27 @@ No structural gaps — divergent exploration recommended.`;
   }
 
   const bullets = details.map(d => {
+    if (d.type === 'structural_gap') {
+      // Preserve bridge candidates — the generic
+      // "- label (count): ids" form would drop the actionable candidate pairs.
+      return `- ${renderStructuralGapForPrompt(d)}`;
+    }
     const label = GAP_TYPE_LABELS[d.type] ?? d.type;
     const ids = d.nodeIds.join(', ');
     return `- ${label} (${d.nodeIds.length}): ${ids}`;
   }).join('\n');
 
+  // Hardcoded English: this prompt is intentionally not localized (see header).
+  // Mirrors the en.ts `gap.structural_truncated` wording.
+  const truncationNote = health.structuralGapTruncated
+    ? `\n(+${health.structuralGapTruncated} more structural gap(s) not shown — raise gaps.structural_max_gaps to see them)`
+    : '';
+
   return `## Gap Directive
 
 ⚠️ This graph has open structural gaps. **Address at least one before converging on new spec work.**
 
-${bullets}
+${bullets}${truncationNote}
 
 ### Acknowledgment protocol
 
@@ -160,8 +187,13 @@ function buildGraphOverview(health: HealthReport): string {
     .map(([type, count]) => `  - ${type}: ${count}`)
     .join('\n');
 
-  const gapsSection = health.gaps.length > 0
-    ? health.gaps.map(g => `  - ${g}`).join('\n')
+  const structuralGaps = health.gapDetails
+    .filter((d) => d.type === 'structural_gap')
+    .map(renderStructuralGapForPrompt);
+  const overviewGaps = [...health.gaps, ...structuralGaps];
+
+  const gapsSection = overviewGaps.length > 0
+    ? overviewGaps.map(g => `  - ${g}`).join('\n')
     : '  None detected';
 
   const confidenceInfo = health.avgConfidence !== null

@@ -63,6 +63,9 @@ export const healthDef: CommandDef<typeof schema, HealthReport> = {
         lines.push(`  [${gap.type}]${trigger} ${gap.message}`);
         lines.push(`    ${t('health.nodes')}: ${gap.nodeIds.join(', ')}`);
       }
+      if (report.structuralGapTruncated) {
+        lines.push(`  ${t('gap.structural_truncated', { count: String(report.structuralGapTruncated) })}`);
+      }
       lines.push('');
     }
 

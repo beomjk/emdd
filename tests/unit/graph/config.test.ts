@@ -80,3 +80,84 @@ describe('loadConfig', () => {
     expect(config).toEqual(DEFAULT_CONFIG);
   });
 });
+
+describe('loadConfig — structural_* thresholds (011, US3)', () => {
+  let tmpDir: string;
+  let graphDir: string;
+
+  beforeEach(() => {
+    tmpDir = mkdtempSync(join(tmpdir(), 'emdd-config-sg-'));
+    graphDir = join(tmpDir, 'graph');
+    mkdirSync(graphDir, { recursive: true });
+  });
+
+  afterEach(() => {
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it('K1: defaults 3 / 1 / 5 when the keys are unset', () => {
+    const config = loadConfig(graphDir);
+    expect(config.gaps.structural_min_cluster_size).toBe(3);
+    expect(config.gaps.structural_max_bridges).toBe(1);
+    expect(config.gaps.structural_max_gaps).toBe(5);
+  });
+
+  it('loads structural_* values from .emdd.yml', () => {
+    writeFileSync(join(tmpDir, '.emdd.yml'), [
+      'gaps:',
+      '  structural_min_cluster_size: 4',
+      '  structural_max_bridges: 2',
+      '  structural_max_gaps: 10',
+    ].join('\n'));
+    const config = loadConfig(graphDir);
+    expect(config.gaps.structural_min_cluster_size).toBe(4);
+    expect(config.gaps.structural_max_bridges).toBe(2);
+    expect(config.gaps.structural_max_gaps).toBe(10);
+  });
+
+  it('K2: negative / zero / non-numeric values fall back to defaults', () => {
+    writeFileSync(join(tmpDir, '.emdd.yml'), [
+      'gaps:',
+      '  structural_min_cluster_size: -1', // negative → default
+      '  structural_max_bridges: 0',       // zero → default (≥1 required)
+      '  structural_max_gaps: "lots"',     // non-numeric → default
+    ].join('\n'));
+    const config = loadConfig(graphDir);
+    expect(config.gaps.structural_min_cluster_size).toBe(3);
+    expect(config.gaps.structural_max_bridges).toBe(1);
+    expect(config.gaps.structural_max_gaps).toBe(5);
+  });
+
+  it('K2: fractional structural values fall back to defaults', () => {
+    writeFileSync(join(tmpDir, '.emdd.yml'), [
+      'gaps:',
+      '  structural_min_cluster_size: 2.5',
+      '  structural_max_bridges: 1.5',
+      '  structural_max_gaps: 0.5',
+    ].join('\n'));
+    const config = loadConfig(graphDir);
+    expect(config.gaps.structural_min_cluster_size).toBe(3);
+    expect(config.gaps.structural_max_bridges).toBe(1);
+    expect(config.gaps.structural_max_gaps).toBe(5);
+  });
+
+  it('K2: NaN / Infinity structural values fall back to defaults', () => {
+    // js-yaml parses `.nan`→NaN and `.inf`→Infinity; Number.isInteger rejects both.
+    writeFileSync(join(tmpDir, '.emdd.yml'), [
+      'gaps:',
+      '  structural_min_cluster_size: .nan',
+      '  structural_max_bridges: .inf',
+      '  structural_max_gaps: .inf',
+    ].join('\n'));
+    const config = loadConfig(graphDir);
+    expect(config.gaps.structural_min_cluster_size).toBe(3);
+    expect(config.gaps.structural_max_bridges).toBe(1);
+    expect(config.gaps.structural_max_gaps).toBe(5);
+  });
+
+  it('K2: orphan_min_outgoing keeps its valid 0 default (positive check NOT applied to legacy keys)', () => {
+    writeFileSync(join(tmpDir, '.emdd.yml'), ['gaps:', '  orphan_min_outgoing: 0'].join('\n'));
+    const config = loadConfig(graphDir);
+    expect(config.gaps.orphan_min_outgoing).toBe(0);
+  });
+});

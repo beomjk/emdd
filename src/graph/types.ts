@@ -91,6 +91,20 @@ export interface MarkConsolidatedResult {
   date: string;
 }
 
+/** A suggested bridge between a node in clusterA and a node in clusterB (not yet connected). */
+export interface BridgeCandidate {
+  from: string; // clusterA node id (high betweenness)
+  to: string;   // clusterB node id (high betweenness)
+}
+
+/** Machine-readable payload for a structural_gap entry. */
+export interface StructuralGapInfo {
+  clusterA: string[];            // cluster A member node ids (id-sorted)
+  clusterB: string[];            // cluster B member node ids (id-sorted)
+  bridgeCount: number;           // existing A–B bridges (undirected edges), 1 ≤ n ≤ max_bridges
+  candidates: BridgeCandidate[]; // ranked bridge candidate pairs, 1 ≤ length ≤ 3
+}
+
 export interface GapDetail {
   type:
     | 'untested_hypothesis'
@@ -99,10 +113,12 @@ export interface GapDetail {
     | 'orphan_finding'
     | 'disconnected_cluster'
     | 'stale_in_progress'
-    | 'soft_violations';
+    | 'soft_violations'
+    | 'structural_gap';
   nodeIds: string[];
   message: string;
   triggerType?: 'days' | 'episodes' | 'both';
+  structuralGap?: StructuralGapInfo; // present only when type === 'structural_gap'
 }
 
 export interface HealthReport {
@@ -118,6 +134,7 @@ export interface HealthReport {
   deferredItems: string[];
   affinityViolations: string[];
   showAll?: boolean;
+  structuralGapTruncated?: number; // structural_gap entries dropped by the report cap (>0 only)
 }
 
 export interface CheckTrigger {
