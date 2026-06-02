@@ -1,7 +1,7 @@
 import GraphologyDefault from 'graphology';
 import louvainDefault from 'graphology-communities-louvain';
-import type { Graph as EmddGraph, GapDetail } from './types.js';
-import { DEFAULT_CONFIG, type GapThresholds } from './config.js';
+import type { Graph as EmddGraph, GapDetail, BridgeCandidate } from './types.js';
+import { DEFAULT_CONFIG, positiveInteger, type GapThresholds } from './config.js';
 import { t } from '../i18n/index.js';
 
 // ESM interop — graphology/louvain export shapes vary by bundler
@@ -9,6 +9,16 @@ const GraphologyGraph = (GraphologyDefault as any).default ?? GraphologyDefault;
 const louvain = (louvainDefault as any).default ?? louvainDefault;
 
 type GraphologyInstance = InstanceType<typeof GraphologyGraph>;
+
+/**
+ * Above this many nodes, candidate ranking falls back from Brandes betweenness
+ * (O(V·E)) to degree centrality (O(V+E)). `getHealth` runs structural-gap
+ * detection on the MCP session-start hot path, so the O(V·E) cost must not grow
+ * unbounded — at ~500 nodes betweenness is ~180ms, but it crosses the 3s health
+ * budget near ~2000 nodes. The gate caps that cost; only candidate *ranking*
+ * precision degrades on very large graphs — gap *detection* is unchanged.
+ */
+const BETWEENNESS_MAX_NODES = 1000;
 
 // ── Undirected unweighted builder ───────────────────────────────────
 
@@ -124,6 +134,19 @@ export function computeBetweenness(g: GraphologyInstance): Map<string, number> {
   return CB;
 }
 
+/**
+ * Degree centrality (neighbor count) from the prebuilt adjacency — O(V).
+ * Used as the large-graph fallback for candidate ranking when betweenness's
+ * O(V·E) cost would breach the health budget (see BETWEENNESS_MAX_NODES).
+ * High-degree endpoints are a cheap, deterministic proxy for "well-connected
+ * bridge points"; the id tie-break in `byCentrality` keeps output stable.
+ */
+export function degreeCentrality(adj: Map<string, Set<string>>): Map<string, number> {
+  const deg = new Map<string, number>();
+  for (const [id, neighbors] of adj) deg.set(id, neighbors.size);
+  return deg;
+}
+
 // ── Structural gap detection ────────────────────────────────────────
 
 interface DevelopedCluster {
@@ -137,11 +160,7 @@ interface QualifiedPair {
 }
 
 interface GapPair extends QualifiedPair {
-  candidates: Array<{ from: string; to: string }>;
-}
-
-function positiveInteger(value: number, fallback: number): number {
-  return Number.isInteger(value) && value > 0 ? value : fallback;
+  candidates: BridgeCandidate[];
 }
 
 /**
@@ -212,13 +231,18 @@ export function detectStructuralGaps(
   }
   if (qualifiedPairs.length === 0) return { gaps: [], truncated: 0 };
 
-  const bc = computeBetweenness(g);
+  // Rank candidates by betweenness, but degrade to degree centrality above
+  // BETWEENNESS_MAX_NODES so the O(V·E) cost can't stall the health hot path.
+  // Detection (the bridge-count rule) is unaffected — only ranking precision.
+  const centrality = g.order > BETWEENNESS_MAX_NODES
+    ? degreeCentrality(adj)
+    : computeBetweenness(g);
 
-  // Betweenness-desc, id-asc comparator for candidate ranking.
+  // Centrality-desc, id-asc comparator for candidate ranking.
   const byCentrality = (x: string, y: string): number => {
-    const bx = bc.get(x) ?? 0;
-    const by = bc.get(y) ?? 0;
-    if (bx !== by) return by - bx;
+    const cx = centrality.get(x) ?? 0;
+    const cy = centrality.get(y) ?? 0;
+    if (cx !== cy) return cy - cx;
     return x < y ? -1 : x > y ? 1 : 0;
   };
 
@@ -231,7 +255,7 @@ export function detectStructuralGaps(
     const rankA = new Map(sortedA.map((id, idx) => [id, idx] as const));
     const rankB = new Map(sortedB.map((id, idx) => [id, idx] as const));
 
-    const compareCandidate = (p: { from: string; to: string }, q: { from: string; to: string }): number => {
+    const compareCandidate = (p: BridgeCandidate, q: BridgeCandidate): number => {
       const rp = rankA.get(p.from)! + rankB.get(p.to)!;
       const rq = rankA.get(q.from)! + rankB.get(q.to)!;
       if (rp !== rq) return rp - rq;
@@ -239,7 +263,7 @@ export function detectStructuralGaps(
       return p.to < q.to ? -1 : p.to > q.to ? 1 : 0;
     };
 
-    const candidates: Array<{ from: string; to: string }> = [];
+    const candidates: BridgeCandidate[] = [];
     for (const a of sortedA) {
       const aAdj = adj.get(a);
       for (const b of sortedB) {
@@ -250,8 +274,10 @@ export function detectStructuralGaps(
       }
     }
 
-    // Defensive: a separated-but-fully-connected pair has no candidate to
-    // propose — drop it rather than emit an empty (and unactionable) gap.
+    // Defensive (normally unreachable): `candidates` is empty only if every A–B
+    // cross pair is already connected, i.e. bridgeCount = |A|·|B| ≥ S² > B — which
+    // fails the qualify check above; and a fully cross-connected pair would merge
+    // into one Louvain community anyway. Drop rather than emit an unactionable gap.
     if (candidates.length === 0) continue;
 
     pairs.push({ ci, cj, bridgeCount, candidates });

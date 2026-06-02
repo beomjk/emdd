@@ -141,6 +141,20 @@ describe('loadConfig — structural_* thresholds (011, US3)', () => {
     expect(config.gaps.structural_max_gaps).toBe(5);
   });
 
+  it('K2: NaN / Infinity structural values fall back to defaults', () => {
+    // js-yaml parses `.nan`→NaN and `.inf`→Infinity; Number.isInteger rejects both.
+    writeFileSync(join(tmpDir, '.emdd.yml'), [
+      'gaps:',
+      '  structural_min_cluster_size: .nan',
+      '  structural_max_bridges: .inf',
+      '  structural_max_gaps: .inf',
+    ].join('\n'));
+    const config = loadConfig(graphDir);
+    expect(config.gaps.structural_min_cluster_size).toBe(3);
+    expect(config.gaps.structural_max_bridges).toBe(1);
+    expect(config.gaps.structural_max_gaps).toBe(5);
+  });
+
   it('K2: orphan_min_outgoing keeps its valid 0 default (positive check NOT applied to legacy keys)', () => {
     writeFileSync(join(tmpDir, '.emdd.yml'), ['gaps:', '  orphan_min_outgoing: 0'].join('\n'));
     const config = loadConfig(graphDir);

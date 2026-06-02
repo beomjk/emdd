@@ -3,6 +3,7 @@ import {
   detectStructuralGaps,
   buildUndirectedGraph,
   computeBetweenness,
+  degreeCentrality,
 } from '../../../src/graph/structural-gap.js';
 import { DEFAULT_CONFIG, type GapThresholds } from '../../../src/graph/config.js';
 import type { Graph, Node } from '../../../src/graph/types.js';
@@ -81,6 +82,34 @@ describe('computeBetweenness — Brandes correctness', () => {
     expect(bc.get('d')!).toBeCloseTo(3.5);
     expect(bc.get('e')!).toBeCloseTo(0);
   });
+
+  it('star K_{1,4} → center = C(4,2) = 6, leaves = 0 (canonical max-centrality case)', () => {
+    // Every one of the 6 leaf-pair shortest paths routes through the center.
+    const { g } = buildUndirectedGraph(makeGraph({ a: ['b', 'c', 'd', 'e'], b: [], c: [], d: [], e: [] }));
+    const bc = computeBetweenness(g);
+    expect(bc.get('a')!).toBeCloseTo(6);
+    for (const leaf of ['b', 'c', 'd', 'e']) expect(bc.get(leaf)!).toBeCloseTo(0);
+  });
+});
+
+// ── degree centrality (large-graph ranking fallback) ────────────────
+
+describe('degreeCentrality — large-graph ranking fallback', () => {
+  it('returns neighbor counts and ranks the star center above its leaves', () => {
+    const { adj } = buildUndirectedGraph(makeGraph({ a: ['b', 'c', 'd', 'e'], b: [], c: [], d: [], e: [] }));
+    const deg = degreeCentrality(adj);
+    expect(deg.get('a')).toBe(4);
+    for (const leaf of ['b', 'c', 'd', 'e']) expect(deg.get(leaf)).toBe(1);
+  });
+
+  it('agrees with betweenness on which star node ranks first (degrades precision, not order here)', () => {
+    const { g, adj } = buildUndirectedGraph(makeGraph({ a: ['b', 'c', 'd', 'e'], b: [], c: [], d: [], e: [] }));
+    const deg = degreeCentrality(adj);
+    const bc = computeBetweenness(g);
+    // both rank the center strictly above any leaf
+    expect(deg.get('a')!).toBeGreaterThan(deg.get('b')!);
+    expect(bc.get('a')!).toBeGreaterThan(bc.get('b')!);
+  });
 });
 
 // ── detection: quickstart K/H fixture ───────────────────────────────
@@ -154,6 +183,49 @@ describe('detectStructuralGaps — determinism (FR-008)', () => {
       detectStructuralGaps(multiClusterFixture(), thresholds({ structural_max_gaps: 999 }));
     expect(g()).toEqual(g());
   });
+
+  it('output is independent of node insertion order (id-sort normalization)', () => {
+    // Same logical graph, node Map built in reverse insertion order. The internal
+    // id-sort in buildUndirectedGraph/computeBetweenness must erase the difference —
+    // this catches accidental reliance on Map iteration order that two same-process
+    // runs of an identical Map would not.
+    const base = multiClusterFixture();
+    const reversed = { ...base, nodes: new Map([...base.nodes].reverse()) };
+    const normal = detectStructuralGaps(base, thresholds({ structural_max_gaps: 999 }));
+    const shuffled = detectStructuralGaps(reversed, thresholds({ structural_max_gaps: 999 }));
+    expect(shuffled).toEqual(normal);
+  });
+});
+
+// ── threshold guard at the function boundary (M4) ───────────────────
+
+describe('detectStructuralGaps — threshold guard at the function boundary', () => {
+  // detectStructuralGaps is exported and unit-callable, bypassing loadConfig's
+  // validation. Its own positiveInteger guard is then the ONLY defense, so it
+  // must reject invalid thresholds passed directly and fall back to defaults.
+  it('rejects fractional / zero / negative thresholds → identical to default-threshold result', () => {
+    const invalid = detectStructuralGaps(
+      khFixture(),
+      thresholds({
+        structural_min_cluster_size: 2.5, // → 3
+        structural_max_bridges: 0,         // → 1
+        structural_max_gaps: -1,           // → 5
+      }),
+    );
+    expect(invalid).toEqual(detectStructuralGaps(khFixture(), thresholds()));
+  });
+
+  it('rejects NaN / Infinity thresholds → identical to default-threshold result', () => {
+    const invalid = detectStructuralGaps(
+      khFixture(),
+      thresholds({
+        structural_min_cluster_size: NaN,
+        structural_max_bridges: Infinity,
+        structural_max_gaps: NaN,
+      }),
+    );
+    expect(invalid).toEqual(detectStructuralGaps(khFixture(), thresholds()));
+  });
 });
 
 // ── false positives ─────────────────────────────────────────────────
@@ -166,6 +238,14 @@ describe('detectStructuralGaps — false positives (SC-002)', () => {
 
   it('single dense cluster → 0 gaps (needs ≥2 developed clusters)', () => {
     const { gaps } = detectStructuralGaps(makeGraph(cliqueLinks(ids('know', 4))), thresholds());
+    expect(gaps).toHaveLength(0);
+  });
+
+  it('single large community (K8 ≥ 2·min_cluster_size) → 0 gaps via the <2-developed path', () => {
+    // K8: order 8 ≥ 2*S=6 clears the node-count early-exit, but Louvain yields ONE
+    // community of 8 ≥ S → developed.length < 2. Isolates that return (the K4 case
+    // above exits earlier on `order < 2*S`, never reaching the <2-developed check).
+    const { gaps } = detectStructuralGaps(makeGraph(cliqueLinks(ids('know', 8))), thresholds());
     expect(gaps).toHaveLength(0);
   });
 
@@ -271,6 +351,17 @@ describe('detectStructuralGaps — report cap (FR-009)', () => {
     expect(truncated).toBe(2);
     const sg = gaps[0].structuralGap!;
     expect(sg.clusterA.length + sg.clusterB.length).toBe(9);
+  });
+
+  it('exactly at the cap (pairs === structural_max_gaps) → truncated 0, all reported', () => {
+    // multiClusterFixture has exactly 3 qualified pairs; cap=3 is the off-by-one
+    // boundary for `Math.max(0, pairs.length - G)` — nothing is dropped.
+    const { gaps, truncated } = detectStructuralGaps(
+      multiClusterFixture(),
+      thresholds({ structural_max_gaps: 3 }),
+    );
+    expect(gaps).toHaveLength(3);
+    expect(truncated).toBe(0);
   });
 });
 

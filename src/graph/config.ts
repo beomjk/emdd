@@ -44,8 +44,13 @@ export const DEFAULT_CONFIG: EmddConfig = {
  * Used only for the structural_* keys, which require ≥1 to be meaningful. The
  * existing 7 keys keep their typeof-only pattern (notably orphan_min_outgoing,
  * whose default 0 is a valid value that a positive check would wrongly reject).
+ *
+ * Exported and reused by `detectStructuralGaps` so the structural thresholds
+ * are validated identically whether they arrive via `loadConfig` or are passed
+ * directly to the exported detector — one predicate, no divergence. Accepts
+ * `unknown` so it guards both untrusted YAML and already-typed `number` inputs.
  */
-function positiveInteger(v: unknown, fallback: number): number {
+export function positiveInteger(v: unknown, fallback: number): number {
   return typeof v === 'number' && Number.isInteger(v) && v > 0 ? v : fallback;
 }
 

@@ -14,6 +14,7 @@ import { getHealth } from '../../../src/graph/health.js';
 import { loadGraph } from '../../../src/graph/loader.js';
 import { detectStructuralGaps } from '../../../src/graph/structural-gap.js';
 import { DEFAULT_CONFIG } from '../../../src/graph/config.js';
+import type { Graph, Node } from '../../../src/graph/types.js';
 
 const CLUSTERS = 20;
 const PER_CLUSTER = 25; // 20 * 25 = 500 nodes
@@ -52,6 +53,55 @@ function generateGraph(graphDir: string): void {
     }
   }
 }
+
+/** In-memory chained-cluster Graph: `clusters` communities of `per` nodes each,
+ *  joined in a chain by a single weak bridge — same topology as generateGraph,
+ *  but built directly (no file I/O) so large sizes stay cheap to construct. */
+function buildChainedGraph(clusters: number, per: number): Graph {
+  const nodes = new Map<string, Node>();
+  const id = (c: number, i: number) => `know-${String(c * per + i).padStart(5, '0')}`;
+  for (let c = 0; c < clusters; c++) {
+    for (let i = 0; i < per; i++) {
+      const links: Node['links'] = [
+        { target: id(c, (i + 1) % per), relation: 'relates_to' },
+        { target: id(c, (i + 2) % per), relation: 'relates_to' },
+        { target: id(c, (i + 5) % per), relation: 'relates_to' },
+      ];
+      if (i === 0 && c + 1 < clusters) links.push({ target: id(c + 1, 0), relation: 'relates_to' });
+      nodes.set(id(c, i), {
+        id: id(c, i),
+        type: 'knowledge',
+        title: id(c, i),
+        path: `graph/knowledge/${id(c, i)}.md`,
+        tags: [],
+        links,
+        meta: {},
+      });
+    }
+  }
+  return { nodes, errors: [], warnings: [] };
+}
+
+describe('SC-005: large graphs use the degree-centrality fallback (M1)', () => {
+  it('stays fast and deterministic above BETWEENNESS_MAX_NODES (1500 nodes)', () => {
+    // 60 × 25 = 1500 nodes > the 1000-node betweenness gate. Brandes O(V·E) would
+    // cost ~1.6s here (extrapolated from the 500-node ~180ms point); the degree
+    // fallback must keep it far under — the <800ms bound fails if betweenness ran.
+    const graph = buildChainedGraph(60, 25);
+    expect(graph.nodes.size).toBe(1500);
+
+    const t0 = performance.now();
+    const { gaps, truncated } = detectStructuralGaps(graph, DEFAULT_CONFIG.gaps);
+    const ms = performance.now() - t0;
+
+    expect(gaps.length).toBeGreaterThan(0); // detection still works at scale
+    expect(truncated).toBeGreaterThan(0);   // 59 weak bridges → capped to 5
+    expect(ms).toBeLessThan(800);           // degree fallback, not O(V·E) betweenness
+
+    // Determinism is preserved under the fallback.
+    expect(detectStructuralGaps(graph, DEFAULT_CONFIG.gaps).gaps).toEqual(gaps);
+  });
+});
 
 describe('SC-005: getHealth performance at ~500 nodes', () => {
   it('stays within the 3s budget and the structural-gap cost is a small fraction', async () => {

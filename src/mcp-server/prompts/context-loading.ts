@@ -111,7 +111,11 @@ const GAP_TYPE_LABELS: Record<string, string> = {
 
 function renderStructuralGapForPrompt(detail: GapDetail): string {
   const sg = detail.structuralGap;
-  if (!sg) return detail.message;
+  // The detector always sets `structuralGap` on structural_gap entries, so this
+  // fallback only guards a malformed detail. It must stay hardcoded-English:
+  // `detail.message` is locale-dependent (t()) and this prompt is machine-facing
+  // and never localized — returning it would leak Korean when lang=ko.
+  if (!sg) return `Structural gap: ${detail.nodeIds.join(', ')}`;
 
   const first = sg.candidates[0];
   const left = first?.from ?? sg.clusterA[0] ?? 'cluster A';
