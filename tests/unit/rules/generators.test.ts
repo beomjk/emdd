@@ -94,14 +94,14 @@ describe('getRulesContent', () => {
     // parenthetical fallback. Without this, the rules file (loaded as agent
     // context every session) contradicts the SKILL.md disclaimer.
     expect(content).not.toContain('Run the `context-loading` prompt');
-    expect(content).toContain('Run the `emdd-open` skill');
+    expect(content).toContain('Use the `emdd-open` skill only when the user explicitly invokes `$emdd-open`');
     // Steps 3-5 must redirect to the `emdd-close` skill — same reason.
     expect(content).not.toContain('Run the `episode-creation` prompt');
     expect(content).not.toContain('Run the `consolidation` prompt');
     expect(content).not.toContain('Run the `health-review` prompt');
-    expect(content).toContain('Run the `emdd-close` skill (Episode step)');
-    expect(content).toContain('Run the `emdd-close` skill (Consolidation step)');
-    expect(content).toContain('Run the `emdd-close` skill (Health Review step)');
+    expect(content).toContain('Use the `emdd-close` skill only when the user explicitly invokes `$emdd-close`');
+    expect(content).toContain('During explicit `$emdd-close`, run the `emdd-close` skill (Consolidation step)');
+    expect(content).toContain('call the `health` tool on explicit request');
     expect(content).toMatchSnapshot();
   });
 
@@ -150,14 +150,16 @@ describe('getRulesContent', () => {
     // C half of the auto-run fix: the always-on rules context must agree with the
     // pinned allow_implicit_invocation:false policy — close is pull, not push.
     const full = getRulesContent('codex', 'full');
-    expect(full).toContain('do not auto-run it just because work appears finished');
+    expect(full).toContain('do not auto-run lifecycle skills');
+    expect(full).toContain('$emdd-open');
     expect(full).toContain('$emdd-close');
 
     const compact = getRulesContent('codex', 'compact');
-    expect(compact).toContain('do not auto-run `emdd-close`');
+    expect(compact).toContain('do not auto-run lifecycle skills');
 
     // Claude rules must NOT carry the Codex-specific guard or `$` invocation syntax.
     const claudeFull = getRulesContent('claude', 'full');
+    expect(claudeFull).not.toContain('$emdd-open');
     expect(claudeFull).not.toContain('$emdd-close');
     expect(claudeFull).not.toContain('do not auto-run');
   });
@@ -340,6 +342,7 @@ describe('emdd-agent.md uniqueness invariant for Codex drift guard', () => {
       'Run the `episode-creation` prompt.',
       'Run the `consolidation` prompt every close.',
       'Run the `health-review` prompt periodically',
+      'health review remains periodic or explicit.',
     ];
     for (const s of searchStrings) {
       const occurrences = agentMd.split(s).length - 1;

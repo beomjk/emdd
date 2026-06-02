@@ -2,7 +2,17 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mkdtempSync, rmSync, mkdirSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { load as loadYaml } from 'js-yaml';
 import { initCommand } from '../../../src/cli/init.js';
+
+function expectCodexPolicyFile(tmpDir: string, skillName: 'emdd-open' | 'emdd-close'): void {
+  const yamlPath = join(tmpDir, '.agents', 'skills', skillName, 'agents', 'openai.yaml');
+  expect(existsSync(yamlPath), `${skillName} should have agents/openai.yaml`).toBe(true);
+  const parsed = loadYaml(readFileSync(yamlPath, 'utf-8')) as {
+    policy?: { allow_implicit_invocation?: boolean };
+  };
+  expect(parsed.policy?.allow_implicit_invocation).toBe(false);
+}
 
 describe('emdd init --tool', () => {
   let tmpDir: string;
@@ -37,6 +47,8 @@ describe('emdd init --tool', () => {
     expect(content).toContain('Codex skills');
     expect(existsSync(join(tmpDir, '.agents', 'skills', 'emdd-open', 'SKILL.md'))).toBe(true);
     expect(existsSync(join(tmpDir, '.agents', 'skills', 'emdd-close', 'SKILL.md'))).toBe(true);
+    expectCodexPolicyFile(tmpDir, 'emdd-open');
+    expectCodexPolicyFile(tmpDir, 'emdd-close');
   });
 
   it('creates all tool files with --tool all', () => {
@@ -54,6 +66,8 @@ describe('emdd init --tool', () => {
     expect(existsSync(join(tmpDir, '.claude', 'skills', 'emdd-close', 'SKILL.md'))).toBe(true);
     expect(existsSync(join(tmpDir, '.agents', 'skills', 'emdd-open', 'SKILL.md'))).toBe(true);
     expect(existsSync(join(tmpDir, '.agents', 'skills', 'emdd-close', 'SKILL.md'))).toBe(true);
+    expectCodexPolicyFile(tmpDir, 'emdd-open');
+    expectCodexPolicyFile(tmpDir, 'emdd-close');
   });
 
   it('defaults to claude when --tool is omitted (rules + skills both emitted)', () => {
@@ -87,6 +101,8 @@ describe('emdd init --tool', () => {
     seed('.claude/skills/emdd-close/SKILL.md');
     seed('.agents/skills/emdd-open/SKILL.md');
     seed('.agents/skills/emdd-close/SKILL.md');
+    seed('.agents/skills/emdd-open/agents/openai.yaml');
+    seed('.agents/skills/emdd-close/agents/openai.yaml');
 
     initCommand(tmpDir, { lang: 'en', tool: 'all', force: true });
 
@@ -101,6 +117,8 @@ describe('emdd init --tool', () => {
       '.claude/skills/emdd-close/SKILL.md',
       '.agents/skills/emdd-open/SKILL.md',
       '.agents/skills/emdd-close/SKILL.md',
+      '.agents/skills/emdd-open/agents/openai.yaml',
+      '.agents/skills/emdd-close/agents/openai.yaml',
     ];
     for (const rel of checks) {
       const body = readFileSync(join(tmpDir, rel), 'utf-8');

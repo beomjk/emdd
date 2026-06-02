@@ -124,7 +124,7 @@ function makeCompactRules(tool: Exclude<ToolType, 'all'> = 'claude'): string {
   // Codex cannot invoke MCP prompts (openai/codex#5059), so direct it to the
   // skills that wrap the equivalent MCP tools instead.
   const cycleLine = tool === 'codex'
-    ? 'Run the `emdd-open` skill at session start; run the `emdd-close` skill at session end (it writes the Episode, runs Consolidation every close with triggers as depth hints, and reviews health). Invoke them only when the user explicitly starts or ends the session — do not auto-run `emdd-close` because work looks finished.'
+    ? 'Use the `emdd-open` skill at session start and the `emdd-close` skill at session end (it writes the Episode, runs Consolidation every close with triggers as depth hints, and reviews health). Invoke them only when the user explicitly starts/resumes or ends the session; do not auto-run lifecycle skills because work appears to start or finish.'
     : 'Use MCP prompts in order: `context-loading` (start) → work → `episode-creation` (end) → `consolidation` (every close; triggers are depth hints) → `health-review` (periodic).';
 
   return `${EMDD_RULES_MARKER} — Evolving Mindmap-Driven Development (Compact)
@@ -310,7 +310,7 @@ function adaptAgentMarkdownForTool(content: string, tool: Exclude<ToolType, 'all
   out = replaceOrThrow(
     out,
     'Run the `context-loading` prompt (or `/emdd-open`).',
-    'Run the `emdd-open` skill.',
+    'Use the `emdd-open` skill only when the user explicitly invokes `$emdd-open` or asks to start/resume an EMDD session.',
   );
   out = replaceOrThrow(out, 'via `/emdd-close`', 'via the `emdd-close` skill');
 
@@ -323,30 +323,31 @@ function adaptAgentMarkdownForTool(content: string, tool: Exclude<ToolType, 'all
   out = replaceOrThrow(
     out,
     'Run the `episode-creation` prompt.',
-    'Run the `emdd-close` skill (Episode step).',
+    'Use the `emdd-close` skill only when the user explicitly invokes `$emdd-close` or asks to end the session (Episode step).',
   );
   out = replaceOrThrow(
     out,
     'Run the `consolidation` prompt every close.',
-    'Run the `emdd-close` skill (Consolidation step) every close.',
+    'During explicit `$emdd-close`, run the `emdd-close` skill (Consolidation step) every close.',
   );
   out = replaceOrThrow(
     out,
     'Run the `health-review` prompt periodically',
-    'Run the `emdd-close` skill (Health Review step) periodically',
+    'During explicit `$emdd-close`, run the `emdd-close` skill (Health Review step); for a standalone review, call the `health` tool on explicit request',
   );
 
   // Codex skills auto-run when a task matches their description
   // (allow_implicit_invocation defaults to true — see the generated
   // agents/openai.yaml, which we pin to false). The rules file is always-on
   // context, so its imperative "Run the `emdd-close` skill" steps read as a
-  // standing order to close whenever work looks done. Append a user-driven
-  // guard so the always-on context agrees with the pinned policy: the close
-  // ceremony is pull (user invokes `$emdd-close`), not push.
+  // standing order to start/close whenever work looks like a session boundary.
+  // Append a user-driven guard so the always-on context agrees with the pinned
+  // policy: lifecycle ceremonies are pull (user invokes `$emdd-open` /
+  // `$emdd-close`), not push.
   out = replaceOrThrow(
     out,
     'health review remains periodic or explicit.',
-    'health review remains periodic or explicit.\n>\n> **User-driven:** Invoke the `emdd-close` skill only when the user explicitly ends the session (`$emdd-close` or an equivalent request); do not auto-run it just because work appears finished.',
+    'health review runs during explicit close or explicit standalone review.\n>\n> **User-driven:** Invoke the `emdd-open` / `emdd-close` skills only when the user explicitly starts/resumes or ends the session (`$emdd-open`, `$emdd-close`, or an equivalent request); do not auto-run lifecycle skills just because work appears to start or finish.',
   );
 
   return out;

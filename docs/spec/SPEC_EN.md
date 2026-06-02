@@ -708,7 +708,7 @@ Before beginning a new exploration loop (Episode), perform the following:
    -> Report the expected Consolidation depth for session close
 ```
 
-For AI agents, this protocol **runs automatically at session start**. For human researchers, it is performed during the Morning Briefing.
+For AI agents, run this protocol at session start through the configured assistant entry point: the MCP prompt or `/emdd-open` for Claude Code, and explicit `$emdd-open` invocation for Codex. For human researchers, it is performed during the Morning Briefing.
 
 **Principle: Each Episode curates the context for the next Episode.** When the previous session records "what to read next," the following session starts not from zero but from curated context. This mirrors a human researcher's lab notebook habit — "tomorrow, pick up here; check this first before starting."
 
@@ -1243,8 +1243,12 @@ project-root/
 +-- AGENTS.md                  # Codex EMDD rules + agent behavior (created by emdd init --tool codex)
 +-- .agents/                   # Codex skills directory (created by emdd init --tool codex)
 |   +-- skills/
-|       +-- emdd-open/SKILL.md   # Codex session start skill
-|       +-- emdd-close/SKILL.md  # Codex session end skill
+|       +-- emdd-open/
+|       |   +-- SKILL.md           # Codex session start skill
+|       |   +-- agents/openai.yaml # Codex explicit-invocation policy
+|       +-- emdd-close/
+|           +-- SKILL.md           # Codex session end skill
+|           +-- agents/openai.yaml # Codex explicit-invocation policy
 |
 +-- .claude/                   # Claude Code rules + skills (created by emdd init --tool claude)
 |   +-- CLAUDE.md              # EMDD rules + agent behavior (created by emdd init)

@@ -68,6 +68,8 @@ codex mcp add emdd -- cmd /c npx @beomjk/emdd mcp
 
 This registers the EMDD MCP server with Codex. Tools become available immediately in your next session. (Codex does not yet expose MCP prompts — see [openai/codex#5059](https://github.com/openai/codex/issues/5059); the generated `emdd-open` / `emdd-close` skills walk the equivalent MCP tools instead.) The skills pin `allow_implicit_invocation: false` via `agents/openai.yaml`, so invoke them explicitly with `$emdd-open` / `$emdd-close` rather than relying on Codex's automatic skill activation.
 
+Existing Codex projects should run `emdd init . --tool codex` to add missing `agents/openai.yaml` files. Use `emdd init . --tool codex --force` only when you also want to refresh existing `AGENTS.md` and `SKILL.md` files, since `--force` overwrites local edits.
+
 ---
 
 ## Cursor
@@ -296,7 +298,7 @@ The four prompts form a recurring session cycle:
 
 Steps 1-3 happen every session cycle. Step 4 is periodic or explicit.
 
-Prompts are available in tools that support MCP prompts (e.g., Claude Code). Codex does not yet expose MCP prompts ([openai/codex#5059](https://github.com/openai/codex/issues/5059)); the generated Codex skills (`emdd-open`, `emdd-close`) walk the equivalent MCP tools instead and produce the same outcome. These skills set `allow_implicit_invocation: false` (in `agents/openai.yaml`) so Codex runs them only on explicit `$emdd-open` / `$emdd-close` invocation, never auto-triggered when work merely looks finished.
+Prompts are available in tools that support MCP prompts (e.g., Claude Code). Codex does not yet expose MCP prompts ([openai/codex#5059](https://github.com/openai/codex/issues/5059)); the generated Codex skills (`emdd-open`, `emdd-close`) walk the equivalent MCP tools instead and produce the same outcome. These skills set `allow_implicit_invocation: false` (in `agents/openai.yaml`) so Codex runs them only on explicit `$emdd-open` / `$emdd-close` invocation, never auto-triggered when work merely looks finished. Existing Codex projects can run `emdd init . --tool codex` to add missing policy files, or rerun with `--force` to refresh existing rules/skills.
 
 ---
 

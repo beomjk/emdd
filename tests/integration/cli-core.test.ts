@@ -3,6 +3,7 @@ import { execSync } from 'node:child_process';
 import { mkdtempSync, existsSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { load as loadYaml } from 'js-yaml';
 
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
@@ -30,6 +31,15 @@ function runMayFail(args: string, cwd?: string): { stdout: string; stderr: strin
     // message must read this stream, not stdout.
     return { stdout: e.stdout ?? '', stderr: e.stderr ?? '', exitCode: e.status ?? 1 };
   }
+}
+
+function expectCodexPolicyFile(tmpDir: string, skillName: 'emdd-open' | 'emdd-close'): void {
+  const yamlPath = join(tmpDir, '.agents', 'skills', skillName, 'agents', 'openai.yaml');
+  expect(existsSync(yamlPath), `${skillName} should have agents/openai.yaml`).toBe(true);
+  const parsed = loadYaml(readFileSync(yamlPath, 'utf-8')) as {
+    policy?: { allow_implicit_invocation?: boolean };
+  };
+  expect(parsed.policy?.allow_implicit_invocation).toBe(false);
 }
 
 describe('emdd init', () => {
@@ -79,6 +89,8 @@ describe('emdd init', () => {
     expect(existsSync(join(tmpDir, 'AGENTS.md'))).toBe(true);
     expect(existsSync(join(tmpDir, '.agents', 'skills', 'emdd-open', 'SKILL.md'))).toBe(true);
     expect(existsSync(join(tmpDir, '.agents', 'skills', 'emdd-close', 'SKILL.md'))).toBe(true);
+    expectCodexPolicyFile(tmpDir, 'emdd-open');
+    expectCodexPolicyFile(tmpDir, 'emdd-close');
     const agents = readFileSync(join(tmpDir, 'AGENTS.md'), 'utf-8');
     expect(agents.startsWith('# EMDD')).toBe(true);
     // Pin the on-disk file to the canonical generator output. Without this,
@@ -110,6 +122,8 @@ describe('emdd init', () => {
     expect(existsSync(join(tmpDir, 'AGENTS.md'))).toBe(true);
     expect(existsSync(join(tmpDir, '.claude', 'skills', 'emdd-open', 'SKILL.md'))).toBe(true);
     expect(existsSync(join(tmpDir, '.agents', 'skills', 'emdd-open', 'SKILL.md'))).toBe(true);
+    expectCodexPolicyFile(tmpDir, 'emdd-open');
+    expectCodexPolicyFile(tmpDir, 'emdd-close');
     expect(result).toContain('claude mcp add emdd');
     expect(result).toContain('codex mcp add emdd');
     expect(result).toContain('MCP_SETUP.md');

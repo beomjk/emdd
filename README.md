@@ -141,6 +141,8 @@ For Claude Code, use `/emdd-open` and `/emdd-close`. For Codex, use the generate
 > **Codex note**: Codex does not yet expose MCP prompts ([openai/codex#5059](https://github.com/openai/codex/issues/5059)). The generated Codex skills therefore call MCP **tools** (`health`, `list-nodes`, `read-node`, `check`, `backlog`, `status-transitions`, `create-node`, `mark-consolidated`) instead of prompts to achieve the same result. When Codex adds prompt support, the skills will switch to calling prompts directly.
 >
 > Each generated Codex skill also ships an `agents/openai.yaml` that sets `allow_implicit_invocation: false`. Codex otherwise auto-runs a skill whenever a task *looks* like a match for its description — which would fire `emdd-close` unprompted the moment work seems done. With the policy pinned off, you invoke them explicitly (`$emdd-open` / `$emdd-close`), mirroring Claude Code's user-driven `/emdd-open` · `/emdd-close`.
+>
+> Existing Codex projects should run `emdd init . --tool codex` to add any missing policy files. Use `emdd init . --tool codex --force` only when you also want to refresh existing `AGENTS.md` and `SKILL.md` files, since `--force` overwrites local edits.
 
 ## What is EMDD?
 
