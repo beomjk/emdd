@@ -57,8 +57,8 @@ function writeClique(
   }
 }
 
-async function getPrompt(client: Client, graphDir: string): Promise<string> {
-  const result = await client.getPrompt({ name: 'context-loading', arguments: { graphDir } });
+async function getPrompt(client: Client, graphDir: string, args: Record<string, string> = {}): Promise<string> {
+  const result = await client.getPrompt({ name: 'context-loading', arguments: { graphDir, ...args } });
   expect(result.messages).toHaveLength(1);
   const c = result.messages[0].content as { type: string; text: string };
   expect(c.type).toBe('text');
@@ -284,10 +284,26 @@ describe('context-loading prompt — Gap Directive contract (§P-2)', () => {
     });
     const text = await getPrompt(client, graphDir);
     const directiveIdx = sectionIndex(text, 'Gap Directive');
+    const overviewIdx = sectionIndex(text, 'Graph Overview');
     expect(directiveIdx).toBeGreaterThanOrEqual(0);
     // The full message (label ↔ label + connect: candidate pairs) is preserved,
     // unlike the generic "- label (count): ids" rendering of other gap types.
     expect(text).toMatch(/Structural gap:.*↔.*connect:/);
+    expect(overviewIdx).toBeGreaterThan(directiveIdx);
+    const overview = text.slice(overviewIdx);
+    expect(overview).toMatch(/Structural gap:.*↔.*connect:/);
+    expect(overview).not.toContain('None detected');
+  });
+
+  it('keeps structural_gap prompt lines in English even when lang=ko', async () => {
+    const graphDir = makeEmptyGraph('cl-sg-ko');
+    writeClique(graphDir, 'hypotheses', 'hypothesis', 'TESTING', ['hyp-001', 'hyp-002', 'hyp-003', 'hyp-004']);
+    writeClique(graphDir, 'knowledge', 'knowledge', 'ACTIVE', ['know-001', 'know-002', 'know-003', 'know-004'], {
+      'know-001': ['hyp-001'],
+    });
+    const text = await getPrompt(client, graphDir, { lang: 'ko' });
+    expect(text).toMatch(/Structural gap:.*↔.*connect:/);
+    expect(text).not.toContain('구조적 공백:');
   });
 
   it('appends a hardcoded-English truncation note when structuralGapTruncated is set (FR-009/US2)', async () => {
@@ -304,5 +320,6 @@ describe('context-loading prompt — Gap Directive contract (§P-2)', () => {
     const text = await getPrompt(client, graphDir);
     // hardcoded English (this prompt is intentionally not localized)
     expect(text).toContain('more structural gap(s) not shown');
+    expect(text).toContain('raise gaps.structural_max_gaps');
   });
 });

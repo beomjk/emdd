@@ -115,6 +115,14 @@ describe('detectStructuralGaps — K/H quickstart fixture', () => {
     }
   });
 
+  it('ranks bridge-adjacent endpoints first by betweenness, then id', () => {
+    const { gaps } = detectStructuralGaps(khFixture(), thresholds());
+    expect(gaps[0].structuralGap!.candidates[0]).toEqual({
+      from: 'hyp-001',
+      to: 'know-002',
+    });
+  });
+
   it('nodeIds = sorted unique union of candidate endpoints', () => {
     const { gaps } = detectStructuralGaps(khFixture(), thresholds());
     const sg = gaps[0].structuralGap!;
@@ -165,6 +173,14 @@ describe('detectStructuralGaps — false positives (SC-002)', () => {
     const { gaps, truncated } = detectStructuralGaps(makeGraph({}), thresholds());
     expect(gaps).toHaveLength(0);
     expect(truncated).toBe(0);
+  });
+
+  it('raising structural_min_cluster_size suppresses otherwise-developed K4 clusters', () => {
+    const { gaps } = detectStructuralGaps(
+      khFixture(),
+      thresholds({ structural_min_cluster_size: 5 }),
+    );
+    expect(gaps).toHaveLength(0);
   });
 });
 
@@ -245,6 +261,17 @@ describe('detectStructuralGaps — report cap (FR-009)', () => {
     expect(gaps).toHaveLength(5);
     expect(truncated).toBe(1);
   });
+
+  it('applies the report cap after priority sorting', () => {
+    const { gaps, truncated } = detectStructuralGaps(
+      multiClusterFixture(),
+      thresholds({ structural_max_gaps: 1 }),
+    );
+    expect(gaps).toHaveLength(1);
+    expect(truncated).toBe(2);
+    const sg = gaps[0].structuralGap!;
+    expect(sg.clusterA.length + sg.clusterB.length).toBe(9);
+  });
 });
 
 // ── config sensitivity (SC-004 / US3) ───────────────────────────────
@@ -283,5 +310,12 @@ describe('detectStructuralGaps — config sensitivity (SC-004, US3)', () => {
 
   it('lowering structural_max_bridges does not increase reporting', () => {
     expect(total(run(1))).toBeLessThanOrEqual(total(run(3)));
+  });
+
+  it('excludes bridge counts above the default structural_max_bridges boundary', () => {
+    const defaults = run(1).gaps.map((g) => g.structuralGap!.bridgeCount);
+    const expanded = run(3).gaps.map((g) => g.structuralGap!.bridgeCount);
+    expect(defaults).not.toContain(3);
+    expect(expanded).toContain(3);
   });
 });

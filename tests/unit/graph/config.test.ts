@@ -128,6 +128,19 @@ describe('loadConfig — structural_* thresholds (011, US3)', () => {
     expect(config.gaps.structural_max_gaps).toBe(5);
   });
 
+  it('K2: fractional structural values fall back to defaults', () => {
+    writeFileSync(join(tmpDir, '.emdd.yml'), [
+      'gaps:',
+      '  structural_min_cluster_size: 2.5',
+      '  structural_max_bridges: 1.5',
+      '  structural_max_gaps: 0.5',
+    ].join('\n'));
+    const config = loadConfig(graphDir);
+    expect(config.gaps.structural_min_cluster_size).toBe(3);
+    expect(config.gaps.structural_max_bridges).toBe(1);
+    expect(config.gaps.structural_max_gaps).toBe(5);
+  });
+
   it('K2: orphan_min_outgoing keeps its valid 0 default (positive check NOT applied to legacy keys)', () => {
     writeFileSync(join(tmpDir, '.emdd.yml'), ['gaps:', '  orphan_min_outgoing: 0'].join('\n'));
     const config = loadConfig(graphDir);

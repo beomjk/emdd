@@ -265,6 +265,19 @@ describe('getHealth — structural_gap integration (011)', () => {
     expect(r.structuralGapTruncated).toBeUndefined();
   });
 
+  it('uses .emdd.yml structural thresholds when detecting structural gaps', async () => {
+    writeFileSync(join(tmpDir, '.emdd.yml'), [
+      'gaps:',
+      '  structural_min_cluster_size: 5',
+    ].join('\n'));
+    writeClique('hypotheses', ['hyp-001', 'hyp-002', 'hyp-003', 'hyp-004'], 'hypothesis', 'TESTING');
+    writeClique('knowledge', ['know-001', 'know-002', 'know-003', 'know-004'], 'knowledge', 'ACTIVE', {
+      'know-001': ['hyp-001'],
+    });
+    const r = await getHealth(graphDir);
+    expect(r.gapDetails.some(g => g.type === 'structural_gap')).toBe(false);
+  });
+
   it('SC-002: two nodes / single cluster → no structural_gap', async () => {
     writeNode(graphDir, 'hypotheses', 'hyp-001-x.md', {
       id: 'hyp-001', type: 'hypothesis', title: 'X', status: 'TESTING',

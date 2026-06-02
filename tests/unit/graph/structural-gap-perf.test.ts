@@ -88,7 +88,7 @@ describe('SC-005: getHealth performance at ~500 nodes', () => {
       // The added structural-gap cost must itself fit comfortably in budget.
       expect(sgMs).toBeLessThan(NODE_BUDGET_MS);
       // Sanity: detection actually produced report data (cap applied).
-      expect(report.gapDetails.filter(g => g.type === 'structural_gap').length).toBeGreaterThanOrEqual(0);
+      expect(report.gapDetails.filter(g => g.type === 'structural_gap').length).toBeGreaterThan(0);
     } finally {
       rmSync(tmpDir, { recursive: true, force: true });
     }

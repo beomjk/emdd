@@ -1,7 +1,7 @@
 import GraphologyDefault from 'graphology';
 import louvainDefault from 'graphology-communities-louvain';
 import type { Graph as EmddGraph, GapDetail } from './types.js';
-import type { GapThresholds } from './config.js';
+import { DEFAULT_CONFIG, type GapThresholds } from './config.js';
 import { t } from '../i18n/index.js';
 
 // ESM interop — graphology/louvain export shapes vary by bundler
@@ -130,11 +130,18 @@ interface DevelopedCluster {
   members: string[]; // id-sorted
 }
 
-interface GapPair {
+interface QualifiedPair {
   ci: DevelopedCluster; // clusterA — smaller members[0]
   cj: DevelopedCluster; // clusterB
   bridgeCount: number;
+}
+
+interface GapPair extends QualifiedPair {
   candidates: Array<{ from: string; to: string }>;
+}
+
+function positiveInteger(value: number, fallback: number): number {
+  return Number.isInteger(value) && value > 0 ? value : fallback;
 }
 
 /**
@@ -152,9 +159,9 @@ export function detectStructuralGaps(
     'structural_min_cluster_size' | 'structural_max_bridges' | 'structural_max_gaps'
   >,
 ): { gaps: GapDetail[]; truncated: number } {
-  const S = thresholds.structural_min_cluster_size;
-  const B = thresholds.structural_max_bridges;
-  const G = thresholds.structural_max_gaps;
+  const S = positiveInteger(thresholds.structural_min_cluster_size, DEFAULT_CONFIG.gaps.structural_min_cluster_size);
+  const B = positiveInteger(thresholds.structural_max_bridges, DEFAULT_CONFIG.gaps.structural_max_bridges);
+  const G = positiveInteger(thresholds.structural_max_gaps, DEFAULT_CONFIG.gaps.structural_max_gaps);
 
   const { g, adj } = buildUndirectedGraph(graph);
 
@@ -184,17 +191,7 @@ export function detectStructuralGaps(
   if (developed.length < 2) return { gaps: [], truncated: 0 };
   developed.sort((a, b) => (a.members[0] < b.members[0] ? -1 : a.members[0] > b.members[0] ? 1 : 0));
 
-  const bc = computeBetweenness(g);
-
-  // Betweenness-desc, id-asc comparator for candidate ranking.
-  const byCentrality = (x: string, y: string): number => {
-    const bx = bc.get(x) ?? 0;
-    const by = bc.get(y) ?? 0;
-    if (bx !== by) return by - bx;
-    return x < y ? -1 : x > y ? 1 : 0;
-  };
-
-  const pairs: GapPair[] = [];
+  const qualifiedPairs: QualifiedPair[] = [];
   for (let i = 0; i < developed.length; i++) {
     for (let j = i + 1; j < developed.length; j++) {
       const ci = developed[i]; // smaller members[0] → clusterA
@@ -210,37 +207,54 @@ export function detectStructuralGaps(
         }
       }
       if (bridgeCount < 1 || bridgeCount > B) continue;
-
-      // Rank each cluster's nodes by betweenness; collect not-yet-connected
-      // cross pairs ordered by (rankA + rankB, idA, idB); keep top 3.
-      const sortedA = ci.members.slice().sort(byCentrality);
-      const sortedB = cj.members.slice().sort(byCentrality);
-      const rankA = new Map(sortedA.map((id, idx) => [id, idx] as const));
-      const rankB = new Map(sortedB.map((id, idx) => [id, idx] as const));
-
-      const crossPairs: Array<{ from: string; to: string }> = [];
-      for (const a of sortedA) {
-        const aAdj = adj.get(a);
-        for (const b of sortedB) {
-          if (aAdj?.has(b)) continue; // already directly connected
-          crossPairs.push({ from: a, to: b });
-        }
-      }
-      crossPairs.sort((p, q) => {
-        const rp = rankA.get(p.from)! + rankB.get(p.to)!;
-        const rq = rankA.get(q.from)! + rankB.get(q.to)!;
-        if (rp !== rq) return rp - rq;
-        if (p.from !== q.from) return p.from < q.from ? -1 : 1;
-        return p.to < q.to ? -1 : p.to > q.to ? 1 : 0;
-      });
-
-      const candidates = crossPairs.slice(0, 3);
-      // Defensive: a separated-but-fully-connected pair has no candidate to
-      // propose — drop it rather than emit an empty (and unactionable) gap.
-      if (candidates.length === 0) continue;
-
-      pairs.push({ ci, cj, bridgeCount, candidates });
+      qualifiedPairs.push({ ci, cj, bridgeCount });
     }
+  }
+  if (qualifiedPairs.length === 0) return { gaps: [], truncated: 0 };
+
+  const bc = computeBetweenness(g);
+
+  // Betweenness-desc, id-asc comparator for candidate ranking.
+  const byCentrality = (x: string, y: string): number => {
+    const bx = bc.get(x) ?? 0;
+    const by = bc.get(y) ?? 0;
+    if (bx !== by) return by - bx;
+    return x < y ? -1 : x > y ? 1 : 0;
+  };
+
+  const pairs: GapPair[] = [];
+  for (const { ci, cj, bridgeCount } of qualifiedPairs) {
+    // Rank each cluster's nodes by betweenness; collect only the best 3
+    // not-yet-connected cross pairs ordered by (rankA + rankB, idA, idB).
+    const sortedA = ci.members.slice().sort(byCentrality);
+    const sortedB = cj.members.slice().sort(byCentrality);
+    const rankA = new Map(sortedA.map((id, idx) => [id, idx] as const));
+    const rankB = new Map(sortedB.map((id, idx) => [id, idx] as const));
+
+    const compareCandidate = (p: { from: string; to: string }, q: { from: string; to: string }): number => {
+      const rp = rankA.get(p.from)! + rankB.get(p.to)!;
+      const rq = rankA.get(q.from)! + rankB.get(q.to)!;
+      if (rp !== rq) return rp - rq;
+      if (p.from !== q.from) return p.from < q.from ? -1 : 1;
+      return p.to < q.to ? -1 : p.to > q.to ? 1 : 0;
+    };
+
+    const candidates: Array<{ from: string; to: string }> = [];
+    for (const a of sortedA) {
+      const aAdj = adj.get(a);
+      for (const b of sortedB) {
+        if (aAdj?.has(b)) continue; // already directly connected
+        candidates.push({ from: a, to: b });
+        candidates.sort(compareCandidate);
+        if (candidates.length > 3) candidates.pop();
+      }
+    }
+
+    // Defensive: a separated-but-fully-connected pair has no candidate to
+    // propose — drop it rather than emit an empty (and unactionable) gap.
+    if (candidates.length === 0) continue;
+
+    pairs.push({ ci, cj, bridgeCount, candidates });
   }
 
   // Sort gaps: bridgeCount asc, total size desc, then cluster member ids.

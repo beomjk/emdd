@@ -58,6 +58,24 @@ describe('format() functions', () => {
       expect(out).toContain('fnd-001');
     });
 
+    it('shows structural gap truncation note when present', () => {
+      const detail: GapDetail = {
+        type: 'structural_gap',
+        nodeIds: ['hyp-001', 'know-001'],
+        message: 'Structural gap',
+        structuralGap: {
+          clusterA: ['hyp-001'],
+          clusterB: ['know-001'],
+          bridgeCount: 1,
+          candidates: [{ from: 'hyp-001', to: 'know-001' }],
+        },
+      };
+      const report = { ...baseReport, gapDetails: [detail], structuralGapTruncated: 2 };
+      const out = healthDef.format(report);
+      expect(out).toContain('more structural gap(s) not shown');
+      expect(out).toContain('gaps.structural_max_gaps');
+    });
+
     it('shows affinity violations when present', () => {
       const report = { ...baseReport, affinityViolations: ['violation1'] };
       const out = healthDef.format(report);
@@ -108,6 +126,23 @@ describe('format() functions', () => {
       const out = gapsDef.format({ gaps: ['gap1'], gapDetails: [detail] });
       expect(out).toContain('gap1');
       expect(out).toContain('stale_knowledge');
+    });
+
+    it('formats structural gap truncation note', () => {
+      const detail: GapDetail = {
+        type: 'structural_gap',
+        nodeIds: ['hyp-001', 'know-001'],
+        message: 'Structural gap',
+        structuralGap: {
+          clusterA: ['hyp-001'],
+          clusterB: ['know-001'],
+          bridgeCount: 1,
+          candidates: [{ from: 'hyp-001', to: 'know-001' }],
+        },
+      };
+      const out = gapsDef.format({ gaps: [], gapDetails: [detail], structuralGapTruncated: 2 });
+      expect(out).toContain('more structural gap(s) not shown');
+      expect(out).toContain('gaps.structural_max_gaps');
     });
   });
 
