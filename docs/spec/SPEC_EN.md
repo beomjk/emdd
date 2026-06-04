@@ -708,7 +708,7 @@ Before beginning a new exploration loop (Episode), perform the following:
    -> Report the expected Consolidation depth for session close
 ```
 
-For AI agents, this protocol **runs automatically at session start**. For human researchers, it is performed during the Morning Briefing.
+For AI agents, run this protocol at session start through the configured assistant entry point: the MCP prompt or `/emdd-open` for Claude Code, and explicit `$emdd-open` invocation for Codex. For human researchers, it is performed during the Morning Briefing.
 
 **Principle: Each Episode curates the context for the next Episode.** When the previous session records "what to read next," the following session starts not from zero but from curated context. This mirrors a human researcher's lab notebook habit — "tomorrow, pick up here; check this first before starting."
 
@@ -1243,8 +1243,12 @@ project-root/
 +-- AGENTS.md                  # Codex EMDD rules + agent behavior (created by emdd init --tool codex)
 +-- .agents/                   # Codex skills directory (created by emdd init --tool codex)
 |   +-- skills/
-|       +-- emdd-open/SKILL.md   # Codex session start skill
-|       +-- emdd-close/SKILL.md  # Codex session end skill
+|       +-- emdd-open/
+|       |   +-- SKILL.md           # Codex session start skill
+|       |   +-- agents/openai.yaml # Codex explicit-invocation policy
+|       +-- emdd-close/
+|           +-- SKILL.md           # Codex session end skill
+|           +-- agents/openai.yaml # Codex explicit-invocation policy
 |
 +-- .claude/                   # Claude Code rules + skills (created by emdd init --tool claude)
 |   +-- CLAUDE.md              # EMDD rules + agent behavior (created by emdd init)
@@ -1894,7 +1898,7 @@ The researcher responds. Sometimes following the suggestion, sometimes heading i
 
 2. **Consolidation Hint Tags (6.2, 7.4)**: Officially allowed `extends: know-NNN` hints in Finding links. Added the rule "review Findings with hints first" during the Consolidation promotion step. Hints accelerate promotion judgment but do not exempt promotion criteria (2+ independent supports, confidence >= 0.9, de facto in use).
 
-3. **CLI-Slash integration**: MCP prompts (`context-loading`, `episode-creation`, `consolidation`, `health-review`) rewritten to directly invoke CLI commands. For Claude Code, these are exposed as repository-local skills: `/emdd-open` invokes `context-loading`; `/emdd-close` invokes `episode-creation` → `consolidation` → `health-review` in sequence. For Codex, equivalent repository-local skills (`emdd-open`, `emdd-close`) are also generated, but because Codex does not yet expose MCP prompts ([openai/codex#5059](https://github.com/openai/codex/issues/5059)) the Codex skills walk the matching MCP **tools** (`health`, `list-nodes`, `read-node`, `check`, `backlog`, `status-transitions`, `create-node`, `mark-consolidated`) to reach the same outcome. Four new CLI commands added:
+3. **CLI-Slash integration**: MCP prompts (`context-loading`, `episode-creation`, `consolidation`, `health-review`) rewritten to directly invoke CLI commands. For Claude Code, these are exposed as repository-local skills: `/emdd-open` invokes `context-loading`; `/emdd-close` invokes `episode-creation` → `consolidation` → `health-review` in sequence. For Codex, equivalent repository-local skills (`emdd-open`, `emdd-close`) are also generated, but because Codex does not yet expose MCP prompts ([openai/codex#5059](https://github.com/openai/codex/issues/5059)) the Codex skills walk the matching MCP **tools** (`health`, `list-nodes`, `read-node`, `check`, `backlog`, `status-transitions`, `create-node`, `mark-consolidated`) to reach the same outcome. The Codex skills also ship an `agents/openai.yaml` setting `allow_implicit_invocation: false`, keeping the session ceremonies user-driven (explicit `$emdd-open` / `$emdd-close`) rather than auto-triggered when a task merely resembles a session boundary. Four new CLI commands added:
    - `emdd update <node-id> --set key=value`: update frontmatter fields (with confidence range validation)
    - `emdd link <source-id> <target-id> <relation>`: add a link between nodes (relation validation, duplicate skip)
    - `emdd done <episode-id> "<item>" [--marker <done|deferred|superseded>]`: change status marker of an Episode "What's Next" item (default: done)

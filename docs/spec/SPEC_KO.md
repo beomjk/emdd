@@ -654,7 +654,7 @@ Untested Hypotheses와 Blocking Questions는 이중 트리거 시스템을 사�
    → 세션 close 시 필요한 Consolidation 깊이를 보고
 ```
 
-AI 에이전트의 경우, 이 프로토콜은 **세션 시작 시 자동으로 실행**한다. 인간 연구자의 경우, 모닝 브리핑에서 수행한다.
+AI 에이전트의 경우, 이 프로토콜은 설정된 assistant 진입점으로 세션 시작 시 실행한다: Claude Code는 MCP 프롬프트 또는 `/emdd-open`, Codex는 명시적 `$emdd-open` 호출을 사용한다. 인간 연구자의 경우, 모닝 브리핑에서 수행한다.
 
 **원칙: Episode가 다음 Episode의 컨텍스트를 큐레이션한다.** 이전 세션에서 "다음에 무엇을 읽어야 하는가"를 기록해두면, 다음 세션에서는 제로에서 시작하는 것이 아니라 큐레이션된 맥락 위에서 시작한다. 이것은 인간 연구자의 lab notebook 습관과 같다 — "내일은 여기서 이어서, 먼저 이것을 확인하고 시작할 것."
 
@@ -1187,8 +1187,12 @@ project-root/
 ├── AGENTS.md                  # Codex EMDD 규칙 + 에이전트 행동 (emdd init --tool codex)
 ├── .agents/                   # Codex 스킬 디렉토리 (emdd init --tool codex)
 │   └── skills/
-│       ├── emdd-open/SKILL.md   # Codex 세션 시작 스킬
-│       └── emdd-close/SKILL.md  # Codex 세션 종료 스킬
+│       ├── emdd-open/
+│       │   ├── SKILL.md           # Codex 세션 시작 스킬
+│       │   └── agents/openai.yaml # Codex 명시 호출 정책
+│       └── emdd-close/
+│           ├── SKILL.md           # Codex 세션 종료 스킬
+│           └── agents/openai.yaml # Codex 명시 호출 정책
 │
 ├── .claude/                   # Claude Code 규칙 + 스킬 (emdd init --tool claude)
 │   ├── CLAUDE.md              # EMDD 규칙 + 에이전트 행동 (emdd init으로 생성)
@@ -1804,7 +1808,7 @@ Zettelkasten을 만든 Niklas Luhmann은 자신의 카드 상자를 "대화 파�
 
 2. **Consolidation Hint Tags (6.2, 7.4)**: Finding의 links에 `extends: know-NNN` 힌트를 공식 허용. Consolidation 승격 단계에서 "hint가 있는 Finding부터 검토" 규칙 추가. 힌트는 승격 판단을 가속하지만 승격 기준(독립 지지 2개+, confidence ≥ 0.9, 사실상 사용 중)을 면제하지 않음.
 
-3. **CLI-Slash 통합**: MCP 프롬프트(`context-loading`, `episode-creation`, `consolidation`, `health-review`)가 CLI 커맨드를 직접 호출하도록 템플릿 재작성. Claude Code에서는 저장소 로컬 스킬로 노출됨: `/emdd-open`은 `context-loading`을 호출하고, `/emdd-close`는 `episode-creation` → `consolidation` → `health-review`를 순차 호출. Codex에서도 동일한 저장소 로컬 스킬(`emdd-open`, `emdd-close`)이 생성되지만, Codex는 아직 MCP 프롬프트를 노출하지 않으므로([openai/codex#5059](https://github.com/openai/codex/issues/5059)) Codex 스킬은 동일한 결과를 얻기 위해 대응되는 MCP **도구**(`health`, `list-nodes`, `read-node`, `check`, `backlog`, `status-transitions`, `create-node`, `mark-consolidated`)를 순차 호출함. 새 CLI 커맨드 4개 추가:
+3. **CLI-Slash 통합**: MCP 프롬프트(`context-loading`, `episode-creation`, `consolidation`, `health-review`)가 CLI 커맨드를 직접 호출하도록 템플릿 재작성. Claude Code에서는 저장소 로컬 스킬로 노출됨: `/emdd-open`은 `context-loading`을 호출하고, `/emdd-close`는 `episode-creation` → `consolidation` → `health-review`를 순차 호출. Codex에서도 동일한 저장소 로컬 스킬(`emdd-open`, `emdd-close`)이 생성되지만, Codex는 아직 MCP 프롬프트를 노출하지 않으므로([openai/codex#5059](https://github.com/openai/codex/issues/5059)) Codex 스킬은 동일한 결과를 얻기 위해 대응되는 MCP **도구**(`health`, `list-nodes`, `read-node`, `check`, `backlog`, `status-transitions`, `create-node`, `mark-consolidated`)를 순차 호출함. 또한 Codex 스킬에는 `agents/openai.yaml`이 함께 생성되어 `allow_implicit_invocation: false`로 설정되므로, 세션 의례가 작업이 끝나 보인다는 이유로 자동 트리거되지 않고 사용자가 `$emdd-open` / `$emdd-close`로 명시 호출할 때만 실행됨. 새 CLI 커맨드 4개 추가:
    - `emdd update <node-id> --set key=value`: frontmatter 필드 업데이트 (confidence 범위 검증 포함)
    - `emdd link <source-id> <target-id> <relation>`: 노드 간 링크 추가 (relation 검증, 중복 skip)
    - `emdd done <episode-id> "<item>" [--marker <done|deferred|superseded>]`: Episode "다음에 할 것" 항목의 상태 마커 변경 (기본값: done)

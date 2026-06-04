@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync, existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
+import { load as loadYaml } from 'js-yaml';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 import {
@@ -10,6 +11,7 @@ import {
   generateRulesFile,
   getSkillContent,
   generateSkillFiles,
+  getCodexSkillPolicy,
   replaceOrThrow,
   SKILL_TOOLS,
   toolSupportsSkills,
@@ -92,14 +94,14 @@ describe('getRulesContent', () => {
     // parenthetical fallback. Without this, the rules file (loaded as agent
     // context every session) contradicts the SKILL.md disclaimer.
     expect(content).not.toContain('Run the `context-loading` prompt');
-    expect(content).toContain('Run the `emdd-open` skill');
+    expect(content).toContain('Use the `emdd-open` skill only when the user explicitly invokes `$emdd-open`');
     // Steps 3-5 must redirect to the `emdd-close` skill — same reason.
     expect(content).not.toContain('Run the `episode-creation` prompt');
     expect(content).not.toContain('Run the `consolidation` prompt');
     expect(content).not.toContain('Run the `health-review` prompt');
-    expect(content).toContain('Run the `emdd-close` skill (Episode step)');
-    expect(content).toContain('Run the `emdd-close` skill (Consolidation step)');
-    expect(content).toContain('Run the `emdd-close` skill (Health Review step)');
+    expect(content).toContain('Use the `emdd-close` skill only when the user explicitly invokes `$emdd-close`');
+    expect(content).toContain('During explicit `$emdd-close`, run the `emdd-close` skill (Consolidation step)');
+    expect(content).toContain('call the `health` tool on explicit request');
     expect(content).toMatchSnapshot();
   });
 
@@ -142,6 +144,24 @@ describe('getRulesContent', () => {
     expect(content).toContain('`emdd-open` skill at session start');
     expect(content).toContain('`emdd-close` skill at session end');
     expect(content).toMatchSnapshot();
+  });
+
+  it('Codex rules tell the agent not to auto-run emdd-close (user-driven close)', () => {
+    // C half of the auto-run fix: the always-on rules context must agree with the
+    // pinned allow_implicit_invocation:false policy — close is pull, not push.
+    const full = getRulesContent('codex', 'full');
+    expect(full).toContain('do not auto-run lifecycle skills');
+    expect(full).toContain('$emdd-open');
+    expect(full).toContain('$emdd-close');
+
+    const compact = getRulesContent('codex', 'compact');
+    expect(compact).toContain('do not auto-run lifecycle skills');
+
+    // Claude rules must NOT carry the Codex-specific guard or `$` invocation syntax.
+    const claudeFull = getRulesContent('claude', 'full');
+    expect(claudeFull).not.toContain('$emdd-open');
+    expect(claudeFull).not.toContain('$emdd-close');
+    expect(claudeFull).not.toContain('do not auto-run');
   });
 
   // --- Schema-derived content assertions (T043a) ---
@@ -322,6 +342,7 @@ describe('emdd-agent.md uniqueness invariant for Codex drift guard', () => {
       'Run the `episode-creation` prompt.',
       'Run the `consolidation` prompt every close.',
       'Run the `health-review` prompt periodically',
+      'health review remains periodic or explicit.',
     ];
     for (const s of searchStrings) {
       const occurrences = agentMd.split(s).length - 1;
@@ -589,6 +610,19 @@ describe('getSkillContent (per-tool body)', () => {
     expect(getSkillContent('emdd-open')).toBe(getSkillContent('emdd-open', 'claude'));
     expect(getSkillContent('emdd-close')).toBe(getSkillContent('emdd-close', 'claude'));
   });
+
+  it('skill descriptions scope invocation to explicit user requests (no auto-run)', () => {
+    // Codex implicit invocation matches on the description, and Claude likewise
+    // selects skills by description. Both bodies must tell the agent NOT to fire
+    // on its own when work merely looks done — the B half of the auto-run fix.
+    for (const tool of ['claude', 'codex'] as const) {
+      const close = getSkillContent('emdd-close', tool);
+      expect(close).toContain('명시적으로');
+      expect(close).toContain('자동으로 실행하지 마세요');
+      const open = getSkillContent('emdd-open', tool);
+      expect(open).toContain('자동으로 실행하지 마세요');
+    }
+  });
 });
 
 describe('generateSkillFiles', () => {
@@ -614,7 +648,9 @@ describe('generateSkillFiles', () => {
     expect(existsSync(join(tmpDir, '.agents', 'skills', 'emdd-close', 'SKILL.md'))).toBe(true);
     expect(result.created).toEqual([
       join('.agents', 'skills', 'emdd-open', 'SKILL.md'),
+      join('.agents', 'skills', 'emdd-open', 'agents', 'openai.yaml'),
       join('.agents', 'skills', 'emdd-close', 'SKILL.md'),
+      join('.agents', 'skills', 'emdd-close', 'agents', 'openai.yaml'),
     ]);
   });
 
@@ -637,17 +673,48 @@ describe('generateSkillFiles', () => {
     expect(close).toContain('episode-creation');
   });
 
+  it('Codex skills get agents/openai.yaml pinning allow_implicit_invocation: false', () => {
+    generateSkillFiles(tmpDir, { tool: 'codex' });
+    for (const name of ['emdd-open', 'emdd-close']) {
+      const yamlPath = join(tmpDir, '.agents', 'skills', name, 'agents', 'openai.yaml');
+      expect(existsSync(yamlPath), `${name} should have agents/openai.yaml`).toBe(true);
+      const parsed = loadYaml(readFileSync(yamlPath, 'utf-8')) as {
+        policy?: { allow_implicit_invocation?: boolean };
+      };
+      // The whole point: Codex must NOT auto-invoke a session ceremony just
+      // because a task matches its description.
+      expect(parsed.policy?.allow_implicit_invocation).toBe(false);
+    }
+  });
+
+  it('the generated openai.yaml matches getCodexSkillPolicy() (drift guard)', () => {
+    generateSkillFiles(tmpDir, { tool: 'codex' });
+    const body = readFileSync(
+      join(tmpDir, '.agents', 'skills', 'emdd-close', 'agents', 'openai.yaml'),
+      'utf-8',
+    );
+    expect(body).toBe(getCodexSkillPolicy());
+  });
+
+  it('Claude skills do NOT get an agents/openai.yaml (Codex-only policy key)', () => {
+    generateSkillFiles(tmpDir, { tool: 'claude' });
+    expect(existsSync(join(tmpDir, '.claude', 'skills', 'emdd-open', 'agents', 'openai.yaml'))).toBe(false);
+    expect(existsSync(join(tmpDir, '.claude', 'skills', 'emdd-close', 'agents', 'openai.yaml'))).toBe(false);
+  });
+
   it('skips existing Codex skill files when force is false', () => {
     generateSkillFiles(tmpDir, { tool: 'codex' });
     const result = generateSkillFiles(tmpDir, { tool: 'codex' });
-    expect(result.skipped).toHaveLength(2);
+    // 2 SKILL.md + 2 agents/openai.yaml — both tracked under the same skip rule.
+    expect(result.skipped).toHaveLength(4);
     expect(result.created).toHaveLength(0);
   });
 
   it('overwrites existing Codex skill files when force is true', () => {
     generateSkillFiles(tmpDir, { tool: 'codex' });
     const result = generateSkillFiles(tmpDir, { tool: 'codex', force: true });
-    expect(result.created).toHaveLength(2);
+    // force rewrites both the SKILL.md and the agents/openai.yaml for each skill.
+    expect(result.created).toHaveLength(4);
     expect(result.skipped).toHaveLength(0);
   });
 

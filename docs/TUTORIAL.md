@@ -1,6 +1,6 @@
 # EMDD in 5 Minutes
 
-> **Using an AI assistant?** You can skip the manual steps below. After `emdd init`, connect via MCP and ask your AI to load the `context-loading` prompt. See [MCP Setup](MCP_SETUP.md).
+> **Using an AI assistant?** You can skip the manual steps below. After `emdd init`, connect via MCP. In Claude Code, load the `context-loading` prompt or use `/emdd-open`; in Codex, invoke `$emdd-open`. See [MCP Setup](MCP_SETUP.md).
 
 > One terminal is all you need. Copy-paste and follow along.
 

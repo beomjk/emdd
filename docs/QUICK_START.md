@@ -1,6 +1,6 @@
 # EMDD Quick Start
 
-> **Using an AI assistant?** You don't need to create files manually. After Step 1 (init), connect via MCP and ask your AI to load the `context-loading` prompt -- it will guide you through creating your first nodes. See [MCP Setup](MCP_SETUP.md).
+> **Using an AI assistant?** You don't need to create files manually. After Step 1 (init), connect via MCP. In Claude Code, load the `context-loading` prompt or use `/emdd-open`; in Codex, invoke `$emdd-open`. See [MCP Setup](MCP_SETUP.md).
 
 > From zero to a working knowledge graph in 15 minutes.
 
